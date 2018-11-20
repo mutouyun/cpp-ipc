@@ -9,7 +9,7 @@
 
 /*
  * Compiler & system detection for IPC_DECL_EXPORT & IPC_DECL_IMPORT.
- * Not using QtCore cause it shouldn't depend on Qt & C++.
+ * Not using QtCore cause it shouldn't depend on Qt.
 */
 
 #if defined(_MSC_VER)

@@ -6,12 +6,16 @@
 
 namespace {
 
-QVector<QObject*> suites__;
+QVector<QObject*>* suites__ = nullptr;
 
 } // internal-linkage
 
 TestSuite::TestSuite(void) {
-    suites__ << this;
+    static struct __ {
+        QVector<QObject*> suites_;
+        __(void) { suites__ = &suites_; }
+    } _;
+    _.suites_ << this;
 }
 
 int main(int argc, char* argv[]) {
@@ -19,7 +23,7 @@ int main(int argc, char* argv[]) {
     Q_UNUSED(app)
 
     int failed_count = 0;
-    for (const auto& suite : suites__) {
+    for (const auto& suite : (*suites__)) {
         if (QTest::qExec(suite, argc, argv) != 0)
             ++failed_count;
     }
