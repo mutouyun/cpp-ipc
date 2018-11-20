@@ -20,7 +20,7 @@ handle_t acquire(std::string const & name, std::size_t size) {
     if (fd == -1) {
         return nullptr;
     }
-    if (::ftruncate(fd, size) != 0) {
+    if (::ftruncate(fd, static_cast<off_t>(size)) != 0) {
         ::close(fd);
         return nullptr;
     }
