@@ -2,9 +2,11 @@
 #include <string>
 #include <type_traits>
 #include <memory>
+#include <new>
 
 #include "circ_queue.h"
 #include "test.h"
+#include "stopwatch.hpp"
 
 namespace {
 
@@ -32,8 +34,8 @@ void Unit::test_inst(void) {
 }
 
 void Unit::test_producer(void) {
-    cq__ = new cq_t;
-    std::thread consumers[3];
+    ::new (cq__) cq_t;
+    std::thread consumers[1];
 
     for (auto& c : consumers) {
         c = std::thread{[&c] {
@@ -48,11 +50,8 @@ void Unit::test_producer(void) {
             do {
                 while (cur != cq__->cursor()) {
                     int d = *static_cast<const int*>(cq__->get(cur));
-//                    std::cout << &c << ": cur = " << (int)cur << ", " << d << std::endl;
-                    if (d < 0) {
-                        return;
-                    }
-                    else QCOMPARE(d, i);
+                    if (d < 0) return;
+                    QCOMPARE(d, i);
                     ++cur;
                     ++i;
                 }
@@ -63,20 +62,27 @@ void Unit::test_producer(void) {
     while (cq__->conn_count() != std::extent<decltype(consumers)>::value) {
         std::this_thread::yield();
     }
+    capo::stopwatch<> sw;
+    constexpr static int loops = 1000000;
+
     std::cout << "start producer..." << std::endl;
-    for (int i = 0; i < 1000; ++i) {
+    sw.start();
+    for (int i = 0; i < loops; ++i) {
         auto d = static_cast<int*>(cq__->acquire());
         *d = i;
         cq__->commit();
     }
     auto d = static_cast<int*>(cq__->acquire());
     *d = -1;
-    std::cout << "put: quit..." << std::endl;
     cq__->commit();
 
     for (auto& c : consumers) {
         c.join();
     }
+
+    auto ts = sw.elapsed<std::chrono::microseconds>();
+    std::cout << "time spent : " << (ts / 1000) << " ms" << std::endl;
+    std::cout << "performance: " << (double(ts) / double(loops)) << " us/msg" << std::endl;
 }
 
 } // internal-linkage

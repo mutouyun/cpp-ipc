@@ -62,10 +62,7 @@ public:
         auto st = begin() + id(cr_.load(std::memory_order_relaxed));
         do {
             // check remain count of consumers
-            if (st->head_.load(std::memory_order_acquire)) {
-                std::this_thread::yield();
-            }
-            else {
+            if (!st->head_.load(std::memory_order_acquire)) {
                 st->head_.store(conn_count());
                 break;
             }
