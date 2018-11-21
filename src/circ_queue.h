@@ -6,7 +6,6 @@
 #include <utility>
 #include <limits>
 #include <algorithm>
-#include <tuple>
 
 namespace ipc {
 
@@ -14,7 +13,6 @@ struct circ_queue_head {
     using u8_t = std::atomic<std::uint8_t>;
 
     u8_t cc_; // connection count
-    u8_t rd_; // read-index
     u8_t wt_; // write-index
 };
 
@@ -42,23 +40,38 @@ public:
     circ_queue& operator=(circ_queue&&) = delete;
 
     std::size_t connect(void) {
-        return cc_.fetch_add(1, std::memory_order_relaxed);
+        return cc_.fetch_add(1, std::memory_order_acq_rel);
     }
 
     std::size_t disconnect(void) {
-        return cc_.fetch_sub(1, std::memory_order_relaxed);
+        return cc_.fetch_sub(1, std::memory_order_acq_rel);
     }
 
-    std::tuple<void*, std::uint8_t> acquire(void) {
-        std::uint8_t wt_id = wt_.fetch_add(1, std::memory_order_relaxed);
-        return std::make_tuple(&(block_[wt_id]), wt_id);
+    void* acquire(void) {
+        return begin() + wt_.load(std::memory_order_relaxed);
     }
 
-    void commit() {
+    void commit(void) {
+        wt_.fetch_add(1, std::memory_order_release);
+    }
 
+    std::uint8_t cursor(void) const {
+        return wt_.load(std::memory_order_acquire);
+    }
+
+    void const * get(std::uint8_t index) const {
+        return begin() + index;
     }
 
 private:
+    using elem_t = std::uint8_t[elem_size];
+    elem_t const * begin(void) const {
+        return reinterpret_cast<elem_t const *>(
+               reinterpret_cast<std::uint8_t const *>(this) + elem_size);
+    }
+    elem_t * begin(void) {
+        return const_cast<elem_t *>(static_cast<circ_queue const *>(this)->begin());
+    }
     std::uint8_t block_[block_size];
 };
 
