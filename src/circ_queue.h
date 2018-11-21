@@ -15,12 +15,13 @@ struct circ_queue_head {
     using u8_t = std::atomic<std::uint8_t>;
     using ms_t = std::atomic<std::size_t>; // message head
 
-    u8_t cc_ { 0 }; // connection count
+    ms_t mc_ { 0 }; // message counter
+    u8_t cc_ { 0 }; // connection counter
     u8_t cr_ { 0 }; // write cursor
 };
 
 template <std::size_t Size>
-class circ_queue : public circ_queue_head {
+class circ_queue : private circ_queue_head {
 public:
     enum : std::size_t {
         total_size = Size,
@@ -35,6 +36,27 @@ public:
     static_assert(elem_size >= head_size  , "elem_size must >= head_size");
     static_assert(elem_size > sizeof(ms_t), "elem_size must > sizeof(ms_t)");
     static_assert(Size % elem_size == 0   , "Size must be multiple of elem_size");
+
+private:
+    struct elem_t {
+        ms_t head_;
+        std::uint8_t msg_[msg_size];
+    };
+
+    elem_t* elem_start(void) {
+        return reinterpret_cast<elem_t*>(this) + 1;
+    }
+
+    static void next(u8_t& i) {
+        if (++i == elem_max) i.store(0, std::memory_order_release);
+    }
+
+    std::uint8_t block_[block_size];
+
+public:
+    static void next(std::uint8_t& i) {
+        if (++i == elem_max) i = 0;
+    }
 
     circ_queue(void) {
         ::memset(block_, 0, sizeof(block_));
@@ -59,7 +81,7 @@ public:
     }
 
     void* acquire(void) {
-        auto st = begin() + id(cr_.load(std::memory_order_relaxed));
+        auto st = elem_start() + cr_.load(std::memory_order_relaxed);
         do {
             // check remain count of consumers
             if (!st->head_.load(std::memory_order_acquire)) {
@@ -71,31 +93,27 @@ public:
     }
 
     void commit(void) {
-        cr_.fetch_add(1, std::memory_order_release);
+        next(cr_);
+        mc_.fetch_add(1, std::memory_order_release);
     }
 
     std::uint8_t cursor(void) const {
         return cr_.load(std::memory_order_acquire);
     }
 
+    constexpr std::size_t begin(void) const {
+        return 0;
+    }
+
+    std::size_t end(void) const {
+        return mc_.load(std::memory_order_acquire);
+    }
+
     void* get(std::uint8_t index) {
-        auto st = begin() + id(index);
+        auto st = elem_start() + index;
         st->head_.fetch_sub(1, std::memory_order_release);
         return st->msg_;
     }
-
-private:
-    struct elem_t {
-        ms_t head_;
-        std::uint8_t msg_[msg_size];
-    };
-    elem_t* begin(void) {
-        return reinterpret_cast<elem_t*>(this);
-    }
-    static std::uint8_t id(std::uint8_t i) {
-        return (i += 1) ? i : 1;
-    }
-    std::uint8_t block_[block_size];
 };
 
 } // namespace ipc

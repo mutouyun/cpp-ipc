@@ -28,9 +28,9 @@ void Unit::test_inst(void) {
     QCOMPARE(sizeof(*cq__), static_cast<std::size_t>(cq_t::total_size));
     auto a = cq__->get(1);
     auto b = cq__->get(2);
-    QCOMPARE(static_cast<std::size_t>(
-             static_cast<std::uint8_t const *>(b) -
-             static_cast<std::uint8_t const *>(a)), cq_t::elem_size);
+    QCOMPARE(static_cast<std::size_t>(static_cast<std::uint8_t const *>(b) -
+                                      static_cast<std::uint8_t const *>(a)),
+             static_cast<std::size_t>(cq_t::elem_size));
 }
 
 void Unit::test_producer(void) {
@@ -46,14 +46,14 @@ void Unit::test_producer(void) {
             auto disconn = [](cq_t* cq) { cq->disconnect(); };
             std::unique_ptr<cq_t, decltype(disconn)> guard(cq__, disconn);
 
+            auto it = cq__->begin();
             int i = 0;
             do {
-                while (cur != cq__->cursor()) {
+                while (it != cq__->end()) {
                     int d = *static_cast<const int*>(cq__->get(cur));
                     if (d < 0) return;
                     QCOMPARE(d, i);
-                    ++cur;
-                    ++i;
+                    ++i; ++it; cq__->next(cur);
                 }
             } while(1);
         }};
@@ -63,7 +63,7 @@ void Unit::test_producer(void) {
         std::this_thread::yield();
     }
     capo::stopwatch<> sw;
-    constexpr static int loops = 1000000;
+    constexpr static int loops = 267/*1000000*/;
 
     std::cout << "start producer..." << std::endl;
     sw.start();
