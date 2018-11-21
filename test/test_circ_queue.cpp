@@ -1,14 +1,12 @@
-#include <thread>
 #include <iostream>
 #include <string>
 #include <type_traits>
+#include <memory>
 
 #include "circ_queue.h"
 #include "test.h"
 
 namespace {
-
-using namespace std::string_literals;
 
 class Unit : public TestSuite {
     Q_OBJECT
@@ -34,42 +32,46 @@ void Unit::test_inst(void) {
 }
 
 void Unit::test_producer(void) {
+    cq__ = new cq_t;
     std::thread consumers[3];
-    std::atomic_int flag(0);
 
     for (auto& c : consumers) {
-        c = std::thread{[&c, &flag] {
+        c = std::thread{[&c] {
             auto cur = cq__->cursor();
-            std::cout << &c << ": cur = " << (int)cur << std::endl;
-            flag.fetch_add(1, std::memory_order_release);
+            std::cout << "start consumer " << &c << ": cur = " << (int)cur << std::endl;
+
+            cq__->connect();
+            auto disconn = [](cq_t* cq) { cq->disconnect(); };
+            std::unique_ptr<cq_t, decltype(disconn)> guard(cq__, disconn);
+
+            int i = 0;
             do {
                 while (cur != cq__->cursor()) {
-                    auto data = static_cast<const char*>(cq__->get(cur));
-                    std::cout << &c << ": " << data << std::endl;
-                    if (data == "quit"s) {
+                    int d = *static_cast<const int*>(cq__->get(cur));
+//                    std::cout << &c << ": cur = " << (int)cur << ", " << d << std::endl;
+                    if (d < 0) {
                         return;
                     }
-                    else QCOMPARE(data, std::to_string(cur).c_str());
+                    else QCOMPARE(d, i);
                     ++cur;
+                    ++i;
                 }
-                std::this_thread::yield();
             } while(1);
         }};
     }
 
-    while (flag.load(std::memory_order_acquire) != std::extent<decltype(consumers)>::value) {
+    while (cq__->conn_count() != std::extent<decltype(consumers)>::value) {
         std::this_thread::yield();
     }
-
-    for (int i = 0; i < 10; ++i) {
-        auto str = static_cast<char*>(cq__->acquire());
-        strcpy(str, std::to_string(i).c_str());
-        std::cout << "put: " << str << std::endl;
+    std::cout << "start producer..." << std::endl;
+    for (int i = 0; i < 1000; ++i) {
+        auto d = static_cast<int*>(cq__->acquire());
+        *d = i;
         cq__->commit();
     }
-    auto str = static_cast<char*>(cq__->acquire());
-    strcpy(str, "quit");
-    std::cout << "put: " << str << std::endl;
+    auto d = static_cast<int*>(cq__->acquire());
+    *d = -1;
+    std::cout << "put: quit..." << std::endl;
     cq__->commit();
 
     for (auto& c : consumers) {
