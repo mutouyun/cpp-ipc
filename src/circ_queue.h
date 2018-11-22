@@ -53,10 +53,7 @@ private:
 
 public:
     static std::uint16_t next(std::uint16_t i) {
-        if (id(++i) == elem_max) {
-            return ++i;
-        }
-        else return i;
+        return (id(++i) == elem_max) ? 0 : i;
     }
 
     circ_queue(void) {
