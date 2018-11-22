@@ -49,11 +49,15 @@ private:
         return i & 0x00ff;
     }
 
+    static elem_t* elem(void* ptr) {
+        return reinterpret_cast<elem_t*>(static_cast<std::uint8_t*>(ptr) - sizeof(el_t));
+    }
+
     std::uint8_t block_[block_size];
 
 public:
     static std::uint16_t next(std::uint16_t i) {
-        return (id(++i) == elem_max) ? 0 : i;
+        return (id(++i) == elem_max) ? ++i : i;
     }
 
     circ_queue(void) {
@@ -99,12 +103,12 @@ public:
         return cr_.load(std::memory_order_consume);
     }
 
-    void* get(std::uint16_t index) {
+    void* take(std::uint16_t index) {
         return (elem_start() + id(index))->data_;
     }
 
-    void put(std::uint16_t index) {
-        auto st = elem_start() + id(index);
+    void put(void* ptr) {
+        auto st = elem(ptr);
         st->head_.fetch_sub(1, std::memory_order_release);
     }
 };

@@ -28,8 +28,8 @@ cq_t* cq__;
 void Unit::test_inst(void) {
     cq__ = new cq_t;
     QCOMPARE(sizeof(*cq__), static_cast<std::size_t>(cq_t::total_size));
-    auto a = cq__->get(1);
-    auto b = cq__->get(2);
+    auto a = cq__->take(1);
+    auto b = cq__->take(2);
     QCOMPARE(static_cast<std::size_t>(static_cast<std::uint8_t const *>(b) -
                                       static_cast<std::uint8_t const *>(a)),
              static_cast<std::size_t>(cq_t::elem_size));
@@ -52,8 +52,9 @@ void Unit::test_producer(void) {
             int i = 0;
             do {
                 while (cur != cq__->cursor()) {
-                    int d = *static_cast<const int*>(cq__->get(cur));
-                    cq__->put(cur);
+                    auto p = static_cast<int*>(cq__->take(cur));
+                    int d = *p;
+                    cq__->put(p);
                     if (d < 0) return;
                     cur = cq__->next(cur);
                     list.push_back(d);
