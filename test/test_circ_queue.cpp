@@ -48,6 +48,7 @@ void Unit::test_producer(void) {
             auto disconn = [](cq_t* cq) { cq->disconnect(); };
             std::unique_ptr<cq_t, decltype(disconn)> guard(cq__, disconn);
 
+            std::vector<int> list;
             int i = 0;
             do {
                 while (cur != cq__->cursor()) {
@@ -55,9 +56,13 @@ void Unit::test_producer(void) {
                     cq__->commit(cur);
                     if (d < 0) return;
                     cur = cq__->next(cur);
+                    list.push_back(d);
+                }
+                for (int d : list) {
                     QCOMPARE(i, d);
                     ++i;
                 }
+                list.clear();
             } while(1);
         }};
     }
