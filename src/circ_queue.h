@@ -15,7 +15,8 @@ struct circ_queue_head {
     using el_t = std::atomic<std::size_t>; // element head
 
     ui_t cc_ { 0 }; // connection counter
-    ui_t cr_ { 0 }; // write cursor
+    ui_t rd_ { 0 }; // read cursor
+    ui_t wt_ { 0 }; // write cursor
 };
 
 template <std::size_t Size>
@@ -83,7 +84,7 @@ public:
     }
 
     void* acquire(void) {
-        auto st = elem_start() + id(cr_.load(std::memory_order_relaxed));
+        auto st = elem_start() + id(wt_.load(std::memory_order_relaxed));
         // check remain count of consumers
         do {
             std::size_t expected = 0;
@@ -96,11 +97,11 @@ public:
     }
 
     void commit(void) {
-        cr_.store(next(cr_.load(std::memory_order_relaxed)), std::memory_order_release);
+        wt_.store(next(wt_.load(std::memory_order_relaxed)), std::memory_order_release);
     }
 
     std::uint16_t cursor(void) const {
-        return cr_.load(std::memory_order_consume);
+        return wt_.load(std::memory_order_consume);
     }
 
     void* take(std::uint16_t index) {
