@@ -37,7 +37,7 @@ void Unit::test_inst(void) {
 
 void Unit::test_producer(void) {
     ::new (cq__) cq_t;
-    std::thread consumers[1];
+    std::thread consumers[3];
 
     for (auto& c : consumers) {
         c = std::thread{[&c] {
