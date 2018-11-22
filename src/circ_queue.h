@@ -70,11 +70,11 @@ public:
     circ_queue& operator=(circ_queue&&) = delete;
 
     std::size_t connect(void) {
-        return cc_.fetch_add(1, std::memory_order_acq_rel);
+        return cc_.fetch_add(1, std::memory_order_release);
     }
 
     std::size_t disconnect(void) {
-        return cc_.fetch_sub(1, std::memory_order_acq_rel);
+        return cc_.fetch_sub(1, std::memory_order_release);
     }
 
     std::size_t conn_count(void) const {
