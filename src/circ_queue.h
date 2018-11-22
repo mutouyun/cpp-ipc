@@ -83,10 +83,11 @@ public:
 
     void* acquire(void) {
         auto st = elem_start() + id(cr_.load(std::memory_order_relaxed));
+        // check remain count of consumers
         do {
-            // check remain count of consumers
-            if (!st->head_.load(std::memory_order_acquire)) {
-                st->head_.store(conn_count());
+            std::size_t expected = 0;
+            if (st->head_.compare_exchange_weak(expected, conn_count(),
+                std::memory_order_acquire, std::memory_order_relaxed)) {
                 break;
             }
         } while(1);
@@ -105,7 +106,7 @@ public:
         return (elem_start() + id(index))->data_;
     }
 
-    void commit(std::uint16_t index) {
+    void put(std::uint16_t index) {
         auto st = elem_start() + id(index);
         st->head_.fetch_sub(1, std::memory_order_release);
     }

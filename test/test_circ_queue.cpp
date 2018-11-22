@@ -53,7 +53,7 @@ void Unit::test_producer(void) {
             do {
                 while (cur != cq__->cursor()) {
                     int d = *static_cast<const int*>(cq__->get(cur));
-                    cq__->commit(cur);
+                    cq__->put(cur);
                     if (d < 0) return;
                     cur = cq__->next(cur);
                     list.push_back(d);
