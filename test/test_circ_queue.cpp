@@ -3,6 +3,8 @@
 #include <type_traits>
 #include <memory>
 #include <new>
+#include <vector>
+#include <thread>
 
 #include "circ_queue.h"
 #include "test.h"
@@ -46,14 +48,15 @@ void Unit::test_producer(void) {
             auto disconn = [](cq_t* cq) { cq->disconnect(); };
             std::unique_ptr<cq_t, decltype(disconn)> guard(cq__, disconn);
 
-            auto it = cq__->begin();
             int i = 0;
             do {
-                while (it != cq__->end()) {
+                while (cur != cq__->cursor()) {
                     int d = *static_cast<const int*>(cq__->get(cur));
+                    cq__->commit(cur);
                     if (d < 0) return;
-                    QCOMPARE(d, i);
-                    ++i; ++it; cq__->next(cur);
+                    cur = cq__->next(cur);
+                    QCOMPARE(i, d);
+                    ++i;
                 }
             } while(1);
         }};
@@ -63,7 +66,7 @@ void Unit::test_producer(void) {
         std::this_thread::yield();
     }
     capo::stopwatch<> sw;
-    constexpr static int loops = 267/*1000000*/;
+    constexpr static int loops = 1000000;
 
     std::cout << "start producer..." << std::endl;
     sw.start();
