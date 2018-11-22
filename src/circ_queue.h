@@ -78,7 +78,7 @@ public:
     }
 
     std::size_t conn_count(void) const {
-        return cc_.load(std::memory_order_acquire);
+        return cc_.load(std::memory_order_consume);
     }
 
     void* acquire(void) {
@@ -87,7 +87,7 @@ public:
         do {
             std::size_t expected = 0;
             if (st->head_.compare_exchange_weak(expected, conn_count(),
-                std::memory_order_acquire, std::memory_order_relaxed)) {
+                std::memory_order_consume, std::memory_order_relaxed)) {
                 break;
             }
         } while(1);
@@ -99,7 +99,7 @@ public:
     }
 
     std::uint16_t cursor(void) const {
-        return cr_.load(std::memory_order_acquire);
+        return cr_.load(std::memory_order_consume);
     }
 
     void* get(std::uint16_t index) {
