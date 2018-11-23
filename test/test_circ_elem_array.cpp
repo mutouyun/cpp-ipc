@@ -47,7 +47,7 @@ void Unit::test_inst(void) {
 
 void Unit::test_prod_cons_1vN(void) {
     ::new (cq__) cq_t;
-    std::thread consumers[1];
+    std::thread consumers[3];
     std::atomic_int fini { 0 };
     capo::stopwatch<> sw;
     constexpr static int loops = 10000000;
