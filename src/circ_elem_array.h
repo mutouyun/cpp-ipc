@@ -103,7 +103,7 @@ public:
 
     void* acquire(void) {
         auto el = elem(wt_.fetch_add(1, std::memory_order_consume));
-        // check read flag
+        // check read finished by all consumers
         do {
             uc_t expected = 0;
             if (el->head_.rf_.compare_exchange_weak(
@@ -116,26 +116,39 @@ public:
     }
 
     void commit(void* ptr) {
-        auto el = elem(ptr);
-        ui_t wt = index_of(el);
+        auto el = elem(ptr);    // get the commit element
+        ui_t cm = index_of(el); // get the index of this element
         do {
-            bool no_next;
+            bool no_next_check;
             uc_t curr;
             do {
                 curr = cr_.load(std::memory_order_relaxed);
-                no_next = (index_of(curr) != wt);
-                if (no_next) {
+                no_next_check = (index_of(curr) != cm);
+                if (no_next_check) {
+                    /*
+                     * set wf_ for the other producer thread which is commiting
+                     * the element matches cr_ could see it has commited
+                     */
                     el->head_.wf_.store(1, std::memory_order_relaxed);
                 }
                 else {
+                    /*
+                     * no thread changes the cr_ except current thread at here
+                     * so we could just fetch_add & break, no need to check cr_ again
+                     */
                     cr_.fetch_add(1, std::memory_order_relaxed);
                     el->head_.wf_.store(0, std::memory_order_release);
-                    no_next = false;
+                    no_next_check = false;
                     break;
                 }
+                /*
+                 * it needs to go back and judge again
+                 * when cr_ has been changed by the other producer thread
+                 */
             } while(curr != cr_.load(std::memory_order_acq_rel));
-            if (no_next) return;
-        } while(el = elem(++wt), el->head_.wf_.load(std::memory_order_consume));
+            // check next element has commited or not
+            if (no_next_check) return;
+        } while(el = elem(++cm), el->head_.wf_.load(std::memory_order_consume));
     }
 
     uc_t cursor(void) const {

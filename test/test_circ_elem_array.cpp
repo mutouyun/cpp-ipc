@@ -31,9 +31,9 @@ void Unit::test_inst(void) {
     std::cout << "cq_t::elem_size  = " << cq_t::elem_size  << std::endl;
     std::cout << "cq_t::block_size = " << cq_t::block_size << std::endl;
 
-    QCOMPARE(cq_t::data_size , 12);
-    QCOMPARE(cq_t::block_size, 4096);
-    QCOMPARE(sizeof(cq_t), cq_t::block_size + cq_t::head_size);
+    QCOMPARE(static_cast<std::size_t>(cq_t::data_size) , static_cast<std::size_t>(12));
+    QCOMPARE(static_cast<std::size_t>(cq_t::block_size), static_cast<std::size_t>(4096));
+    QCOMPARE(sizeof(cq_t), static_cast<std::size_t>(cq_t::block_size + cq_t::head_size));
 
     cq__ = new cq_t;
     std::cout << "sizeof(ipc::circ::elem_array<4096>) = " << sizeof(*cq__) << std::endl;
@@ -50,7 +50,7 @@ void Unit::test_prod_cons_1vN(void) {
     std::thread consumers[1];
     std::atomic_int fini { 0 };
     capo::stopwatch<> sw;
-    constexpr static int loops = 1000000;
+    constexpr static int loops = 10000000;
 
     for (auto& c : consumers) {
         c = std::thread{[&] {
@@ -78,6 +78,7 @@ void Unit::test_prod_cons_1vN(void) {
                 auto ts = sw.elapsed<std::chrono::microseconds>();
                 std::cout << "performance: " << (double(ts) / double(loops)) << " us/d" << std::endl;
             }
+            std::cout << "confirming..." << std::endl;
             for (int d : list) {
                 QCOMPARE(i, d);
                 ++i;
