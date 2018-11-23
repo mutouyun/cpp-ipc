@@ -17,6 +17,6 @@ HEADERS += \
 SOURCES += \
     ../test/main.cpp \
     ../test/test_shm.cpp \
-    ../test/test_circ_queue.cpp
+    ../test/test_circ_elem_array.cpp
 
 LIBS += -L$${DESTDIR} -lipc

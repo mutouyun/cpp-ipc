@@ -6,7 +6,7 @@
 #include <vector>
 #include <thread>
 
-#include "circ_queue.h"
+#include "circ_elem_array.h"
 #include "test.h"
 #include "stopwatch.hpp"
 
@@ -17,30 +17,43 @@ class Unit : public TestSuite {
 
 private slots:
     void test_inst(void);
-    void test_producer(void);
+    void test_prod_cons_1vN(void);
 } unit__;
 
-#include "test_circ_queue.moc"
+#include "test_circ_elem_array.moc"
 
-using cq_t = ipc::circ_queue<4096>;
+using cq_t = ipc::circ::elem_array<12>;
 cq_t* cq__;
 
 void Unit::test_inst(void) {
+    std::cout << "cq_t::head_size  = " << cq_t::head_size  << std::endl;
+    std::cout << "cq_t::data_size  = " << cq_t::data_size  << std::endl;
+    std::cout << "cq_t::elem_size  = " << cq_t::elem_size  << std::endl;
+    std::cout << "cq_t::block_size = " << cq_t::block_size << std::endl;
+
+    QCOMPARE(cq_t::data_size , 12);
+    QCOMPARE(cq_t::block_size, 4096);
+    QCOMPARE(sizeof(cq_t), cq_t::block_size + cq_t::head_size);
+
     cq__ = new cq_t;
-    QCOMPARE(sizeof(*cq__), static_cast<std::size_t>(cq_t::total_size));
+    std::cout << "sizeof(ipc::circ::elem_array<4096>) = " << sizeof(*cq__) << std::endl;
+
     auto a = cq__->take(1);
     auto b = cq__->take(2);
-    QCOMPARE(static_cast<std::size_t>(static_cast<std::uint8_t const *>(b) -
-                                      static_cast<std::uint8_t const *>(a)),
+    QCOMPARE(static_cast<std::size_t>(static_cast<ipc::byte_t*>(b) -
+                                      static_cast<ipc::byte_t*>(a)),
              static_cast<std::size_t>(cq_t::elem_size));
 }
 
-void Unit::test_producer(void) {
+void Unit::test_prod_cons_1vN(void) {
     ::new (cq__) cq_t;
-    std::thread consumers[3];
+    std::thread consumers[1];
+    std::atomic_int fini { 0 };
+    capo::stopwatch<> sw;
+    constexpr static int loops = 1000000;
 
     for (auto& c : consumers) {
-        c = std::thread{[&c] {
+        c = std::thread{[&] {
             auto cur = cq__->cursor();
             std::cout << "start consumer " << &c << ": cur = " << (int)cur << std::endl;
 
@@ -55,43 +68,41 @@ void Unit::test_producer(void) {
                     auto p = static_cast<int*>(cq__->take(cur));
                     int d = *p;
                     cq__->put(p);
-                    if (d < 0) return;
-                    cur = cq__->next(cur);
+                    if (d < 0) goto finished;
+                    ++cur;
                     list.push_back(d);
                 }
-                for (int d : list) {
-                    QCOMPARE(i, d);
-                    ++i;
-                }
-                list.clear();
             } while(1);
+        finished:
+            if (++fini == std::extent<decltype(consumers)>::value) {
+                auto ts = sw.elapsed<std::chrono::microseconds>();
+                std::cout << "performance: " << (double(ts) / double(loops)) << " us/d" << std::endl;
+            }
+            for (int d : list) {
+                QCOMPARE(i, d);
+                ++i;
+            }
         }};
     }
 
     while (cq__->conn_count() != std::extent<decltype(consumers)>::value) {
         std::this_thread::yield();
     }
-    capo::stopwatch<> sw;
-    constexpr static int loops = 1000000;
 
     std::cout << "start producer..." << std::endl;
     sw.start();
     for (int i = 0; i < loops; ++i) {
         auto d = static_cast<int*>(cq__->acquire());
         *d = i;
-        cq__->commit();
+        cq__->commit(d);
     }
     auto d = static_cast<int*>(cq__->acquire());
     *d = -1;
-    cq__->commit();
+    cq__->commit(d);
 
     for (auto& c : consumers) {
         c.join();
     }
-
-    auto ts = sw.elapsed<std::chrono::microseconds>();
-    std::cout << "time spent : " << (ts / 1000) << " ms" << std::endl;
-    std::cout << "performance: " << (double(ts) / double(loops)) << " us/msg" << std::endl;
 }
 
 } // internal-linkage

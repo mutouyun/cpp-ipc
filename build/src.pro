@@ -15,7 +15,7 @@ INCLUDEPATH += \
 HEADERS += \
     ../include/export.h \
     ../include/shm.h \
-    ../src/circ_queue.h
+    ../src/circ_elem_array.h
 
 SOURCES += \
     ../src/shm.cpp
