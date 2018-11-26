@@ -107,8 +107,7 @@ public:
         do {
             uc_t expected = 0;
             if (el->head_.rf_.compare_exchange_weak(
-                        expected, static_cast<uc_t>(conn_count()),
-                        std::memory_order_consume, std::memory_order_relaxed)) {
+                        expected, static_cast<uc_t>(conn_count()), std::memory_order_acq_rel)) {
                 break;
             }
         } while(1);
@@ -117,38 +116,41 @@ public:
 
     void commit(void* ptr) {
         auto el = elem(ptr);    // get the commit element
-        ui_t cm = index_of(el); // get the index of this element
+        ui_t wi = index_of(el); // get the index of this element (the write index)
         do {
-            bool no_next_check;
-            uc_t curr;
+            bool no_next, cas;
+            uc_t curr = cr_.load(std::memory_order_relaxed), next;
             do {
-                curr = cr_.load(std::memory_order_relaxed);
-                no_next_check = (index_of(curr) != cm);
-                if (no_next_check) {
+                next = curr;
+                if ((no_next = (index_of(curr) != wi)) /* assign & judge */) {
                     /*
+                     * commit is not the current commit
                      * set wf_ for the other producer thread which is commiting
                      * the element matches cr_ could see it has commited
                      */
-                    el->head_.wf_.store(1, std::memory_order_relaxed);
+                    el->head_.wf_.store(1, std::memory_order_release);
                 }
                 else {
                     /*
-                     * no thread changes the cr_ except current thread at here
-                     * so we could just fetch_add & break, no need to check cr_ again
+                     * commit is the current commit
+                     * so we should increase the cursor & go check the next
                      */
-                    cr_.fetch_add(1, std::memory_order_relaxed);
+                    ++next;
                     el->head_.wf_.store(0, std::memory_order_release);
-                    no_next_check = false;
-                    break;
                 }
                 /*
                  * it needs to go back and judge again
                  * when cr_ has been changed by the other producer thread
                  */
-            } while(curr != cr_.load(std::memory_order_acq_rel));
+            } while(!(cas = cr_.compare_exchange_weak(curr, next, std::memory_order_acq_rel)) && no_next);
+            /*
+             * if compare_exchange failed & !no_next,
+             * means there is another producer thread just update this commit,
+             * so in this case we could just return
+            */
+            if (no_next || (!cas/* && !no_next*/)) return;
             // check next element has commited or not
-            if (no_next_check) return;
-        } while(el = elem(++cm), el->head_.wf_.load(std::memory_order_consume));
+        } while(el = elem(++wi), el->head_.wf_.load(std::memory_order_consume));
     }
 
     uc_t cursor(void) const {
