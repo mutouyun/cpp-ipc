@@ -106,8 +106,9 @@ public:
         // check read finished by all consumers
         do {
             uc_t expected = 0;
+            std::atomic_thread_fence(std::memory_order_acquire);
             if (el->head_.rf_.compare_exchange_weak(
-                        expected, static_cast<uc_t>(conn_count()), std::memory_order_acq_rel)) {
+                        expected, cc_.load(std::memory_order_relaxed), std::memory_order_release)) {
                 break;
             }
             std::this_thread::yield();
