@@ -7,6 +7,7 @@
 #include <utility>
 #include <limits>
 #include <algorithm>
+#include <thread>
 
 namespace ipc {
 
@@ -102,7 +103,7 @@ public:
     }
 
     void* acquire(void) {
-        auto el = elem(wt_.fetch_add(1, std::memory_order_acq_rel));
+        auto el = elem(wt_.load(std::memory_order_consume));
         // check read finished by all consumers
         do {
             uc_t expected = 0;
@@ -110,7 +111,9 @@ public:
                         expected, static_cast<uc_t>(conn_count()), std::memory_order_acq_rel)) {
                 break;
             }
+            std::this_thread::yield();
         } while(1);
+        wt_.fetch_add(1, std::memory_order_release);
         return el->data_;
     }
 
@@ -119,7 +122,7 @@ public:
         ui_t wi = index_of(el); // get the index of this element (the write index)
         do {
             bool no_next, cas;
-            uc_t curr = cr_.load(std::memory_order_relaxed), next;
+            uc_t curr = cr_.load(std::memory_order_consume), next;
             do {
                 next = curr;
                 if ((no_next = (index_of(curr) != wi)) /* assign & judge */) {
@@ -127,21 +130,21 @@ public:
                      * commit is not the current commit
                      * set wf_ for the other producer thread which is commiting
                      * the element matches cr_ could see it has commited
-                     */
+                    */
                     el->head_.wf_.store(1, std::memory_order_release);
                 }
                 else {
                     /*
                      * commit is the current commit
                      * so we just increase the cursor & go check the next
-                     */
+                    */
                     ++next;
                     el->head_.wf_.store(0, std::memory_order_release);
                 }
                 /*
                  * it needs to go back and judge again
                  * when cr_ has been changed by the other producer thread
-                 */
+                */
             } while(!(cas = cr_.compare_exchange_weak(curr, next, std::memory_order_acq_rel)) && no_next);
             /*
              * if compare_exchange failed & !no_next,
@@ -151,7 +154,7 @@ public:
             if (no_next || (!cas/* && !no_next*/)) return;
             /*
              * check next element has commited or not
-             */
+            */
         } while(el = elem(++wi), el->head_.wf_.exchange(0, std::memory_order_acq_rel));
     }
 

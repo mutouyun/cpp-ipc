@@ -5,7 +5,6 @@
 #include <new>
 #include <vector>
 #include <unordered_map>
-#include <thread>
 
 #include "circ_elem_array.h"
 #include "test.h"
