@@ -52,15 +52,14 @@ public:
     static_assert(data_size % alignof(head_t) == 0, "data_size must be multiple of alignof(head_t)");
 
 private:
-    byte_t block_[block_size];
-
     struct elem_t {
         head_t head_;
         byte_t data_[data_size];
     };
+    elem_t block_[elem_max];
 
     elem_t* elem_start(void) {
-        return reinterpret_cast<elem_t*>(block_);
+        return block_;
     }
 
     static elem_t* elem(void* ptr) {
@@ -148,7 +147,7 @@ public:
             } while(!(cas = cr_.compare_exchange_weak(curr, next, std::memory_order_acq_rel)) && no_next);
             /*
              * if compare_exchange failed & !no_next,
-             * means there is another producer thread just update this commit,
+             * means there is another producer thread updated this commit,
              * so in this case we could just return
             */
             if (no_next || (!cas/* && !no_next*/)) return;
