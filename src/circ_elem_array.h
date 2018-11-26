@@ -102,7 +102,7 @@ public:
     }
 
     void* acquire(void) {
-        auto el = elem(wt_.fetch_add(1, std::memory_order_consume));
+        auto el = elem(wt_.fetch_add(1, std::memory_order_acq_rel));
         // check read finished by all consumers
         do {
             uc_t expected = 0;
@@ -133,7 +133,7 @@ public:
                 else {
                     /*
                      * commit is the current commit
-                     * so we should increase the cursor & go check the next
+                     * so we just increase the cursor & go check the next
                      */
                     ++next;
                     el->head_.wf_.store(0, std::memory_order_release);
@@ -149,8 +149,10 @@ public:
              * so in this case we could just return
             */
             if (no_next || (!cas/* && !no_next*/)) return;
-            // check next element has commited or not
-        } while(el = elem(++wi), el->head_.wf_.load(std::memory_order_consume));
+            /*
+             * check next element has commited or not
+             */
+        } while(el = elem(++wi), el->head_.wf_.exchange(0, std::memory_order_acq_rel));
     }
 
     uc_t cursor(void) const {

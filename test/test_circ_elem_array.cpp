@@ -84,7 +84,7 @@ void test_prod_cons(void) {
             if (++fini == std::extent<decltype(consumers)>::value) {
                 auto ts = sw.elapsed<std::chrono::microseconds>();
                 std::cout << "[" << N << ":" << M << ", " << Loops << "]" << std::endl
-                          << "performance: " << (double(ts) / double(Loops)) << " us/d" << std::endl;
+                          << "performance: " << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
             }
             std::cout << "confirming..." << std::endl;
             for (int n = 0; n < static_cast<int>(std::extent<decltype(producers)>::value); ++n) {
@@ -130,11 +130,11 @@ void test_prod_cons(void) {
 }
 
 void Unit::test_prod_cons_1v1(void) {
-    test_prod_cons<1, 1>();
+//    test_prod_cons<1, 1>();
 }
 
 void Unit::test_prod_cons_1vN(void) {
-    test_prod_cons<1, 3>();
+//    test_prod_cons<1, 3>();
 }
 
 void Unit::test_prod_cons_Nv1(void) {
