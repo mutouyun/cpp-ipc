@@ -8,6 +8,7 @@
 #include <functional>
 
 #include "circ_elem_array.h"
+#include "circ_queue.h"
 #include "test.h"
 #include "stopwatch.hpp"
 
@@ -24,9 +25,11 @@ private slots:
     void test_prod_cons_1v1(void);
     void test_prod_cons_1v3(void);
     void test_prod_cons_performance(void);
+
+    void test_queue(void);
 } unit__;
 
-#include "test_circ_elem_array.moc"
+#include "test_circ.moc"
 
 using cq_t = ipc::circ::elem_array<12>;
 cq_t* cq__;
@@ -57,6 +60,11 @@ void Unit::test_inst(void) {
              static_cast<std::size_t>(cq_t::elem_size));
 }
 
+struct msg_t {
+    int pid_;
+    int dat_;
+};
+
 template <int N, int M, bool Confirmation = true, int Loops = 1000000>
 void test_prod_cons(void) {
     ::new (cq__) cq_t;
@@ -64,11 +72,6 @@ void test_prod_cons(void) {
     std::thread consumers[M];
     std::atomic_int fini { 0 };
     capo::stopwatch<> sw;
-
-    struct msg_t {
-        int pid_;
-        int dat_;
-    };
 
     std::unordered_map<int, std::vector<int>> list[std::extent<decltype(consumers)>::value];
     auto push_data = Confirmation ? [](std::vector<int>& l, int dat) {
@@ -174,6 +177,16 @@ struct test_performance<E, E> {
 
 void Unit::test_prod_cons_performance(void) {
     test_performance<1, 10>::start();
+}
+
+void Unit::test_queue(void) {
+    ipc::circ::queue<msg_t> queue;
+    queue.push(1, 2);
+    QVERIFY_EXCEPTION_THROWN(queue.pop(), std::exception);
+    QVERIFY(sizeof(decltype(queue)::array_t) <= sizeof(*cq__));
+
+    auto cq = ::new (cq__) decltype(queue)::array_t;
+    QVERIFY(queue.connect(cq) != ipc::error_count);
 }
 
 } // internal-linkage
