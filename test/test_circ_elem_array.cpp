@@ -69,7 +69,9 @@ void test_prod_cons(void) {
     for (auto& t : consumers) {
         t = std::thread{[&, cid] {
             auto cur = cq__->cursor();
-            std::cout << "start consumer " << &t << ": cur = " << (int)cur << std::endl;
+            if (Confirmation) {
+                std::cout << "start consumer " << &t << ": cur = " << (int)cur << std::endl;
+            }
 
             cq__->connect();
             std::unique_ptr<cq_t, void(*)(cq_t*)> guard(cq__, [](cq_t* cq) { cq->disconnect(); });
