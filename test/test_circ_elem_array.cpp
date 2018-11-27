@@ -18,7 +18,8 @@ class Unit : public TestSuite {
 private slots:
     void test_inst(void);
     void test_prod_cons_1v1(void);
-    void test_prod_cons_1vN(void);
+    void test_prod_cons_1v3(void);
+    void test_prod_cons_1v8(void);
 } unit__;
 
 #include "test_circ_elem_array.moc"
@@ -77,6 +78,7 @@ void test_prod_cons(void) {
                     ++cur;
                     list[cid][msg.pid_].push_back(msg.dat_);
                 }
+                std::this_thread::yield();
             } while(1);
         finished:
             if (++fini == std::extent<decltype(consumers)>::value) {
@@ -134,8 +136,12 @@ void Unit::test_prod_cons_1v1(void) {
     test_prod_cons<1, 1>();
 }
 
-void Unit::test_prod_cons_1vN(void) {
+void Unit::test_prod_cons_1v3(void) {
     test_prod_cons<1, 3>();
+}
+
+void Unit::test_prod_cons_1v8(void) {
+    test_prod_cons<1, 8>();
 }
 
 } // internal-linkage
