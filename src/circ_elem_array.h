@@ -99,7 +99,7 @@ public:
 
     void* acquire(void) {
         elem_t* el = elem(wt_.load(std::memory_order_acquire));
-        // check read finished by all consumers
+        // check all consumers have finished reading
         while(1) {
             std::size_t expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
