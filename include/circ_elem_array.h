@@ -76,7 +76,6 @@ private:
 
 public:
     elem_array(void) = default;
-    ~elem_array(void) = delete;
 
     elem_array(const elem_array&) = delete;
     elem_array& operator=(const elem_array&) = delete;

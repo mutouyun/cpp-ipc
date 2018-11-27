@@ -17,6 +17,9 @@ class Unit : public TestSuite {
     Q_OBJECT
 
 private slots:
+    void initTestCase(void);
+    void cleanupTestCase(void);
+
     void test_inst(void);
     void test_prod_cons_1v1(void);
     void test_prod_cons_1v3(void);
@@ -28,6 +31,14 @@ private slots:
 using cq_t = ipc::circ::elem_array<12>;
 cq_t* cq__;
 
+void Unit::initTestCase(void) {
+    cq__ = new cq_t;
+}
+
+void Unit::cleanupTestCase(void) {
+    delete cq__;
+}
+
 void Unit::test_inst(void) {
     std::cout << "cq_t::head_size  = " << cq_t::head_size  << std::endl;
     std::cout << "cq_t::data_size  = " << cq_t::data_size  << std::endl;
@@ -37,7 +48,6 @@ void Unit::test_inst(void) {
     QCOMPARE(static_cast<std::size_t>(cq_t::data_size) , static_cast<std::size_t>(12));
     QCOMPARE(sizeof(cq_t), static_cast<std::size_t>(cq_t::block_size + cq_t::head_size));
 
-    cq__ = new cq_t;
     std::cout << "sizeof(ipc::circ::elem_array<4096>) = " << sizeof(*cq__) << std::endl;
 
     auto a = cq__->take(1);
