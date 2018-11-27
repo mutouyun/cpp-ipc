@@ -19,7 +19,6 @@ private slots:
     void test_inst(void);
     void test_prod_cons_1v1(void);
     void test_prod_cons_1vN(void);
-    void test_prod_cons_Nv1(void);
 } unit__;
 
 #include "test_circ_elem_array.moc"
@@ -34,17 +33,16 @@ void Unit::test_inst(void) {
     std::cout << "cq_t::block_size = " << cq_t::block_size << std::endl;
 
     QCOMPARE(static_cast<std::size_t>(cq_t::data_size) , static_cast<std::size_t>(12));
-    QCOMPARE(static_cast<std::size_t>(cq_t::block_size), static_cast<std::size_t>(4096));
     QCOMPARE(sizeof(cq_t), static_cast<std::size_t>(cq_t::block_size + cq_t::head_size));
 
     cq__ = new cq_t;
     std::cout << "sizeof(ipc::circ::elem_array<4096>) = " << sizeof(*cq__) << std::endl;
 
-//    auto a = cq__->take(1);
-//    auto b = cq__->take(2);
-//    QCOMPARE(static_cast<std::size_t>(static_cast<ipc::byte_t*>(b) -
-//                                      static_cast<ipc::byte_t*>(a)),
-//             static_cast<std::size_t>(cq_t::elem_size));
+    auto a = cq__->take(1);
+    auto b = cq__->take(2);
+    QCOMPARE(static_cast<std::size_t>(static_cast<ipc::byte_t*>(b) -
+                                      static_cast<ipc::byte_t*>(a)),
+             static_cast<std::size_t>(cq_t::elem_size));
 }
 
 template <int N, int M, int Loops = 1000000>
@@ -129,15 +127,11 @@ void test_prod_cons(void) {
 }
 
 void Unit::test_prod_cons_1v1(void) {
-//    test_prod_cons<1, 1>();
+    test_prod_cons<1, 1>();
 }
 
 void Unit::test_prod_cons_1vN(void) {
-//    test_prod_cons<1, 3>();
-}
-
-void Unit::test_prod_cons_Nv1(void) {
-    test_prod_cons<2, 1>();
+    test_prod_cons<1, 3>();
 }
 
 } // internal-linkage
