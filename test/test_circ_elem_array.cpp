@@ -5,6 +5,7 @@
 #include <new>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 #include "circ_elem_array.h"
 #include "test.h"
@@ -19,7 +20,7 @@ private slots:
     void test_inst(void);
     void test_prod_cons_1v1(void);
     void test_prod_cons_1v3(void);
-    void test_prod_cons_1v8(void);
+    void test_prod_cons_performance(void);
 } unit__;
 
 #include "test_circ_elem_array.moc"
@@ -46,7 +47,7 @@ void Unit::test_inst(void) {
              static_cast<std::size_t>(cq_t::elem_size));
 }
 
-template <int N, int M, int Loops = 1000000>
+template <int N, int M, bool Confirmation = true, int Loops = 1000000>
 void test_prod_cons(void) {
     ::new (cq__) cq_t;
     std::thread producers[N];
@@ -60,6 +61,10 @@ void test_prod_cons(void) {
     };
 
     std::unordered_map<int, std::vector<int>> list[std::extent<decltype(consumers)>::value];
+    auto push_data = Confirmation ? [](std::vector<int>& l, int dat) {
+        l.push_back(dat);
+    } : [](std::vector<int>&, int) {};
+
     int cid = 0;
     for (auto& t : consumers) {
         t = std::thread{[&, cid] {
@@ -76,25 +81,25 @@ void test_prod_cons(void) {
                     cq__->put(pmsg);
                     if (msg.pid_ < 0) goto finished;
                     ++cur;
-                    list[cid][msg.pid_].push_back(msg.dat_);
+                    push_data(list[cid][msg.pid_], msg.dat_);
                 }
                 std::this_thread::yield();
             } while(1);
         finished:
-            if (++fini == std::extent<decltype(consumers)>::value) {
-                auto ts = sw.elapsed<std::chrono::microseconds>();
-                std::cout << "[" << N << ":" << M << ", " << Loops << "]" << std::endl
-                          << "performance: " << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
-                std::cout << "confirming..." << std::endl;
-                for (auto& cons_vec : list) {
-                    for (int n = 0; n < static_cast<int>(std::extent<decltype(producers)>::value); ++n) {
-                        auto& vec = cons_vec[n];
-                        QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
-                        int i = 0;
-                        for (int d : vec) {
-                            QCOMPARE(i, d);
-                            ++i;
-                        }
+            if (++fini != std::extent<decltype(consumers)>::value) return;
+            auto ts = sw.elapsed<std::chrono::microseconds>();
+            std::cout << "[" << N << ":" << M << ", " << Loops << "]" << std::endl
+                      << "performance: " << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
+            if (!Confirmation) return;
+            std::cout << "confirming..." << std::endl;
+            for (auto& cons_vec : list) {
+                for (int n = 0; n < static_cast<int>(std::extent<decltype(producers)>::value); ++n) {
+                    auto& vec = cons_vec[n];
+                    QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
+                    int i = 0;
+                    for (int d : vec) {
+                        QCOMPARE(i, d);
+                        ++i;
                     }
                 }
             }
@@ -140,8 +145,23 @@ void Unit::test_prod_cons_1v3(void) {
     test_prod_cons<1, 3>();
 }
 
-void Unit::test_prod_cons_1v8(void) {
-    test_prod_cons<1, 8>();
+template <int B, int E>
+struct test_performance {
+    static void start(void) {
+        test_prod_cons<1, B, false>();
+        test_performance<B + 1, E>::start();
+    }
+};
+
+template <int E>
+struct test_performance<E, E> {
+    static void start(void) {
+        test_prod_cons<1, E, false>();
+    }
+};
+
+void Unit::test_prod_cons_performance(void) {
+    test_performance<1, 10>::start();
 }
 
 } // internal-linkage
