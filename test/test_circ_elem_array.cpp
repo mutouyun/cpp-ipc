@@ -58,15 +58,16 @@ void test_prod_cons(void) {
         int dat_;
     };
 
+    std::unordered_map<int, std::vector<int>> list[std::extent<decltype(consumers)>::value];
+    int cid = 0;
     for (auto& t : consumers) {
-        t = std::thread{[&] {
+        t = std::thread{[&, cid] {
             auto cur = cq__->cursor();
             std::cout << "start consumer " << &t << ": cur = " << (int)cur << std::endl;
 
             cq__->connect();
             std::unique_ptr<cq_t, void(*)(cq_t*)> guard(cq__, [](cq_t* cq) { cq->disconnect(); });
 
-            std::unordered_map<int, std::vector<int>> list;
             do {
                 while (cur != cq__->cursor()) {
                     msg_t* pmsg = static_cast<msg_t*>(cq__->take(cur)),
@@ -74,7 +75,7 @@ void test_prod_cons(void) {
                     cq__->put(pmsg);
                     if (msg.pid_ < 0) goto finished;
                     ++cur;
-                    list[msg.pid_].push_back(msg.dat_);
+                    list[cid][msg.pid_].push_back(msg.dat_);
                 }
             } while(1);
         finished:
@@ -82,18 +83,21 @@ void test_prod_cons(void) {
                 auto ts = sw.elapsed<std::chrono::microseconds>();
                 std::cout << "[" << N << ":" << M << ", " << Loops << "]" << std::endl
                           << "performance: " << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
-            }
-            std::cout << "confirming..." << std::endl;
-            for (int n = 0; n < static_cast<int>(std::extent<decltype(producers)>::value); ++n) {
-                auto& vec = list[n];
-                QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
-                int i = 0;
-                for (int d : vec) {
-                    QCOMPARE(i, d);
-                    ++i;
+                std::cout << "confirming..." << std::endl;
+                for (auto& cons_vec : list) {
+                    for (int n = 0; n < static_cast<int>(std::extent<decltype(producers)>::value); ++n) {
+                        auto& vec = cons_vec[n];
+                        QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
+                        int i = 0;
+                        for (int d : vec) {
+                            QCOMPARE(i, d);
+                            ++i;
+                        }
+                    }
                 }
             }
         }};
+        ++cid;
     }
 
     while (cq__->conn_count() != std::extent<decltype(consumers)>::value) {

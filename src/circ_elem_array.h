@@ -34,7 +34,7 @@ enum : std::size_t {
 template <std::size_t DataSize>
 class elem_array : private elem_array_head {
     struct head_t {
-        std::atomic<std::size_t> rc_ { 0 }; // read counter
+        std::atomic<std::uint32_t> rc_ { 0 }; // read counter
     };
 
 public:
@@ -45,8 +45,6 @@ public:
         elem_size  = sizeof(head_t) + DataSize,
         block_size = elem_size * elem_max
     };
-
-    static_assert(data_size % alignof(head_t) == 0, "data_size must be multiple of alignof(head_t)");
 
 private:
     struct elem_t {
@@ -101,10 +99,10 @@ public:
         elem_t* el = elem(wt_.load(std::memory_order_acquire));
         // check all consumers have finished reading
         while(1) {
-            std::size_t expected = 0;
+            std::uint32_t expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
                         expected,
-                        static_cast<std::size_t>(cc_.load(std::memory_order_relaxed)),
+                        static_cast<std::uint32_t>(cc_.load(std::memory_order_relaxed)),
                         std::memory_order_release)) {
                 break;
             }
