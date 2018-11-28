@@ -65,91 +65,217 @@ struct msg_t {
     int dat_;
 };
 
-template <int N, int M, bool Confirmation = true, int Loops = 1000000>
-void test_prod_cons(void) {
-    ::new (cq__) cq_t;
+struct test_stopwatch {
+    capo::stopwatch<> sw_;
+    std::atomic_flag started_ = ATOMIC_FLAG_INIT;
+
+    void start(void) {
+        if (!started_.test_and_set()) {
+            sw_.start();
+        }
+    }
+
+    void print_elapsed(int N, int M, int Loops) {
+        auto ts = sw_.elapsed<std::chrono::microseconds>();
+        std::cout << "[" << N << ":" << M << ", " << Loops << "]" << std::endl
+                  << "performance: " << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
+    }
+};
+
+template <bool Confirmation>
+struct test_confirm {
+    std::unordered_map<int, std::vector<int>>* list_;
+    int lcount_;
+
+    test_confirm(int M) {
+        list_ = new std::remove_reference_t<decltype(*list_)>[lcount_ = M];
+    }
+
+    ~test_confirm(void) {
+        delete [] list_;
+    }
+
+    void prepare(void* pt) {
+        std::cout << "start consumer: " << pt << std::endl;
+    }
+
+    void push_data(int cid, msg_t const & msg) {
+        list_[cid][msg.pid_].push_back(msg.dat_);
+    }
+
+    void verify(int N, int Loops) {
+        std::cout << "confirming..." << std::endl;
+        for (int m = 0; m < lcount_; ++m) {
+            auto& cons_vec = list_[m];
+            for (int n = 0; n < N; ++n) {
+                auto& vec = cons_vec[n];
+                QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
+                int i = 0;
+                for (int d : vec) {
+                    QCOMPARE(i, d);
+                    ++i;
+                }
+            }
+        }
+    }
+};
+
+template <>
+struct test_confirm<false> {
+    test_confirm  (int)                {}
+    void prepare  (void*)              {}
+    void push_data(int, msg_t const &) {}
+    void verify   (int, int)           {}
+};
+
+template <typename T>
+struct test_cq;
+
+template <std::size_t D>
+struct test_cq<ipc::circ::elem_array<D>> {
+    using ca_t = ipc::circ::elem_array<D>;
+    using cn_t = typename std::result_of<decltype(&ca_t::cursor)(ca_t)>::type;
+
+    ca_t* ca_;
+
+    test_cq(ca_t* ca) : ca_(ca) {
+        ::new (ca) ca_t;
+    }
+
+    cn_t connect(void) {
+        auto cur = ca_->cursor();
+        ca_->connect();
+        return cur;
+    }
+
+    void disconnect(cn_t) {
+        ca_->disconnect();
+    }
+
+    void wait_start(int M) {
+        while (ca_->conn_count() != static_cast<std::size_t>(M)) {
+            std::this_thread::yield();
+        }
+    }
+
+    template <typename F>
+    void recv(cn_t cur, F&& proc) {
+        do {
+            while (cur != ca_->cursor()) {
+                msg_t* pmsg = static_cast<msg_t*>(ca_->take(cur)),
+                        msg = *pmsg;
+                ca_->put(pmsg);
+                if (msg.pid_ < 0) return;
+                ++cur;
+                proc(msg);
+            }
+            std::this_thread::yield();
+        } while(1);
+    }
+
+    void send(msg_t const & msg) {
+        msg_t* pmsg = static_cast<msg_t*>(ca_->acquire());
+        (*pmsg) = msg;
+        ca_->commit(pmsg);
+    }
+};
+
+template <typename T>
+struct test_cq<ipc::circ::queue<T>> {
+    using cn_t = ipc::circ::queue<T>;
+    using ca_t = typename cn_t::array_t;
+
+    ca_t* ca_;
+
+    test_cq(void*) : ca_(reinterpret_cast<ca_t*>(cq__)) {
+        ::new (ca_) ca_t;
+    }
+
+    cn_t connect(void) {
+        cn_t queue;
+        [&] {
+            queue.attch(ca_);
+            QVERIFY(queue.connect() != ipc::error_count);
+        } ();
+        return queue;
+    }
+
+    void disconnect(cn_t& queue) {
+        QVERIFY(queue.disconnect() != ipc::error_count);
+        QVERIFY(queue.detach() != nullptr);
+    }
+
+    void wait_start(int M) {
+        while (ca_->conn_count() != static_cast<std::size_t>(M)) {
+            std::this_thread::yield();
+        }
+    }
+
+    template <typename F>
+    void recv(cn_t& queue, F&& proc) {
+        do {
+            auto msg = queue.pop();
+            if (msg.pid_ < 0) return;
+            proc(msg);
+        } while(1);
+    }
+
+    void send(msg_t const & msg) {
+        cn_t{ ca_ }.push(msg);
+    }
+};
+
+template <int N, int M, bool C = true, int Loops = 1000000, typename T>
+void test_prod_cons(T* cq) {
+    test_cq<T> tcq { cq };
+
     std::thread producers[N];
     std::thread consumers[M];
     std::atomic_int fini { 0 };
-    capo::stopwatch<> sw;
 
-    std::unordered_map<int, std::vector<int>> list[std::extent<decltype(consumers)>::value];
-    auto push_data = Confirmation ? [](std::vector<int>& l, int dat) {
-        l.push_back(dat);
-    } : [](std::vector<int>&, int) {};
+    test_stopwatch  sw;
+    test_confirm<C> cf { M };
 
     int cid = 0;
     for (auto& t : consumers) {
         t = std::thread{[&, cid] {
-            auto cur = cq__->cursor();
-            if (Confirmation) {
-                std::cout << "start consumer " << &t << ": cur = " << (int)cur << std::endl;
-            }
+            cf.prepare(&t);
+            auto cn = tcq.connect();
 
-            cq__->connect();
-            std::unique_ptr<cq_t, void(*)(cq_t*)> guard(cq__, [](cq_t* cq) { cq->disconnect(); });
+            using namespace std::placeholders;
+            tcq.recv(cn, std::bind(&test_confirm<C>::push_data, &cf, cid, _1));
 
-            do {
-                while (cur != cq__->cursor()) {
-                    msg_t* pmsg = static_cast<msg_t*>(cq__->take(cur)),
-                            msg = *pmsg;
-                    cq__->put(pmsg);
-                    if (msg.pid_ < 0) goto finished;
-                    ++cur;
-                    push_data(list[cid][msg.pid_], msg.dat_);
-                }
-                std::this_thread::yield();
-            } while(1);
-        finished:
+            tcq.disconnect(cn);
             if (++fini != std::extent<decltype(consumers)>::value) return;
-            auto ts = sw.elapsed<std::chrono::microseconds>();
-            std::cout << "[" << N << ":" << M << ", " << Loops << "]" << std::endl
-                      << "performance: " << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
-            if (!Confirmation) return;
-            std::cout << "confirming..." << std::endl;
-            for (auto& cons_vec : list) {
-                for (int n = 0; n < static_cast<int>(std::extent<decltype(producers)>::value); ++n) {
-                    auto& vec = cons_vec[n];
-                    QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
-                    int i = 0;
-                    for (int d : vec) {
-                        QCOMPARE(i, d);
-                        ++i;
-                    }
-                }
-            }
+            sw.print_elapsed(N, M, Loops);
+            cf.verify(N, Loops);
         }};
         ++cid;
     }
 
-    while (cq__->conn_count() != std::extent<decltype(consumers)>::value) {
-        std::this_thread::yield();
-    }
+    tcq.wait_start(M);
 
     std::cout << "start producers..." << std::endl;
-    std::atomic_flag started = ATOMIC_FLAG_INIT;
     int pid = 0;
     for (auto& t : producers) {
         t = std::thread{[&, pid] {
-            if (!started.test_and_set()) {
-                sw.start();
-            }
+            sw.start();
             for (int i = 0; i < Loops; ++i) {
-                msg_t* pmsg = static_cast<msg_t*>(cq__->acquire());
-                pmsg->pid_ = pid;
-                pmsg->dat_ = i;
-                cq__->commit(pmsg);
+                tcq.send({ pid, i });
             }
         }};
         ++pid;
     }
     for (auto& t : producers) t.join();
     // quit
-    msg_t* pmsg = static_cast<msg_t*>(cq__->acquire());
-    pmsg->pid_ = pmsg->dat_ = -1;
-    cq__->commit(pmsg);
+    tcq.send({ -1, -1 });
 
     for (auto& t : consumers) t.join();
+}
+
+template <int N, int M, bool C = true, int Loops = 1000000>
+void test_prod_cons(void) {
+    test_prod_cons<N, M, C, Loops>(cq__);
 }
 
 void Unit::test_prod_cons_1v1(void) {
@@ -186,7 +312,10 @@ void Unit::test_queue(void) {
     QVERIFY(sizeof(decltype(queue)::array_t) <= sizeof(*cq__));
 
     auto cq = ::new (cq__) decltype(queue)::array_t;
-    QVERIFY(queue.connect(cq) != ipc::error_count);
+    queue.attch(cq);
+    QVERIFY(queue.detach() != nullptr);
+
+    test_prod_cons<1, 1>((ipc::circ::queue<msg_t>*)nullptr);
 }
 
 } // internal-linkage

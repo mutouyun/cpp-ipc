@@ -4,6 +4,7 @@
 #include <new>
 #include <exception>
 #include <utility>
+#include <algorithm>
 
 #include "circ_elem_array.h"
 
@@ -21,22 +22,59 @@ public:
     using array_t = elem_array<sizeof(T)>;
 
 private:
-    array_t * elems_ = nullptr;
+    array_t* elems_ = nullptr;
     typename std::result_of<decltype(&array_t::cursor)(array_t)>::type cursor_ = 0;
 
 public:
-    std::size_t connect(array_t* arr) {
-        if (arr == nullptr) return error_count;
-        elems_  = arr;
+    queue(void) = default;
+
+    explicit queue(array_t* arr) : queue() {
+        attch(arr);
+    }
+
+    queue(queue&& rhs) : queue() {
+        swap(rhs);
+    }
+
+    ~queue(void) { detach(); }
+
+    void swap(queue& rhs) {
+        std::swap(elems_ , rhs.elems_ );
+        std::swap(cursor_, rhs.cursor_);
+    }
+
+    queue& operator=(queue rhs) {
+        swap(rhs);
+        return *this;
+    }
+
+    array_t * elems(void) {
+        return elems_;
+    }
+
+    std::size_t connect(void) {
+        if (elems_ == nullptr) return error_count;
         cursor_ = elems_->cursor();
         return elems_->connect();
     }
 
     std::size_t disconnect(void) {
         if (elems_ == nullptr) return error_count;
-        auto ret = elems_->disconnect();
+        return elems_->disconnect();
+    }
+
+    array_t* attch(array_t* arr) {
+        if (arr == nullptr) return nullptr;
+        auto old = elems_;
+        elems_ = arr;
+        return old;
+    }
+
+    array_t* detach(void) {
+        if (elems_ == nullptr) return nullptr;
+        auto old = elems_;
         elems_ = nullptr;
-        return ret;
+        return old;
     }
 
     std::size_t conn_count(void) const {
@@ -59,7 +97,7 @@ public:
             std::this_thread::yield();
         }
         auto item_ptr = static_cast<T*>(elems_->take(cursor_));
-        T item { *item_ptr };
+        T item = *item_ptr;
         elems_->put(item_ptr);
         return item;
     }
