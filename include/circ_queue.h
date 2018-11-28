@@ -36,8 +36,6 @@ public:
         swap(rhs);
     }
 
-    ~queue(void) { detach(); }
-
     void swap(queue& rhs) {
         std::swap(elems_ , rhs.elems_ );
         std::swap(cursor_, rhs.cursor_);
@@ -96,7 +94,7 @@ public:
         while (cursor_ == elems_->cursor()) {
             std::this_thread::yield();
         }
-        auto item_ptr = static_cast<T*>(elems_->take(cursor_));
+        auto item_ptr = static_cast<T*>(elems_->take(cursor_++));
         T item = *item_ptr;
         elems_->put(item_ptr);
         return item;

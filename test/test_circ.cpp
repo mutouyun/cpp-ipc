@@ -88,7 +88,9 @@ struct test_confirm {
     int lcount_;
 
     test_confirm(int M) {
-        list_ = new std::remove_reference_t<decltype(*list_)>[lcount_ = M];
+        list_ = new std::remove_reference_t<decltype(*list_)>[
+                    static_cast<std::size_t>(lcount_ = M)
+                ];
     }
 
     ~test_confirm(void) {
@@ -315,7 +317,7 @@ void Unit::test_queue(void) {
     queue.attch(cq);
     QVERIFY(queue.detach() != nullptr);
 
-    test_prod_cons<1, 1>((ipc::circ::queue<msg_t>*)nullptr);
+    test_prod_cons<1, 3>((ipc::circ::queue<msg_t>*)nullptr);
 }
 
 } // internal-linkage
