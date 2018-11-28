@@ -196,7 +196,7 @@ struct test_cq<ipc::circ::queue<T>> {
     cn_t connect(void) {
         cn_t queue;
         [&] {
-            queue.attch(ca_);
+            queue.attach(ca_);
             QVERIFY(queue.connect() != ipc::error_count);
         } ();
         return queue;
@@ -314,7 +314,7 @@ void Unit::test_queue(void) {
     QVERIFY(sizeof(decltype(queue)::array_t) <= sizeof(*cq__));
 
     auto cq = ::new (cq__) decltype(queue)::array_t;
-    queue.attch(cq);
+    queue.attach(cq);
     QVERIFY(queue.detach() != nullptr);
 
     test_prod_cons<1, 3>((ipc::circ::queue<msg_t>*)nullptr);

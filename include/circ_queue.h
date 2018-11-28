@@ -29,7 +29,7 @@ public:
     queue(void) = default;
 
     explicit queue(array_t* arr) : queue() {
-        attch(arr);
+        attach(arr);
     }
 
     queue(queue&& rhs) : queue() {
@@ -61,7 +61,7 @@ public:
         return elems_->disconnect();
     }
 
-    array_t* attch(array_t* arr) {
+    array_t* attach(array_t* arr) {
         if (arr == nullptr) return nullptr;
         auto old = elems_;
         elems_ = arr;
@@ -89,7 +89,7 @@ public:
 
     T pop(void) {
         if (elems_ == nullptr) throw std::invalid_argument {
-            "This queue hasn't connected to any elem_array."
+            "This queue hasn't attached any elem_array."
         };
         while (cursor_ == elems_->cursor()) {
             std::this_thread::yield();
