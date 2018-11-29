@@ -1,18 +1,14 @@
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <atomic>
 #include <utility>
-#include <limits>
 #include <algorithm>
 #include <thread>
 
+#include "def.h"
+
 namespace ipc {
-
-using byte_t = std::uint8_t;
-
 namespace circ {
 
 struct alignas(std::max_align_t) elem_array_head {

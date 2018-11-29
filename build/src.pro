@@ -17,10 +17,12 @@ HEADERS += \
     ../include/shm.h \
     ../include/circ_elem_array.h \
     ../include/circ_queue.h \
-    ../include/ipc.h
+    ../include/ipc.h \
+    ../include/def.h
 
 SOURCES += \
-    ../src/shm.cpp
+    ../src/shm.cpp \
+    ../src/ipc.cpp
 
 unix {
 

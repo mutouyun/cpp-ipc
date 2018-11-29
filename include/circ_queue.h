@@ -6,14 +6,10 @@
 #include <utility>
 #include <algorithm>
 
+#include "def.h"
 #include "circ_elem_array.h"
 
 namespace ipc {
-
-enum : std::size_t {
-    error_count = std::numeric_limits<std::size_t>::max()
-};
-
 namespace circ {
 
 template <typename T>
@@ -24,6 +20,7 @@ public:
 private:
     array_t* elems_ = nullptr;
     typename std::result_of<decltype(&array_t::cursor)(array_t)>::type cursor_ = 0;
+    bool connected_ = false;
 
 public:
     queue(void) = default;
@@ -52,19 +49,31 @@ public:
 
     std::size_t connect(void) {
         if (elems_ == nullptr) return error_count;
-        cursor_ = elems_->cursor();
+        if (connected_) return error_count;
+        connected_ = true;
         return elems_->connect();
     }
 
     std::size_t disconnect(void) {
         if (elems_ == nullptr) return error_count;
+        if (!connected_) return error_count;
+        connected_ = false;
         return elems_->disconnect();
+    }
+
+    std::size_t conn_count(void) const {
+        return (elems_ == nullptr) ? error_count : elems_->conn_count();
+    }
+
+    bool connected(void) const {
+        return connected_;
     }
 
     array_t* attach(array_t* arr) {
         if (arr == nullptr) return nullptr;
         auto old = elems_;
-        elems_ = arr;
+        elems_  = arr;
+        cursor_ = elems_->cursor();
         return old;
     }
 
@@ -75,16 +84,13 @@ public:
         return old;
     }
 
-    std::size_t conn_count(void) const {
-        return (elems_ == nullptr) ? error_count : elems_->conn_count();
-    }
-
     template <typename... P>
-    void push(P&&... params) {
-        if (elems_ == nullptr) return;
+    bool push(P&&... params) {
+        if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
         ::new (ptr) T { std::forward<P>(params)... };
         elems_->commit(ptr);
+        return true;
     }
 
     T pop(void) {

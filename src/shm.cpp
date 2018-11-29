@@ -1,6 +1,6 @@
-#include "shm.h"
-
 #include <utility>
+
+#include "shm.h"
 
 namespace ipc {
 namespace shm {
