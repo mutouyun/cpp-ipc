@@ -24,6 +24,7 @@ private slots:
     void test_inst(void);
     void test_prod_cons_1v1(void);
     void test_prod_cons_1v3(void);
+    void test_prod_cons_3v1(void);
     void test_prod_cons_performance(void);
 
     void test_queue(void);
@@ -82,18 +83,18 @@ struct test_stopwatch {
     }
 };
 
-template <bool Confirmation>
-struct test_confirm {
+template <bool V>
+struct test_verify {
     std::unordered_map<int, std::vector<int>>* list_;
     int lcount_;
 
-    test_confirm(int M) {
+    test_verify(int M) {
         list_ = new std::remove_reference_t<decltype(*list_)>[
                     static_cast<std::size_t>(lcount_ = M)
                 ];
     }
 
-    ~test_confirm(void) {
+    ~test_verify(void) {
         delete [] list_;
     }
 
@@ -106,7 +107,7 @@ struct test_confirm {
     }
 
     void verify(int N, int Loops) {
-        std::cout << "confirming..." << std::endl;
+        std::cout << "verifying..." << std::endl;
         for (int m = 0; m < lcount_; ++m) {
             auto& cons_vec = list_[m];
             for (int n = 0; n < N; ++n) {
@@ -123,8 +124,8 @@ struct test_confirm {
 };
 
 template <>
-struct test_confirm<false> {
-    test_confirm  (int)                {}
+struct test_verify<false> {
+    test_verify   (int)                {}
     void prepare  (void*)              {}
     void push_data(int, msg_t const &) {}
     void verify   (int, int)           {}
@@ -227,7 +228,7 @@ struct test_cq<ipc::circ::queue<T>> {
     }
 };
 
-template <int N, int M, bool C = true, int Loops = 1000000, typename T>
+template <int N, int M, bool V = true, int Loops = 1000000, typename T>
 void test_prod_cons(T* cq) {
     test_cq<T> tcq { cq };
 
@@ -235,22 +236,22 @@ void test_prod_cons(T* cq) {
     std::thread consumers[M];
     std::atomic_int fini { 0 };
 
-    test_stopwatch  sw;
-    test_confirm<C> cf { M };
+    test_stopwatch sw;
+    test_verify<V> vf { M };
 
     int cid = 0;
     for (auto& t : consumers) {
         t = std::thread{[&, cid] {
-            cf.prepare(&t);
+            vf.prepare(&t);
             auto cn = tcq.connect();
 
             using namespace std::placeholders;
-            tcq.recv(cn, std::bind(&test_confirm<C>::push_data, &cf, cid, _1));
+            tcq.recv(cn, std::bind(&test_verify<V>::push_data, &vf, cid, _1));
 
             tcq.disconnect(cn);
             if (++fini != std::extent<decltype(consumers)>::value) return;
             sw.print_elapsed(N, M, Loops);
-            cf.verify(N, Loops);
+            vf.verify(N, Loops);
         }};
         ++cid;
     }
@@ -275,9 +276,9 @@ void test_prod_cons(T* cq) {
     for (auto& t : consumers) t.join();
 }
 
-template <int N, int M, bool C = true, int Loops = 1000000>
+template <int N, int M, bool V = true, int Loops = 1000000>
 void test_prod_cons(void) {
-    test_prod_cons<N, M, C, Loops>(cq__);
+    test_prod_cons<N, M, V, Loops>(cq__);
 }
 
 void Unit::test_prod_cons_1v1(void) {
@@ -288,23 +289,45 @@ void Unit::test_prod_cons_1v3(void) {
     test_prod_cons<1, 3>();
 }
 
+void Unit::test_prod_cons_3v1(void) {
+    test_prod_cons<3, 1>();
+}
+
 template <int B, int E>
-struct test_performance {
+struct test_cons_performance {
     static void start(void) {
         test_prod_cons<1, B, false>();
-        test_performance<B + 1, E>::start();
+        test_cons_performance<B + 1, E>::start();
     }
 };
 
 template <int E>
-struct test_performance<E, E> {
+struct test_cons_performance<E, E> {
     static void start(void) {
         test_prod_cons<1, E, false>();
     }
 };
 
+template <int B, int E>
+struct test_prod_performance {
+    static void start(void) {
+        test_prod_cons<B, 1, false>();
+        test_prod_performance<B + 1, E>::start();
+    }
+};
+
+template <int E>
+struct test_prod_performance<E, E> {
+    static void start(void) {
+        test_prod_cons<E, 1, false>();
+    }
+};
+
 void Unit::test_prod_cons_performance(void) {
-    test_performance<1, 10>::start();
+    test_cons_performance<1, 10>::start();
+    test_prod_performance<1, 10>::start();
+    test_prod_cons<3, 3, false>();  // just test
+    test_prod_cons<5, 5>();         // test & verify
 }
 
 void Unit::test_queue(void) {
@@ -318,6 +341,8 @@ void Unit::test_queue(void) {
     QVERIFY(queue.detach() != nullptr);
 
     test_prod_cons<1, 3>((ipc::circ::queue<msg_t>*)nullptr);
+    test_prod_cons<3, 1>((ipc::circ::queue<msg_t>*)nullptr);
+    test_prod_cons<3, 3>((ipc::circ::queue<msg_t>*)nullptr);
 }
 
 } // internal-linkage
