@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstring>
 #include <atomic>
 #include <utility>
 #include <algorithm>
@@ -47,8 +46,7 @@ public:
 private:
     struct elem_t {
         head_t head_;
-        byte_t data_[data_size];
-        elem_t(void) { ::memset(data_, 0, sizeof(data_)); }
+        byte_t data_[data_size] {};
     };
     elem_t block_[elem_max];
 
