@@ -16,10 +16,10 @@ struct alignas(std::max_align_t) elem_array_head {
     using uc_t = std::uint16_t;
     using ac_t = std::atomic<uc_t>;
 
+    std::atomic<std::size_t> lc_ { 0 }; // write spin lock flag
+
     ac_t cc_ { 0 }; // connection counter, using for broadcast
     ac_t wt_ { 0 }; // write index
-
-    std::atomic_flag lc_ ATOMIC_FLAG_INIT; // write spin lock flag
 };
 
 enum : std::size_t {
@@ -93,7 +93,7 @@ public:
     }
 
     void* acquire(void) {
-        while (lc_.test_and_set(std::memory_order_acquire)) {
+        while (lc_.exchange(1, std::memory_order_acquire)) {
             std::this_thread::yield();
         }
         elem_t* el = elem(wt_.load(std::memory_order_relaxed));
@@ -114,7 +114,7 @@ public:
 
     void commit(void* /*ptr*/) {
         wt_.fetch_add(1, std::memory_order_relaxed);
-        lc_.clear(std::memory_order_release);
+        lc_.store(0, std::memory_order_release);
     }
 
     uc_t cursor(void) const {

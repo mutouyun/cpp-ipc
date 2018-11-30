@@ -84,8 +84,27 @@ public:
         return old;
     }
 
+    bool push(T const & item) {
+        if (elems_ == nullptr) return false;
+        auto ptr = elems_->acquire();
+        ::new (ptr) T(item);
+        elems_->commit(ptr);
+        return true;
+    }
+
+    template <typename P>
+    auto push(P&& param) // disable this if P is the same as T
+     -> std::enable_if_t<!std::is_same<std::remove_reference_t<P>, T>::value, bool> {
+        if (elems_ == nullptr) return false;
+        auto ptr = elems_->acquire();
+        ::new (ptr) T { std::forward<P>(param) };
+        elems_->commit(ptr);
+        return true;
+    }
+
     template <typename... P>
-    bool push(P&&... params) {
+    auto push(P&&... params) // some old compilers are not support this well
+     -> std::enable_if_t<(sizeof...(P) != 1), bool> {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
         ::new (ptr) T { std::forward<P>(params)... };

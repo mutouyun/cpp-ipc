@@ -293,41 +293,42 @@ void Unit::test_prod_cons_3v1(void) {
     test_prod_cons<3, 1>();
 }
 
-template <int B, int E>
-struct test_cons_performance {
+template <int P, int C>
+struct test_performance {
     static void start(void) {
-        test_prod_cons<1, B, false>();
-        test_cons_performance<B + 1, E>::start();
+        test_performance<P - 1, C - 1>::start();
+        test_prod_cons<P, C, false>();
     }
 };
 
-template <int E>
-struct test_cons_performance<E, E> {
+template <int C>
+struct test_performance<1, C> {
     static void start(void) {
-        test_prod_cons<1, E, false>();
+        test_performance<1, C - 1>::start();
+        test_prod_cons<1, C, false>();
     }
 };
 
-template <int B, int E>
-struct test_prod_performance {
+template <int P>
+struct test_performance<P, 1> {
     static void start(void) {
-        test_prod_cons<B, 1, false>();
-        test_prod_performance<B + 1, E>::start();
+        test_performance<P - 1, 1>::start();
+        test_prod_cons<P, 1, false>();
     }
 };
 
-template <int E>
-struct test_prod_performance<E, E> {
+template <>
+struct test_performance<1, 1> {
     static void start(void) {
-        test_prod_cons<E, 1, false>();
+        test_prod_cons<1, 1, false>();
     }
 };
 
 void Unit::test_prod_cons_performance(void) {
-    test_cons_performance<1, 10>::start();
-    test_prod_performance<1, 10>::start();
-    test_prod_cons<3, 3, false>();  // just test
-    test_prod_cons<5, 5>();         // test & verify
+    test_performance<1 , 10>::start();
+    test_performance<10, 1 >::start();
+    test_performance<10, 10>::start();
+    test_prod_cons  <3 , 3 >(); // test & verify
 }
 
 void Unit::test_queue(void) {
