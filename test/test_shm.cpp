@@ -12,6 +12,10 @@ namespace {
 class Unit : public TestSuite {
     Q_OBJECT
 
+    const char* name(void) const {
+        return "test_shm";
+    }
+
 private slots:
     void test_acquire(void);
     void test_release(void);

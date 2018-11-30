@@ -3,6 +3,7 @@
 #include <type_traits>
 #include <cstring>
 #include <algorithm>
+#include <utility>
 
 #include "ipc.h"
 #include "circ_queue.h"
@@ -14,8 +15,9 @@ using namespace ipc;
 using data_t = byte_t[data_length];
 
 struct msg_t {
-    int    remain_;
-    data_t data_;
+    int      remain_;
+    unsigned id_;
+    data_t   data_;
 };
 
 using queue_t = circ::queue<msg_t>;
@@ -67,7 +69,7 @@ void disconnect(handle_t h) {
     h2q__.erase(it);
 }
 
-bool send(handle_t h, byte_t* data, int size) {
+bool send(handle_t h, void* data, int size) {
     if (data == nullptr) {
         return false;
     }
@@ -78,51 +80,91 @@ bool send(handle_t h, byte_t* data, int size) {
     if (queue == nullptr) {
         return false;
     }
-    queue_t drop_box { queue->elems() };
+    static unsigned msg_id = 0;
+    ++msg_id; // calc a new message id
     int offset = 0;
     for (int i = 0; i < (size / static_cast<int>(data_length)); ++i, offset += data_length) {
         msg_t msg {
             size - offset - static_cast<int>(data_length),
-            { 0 }
+            msg_id, { 0 }
         };
-        std::memcpy(msg.data_, data + offset, data_length);
-        drop_box.push(msg);
+        std::memcpy(msg.data_, static_cast<byte_t*>(data) + offset, data_length);
+        queue->push(msg);
     }
     int remain = size - offset;
     if (remain > 0) {
-        msg_t msg { remain - static_cast<int>(data_length), { 0 } };
-        std::memcpy(msg.data_, data + offset, static_cast<std::size_t>(remain));
-        drop_box.push(msg);
+        msg_t msg {
+            remain - static_cast<int>(data_length),
+            msg_id, { 0 }
+        };
+        std::memcpy(msg.data_, static_cast<byte_t*>(data) + offset,
+                    static_cast<std::size_t>(remain));
+        queue->push(msg);
     }
     return true;
 }
 
 std::vector<byte_t> recv(handle_t h) {
-    std::vector<byte_t> all;
     auto queue = queue_of(h);
     if (queue == nullptr) {
-        return all;
+        return {};
     }
     if (!queue->connected()) {
         queue->connect();
     }
+    static thread_local std::unordered_map<int, std::vector<byte_t>> all;
     do {
         auto msg = queue->pop();
-        auto last_size = all.size();
+        // here comes a new message
+        auto& cache = all[msg.id_]; // find the cache using message id
+        auto last_size = cache.size();
         if (msg.remain_ > 0) {
-            all.resize(last_size + data_length);
-            std::memcpy(all.data() + last_size, msg.data_, data_length);
+            cache.resize(last_size + data_length);
+            std::memcpy(cache.data() + last_size, msg.data_, data_length);
         }
         else {
             // remain_ is minus & abs(remain_) < data_length
             std::size_t remain = static_cast<std::size_t>(
                                  static_cast<int>(data_length) + msg.remain_);
-            all.resize(last_size + remain);
-            std::memcpy(all.data() + last_size, msg.data_, remain);
-            break;
+            cache.resize(last_size + remain);
+            std::memcpy(cache.data() + last_size, msg.data_, remain);
+            // finish this message, erase it from cache
+            auto ret { std::move(cache) };
+            all.erase(msg.id_);
+            return std::move(ret);
         }
     } while(1);
-    return all;
+}
+
+class channel_ {
+public:
+};
+
+channel::channel(void)
+    : p_(new channel_) {
+}
+
+channel::channel(std::string const & /*name*/)
+    : channel() {
+
+}
+
+channel::channel(channel&& rhs)
+    : channel() {
+    swap(rhs);
+}
+
+channel::~channel(void) {
+    delete p_;
+}
+
+void channel::swap(channel& rhs) {
+    std::swap(p_, rhs.p_);
+}
+
+channel& channel::operator=(channel rhs) {
+    swap(rhs);
+    return *this;
 }
 
 } // namespace ipc

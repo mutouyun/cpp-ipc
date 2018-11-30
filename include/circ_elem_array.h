@@ -65,7 +65,7 @@ private:
     }
 
     static ui_t index_of(uc_t c) {
-        return static_cast<ui_t>(c & std::numeric_limits<ui_t>::max());
+        return static_cast<ui_t>(c);
     }
 
     ui_t index_of(elem_t* el) {
@@ -96,7 +96,7 @@ public:
         while (lc_.exchange(1, std::memory_order_acquire)) {
             std::this_thread::yield();
         }
-        elem_t* el = elem(wt_.load(std::memory_order_relaxed));
+        elem_t* el = elem(index_of(wt_.load(std::memory_order_relaxed)));
         // check all consumers have finished reading
         while(1) {
             std::uint32_t expected = 0;

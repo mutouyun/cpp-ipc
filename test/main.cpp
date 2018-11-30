@@ -1,6 +1,8 @@
 #include <QCoreApplication>
 #include <QObject>
 #include <QVector>
+#include <QString>
+#include <QDebug>
 
 #include "test.h"
 
@@ -16,6 +18,14 @@ TestSuite::TestSuite(void) {
         __(void) { suites__ = &suites_; }
     } _;
     _.suites_ << this;
+}
+
+const char* TestSuite::name(void) const {
+    return "";
+}
+
+void TestSuite::initTestCase(void) {
+    qDebug() << QString("#### Start: %1 ####").arg(name());
 }
 
 int main(int argc, char* argv[]) {

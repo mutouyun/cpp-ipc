@@ -9,13 +9,17 @@
 
 #include "circ_elem_array.h"
 #include "circ_queue.h"
-#include "test.h"
 #include "stopwatch.hpp"
+#include "test.h"
 
 namespace {
 
 class Unit : public TestSuite {
     Q_OBJECT
+
+    const char* name(void) const {
+        return "test_circ";
+    }
 
 private slots:
     void initTestCase(void);
@@ -36,6 +40,7 @@ using cq_t = ipc::circ::elem_array<12>;
 cq_t* cq__;
 
 void Unit::initTestCase(void) {
+    TestSuite::initTestCase();
     cq__ = new cq_t;
 }
 

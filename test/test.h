@@ -8,4 +8,10 @@ class TestSuite : public QObject
 
 public:
     explicit TestSuite(void);
+
+protected:
+    virtual const char* name(void) const;
+
+protected slots:
+    virtual void initTestCase(void);
 };
