@@ -43,7 +43,7 @@ queue_t* queue_of(handle_t h) {
 
 namespace ipc {
 
-handle_t connect(std::string const & name) {
+handle_t connect(char const * name) {
     auto h = shm::acquire(name, sizeof(queue_t));
     if (h == nullptr) {
         return nullptr;
@@ -138,15 +138,16 @@ std::vector<byte_t> recv(handle_t h) {
 
 class channel::channel_ {
 public:
+    handle_t h_;
 };
 
 channel::channel(void)
     : p_(new channel_) {
 }
 
-channel::channel(std::string const & /*name*/)
+channel::channel(char const * name)
     : channel() {
-
+    connect(name);
 }
 
 channel::channel(channel&& rhs)
@@ -165,6 +166,10 @@ void channel::swap(channel& rhs) {
 channel& channel::operator=(channel rhs) {
     swap(rhs);
     return *this;
+}
+
+bool channel::connect(char const * name) {
+    return false;
 }
 
 } // namespace ipc

@@ -1,24 +1,26 @@
 #include <windows.h>
 
 #include <type_traits>
+#include <string>
 #include <locale>
 #include <codecvt>
+#include <utility>
 
 #include "shm.h"
 
 namespace {
 
+template <typename T, typename S, typename R = S>
+using IsSame = std::enable_if_t<std::is_same<T, typename S::value_type>::value, R>;
+
 template <typename T = TCHAR>
-constexpr auto to_tchar(std::string const & str)
- -> std::enable_if_t<std::is_same<std::string::value_type, T>::value, std::string const &> {
-    return str;
+constexpr auto to_tchar(std::string && str) -> IsSame<T, std::string, std::string &&> {
+    return std::move(str);
 }
 
 template <typename T = TCHAR>
-inline auto to_tchar(std::string const & str)
- -> std::enable_if_t<std::is_same<std::wstring::value_type, T>::value, std::wstring> {
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.from_bytes(str);
+inline auto to_tchar(std::string && str) -> IsSame<T, std::wstring> {
+    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(std::move(str));
 }
 
 } // internal-linkage
@@ -26,16 +28,15 @@ inline auto to_tchar(std::string const & str)
 namespace ipc {
 namespace shm {
 
-handle_t acquire(std::string const & name, std::size_t size) {
-    if (name.empty() || size == 0) {
+handle_t acquire(char const * name, std::size_t size) {
+    if (name == nullptr || name[0] == '\0' || size == 0) {
         return nullptr;
     }
     HANDLE h = ::CreateFileMapping(
-        INVALID_HANDLE_VALUE,
-        NULL,
+        INVALID_HANDLE_VALUE, NULL,
         PAGE_READWRITE | SEC_COMMIT,
         0, static_cast<DWORD>(size),
-        to_tchar("__SHM__" + name).c_str()
+        to_tchar(std::string{"__SHM__"} + name).c_str()
     );
     if (h == NULL) {
         return nullptr;

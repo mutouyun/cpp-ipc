@@ -1,3 +1,4 @@
+#include <string>
 #include <utility>
 
 #include "shm.h"
@@ -25,7 +26,7 @@ handle::handle(void)
     p_->t_ = this;
 }
 
-handle::handle(std::string const & name, std::size_t size)
+handle::handle(char const * name, std::size_t size)
     : handle() {
     acquire(name, size);
 }
@@ -56,16 +57,15 @@ std::size_t handle::size(void) const {
     return (p_ == nullptr) ? 0 : p_->s_;
 }
 
-std::string const & handle::name(void) const {
-    static const std::string dummy;
-    return (p_ == nullptr) ? dummy : p_->n_;
+char const * handle::name(void) const {
+    return (p_ == nullptr) ? "" : p_->n_.c_str();
 }
 
-bool handle::acquire(std::string const & name, std::size_t size) {
+bool handle::acquire(char const * name, std::size_t size) {
     if (p_ == nullptr) return false;
     close();
     release();
-    p_->h_ = shm::acquire(p_->n_ = name, p_->s_ = size);
+    p_->h_ = shm::acquire((p_->n_ = name).c_str(), p_->s_ = size);
     return valid();
 }
 
