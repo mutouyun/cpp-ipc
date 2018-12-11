@@ -19,7 +19,7 @@ public:
 
 private:
     array_t* elems_ = nullptr;
-    typename std::result_of<decltype(&array_t::cursor)(array_t)>::type cursor_ = 0;
+    typename array_t::u2_t cursor_ = 0;
     bool connected_ = false;
 
 public:

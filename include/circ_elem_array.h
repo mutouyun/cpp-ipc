@@ -33,6 +33,10 @@ struct alignas(std::max_align_t) elem_array_head {
         return cc_.load(std::memory_order_acquire);
     }
 
+    u2_t cursor(void) const {
+        return wt_.load(std::memory_order_acquire);
+    }
+
     auto acquire(void) {
         while (lc_.exchange(1, std::memory_order_acquire)) {
             std::this_thread::yield();
@@ -61,6 +65,9 @@ class elem_array : private elem_array_head<BaseIntSize> {
 public:
     using base_t = elem_array_head<BaseIntSize>;
     using head_t = elem_head;
+
+    using typename base_t::u1_t;
+    using typename base_t::u2_t;
 
     enum : std::size_t {
         head_size  = elem_array_head_size<BaseIntSize>,
@@ -95,6 +102,7 @@ public:
     using base_t::connect;
     using base_t::disconnect;
     using base_t::conn_count;
+    using base_t::cursor;
 
     void* acquire(void) {
         elem_t* el = elem(base_t::acquire());
@@ -116,12 +124,8 @@ public:
         base_t::commit();
     }
 
-    u2_t cursor(void) const {
-        return wt_.load(std::memory_order_acquire);
-    }
-
     void* take(u2_t cursor) {
-        return elem(index_of(cursor))->data_;
+        return elem(base_t::index_of(cursor))->data_;
     }
 
     void put(void* ptr) {

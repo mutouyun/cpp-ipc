@@ -144,7 +144,7 @@ struct test_cq;
 template <std::size_t D>
 struct test_cq<ipc::circ::elem_array<D>> {
     using ca_t = ipc::circ::elem_array<D>;
-    using cn_t = typename std::result_of<decltype(&ca_t::cursor)(ca_t)>::type;
+    using cn_t = typename ca_t::u2_t;
 
     ca_t* ca_;
 
