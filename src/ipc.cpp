@@ -1,7 +1,10 @@
 #include <unordered_map>
+#include <atomic>
+#include <thread>
 #include <memory>
 #include <type_traits>
 #include <cstring>
+#include <string>
 #include <algorithm>
 #include <utility>
 
@@ -24,6 +27,42 @@ using queue_t = circ::queue<msg_t>;
 using guard_t = std::unique_ptr<std::remove_pointer_t<handle_t>, void(*)(handle_t)>;
 
 std::unordered_map<handle_t, queue_t> h2q__;
+
+class rw_lock {
+    std::atomic_size_t lc_ { 0 };
+
+    enum : std::size_t {
+        w_flag = std::numeric_limits<std::size_t>::max()
+    };
+
+public:
+    void r_lock(void) {
+        do {
+            std::size_t old = lc_.load(std::memory_order_acquire);
+            std::size_t unlocked = old + 1;
+            if (unlocked &&
+                lc_.compare_exchange_weak(old, unlocked, std::memory_order_acq_rel)) {
+                break;
+            }
+            std::this_thread::yield();
+        } while(1);
+    }
+
+    void r_unlock(void) {
+        lc_.fetch_sub(1, std::memory_order_release);
+    }
+
+    void w_lock(void) {
+        std::size_t expected = 0;
+        while (!lc_.compare_exchange_weak(expected, w_flag, std::memory_order_acq_rel)) {
+            std::this_thread::yield();
+        }
+    }
+
+    void w_unlock(void) {
+        lc_.store(0, std::memory_order_release);
+    }
+} h2q_lc__;
 
 queue_t* queue_of(handle_t h) {
     if (h == nullptr) {
@@ -138,7 +177,8 @@ std::vector<byte_t> recv(handle_t h) {
 
 class channel::channel_ {
 public:
-    handle_t h_;
+    handle_t    h_ = nullptr;
+    std::string n_;
 };
 
 channel::channel(void)
@@ -147,7 +187,7 @@ channel::channel(void)
 
 channel::channel(char const * name)
     : channel() {
-    connect(name);
+    this->connect(name);
 }
 
 channel::channel(channel&& rhs)
@@ -168,8 +208,28 @@ channel& channel::operator=(channel rhs) {
     return *this;
 }
 
+bool channel::valid(void) const {
+    return (p_ != nullptr) && (p_->h_ != nullptr);
+}
+
+char const * channel::name(void) const {
+    return (p_ == nullptr) ? "" : p_->n_.c_str();
+}
+
+channel channel::clone(void) const {
+    return { name() };
+}
+
 bool channel::connect(char const * name) {
-    return false;
+    if (p_ == nullptr) return false;
+    this->disconnect();
+    p_->h_ = ipc::connect((p_->n_ = name).c_str());
+    return valid();
+}
+
+void channel::disconnect(void) {
+    if (!valid()) return;
+    ipc::disconnect(p_->h_);
 }
 
 } // namespace ipc

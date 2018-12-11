@@ -27,7 +27,13 @@ public:
     void swap(channel& rhs);
     channel& operator=(channel rhs);
 
+    bool         valid(void) const;
+    char const * name (void) const;
+
+    channel clone(void) const;
+
     bool connect(char const * name);
+    void disconnect(void);
 
 private:
     class channel_;
