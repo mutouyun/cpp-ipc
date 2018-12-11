@@ -1,6 +1,4 @@
 #include <unordered_map>
-#include <atomic>
-#include <thread>
 #include <memory>
 #include <type_traits>
 #include <cstring>
@@ -10,6 +8,7 @@
 
 #include "ipc.h"
 #include "circ_queue.h"
+#include "rw_lock.h"
 
 namespace {
 
@@ -27,42 +26,7 @@ using queue_t = circ::queue<msg_t>;
 using guard_t = std::unique_ptr<std::remove_pointer_t<handle_t>, void(*)(handle_t)>;
 
 std::unordered_map<handle_t, queue_t> h2q__;
-
-class rw_lock {
-    std::atomic_size_t lc_ { 0 };
-
-    enum : std::size_t {
-        w_flag = std::numeric_limits<std::size_t>::max()
-    };
-
-public:
-    void r_lock(void) {
-        do {
-            std::size_t old = lc_.load(std::memory_order_acquire);
-            std::size_t unlocked = old + 1;
-            if (unlocked &&
-                lc_.compare_exchange_weak(old, unlocked, std::memory_order_acq_rel)) {
-                break;
-            }
-            std::this_thread::yield();
-        } while(1);
-    }
-
-    void r_unlock(void) {
-        lc_.fetch_sub(1, std::memory_order_release);
-    }
-
-    void w_lock(void) {
-        std::size_t expected = 0;
-        while (!lc_.compare_exchange_weak(expected, w_flag, std::memory_order_acq_rel)) {
-            std::this_thread::yield();
-        }
-    }
-
-    void w_unlock(void) {
-        lc_.store(0, std::memory_order_release);
-    }
-} h2q_lc__;
+rw_lock h2q_lc__;
 
 queue_t* queue_of(handle_t h) {
     if (h == nullptr) {

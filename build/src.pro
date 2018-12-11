@@ -18,7 +18,8 @@ HEADERS += \
     ../include/circ_elem_array.h \
     ../include/circ_queue.h \
     ../include/ipc.h \
-    ../include/def.h
+    ../include/def.h \
+    ../include/rw_lock.h
 
 SOURCES += \
     ../src/shm.cpp \
