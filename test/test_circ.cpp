@@ -39,6 +39,8 @@ private slots:
 using cq_t = ipc::circ::elem_array<12>;
 cq_t* cq__;
 
+constexpr int LoopCount = 1000000;
+
 void Unit::initTestCase(void) {
     TestSuite::initTestCase();
     cq__ = new cq_t;
@@ -233,7 +235,7 @@ struct test_cq<ipc::circ::queue<T>> {
     }
 };
 
-template <int N, int M, bool V = true, int Loops = 1000000, typename T>
+template <int N, int M, bool V = true, int Loops = LoopCount, typename T>
 void test_prod_cons(T* cq) {
     test_cq<T> tcq { cq };
 
@@ -281,7 +283,7 @@ void test_prod_cons(T* cq) {
     for (auto& t : consumers) t.join();
 }
 
-template <int N, int M, bool V = true, int Loops = 1000000>
+template <int N, int M, bool V = true, int Loops = LoopCount>
 void test_prod_cons(void) {
     test_prod_cons<N, M, V, Loops>(cq__);
 }
