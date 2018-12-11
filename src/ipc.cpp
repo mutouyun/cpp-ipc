@@ -115,7 +115,7 @@ std::vector<byte_t> recv(handle_t h) {
     if (!queue->connected()) {
         queue->connect();
     }
-    static thread_local std::unordered_map<int, std::vector<byte_t>> all;
+    static thread_local std::unordered_map<decltype(msg_t::id_), std::vector<byte_t>> all;
     do {
         auto msg = queue->pop();
         // here comes a new message
@@ -134,7 +134,7 @@ std::vector<byte_t> recv(handle_t h) {
             // finish this message, erase it from cache
             auto ret { std::move(cache) };
             all.erase(msg.id_);
-            return std::move(ret);
+            return ret;
         }
     } while(1);
 }
