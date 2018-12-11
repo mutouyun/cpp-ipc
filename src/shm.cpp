@@ -5,11 +5,11 @@
 namespace ipc {
 namespace shm {
 
-class handle_ {
+class handle::handle_ {
 public:
-    handle*     t_ = nullptr;
-    handle_t    h_ = nullptr;
-    void*       m_ = nullptr;
+    handle*  t_ = nullptr;
+    handle_t h_ = nullptr;
+    void*    m_ = nullptr;
 
     std::string n_;
     std::size_t s_ = 0;

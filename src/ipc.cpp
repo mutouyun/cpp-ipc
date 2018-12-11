@@ -136,7 +136,7 @@ std::vector<byte_t> recv(handle_t h) {
     } while(1);
 }
 
-class channel_ {
+class channel::channel_ {
 public:
 };
 

@@ -15,7 +15,6 @@ IPC_EXPORT void     release(handle_t h, std::size_t size);
 IPC_EXPORT void*    open   (handle_t h);
 IPC_EXPORT void     close  (void* mem);
 
-class handle_;
 class IPC_EXPORT handle {
 public:
     handle(void);
@@ -38,7 +37,7 @@ public:
     void  close(void);
 
 private:
-    friend class handle_;
+    class handle_;
     handle_* p_;
 };
 

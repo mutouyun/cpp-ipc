@@ -16,7 +16,6 @@ IPC_EXPORT void     disconnect(handle_t h);
 IPC_EXPORT bool                send(handle_t h, void* data, int size);
 IPC_EXPORT std::vector<byte_t> recv(handle_t h);
 
-class channel_;
 class IPC_EXPORT channel {
 public:
     channel(void);
@@ -29,7 +28,7 @@ public:
     channel& operator=(channel rhs);
 
 private:
-    friend class channel_;
+    class channel_;
     channel_* p_;
 };
 
