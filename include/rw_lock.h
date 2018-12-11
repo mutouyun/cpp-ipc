@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <thread>
+#include <limits>
 
 namespace ipc {
 
@@ -15,7 +16,7 @@ class rw_lock {
 public:
     void r_lock(void) {
         while(1) {
-            std::size_t old = lc_.load(std::memory_order_acquire);
+            std::size_t old = lc_.load(std::memory_order_relaxed);
             std::size_t unlocked = old + 1;
             if (unlocked &&
                 lc_.compare_exchange_weak(old, unlocked, std::memory_order_acq_rel)) {
@@ -30,8 +31,11 @@ public:
     }
 
     void w_lock(void) {
-        std::size_t expected = 0;
-        while (!lc_.compare_exchange_weak(expected, w_flag, std::memory_order_acq_rel)) {
+        while (1) {
+            std::size_t expected = 0;
+            if (lc_.compare_exchange_weak(expected, w_flag, std::memory_order_acq_rel)) {
+                break;
+            }
             std::this_thread::yield();
         }
     }

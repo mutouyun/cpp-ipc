@@ -32,7 +32,7 @@ private slots:
     void test_prod_cons_performance();
 
     void test_queue();
-} unit__;
+} /*unit__*/;
 
 #include "test_circ.moc"
 
