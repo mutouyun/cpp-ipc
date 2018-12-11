@@ -7,11 +7,11 @@ class TestSuite : public QObject
     Q_OBJECT
 
 public:
-    explicit TestSuite(void);
+    explicit TestSuite();
 
 protected:
-    virtual const char* name(void) const;
+    virtual const char* name() const;
 
 protected slots:
-    virtual void initTestCase(void);
+    virtual void initTestCase();
 };

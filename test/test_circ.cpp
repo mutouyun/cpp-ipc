@@ -17,21 +17,21 @@ namespace {
 class Unit : public TestSuite {
     Q_OBJECT
 
-    const char* name(void) const {
+    const char* name() const {
         return "test_circ";
     }
 
 private slots:
-    void initTestCase(void);
-    void cleanupTestCase(void);
+    void initTestCase();
+    void cleanupTestCase();
 
-    void test_inst(void);
-    void test_prod_cons_1v1(void);
-    void test_prod_cons_1v3(void);
-    void test_prod_cons_3v1(void);
-    void test_prod_cons_performance(void);
+    void test_inst();
+    void test_prod_cons_1v1();
+    void test_prod_cons_1v3();
+    void test_prod_cons_3v1();
+    void test_prod_cons_performance();
 
-    void test_queue(void);
+    void test_queue();
 } unit__;
 
 #include "test_circ.moc"
@@ -41,16 +41,16 @@ cq_t* cq__;
 
 constexpr int LoopCount = 1000000;
 
-void Unit::initTestCase(void) {
+void Unit::initTestCase() {
     TestSuite::initTestCase();
     cq__ = new cq_t;
 }
 
-void Unit::cleanupTestCase(void) {
+void Unit::cleanupTestCase() {
     delete cq__;
 }
 
-void Unit::test_inst(void) {
+void Unit::test_inst() {
     std::cout << "cq_t::head_size  = " << cq_t::head_size  << std::endl;
     std::cout << "cq_t::data_size  = " << cq_t::data_size  << std::endl;
     std::cout << "cq_t::elem_size  = " << cq_t::elem_size  << std::endl;
@@ -77,7 +77,7 @@ struct test_stopwatch {
     capo::stopwatch<> sw_;
     std::atomic_flag started_ = ATOMIC_FLAG_INIT;
 
-    void start(void) {
+    void start() {
         if (!started_.test_and_set()) {
             sw_.start();
         }
@@ -101,7 +101,7 @@ struct test_verify {
                 ];
     }
 
-    ~test_verify(void) {
+    ~test_verify() {
         delete [] list_;
     }
 
@@ -152,7 +152,7 @@ struct test_cq<ipc::circ::elem_array<D>> {
         ::new (ca) ca_t;
     }
 
-    cn_t connect(void) {
+    cn_t connect() {
         auto cur = ca_->cursor();
         ca_->connect();
         return cur;
@@ -201,7 +201,7 @@ struct test_cq<ipc::circ::queue<T>> {
         ::new (ca_) ca_t;
     }
 
-    cn_t connect(void) {
+    cn_t connect() {
         cn_t queue;
         [&] {
             queue.attach(ca_);
@@ -284,25 +284,25 @@ void test_prod_cons(T* cq) {
 }
 
 template <int N, int M, bool V = true, int Loops = LoopCount>
-void test_prod_cons(void) {
+void test_prod_cons() {
     test_prod_cons<N, M, V, Loops>(cq__);
 }
 
-void Unit::test_prod_cons_1v1(void) {
+void Unit::test_prod_cons_1v1() {
     test_prod_cons<1, 1>();
 }
 
-void Unit::test_prod_cons_1v3(void) {
+void Unit::test_prod_cons_1v3() {
     test_prod_cons<1, 3>();
 }
 
-void Unit::test_prod_cons_3v1(void) {
+void Unit::test_prod_cons_3v1() {
     test_prod_cons<3, 1>();
 }
 
 template <int P, int C>
 struct test_performance {
-    static void start(void) {
+    static void start() {
         test_performance<P - 1, C - 1>::start();
         test_prod_cons<P, C, false>();
     }
@@ -310,7 +310,7 @@ struct test_performance {
 
 template <int C>
 struct test_performance<1, C> {
-    static void start(void) {
+    static void start() {
         test_performance<1, C - 1>::start();
         test_prod_cons<1, C, false>();
     }
@@ -318,7 +318,7 @@ struct test_performance<1, C> {
 
 template <int P>
 struct test_performance<P, 1> {
-    static void start(void) {
+    static void start() {
         test_performance<P - 1, 1>::start();
         test_prod_cons<P, 1, false>();
     }
@@ -326,19 +326,19 @@ struct test_performance<P, 1> {
 
 template <>
 struct test_performance<1, 1> {
-    static void start(void) {
+    static void start() {
         test_prod_cons<1, 1, false>();
     }
 };
 
-void Unit::test_prod_cons_performance(void) {
+void Unit::test_prod_cons_performance() {
     test_performance<1 , 10>::start();
     test_performance<10, 1 >::start();
     test_performance<10, 10>::start();
     test_prod_cons  <3 , 3 >(); // test & verify
 }
 
-void Unit::test_queue(void) {
+void Unit::test_queue() {
     ipc::circ::queue<msg_t> queue;
     queue.push(1, 2);
     QVERIFY_EXCEPTION_THROWN(queue.pop(), std::exception);

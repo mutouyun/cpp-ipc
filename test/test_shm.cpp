@@ -12,23 +12,23 @@ namespace {
 class Unit : public TestSuite {
     Q_OBJECT
 
-    const char* name(void) const {
+    const char* name() const {
         return "test_shm";
     }
 
 private slots:
-    void test_acquire(void);
-    void test_release(void);
-    void test_get(void);
-    void test_hello(void);
-    void test_mt(void);
+    void test_acquire();
+    void test_release();
+    void test_get();
+    void test_hello();
+    void test_mt();
 } unit__;
 
 #include "test_shm.moc"
 
 handle shm_hd__;
 
-void Unit::test_acquire(void) {
+void Unit::test_acquire() {
     QVERIFY(!shm_hd__.valid());
 
     QVERIFY(shm_hd__.acquire("my-test-1", 1024));
@@ -44,13 +44,13 @@ void Unit::test_acquire(void) {
     QCOMPARE(shm_hd__.name(), "my-test-3");
 }
 
-void Unit::test_release(void) {
+void Unit::test_release() {
     QVERIFY(shm_hd__.valid());
     shm_hd__.release();
     QVERIFY(!shm_hd__.valid());
 }
 
-void Unit::test_get(void) {
+void Unit::test_get() {
     QVERIFY(shm_hd__.get() == nullptr);
     QVERIFY(shm_hd__.acquire("my-test", 1024));
 
@@ -66,7 +66,7 @@ void Unit::test_get(void) {
     QVERIFY(mem == shm_hd__.get());
 }
 
-void Unit::test_hello(void) {
+void Unit::test_hello() {
     auto mem = shm_hd__.get();
     QVERIFY(mem != nullptr);
 
@@ -76,7 +76,7 @@ void Unit::test_hello(void) {
     QCOMPARE((char*)shm_hd__.get(), hello);
 }
 
-void Unit::test_mt(void) {
+void Unit::test_mt() {
     std::thread {
         [] {
             handle shm_mt(shm_hd__.name(), shm_hd__.size());

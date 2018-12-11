@@ -12,19 +12,19 @@ QVector<QObject*>* suites__ = nullptr;
 
 } // internal-linkage
 
-TestSuite::TestSuite(void) {
+TestSuite::TestSuite() {
     static struct __ {
         QVector<QObject*> suites_;
-        __(void) { suites__ = &suites_; }
+        __() { suites__ = &suites_; }
     } _;
     _.suites_ << this;
 }
 
-const char* TestSuite::name(void) const {
+const char* TestSuite::name() const {
     return "";
 }
 
-void TestSuite::initTestCase(void) {
+void TestSuite::initTestCase() {
     qDebug() << QString("#### Start: %1 ####").arg(name());
 }
 
