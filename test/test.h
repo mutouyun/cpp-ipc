@@ -3,6 +3,7 @@
 #include <QtTest>
 
 #include <iostream>
+#include <atomic>
 
 #include "stopwatch.hpp"
 

@@ -133,7 +133,7 @@ std::vector<byte_t> recv(handle_t h) {
             cache.resize(last_size + remain);
             std::memcpy(cache.data() + last_size, msg.data_, remain);
             // finish this message, erase it from cache
-            auto ret { std::move(cache) };
+            auto ret = std::move(cache);
             all.erase(msg.id_);
             return ret;
         }
