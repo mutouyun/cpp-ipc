@@ -23,6 +23,7 @@ public:
                 break;
             }
             std::this_thread::yield();
+            std::atomic_thread_fence(std::memory_order_acquire);
         }
     }
 
