@@ -1,8 +1,10 @@
 TEMPLATE = lib
 TARGET = ipc
 
-CONFIG += c++14
 CONFIG -= qt
+
+msvc:QMAKE_CXXFLAGS += /std:c++17
+else:CONFIG += c++1z
 
 DEFINES += __IPC_LIBRARY__
 DESTDIR = ../output

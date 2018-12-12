@@ -2,8 +2,11 @@ TEMPLATE = app
 
 QT += core testlib
 QT -= gui
-CONFIG += console c++14
+CONFIG += console
 CONFIG -= app_bundle
+
+msvc:QMAKE_CXXFLAGS += /std:c++17
+else:CONFIG += c++1z
 
 DESTDIR = ../output
 

@@ -14,7 +14,21 @@ class rw_lock {
     };
 
 public:
-    void r_lock(void) {
+    void lock(void) {
+        while (1) {
+            std::size_t expected = 0;
+            if (lc_.compare_exchange_weak(expected, w_flag, std::memory_order_acq_rel)) {
+                break;
+            }
+            std::this_thread::yield();
+        }
+    }
+
+    void unlock(void) {
+        lc_.store(0, std::memory_order_release);
+    }
+
+    void lock_shared(void) {
         while(1) {
             std::size_t old = lc_.load(std::memory_order_relaxed);
             std::size_t unlocked = old + 1;
@@ -27,22 +41,8 @@ public:
         }
     }
 
-    void r_unlock(void) {
+    void unlock_shared(void) {
         lc_.fetch_sub(1, std::memory_order_release);
-    }
-
-    void w_lock(void) {
-        while (1) {
-            std::size_t expected = 0;
-            if (lc_.compare_exchange_weak(expected, w_flag, std::memory_order_acq_rel)) {
-                break;
-            }
-            std::this_thread::yield();
-        }
-    }
-
-    void w_unlock(void) {
-        lc_.store(0, std::memory_order_release);
     }
 };
 
