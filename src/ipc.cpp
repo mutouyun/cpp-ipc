@@ -7,6 +7,8 @@
 #include <string>
 #include <algorithm>
 #include <utility>
+#include <shared_mutex>
+#include <mutex>
 
 #include "circ_queue.h"
 #include "rw_lock.h"
@@ -33,6 +35,7 @@ queue_t* queue_of(handle_t h) {
     if (h == nullptr) {
         return nullptr;
     }
+    std::shared_lock<rw_lock> guard { h2q_lc__ };
     auto it = h2q__.find(h);
     if (it == h2q__.end()) {
         return nullptr;
@@ -59,18 +62,26 @@ handle_t connect(char const * name) {
     if (mem == nullptr) {
         return nullptr;
     }
-    h2q__[h].attach(static_cast<queue_t::array_t*>(mem));
+    {
+        std::unique_lock<rw_lock> guard { h2q_lc__ };
+        h2q__[h].attach(static_cast<queue_t::array_t*>(mem));
+    }
     h_guard.release();
     return h;
 }
 
 void disconnect(handle_t h) {
-    auto it = h2q__.find(h);
-    if (it == h2q__.end()) return;
-    it->second.disconnect();
-    shm::close(it->second.detach());
+    void* mem = nullptr;
+    {
+        std::unique_lock<rw_lock> guard { h2q_lc__ };
+        auto it = h2q__.find(h);
+        if (it == h2q__.end()) return;
+        it->second.disconnect();
+        mem = it->second.elems(); // needn't to detach
+        h2q__.erase(it);
+    }
+    shm::close(mem);
     shm::release(h, sizeof(queue_t));
-    h2q__.erase(it);
 }
 
 bool send(handle_t h, void* data, int size) {

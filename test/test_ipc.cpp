@@ -5,6 +5,11 @@
 #include <shared_mutex>
 #include <mutex>
 #include <typeinfo>
+#include <memory>
+
+#if defined(__GNUC__)
+#   include <cxxabi.h>  // abi::__cxa_demangle
+#endif/*__GNUC__*/
 
 #include "ipc.h"
 #include "rw_lock.h"
@@ -49,7 +54,17 @@ void benchmark() {
     Lc lc;
 
     test_stopwatch sw;
+#if defined(__GNUC__)
+    {
+        const char* typeid_name = typeid(Lc).name();
+        const char* real_name = abi::__cxa_demangle(typeid_name, nullptr, nullptr, nullptr);
+        std::unique_ptr<void, decltype(::free)*> guard { (void*)real_name, ::free };
+        if (real_name == nullptr) real_name = typeid_name;
+        std::cout << std::endl << real_name << std::endl;
+    }
+#else
     std::cout << std::endl << typeid(Lc).name() << std::endl;
+#endif/*__GNUC__*/
 
     for (auto& t : r_trd) {
         t = std::thread([&] {
@@ -58,7 +73,7 @@ void benchmark() {
             while (1) {
                 int x = -1;
                 {
-                    [[maybe_unused]] std::shared_lock<Lc> guard { lc };
+                    std::shared_lock<Lc> guard { lc };
                     if (cnt < datas.size()) {
                         x = datas[cnt];
                     }
@@ -73,9 +88,9 @@ void benchmark() {
             if (++fini == std::extent<decltype(r_trd)>::value) {
                 sw.print_elapsed(R, W, Loops);
             }
-            std::uint64_t sum = 0;
+            std::int64_t sum = 0;
             for (int i : seq) sum += i;
-            QCOMPARE(sum, acc<std::uint64_t>(1, Loops) * std::extent<decltype(w_trd)>::value);
+            QCOMPARE(sum, acc<std::int64_t>(1, Loops) * std::extent<decltype(w_trd)>::value);
         });
     }
 
@@ -84,7 +99,7 @@ void benchmark() {
             sw.start();
             for (int i = 1; i <= Loops; ++i) {
                 {
-                    [[maybe_unused]] std::unique_lock<Lc> guard { lc };
+                    std::unique_lock<Lc> guard { lc };
                     datas.push_back(i);
                 }
                 std::this_thread::yield();
@@ -101,10 +116,15 @@ void benchmark() {
 
 template <int R, int W>
 void test_performance() {
+
+    std::cout << std::endl
+              << "test_performance: [" << R << ":" << W << "]"
+              << std::endl;
+
     benchmark<ipc::rw_lock               , R, W>();
     benchmark<lc_wrapper<capo::spin_lock>, R, W>();
     benchmark<lc_wrapper<std::mutex>     , R, W>();
-    benchmark<std::shared_mutex          , R, W>();
+    benchmark<std::shared_timed_mutex    , R, W>();
 }
 
 void Unit::test_rw_lock() {

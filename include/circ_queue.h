@@ -34,8 +34,9 @@ public:
     }
 
     void swap(queue& rhs) {
-        std::swap(elems_ , rhs.elems_ );
-        std::swap(cursor_, rhs.cursor_);
+        std::swap(elems_    , rhs.elems_    );
+        std::swap(cursor_   , rhs.cursor_   );
+        std::swap(connected_, rhs.connected_);
     }
 
     queue& operator=(queue rhs) {
