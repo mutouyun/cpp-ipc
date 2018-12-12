@@ -1,3 +1,5 @@
+#include "ipc.h"
+
 #include <unordered_map>
 #include <memory>
 #include <type_traits>
@@ -6,7 +8,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "ipc.h"
 #include "circ_queue.h"
 #include "rw_lock.h"
 

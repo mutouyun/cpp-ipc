@@ -1,3 +1,5 @@
+#include "shm.h"
+
 #include <windows.h>
 
 #include <type_traits>
@@ -5,8 +7,6 @@
 #include <locale>
 #include <codecvt>
 #include <utility>
-
-#include "shm.h"
 
 namespace {
 

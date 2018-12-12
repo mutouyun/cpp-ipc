@@ -9,7 +9,6 @@
 
 #include "circ_elem_array.h"
 #include "circ_queue.h"
-#include "stopwatch.hpp"
 #include "test.h"
 
 namespace {
@@ -71,23 +70,6 @@ void Unit::test_inst() {
 struct msg_t {
     int pid_;
     int dat_;
-};
-
-struct test_stopwatch {
-    capo::stopwatch<> sw_;
-    std::atomic_flag started_ = ATOMIC_FLAG_INIT;
-
-    void start() {
-        if (!started_.test_and_set()) {
-            sw_.start();
-        }
-    }
-
-    void print_elapsed(int N, int M, int Loops) {
-        auto ts = sw_.elapsed<std::chrono::microseconds>();
-        std::cout << "[" << N << ":" << M << ", " << Loops << "]" << std::endl
-                  << "performance: " << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
-    }
 };
 
 template <bool V>

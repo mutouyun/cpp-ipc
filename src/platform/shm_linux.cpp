@@ -1,10 +1,10 @@
+#include "shm.h"
+
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
-
-#include "shm.h"
 
 namespace ipc {
 namespace shm {

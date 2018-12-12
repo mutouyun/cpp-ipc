@@ -4,9 +4,12 @@
 #include <iostream>
 #include <shared_mutex>
 #include <mutex>
+#include <typeinfo>
 
 #include "ipc.h"
 #include "rw_lock.h"
+#include "stopwatch.hpp"
+#include "spin_lock.hpp"
 #include "test.h"
 
 namespace {
@@ -25,12 +28,28 @@ private slots:
 
 #include "test_ipc.moc"
 
-void Unit::test_rw_lock() {
-    std::thread r_trd[4];
-    std::thread w_trd[4];
+template <typename T>
+constexpr T acc(T b, T e) {
+    return (e + b) * (e - b + 1) / 2;
+}
+
+template <typename Mutex>
+struct lc_wrapper : Mutex {
+    void lock_shared  () { lock  (); }
+    void unlock_shared() { unlock(); }
+};
+
+template <typename Lc, int Loops = 100000, int R = 4, int W = 4>
+void benchmark() {
+    std::thread r_trd[R];
+    std::thread w_trd[W];
+    std::atomic_int fini { 0 };
 
     std::vector<int> datas;
-    ipc::rw_lock lc;
+    Lc lc;
+
+    test_stopwatch sw;
+    std::cout << std::endl << typeid(Lc).name() << std::endl;
 
     for (auto& t : r_trd) {
         t = std::thread([&] {
@@ -39,7 +58,7 @@ void Unit::test_rw_lock() {
             while (1) {
                 int x = -1;
                 {
-                    [[maybe_unused]] std::shared_lock<ipc::rw_lock> guard { lc };
+                    [[maybe_unused]] std::shared_lock<Lc> guard { lc };
                     if (cnt < datas.size()) {
                         x = datas[cnt];
                     }
@@ -51,21 +70,23 @@ void Unit::test_rw_lock() {
                 }
                 std::this_thread::yield();
             }
-            std::size_t sum = 0;
-            for (int i : seq) {
-                sum += static_cast<std::size_t>(i);
+            if (++fini == std::extent<decltype(r_trd)>::value) {
+                sw.print_elapsed(R, W, Loops);
             }
-            std::cout << std::endl;
-            QCOMPARE(sum, 5050 * std::extent<decltype(w_trd)>::value);
+            std::uint64_t sum = 0;
+            for (int i : seq) sum += i;
+            QCOMPARE(sum, acc<std::uint64_t>(1, Loops) * std::extent<decltype(w_trd)>::value);
         });
     }
 
     for (auto& t : w_trd) {
         t = std::thread([&] {
-            for (int i = 1; i <= 100; ++i) {
-                lc.lock();
-                datas.push_back(i);
-                lc.unlock();
+            sw.start();
+            for (int i = 1; i <= Loops; ++i) {
+                {
+                    [[maybe_unused]] std::unique_lock<Lc> guard { lc };
+                    datas.push_back(i);
+                }
                 std::this_thread::yield();
             }
         });
@@ -75,13 +96,14 @@ void Unit::test_rw_lock() {
     lc.lock();
     datas.push_back(0);
     lc.unlock();
-
     for (auto& t : r_trd) t.join();
+}
 
-    for (int i : datas) {
-        std::cout << i << " ";
-    }
-    std::cout << std::endl;
+void Unit::test_rw_lock() {
+    benchmark<ipc::rw_lock>();
+    benchmark<lc_wrapper<capo::spin_lock>>();
+    benchmark<lc_wrapper<std::mutex>>();
+    benchmark<std::shared_mutex>();
 }
 
 void Unit::test_send_recv() {
