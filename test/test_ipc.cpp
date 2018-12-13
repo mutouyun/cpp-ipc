@@ -101,6 +101,7 @@ void benchmark() {
                 {
                     std::unique_lock<Lc> guard { lc };
                     datas.push_back(i);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
                 std::this_thread::yield();
             }
@@ -122,16 +123,17 @@ void test_performance() {
               << std::endl;
 
     benchmark<ipc::rw_lock               , W, R>();
-    benchmark<lc_wrapper<capo::spin_lock>, W, R>();
-    benchmark<lc_wrapper<std::mutex>     , W, R>();
-    benchmark<std::shared_timed_mutex    , W, R>();
+//    benchmark<ipc::rw_cas_lock           , W, R>();
+//    benchmark<lc_wrapper<capo::spin_lock>, W, R>();
+//    benchmark<lc_wrapper<std::mutex>     , W, R>();
+//    benchmark<std::shared_timed_mutex    , W, R>();
 }
 
 void Unit::test_rw_lock() {
-    test_performance<1, 1>();
-    test_performance<4, 4>();
-    test_performance<1, 8>();
-    test_performance<8, 1>();
+    test_performance<2, 1>();
+//    test_performance<4, 4>();
+//    test_performance<1, 8>();
+//    test_performance<8, 1>();
 }
 
 void Unit::test_send_recv() {

@@ -17,6 +17,7 @@ struct uint;
 template <> struct uint<8 > { using type = std::uint8_t ; };
 template <> struct uint<16> { using type = std::uint16_t; };
 template <> struct uint<32> { using type = std::uint32_t; };
+template <> struct uint<64> { using type = std::uint64_t; };
 
 template <std::size_t N>
 using uint_t = typename uint<N>::type;
