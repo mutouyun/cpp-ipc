@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <limits>
 #include <thread>
-#include <chrono>
 
 namespace ipc {
 
@@ -87,9 +86,7 @@ inline void yield(unsigned k) {
     else
     if (k < 16) { IPC_LOCK_PAUSE_(); }
     else
-    if (k < 32) { std::this_thread::yield(); }
-    else
-    { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+    { std::this_thread::yield(); }
 }
 
 } // namespace ipc

@@ -38,8 +38,8 @@ struct alignas(std::max_align_t) elem_array_head {
     }
 
     auto acquire(void) {
-        for (unsigned k = 0; lc_.exchange(1, std::memory_order_acquire); ++k) {
-            yield(k);
+        while (lc_.exchange(1, std::memory_order_acquire)) {
+            std::this_thread::yield();
         }
         return index_of(wt_.load(std::memory_order_relaxed));
     }
@@ -107,7 +107,7 @@ public:
     void* acquire(void) {
         elem_t* el = elem(base_t::acquire());
         // check all consumers have finished reading
-        for (unsigned k = 0;; ++k) {
+        while(1) {
             uint_t<32> expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
                         expected,
@@ -115,7 +115,7 @@ public:
                         std::memory_order_release)) {
                 break;
             }
-            yield(k);
+            std::this_thread::yield();
         }
         return el->data_;
     }
