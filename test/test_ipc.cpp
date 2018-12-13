@@ -44,10 +44,10 @@ struct lc_wrapper : Mutex {
     void unlock_shared() { Mutex::unlock(); }
 };
 
-template <typename Lc, int R = 4, int W = 4, int Loops = 100000>
+template <typename Lc, int W = 4, int R = 4, int Loops = 100000>
 void benchmark() {
-    std::thread r_trd[R];
     std::thread w_trd[W];
+    std::thread r_trd[R];
     std::atomic_int fini { 0 };
 
     std::vector<int> datas;
@@ -86,7 +86,7 @@ void benchmark() {
                 std::this_thread::yield();
             }
             if (++fini == std::extent<decltype(r_trd)>::value) {
-                sw.print_elapsed(R, W, Loops);
+                sw.print_elapsed(W, R, Loops);
             }
             std::int64_t sum = 0;
             for (int i : seq) sum += i;
@@ -114,17 +114,17 @@ void benchmark() {
     for (auto& t : r_trd) t.join();
 }
 
-template <int R, int W>
+template <int W, int R>
 void test_performance() {
 
     std::cout << std::endl
-              << "test_performance: [" << R << ":" << W << "]"
+              << "test_performance: [" << W << ":" << R << "]"
               << std::endl;
 
-    benchmark<ipc::rw_lock               , R, W>();
-    benchmark<lc_wrapper<capo::spin_lock>, R, W>();
-    benchmark<lc_wrapper<std::mutex>     , R, W>();
-    benchmark<std::shared_timed_mutex    , R, W>();
+    benchmark<ipc::rw_lock               , W, R>();
+    benchmark<lc_wrapper<capo::spin_lock>, W, R>();
+    benchmark<lc_wrapper<std::mutex>     , W, R>();
+    benchmark<std::shared_timed_mutex    , W, R>();
 }
 
 void Unit::test_rw_lock() {
