@@ -44,11 +44,12 @@ struct lc_wrapper : Mutex {
     void unlock_shared() { Mutex::unlock(); }
 };
 
-template <typename Lc, int W = 4, int R = 4, int Loops = 100000>
+template <typename Lc, int W, int R, int Loops = 1000000>
 void benchmark() {
     std::thread w_trd[W];
     std::thread r_trd[R];
     std::atomic_int fini { 0 };
+//    std::atomic_bool wf { false };
 
     std::vector<int> datas;
     Lc lc;
@@ -74,9 +75,11 @@ void benchmark() {
                 int x = -1;
                 {
                     std::shared_lock<Lc> guard { lc };
+//                    QVERIFY(!wf);
                     if (cnt < datas.size()) {
                         x = datas[cnt];
                     }
+//                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
                 if (x ==  0) break; // quit
                 if (x != -1) {
@@ -100,8 +103,10 @@ void benchmark() {
             for (int i = 1; i <= Loops; ++i) {
                 {
                     std::unique_lock<Lc> guard { lc };
+//                    wf = true;
                     datas.push_back(i);
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+//                    wf = false;
                 }
                 std::this_thread::yield();
             }
@@ -123,17 +128,17 @@ void test_performance() {
               << std::endl;
 
     benchmark<ipc::rw_lock               , W, R>();
-//    benchmark<ipc::rw_cas_lock           , W, R>();
-//    benchmark<lc_wrapper<capo::spin_lock>, W, R>();
-//    benchmark<lc_wrapper<std::mutex>     , W, R>();
-//    benchmark<std::shared_timed_mutex    , W, R>();
+    benchmark<ipc::rw_cas_lock           , W, R>();
+    benchmark<lc_wrapper<capo::spin_lock>, W, R>();
+    benchmark<lc_wrapper<std::mutex>     , W, R>();
+    benchmark<std::shared_timed_mutex    , W, R>();
 }
 
 void Unit::test_rw_lock() {
-    test_performance<2, 1>();
-//    test_performance<4, 4>();
-//    test_performance<1, 8>();
-//    test_performance<8, 1>();
+    test_performance<1, 1>();
+    test_performance<4, 4>();
+    test_performance<1, 8>();
+    test_performance<8, 1>();
 }
 
 void Unit::test_send_recv() {
