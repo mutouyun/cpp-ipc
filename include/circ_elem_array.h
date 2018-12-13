@@ -72,7 +72,7 @@ public:
     enum : std::size_t {
         head_size  = elem_array_head_size<BaseIntSize>,
         data_size  = DataSize,
-        elem_max   = std::numeric_limits<u1_t>::max() + 1, // default is 255 + 1
+        elem_max   = (std::numeric_limits<u1_t>::max)() + 1, // default is 255 + 1
         elem_size  = sizeof(head_t) + DataSize,
         block_size = elem_size * elem_max
     };
