@@ -8,10 +8,12 @@
 #include <codecvt>
 #include <utility>
 
+#include "def.h"
+
 namespace {
 
 template <typename T, typename S, typename R = S>
-using IsSame = std::enable_if_t<std::is_same<T, typename S::value_type>::value, R>;
+using IsSame = ipc::Requires<std::is_same<T, typename S::value_type>::value, R>;
 
 template <typename T = TCHAR>
 constexpr auto to_tchar(std::string && str) -> IsSame<T, std::string, std::string &&> {
@@ -19,7 +21,7 @@ constexpr auto to_tchar(std::string && str) -> IsSame<T, std::string, std::strin
 }
 
 template <typename T = TCHAR>
-inline auto to_tchar(std::string && str) -> IsSame<T, std::wstring> {
+constexpr auto to_tchar(std::string && str) -> IsSame<T, std::wstring> {
     return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(std::move(str));
 }
 

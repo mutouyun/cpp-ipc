@@ -29,6 +29,7 @@ class Unit : public TestSuite {
 private slots:
     void test_rw_lock();
     void test_send_recv();
+    void test_channel();
 } unit__;
 
 #include "test_ipc.moc"
@@ -44,7 +45,7 @@ struct lc_wrapper : Mutex {
     void unlock_shared() { Mutex::unlock(); }
 };
 
-template <typename Lc, int W, int R, int Loops = 1000000>
+template <typename Lc, int W, int R, int Loops = 100000>
 void benchmark() {
     std::thread w_trd[W];
     std::thread r_trd[R];
@@ -134,20 +135,24 @@ void test_performance() {
 }
 
 void Unit::test_rw_lock() {
-    test_performance<1, 1>();
-    test_performance<4, 4>();
-    test_performance<1, 8>();
-    test_performance<8, 1>();
+//    test_performance<1, 1>();
+//    test_performance<4, 4>();
+//    test_performance<1, 8>();
+//    test_performance<8, 1>();
 }
 
 void Unit::test_send_recv() {
-//    auto h = ipc::connect("my-ipc");
-//    QVERIFY(h != nullptr);
-//    char data[] = "hello ipc!";
-//    QVERIFY(ipc::send(h, data, sizeof(data)));
-//    auto got = ipc::recv(h);
-//    QCOMPARE((char*)got.data(), data);
-//    ipc::disconnect(h);
+    auto h = ipc::connect("my-ipc");
+    QVERIFY(h != nullptr);
+    char data[] = "hello ipc!";
+    QVERIFY(ipc::send(h, data, sizeof(data)));
+    auto got = ipc::recv(h);
+    QCOMPARE((char*)got.data(), data);
+    ipc::disconnect(h);
+}
+
+void Unit::test_channel() {
+    ipc::channel cc;
 }
 
 } // internal-linkage

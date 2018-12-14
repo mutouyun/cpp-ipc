@@ -10,6 +10,7 @@
 #include <shared_mutex>
 #include <mutex>
 
+#include "def.h"
 #include "circ_queue.h"
 #include "rw_lock.h"
 
@@ -151,14 +152,14 @@ std::vector<byte_t> recv(handle_t h) {
     } while(1);
 }
 
-class channel::channel_ {
+class channel::channel_ : public pimpl<channel_> {
 public:
     handle_t    h_ = nullptr;
     std::string n_;
 };
 
 channel::channel(void)
-    : p_(new channel_) {
+    : p_(p_->make()) {
 }
 
 channel::channel(char const * name)
@@ -172,7 +173,7 @@ channel::channel(channel&& rhs)
 }
 
 channel::~channel(void) {
-    delete p_;
+    p_->clear();
 }
 
 void channel::swap(channel& rhs) {
@@ -185,11 +186,11 @@ channel& channel::operator=(channel rhs) {
 }
 
 bool channel::valid(void) const {
-    return (p_ != nullptr) && (p_->h_ != nullptr);
+    return (impl(p_)->h_ != nullptr);
 }
 
 char const * channel::name(void) const {
-    return (p_ == nullptr) ? "" : p_->n_.c_str();
+    return impl(p_)->n_.c_str();
 }
 
 channel channel::clone(void) const {
@@ -197,15 +198,14 @@ channel channel::clone(void) const {
 }
 
 bool channel::connect(char const * name) {
-    if (p_ == nullptr) return false;
     this->disconnect();
-    p_->h_ = ipc::connect((p_->n_ = name).c_str());
+    impl(p_)->h_ = ipc::connect((impl(p_)->n_ = name).c_str());
     return valid();
 }
 
 void channel::disconnect(void) {
     if (!valid()) return;
-    ipc::disconnect(p_->h_);
+    ipc::disconnect(impl(p_)->h_);
 }
 
 } // namespace ipc

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <thread>
 #include <limits>
 #include <type_traits>
 

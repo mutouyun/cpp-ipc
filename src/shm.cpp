@@ -3,17 +3,22 @@
 #include <string>
 #include <utility>
 
+#include "def.h"
+
 namespace ipc {
 namespace shm {
 
-class handle::handle_ {
+class handle::handle_ : public pimpl<handle_> {
 public:
     handle*  t_ = nullptr;
     handle_t h_ = nullptr;
     void*    m_ = nullptr;
 
-    std::string n_;
+    std::string n_ {};
     std::size_t s_ = 0;
+
+    handle_() = default;
+    handle_(handle* t) : t_{t} {}
 
     ~handle_(void) {
         t_->close();
@@ -22,8 +27,7 @@ public:
 };
 
 handle::handle(void)
-    : p_(new handle_) {
-    p_->t_ = this;
+    : p_(p_->make(this)) {
 }
 
 handle::handle(char const * name, std::size_t size)
@@ -37,7 +41,7 @@ handle::handle(handle&& rhs)
 }
 
 handle::~handle(void) {
-    delete p_;
+    p_->clear();
 }
 
 void handle::swap(handle& rhs) {
@@ -50,45 +54,45 @@ handle& handle::operator=(handle rhs) {
 }
 
 bool handle::valid(void) const {
-    return (p_ != nullptr) && (p_->h_ != nullptr);
+    return impl(p_)->h_ != nullptr;
 }
 
 std::size_t handle::size(void) const {
-    return (p_ == nullptr) ? 0 : p_->s_;
+    return impl(p_)->s_;
 }
 
 char const * handle::name(void) const {
-    return (p_ == nullptr) ? "" : p_->n_.c_str();
+    return impl(p_)->n_.c_str();
 }
 
 bool handle::acquire(char const * name, std::size_t size) {
-    if (p_ == nullptr) return false;
     close();
     release();
-    p_->h_ = shm::acquire((p_->n_ = name).c_str(), p_->s_ = size);
+    impl(p_)->h_ = shm::acquire((impl(p_)->n_ = name).c_str(),
+                                 impl(p_)->s_ = size);
     return valid();
 }
 
 void handle::release(void) {
     if (!valid()) return;
-    shm::release(p_->h_, p_->s_);
-    p_->h_ = nullptr;
-    p_->s_ = 0;
-    p_->n_.clear();
+    shm::release(impl(p_)->h_, impl(p_)->s_);
+    impl(p_)->h_ = nullptr;
+    impl(p_)->s_ = 0;
+    impl(p_)->n_.clear();
 }
 
 void* handle::get(void) {
     if (!valid()) return nullptr;
-    if (p_->m_ == nullptr) {
-        return p_->m_ = shm::open(p_->h_);
+    if (impl(p_)->m_ == nullptr) {
+        return impl(p_)->m_ = shm::open(impl(p_)->h_);
     }
-    else return p_->m_;
+    else return impl(p_)->m_;
 }
 
 void handle::close(void) {
     if (!valid()) return;
-    shm::close(p_->m_);
-    p_->m_ = nullptr;
+    shm::close(impl(p_)->m_);
+    impl(p_)->m_ = nullptr;
 }
 
 } // namespace shm

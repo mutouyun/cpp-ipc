@@ -22,7 +22,7 @@ private slots:
     void test_get();
     void test_hello();
     void test_mt();
-} /*unit__*/;
+} unit__;
 
 #include "test_shm.moc"
 
