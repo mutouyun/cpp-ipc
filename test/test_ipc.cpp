@@ -80,11 +80,11 @@ void benchmark() {
                         x = datas[cnt];
                     }
 //                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                }
-                if (x ==  0) break; // quit
-                if (x != -1) {
-                    seq.push_back(x);
-                    ++cnt;
+                    if (x ==  0) break; // quit
+                    if (x != -1) {
+                        seq.push_back(x);
+                        ++cnt;
+                    }
                 }
                 std::this_thread::yield();
             }
