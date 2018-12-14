@@ -36,15 +36,18 @@ public:
     }
 
     void lock_shared() {
+        auto old = lc_.load(std::memory_order_relaxed);
         for (unsigned k = 0;; ++k) {
-            auto old = lc_.load(std::memory_order_relaxed);
-            // if w_flag set, just continue; otherwise cas lc + 1 (set r-lock)
-            if (!(old & w_flag) &&
-                lc_.compare_exchange_weak(old, old + 1, std::memory_order_acquire)) {
+            // if w_flag set, just continue
+            if (old & w_flag) {
+                yield(k);
+                old = lc_.load(std::memory_order_acquire);
+            }
+            // otherwise try cas lc + 1 (set r-lock)
+            else if (lc_.compare_exchange_weak(old, old + 1, std::memory_order_acquire)) {
                 break;
             }
-            yield(k);
-            std::atomic_thread_fence(std::memory_order_acquire);
+            // set r-lock failed, old has been updated
         }
     }
 
