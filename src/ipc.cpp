@@ -13,6 +13,7 @@
 #include "def.h"
 #include "circ_queue.h"
 #include "rw_lock.h"
+#include "thread_local_ptr.h"
 
 namespace {
 
@@ -28,6 +29,14 @@ struct msg_t {
 
 using queue_t = circ::queue<msg_t>;
 using guard_t = std::unique_ptr<std::remove_pointer_t<handle_t>, void(*)(handle_t)>;
+
+/*
+ * thread_local stl object's destructor causing crash
+ * See: https://sourceforge.net/p/mingw-w64/bugs/527/
+ *      https://sourceforge.net/p/mingw-w64/bugs/727/
+*/
+/*thread_local*/
+thread_local_ptr<std::unordered_map<decltype(msg_t::id_), std::vector<byte_t>>> recv_caches__;
 
 std::unordered_map<handle_t, queue_t> h2q__;
 rw_lock h2q_lc__;
@@ -128,27 +137,34 @@ std::vector<byte_t> recv(handle_t h) {
     if (!queue->connected()) {
         queue->connect();
     }
-    static thread_local std::unordered_map<decltype(msg_t::id_), std::vector<byte_t>> all;
+    auto rcs = recv_caches__.create();
     do {
+        // pop a new message
         auto msg = queue->pop();
-        // here comes a new message
-        auto& cache = all[msg.id_]; // find the cache using message id
-        auto last_size = cache.size();
-        if (msg.remain_ > 0) {
-            cache.resize(last_size + data_length);
-            std::memcpy(cache.data() + last_size, msg.data_, data_length);
+        // remain_ may minus & abs(remain_) < data_length
+        std::size_t remain = static_cast<std::size_t>(
+                             static_cast<int>(data_length) + msg.remain_);
+        auto cache_it = rcs->find(msg.id_);
+        if (cache_it == rcs->end()) {
+            std::vector<byte_t> buf(remain);
+            std::memcpy(buf.data(), msg.data_, remain);
+            return buf;
         }
-        else {
-            // remain_ is minus & abs(remain_) < data_length
-            std::size_t remain = static_cast<std::size_t>(
-                                 static_cast<int>(data_length) + msg.remain_);
+        // has cache before this message
+        auto& cache = cache_it->second;
+        auto last_size = cache.size();
+        // this is the last message fragment
+        if (msg.remain_ <= 0) {
             cache.resize(last_size + remain);
             std::memcpy(cache.data() + last_size, msg.data_, remain);
             // finish this message, erase it from cache
-            auto ret = std::move(cache);
-            all.erase(msg.id_);
-            return ret;
+            auto buf = std::move(cache);
+            rcs->erase(cache_it);
+            return buf;
         }
+        // there are remain datas after this message
+        cache.resize(last_size + data_length);
+        std::memcpy(cache.data() + last_size, msg.data_, data_length);
     } while(1);
 }
 

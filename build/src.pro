@@ -21,7 +21,8 @@ HEADERS += \
     ../include/circ_queue.h \
     ../include/ipc.h \
     ../include/def.h \
-    ../include/rw_lock.h
+    ../include/rw_lock.h \
+    ../src/thread_local_ptr.h
 
 SOURCES += \
     ../src/shm.cpp \
@@ -42,7 +43,8 @@ INSTALLS += target
 else:win32 {
 
 SOURCES += \
-    ../src/platform/shm_win.cpp
+    ../src/platform/shm_win.cpp \
+    ../src/platform/thread_local_ptr_win.cpp
 
 LIBS += -lKernel32
 
