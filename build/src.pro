@@ -22,7 +22,7 @@ HEADERS += \
     ../include/ipc.h \
     ../include/def.h \
     ../include/rw_lock.h \
-    ../src/thread_local_ptr.h
+    ../include/thread_local_ptr.h
 
 SOURCES += \
     ../src/shm.cpp \
