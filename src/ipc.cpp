@@ -106,7 +106,7 @@ bool send(handle_t h, void* data, int size) {
         return false;
     }
     static unsigned msg_id = 0;
-    ++msg_id; // calc a new message id
+    ++msg_id; // calc a new message id, atomic is unnecessary
     int offset = 0;
     for (int i = 0; i < (size / static_cast<int>(data_length)); ++i, offset += data_length) {
         msg_t msg {
@@ -138,7 +138,7 @@ std::vector<byte_t> recv(handle_t h) {
         queue->connect();
     }
     auto rcs = recv_caches__.create();
-    do {
+    while(1) {
         // pop a new message
         auto msg = queue->pop();
         // remain_ may minus & abs(remain_) < data_length
@@ -165,7 +165,7 @@ std::vector<byte_t> recv(handle_t h) {
         // there are remain datas after this message
         cache.resize(last_size + data_length);
         std::memcpy(cache.data() + last_size, msg.data_, data_length);
-    } while(1);
+    }
 }
 
 class channel::channel_ : public pimpl<channel_> {
@@ -214,6 +214,7 @@ channel channel::clone(void) const {
 }
 
 bool channel::connect(char const * name) {
+    if (name == nullptr || name[0] == '\0') return false;
     this->disconnect();
     impl(p_)->h_ = ipc::connect((impl(p_)->n_ = name).c_str());
     return valid();
