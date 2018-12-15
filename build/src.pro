@@ -22,7 +22,7 @@ HEADERS += \
     ../include/ipc.h \
     ../include/def.h \
     ../include/rw_lock.h \
-    ../include/thread_local_ptr.h
+    ../include/tls_pointer.h
 
 SOURCES += \
     ../src/shm.cpp \
@@ -31,7 +31,8 @@ SOURCES += \
 unix {
 
 SOURCES += \
-    ../src/platform/shm_linux.cpp
+    ../src/platform/shm_linux.cpp \
+    ../src/platform/tls_pointer_linux.cpp
 
 LIBS += -lrt
 
@@ -44,7 +45,7 @@ else:win32 {
 
 SOURCES += \
     ../src/platform/shm_win.cpp \
-    ../src/platform/thread_local_ptr_win.cpp
+    ../src/platform/tls_pointer_win.cpp
 
 LIBS += -lKernel32
 

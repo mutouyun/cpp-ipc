@@ -13,7 +13,7 @@
 #include "def.h"
 #include "circ_queue.h"
 #include "rw_lock.h"
-#include "thread_local_ptr.h"
+#include "tls_pointer.h"
 
 namespace {
 
@@ -36,7 +36,7 @@ using guard_t = std::unique_ptr<std::remove_pointer_t<handle_t>, void(*)(handle_
  *      https://sourceforge.net/p/mingw-w64/bugs/727/
 */
 /*thread_local*/
-thread_local_ptr<std::unordered_map<decltype(msg_t::id_), std::vector<byte_t>>> recv_caches__;
+tls::pointer<std::unordered_map<decltype(msg_t::id_), std::vector<byte_t>>> recv_caches__;
 
 std::unordered_map<handle_t, queue_t> h2q__;
 rw_lock h2q_lc__;

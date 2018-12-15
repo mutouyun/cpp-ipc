@@ -1,4 +1,4 @@
-#include "thread_local_ptr.h"
+#include "tls_pointer.h"
 
 #include <windows.h>     // ::Tls...
 #include <unordered_map> // std::unordered_map
@@ -18,71 +18,85 @@ namespace ipc {
 */
 
 namespace {
-    struct tls_data {
-        using destructor_t = void(*)(void*);
-        using map_t = std::unordered_map<IPC_THREAD_LOCAL_KEY_, tls_data>;
 
-        static DWORD& key() {
-            static IPC_THREAD_LOCAL_KEY_ rec_key = ::TlsAlloc();
-            return rec_key;
-        }
+struct tls_data {
+    using destructor_t = void(*)(void*);
+    using map_t = std::unordered_map<tls::key_t, tls_data>;
 
-        static map_t* records(map_t* rec) {
-            IPC_THREAD_LOCAL_SET(key(), rec);
-            return rec;
-        }
+    static DWORD& key() {
+        static DWORD rec_key = ::TlsAlloc();
+        return rec_key;
+    }
 
-        static map_t* records() {
-            return static_cast<map_t*>(IPC_THREAD_LOCAL_GET(key()));
-        }
+    static map_t* records(map_t* rec) {
+        ::TlsSetValue(key(), static_cast<LPVOID>(rec));
+        return rec;
+    }
 
-        IPC_THREAD_LOCAL_KEY_ key_        = 0;
-        destructor_t          destructor_ = nullptr;
+    static map_t* records() {
+        return static_cast<map_t*>(::TlsGetValue(key()));
+    }
 
-        tls_data() = default;
+    tls::key_t   key_        = tls::invalid_value;
+    destructor_t destructor_ = nullptr;
 
-        tls_data(IPC_THREAD_LOCAL_KEY_ key, destructor_t destructor)
-            : key_       (key)
-            , destructor_(destructor)
-        {}
+    tls_data() = default;
 
-        tls_data(tls_data&& rhs) : tls_data() {
-            (*this) = std::move(rhs);
-        }
+    tls_data(tls::key_t key, destructor_t destructor)
+        : key_       (key)
+        , destructor_(destructor)
+    {}
 
-        tls_data& operator=(tls_data&& rhs) {
-            key_            = rhs.key_;
-            destructor_     = rhs.destructor_;
-            rhs.key_        = 0;
-            rhs.destructor_ = nullptr;
-            return *this;
-        }
+    tls_data(tls_data&& rhs) : tls_data() {
+        (*this) = std::move(rhs);
+    }
 
-        ~tls_data() {
-            if (destructor_) destructor_(IPC_THREAD_LOCAL_GET(key_));
-        }
-    };
-}
+    tls_data& operator=(tls_data&& rhs) {
+        key_            = rhs.key_;
+        destructor_     = rhs.destructor_;
+        rhs.key_        = 0;
+        rhs.destructor_ = nullptr;
+        return *this;
+    }
 
-void thread_local_create(IPC_THREAD_LOCAL_KEY_& key, void (*destructor)(void*)) {
-    key = ::TlsAlloc();
-    if (key == TLS_OUT_OF_INDEXES) return;
+    ~tls_data() {
+        if (destructor_) destructor_(tls::get(key_));
+    }
+};
+
+} // internal-linkage
+
+namespace tls {
+
+key_t create(destructor_t destructor) {
+    key_t key = static_cast<key_t>(::TlsAlloc());
+    if (key == TLS_OUT_OF_INDEXES) return invalid_value;
     auto rec = tls_data::records();
     if (!rec) rec = tls_data::records(new tls_data::map_t);
-    if (!rec) return;
+    if (!rec) return key;
     rec->emplace(key, tls_data{ key, destructor });
+    return key;
 }
 
-void thread_local_delete(IPC_THREAD_LOCAL_KEY_ key) {
+void release(key_t key) {
     auto rec = tls_data::records();
     if (!rec) return;
     rec->erase(key);
-    ::TlsFree(key);
+    ::TlsFree(static_cast<DWORD>(key));
 }
 
-////////////////////////////////////////////////////////////////
-/// Call destructors on thread exit
-////////////////////////////////////////////////////////////////
+bool set(key_t key, void* ptr) {
+    return ::TlsSetValue(static_cast<DWORD>(key),
+                         static_cast<LPVOID>(ptr)) == TRUE;
+}
+
+void* get(key_t key) {
+    return static_cast<void*>(::TlsGetValue(static_cast<DWORD>(key)));
+}
+
+} // namespace tls
+
+namespace {
 
 void OnThreadExit() {
     auto rec = tls_data::records();
@@ -95,6 +109,12 @@ void NTAPI OnTlsCallback(PVOID, DWORD dwReason, PVOID) {
     if (dwReason == DLL_THREAD_DETACH) OnThreadExit();
 }
 
+} // internal-linkage
+
+////////////////////////////////////////////////////////////////
+/// Call destructors on thread exit
+////////////////////////////////////////////////////////////////
+
 #if defined(_MSC_VER)
 
 #if defined(IPC_OS_WIN64_)
@@ -102,8 +122,7 @@ void NTAPI OnTlsCallback(PVOID, DWORD dwReason, PVOID) {
 #pragma comment(linker, "/INCLUDE:_tls_used")
 #pragma comment(linker, "/INCLUDE:_tls_xl_b__")
 
-extern "C"
-{
+extern "C" {
 #   pragma const_seg(".CRT$XLB")
     extern const PIMAGE_TLS_CALLBACK _tls_xl_b__;
     const PIMAGE_TLS_CALLBACK _tls_xl_b__ = OnTlsCallback;
@@ -115,8 +134,7 @@ extern "C"
 #pragma comment(linker, "/INCLUDE:__tls_used")
 #pragma comment(linker, "/INCLUDE:__tls_xl_b__")
 
-extern "C"
-{
+extern "C" {
 #   pragma data_seg(".CRT$XLB")
     PIMAGE_TLS_CALLBACK _tls_xl_b__ = OnTlsCallback;
 #   pragma data_seg()
@@ -131,15 +149,13 @@ extern "C"
 #if defined(__MINGW64__) || (__MINGW64_VERSION_MAJOR) || \
     (__MINGW32_MAJOR_VERSION > 3) || ((__MINGW32_MAJOR_VERSION == 3) && (__MINGW32_MINOR_VERSION >= 18))
 
-extern "C"
-{
+extern "C" {
     IPC_CRTALLOC__(".CRT$XLB") PIMAGE_TLS_CALLBACK _tls_xl_b__ = OnTlsCallback;
 }
 
 #else /*!__MINGW*/
 
-extern "C"
-{
+extern "C" {
     ULONG _tls_index__ = 0;
 
     IPC_CRTALLOC__(".tls$AAA") char _tls_start__ = 0;
@@ -150,8 +166,7 @@ extern "C"
     IPC_CRTALLOC__(".CRT$XLZ") PIMAGE_TLS_CALLBACK _tls_xl_z__ = 0;
 }
 
-extern "C" NX_CRTALLOC_(".tls") const IMAGE_TLS_DIRECTORY _tls_used =
-{
+extern "C" NX_CRTALLOC_(".tls") const IMAGE_TLS_DIRECTORY _tls_used = {
     (ULONG_PTR)(&_tls_start__ + 1),
     (ULONG_PTR) &_tls_end__,
     (ULONG_PTR) &_tls_index__,
