@@ -6,6 +6,7 @@
 #include <mutex>
 #include <typeinfo>
 #include <memory>
+#include <string>
 
 #if defined(__GNUC__)
 #   include <cxxabi.h>  // abi::__cxa_demangle
@@ -46,7 +47,7 @@ struct lc_wrapper : Mutex {
 };
 
 template <typename Lc, int W, int R, int Loops = 100000>
-void benchmark() {
+void benchmark_lc() {
     std::thread w_trd[W];
     std::thread r_trd[R];
     std::atomic_int fini { 0 };
@@ -128,10 +129,10 @@ void test_performance() {
               << "test_performance: [" << W << ":" << R << "]"
               << std::endl;
 
-    benchmark<ipc::rw_lock               , W, R>();
-    benchmark<lc_wrapper<capo::spin_lock>, W, R>();
-    benchmark<lc_wrapper<std::mutex>     , W, R>();
-    benchmark<std::shared_timed_mutex    , W, R>();
+    benchmark_lc<ipc::rw_lock               , W, R>();
+    benchmark_lc<lc_wrapper<capo::spin_lock>, W, R>();
+    benchmark_lc<lc_wrapper<std::mutex>     , W, R>();
+    benchmark_lc<std::shared_timed_mutex    , W, R>();
 }
 
 void Unit::test_rw_lock() {
@@ -152,7 +153,56 @@ void Unit::test_send_recv() {
 }
 
 void Unit::test_channel() {
-    ipc::channel cc;
+    auto conn = [](int id) {
+        std::string ack = "copy:" + std::to_string(id);
+        ipc::channel cc { "my-ipc-channel" };
+        std::atomic_bool unmatched { true };
+        std::thread re {[&] {
+            do {
+                auto dd = cc.recv();
+                std::cout << id << "-recv: "
+                          << std::string { reinterpret_cast<char*>(dd.data()), dd.size() }
+                          << "[" << dd.size() << "]" << std::endl;
+                if ((unmatched = (ack.size() != dd.size()) ||
+                                 (ack != reinterpret_cast<char*>(dd.data())))) {
+                    bool need_cp = true;
+                    const char cp[] = "copy:";
+                    for (std::size_t i = 0; i < dd.size() && i < sizeof(cp); ++i) {
+                        if (dd[i] != cp[i]) {
+                            need_cp = false;
+                            break;
+                        }
+                    }
+                    if (need_cp) {
+                        cc.send(dd.data(), dd.size());
+                    }
+                }
+                else std::cout << id << " matched!" << std::endl;
+            } while (unmatched.load(std::memory_order_relaxed));
+        }};
+        while (unmatched.load(std::memory_order_relaxed)) {
+            if (!cc.send(const_cast<char*>(ack.c_str()), ack.size())) {
+                std::cout << "send failed!" << std::endl;
+                unmatched = false;
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        re.join();
+        std::cout << "fini conn " << id << std::endl;
+        return cc;
+    };
+
+    std::thread t1 {[&] {
+        auto cc = conn(1);
+    }};
+
+    std::thread t2 {[&] {
+        auto cc = conn(2);
+    }};
+
+    t1.join();
+    t2.join();
 }
 
 } // internal-linkage

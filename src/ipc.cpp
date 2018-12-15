@@ -94,11 +94,11 @@ void disconnect(handle_t h) {
     shm::release(h, sizeof(queue_t));
 }
 
-bool send(handle_t h, void* data, int size) {
+bool send(handle_t h, void* data, std::size_t size) {
     if (data == nullptr) {
         return false;
     }
-    if (size <= 0) {
+    if (size == 0) {
         return false;
     }
     auto queue = queue_of(h);
@@ -108,15 +108,15 @@ bool send(handle_t h, void* data, int size) {
     static unsigned msg_id = 0;
     ++msg_id; // calc a new message id, atomic is unnecessary
     int offset = 0;
-    for (int i = 0; i < (size / static_cast<int>(data_length)); ++i, offset += data_length) {
+    for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
         msg_t msg {
-            size - offset - static_cast<int>(data_length),
+            static_cast<int>(size) - offset - static_cast<int>(data_length),
             msg_id, { 0 }
         };
         std::memcpy(msg.data_, static_cast<byte_t*>(data) + offset, data_length);
         queue->push(msg);
     }
-    int remain = size - offset;
+    int remain = static_cast<int>(size) - offset;
     if (remain > 0) {
         msg_t msg {
             remain - static_cast<int>(data_length),
@@ -223,6 +223,14 @@ bool channel::connect(char const * name) {
 void channel::disconnect(void) {
     if (!valid()) return;
     ipc::disconnect(impl(p_)->h_);
+}
+
+bool channel::send(void* data, std::size_t size) {
+    return ipc::send(impl(p_)->h_, data, size);
+}
+
+std::vector<byte_t> channel::recv() {
+    return ipc::recv(impl(p_)->h_);
 }
 
 } // namespace ipc
