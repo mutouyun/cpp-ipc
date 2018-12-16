@@ -155,7 +155,7 @@ void Unit::test_send_recv() {
 }
 
 void Unit::test_channel() {
-    auto conn = [](int id) {
+    auto wait_for_connected = [](int id) {
         std::string ack = "copy:" + std::to_string(id);
         ipc::channel cc { "my-ipc-channel" };
         std::atomic_bool unmatched { true };
@@ -189,11 +189,11 @@ void Unit::test_channel() {
     };
 
     std::thread t1 {[&] {
-        auto cc = conn(1);
+        auto cc = wait_for_connected(1);
     }};
 
     std::thread t2 {[&] {
-        auto cc = conn(2);
+        auto cc = wait_for_connected(2);
     }};
 
     t1.join();
