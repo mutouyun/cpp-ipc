@@ -188,12 +188,32 @@ void Unit::test_channel() {
         return cc;
     };
 
+    std::vector<char const *> const datas = {
+        "hello!",
+        "foo",
+        "bar",
+        "ISO/IEC",
+        "14882:2011",
+        "ISO/IEC 14882:2017 Information technology - Programming languages - C++",
+        "ISO/IEC 14882:2020",
+        "Modern C++ Design: Generic Programming and Design Patterns Applied"
+    };
+
     std::thread t1 {[&] {
         auto cc = wait_for_connected(1);
+        for (std::size_t i = 0; i < datas.size(); ++i) {
+            auto dd = cc.recv();
+            QCOMPARE(dd.size(), std::strlen(datas[i]) + 1);
+            QVERIFY(std::memcmp(dd.data(), datas[i], dd.size()) == 0);
+        }
     }};
 
     std::thread t2 {[&] {
         auto cc = wait_for_connected(2);
+        for (std::size_t i = 0; i < datas.size(); ++i) {
+            std::cout << "sending: " << datas[i] << std::endl;
+            cc.send(datas[i]);
+        }
     }};
 
     t1.join();

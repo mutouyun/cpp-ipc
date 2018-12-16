@@ -76,15 +76,15 @@ key_t create(destructor_t destructor) {
     key_t key = static_cast<key_t>(::TlsAlloc());
     if (key == TLS_OUT_OF_INDEXES) return invalid_value;
     auto rec = tls_data::records();
-    if (!rec) rec = tls_data::records(new tls_data::map_t);
-    if (!rec) return key;
+    if (rec == nullptr) rec = tls_data::records(new tls_data::map_t);
+    if (rec == nullptr) return key;
     rec->emplace(key, tls_data{ key, destructor });
     return key;
 }
 
 void release(key_t key) {
     auto rec = tls_data::records();
-    if (!rec) return;
+    if (rec == nullptr) return;
     rec->erase(key);
     ::TlsFree(static_cast<DWORD>(key));
 }
