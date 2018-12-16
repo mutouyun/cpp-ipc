@@ -1,6 +1,6 @@
 #include "shm.h"
 
-#include <windows.h>
+#include <Windows.h>
 
 #include <type_traits>
 #include <string>

@@ -4,7 +4,6 @@
 #include <memory>
 #include <type_traits>
 #include <cstring>
-#include <string>
 #include <algorithm>
 #include <utility>
 #include <shared_mutex>
@@ -107,7 +106,7 @@ void disconnect(handle_t h) {
     shm::release(h, sizeof(queue_t));
 }
 
-bool send(handle_t h, void* data, std::size_t size) {
+bool send(handle_t h, void const * data, std::size_t size) {
     if (data == nullptr) {
         return false;
     }
@@ -127,7 +126,7 @@ bool send(handle_t h, void* data, std::size_t size) {
             static_cast<int>(size) - offset - static_cast<int>(data_length),
             msg_id, { 0 }
         };
-        std::memcpy(msg.data_, static_cast<byte_t*>(data) + offset, data_length);
+        std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset, data_length);
         queue->push(msg);
     }
     // if remain > 0, this is the last message fragment
@@ -137,7 +136,7 @@ bool send(handle_t h, void* data, std::size_t size) {
             remain - static_cast<int>(data_length),
             msg_id, { 0 }
         };
-        std::memcpy(msg.data_, static_cast<byte_t*>(data) + offset,
+        std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset,
                     static_cast<std::size_t>(remain));
         queue->push(msg);
     }
@@ -240,8 +239,16 @@ void channel::disconnect(void) {
     ipc::disconnect(impl(p_)->h_);
 }
 
-bool channel::send(void* data, std::size_t size) {
+bool channel::send(void const *data, std::size_t size) {
     return ipc::send(impl(p_)->h_, data, size);
+}
+
+bool channel::send(std::vector<byte_t> const & buff) {
+    return channel::send(buff.data(), buff.size());
+}
+
+bool channel::send(std::string const & str) {
+    return channel::send(str.c_str(), str.size() + 1);
 }
 
 std::vector<byte_t> channel::recv() {

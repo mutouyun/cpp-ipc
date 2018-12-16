@@ -7,6 +7,8 @@
 #include <typeinfo>
 #include <memory>
 #include <string>
+#include <cstring>
+#include <algorithm>
 
 #if defined(__GNUC__)
 #   include <cxxabi.h>  // abi::__cxa_demangle
@@ -163,25 +165,18 @@ void Unit::test_channel() {
                 std::cout << id << "-recv: "
                           << std::string { reinterpret_cast<char*>(dd.data()), dd.size() }
                           << "[" << dd.size() << "]" << std::endl;
-                if ((unmatched = (ack.size() != dd.size()) ||
-                                 (ack != reinterpret_cast<char*>(dd.data())))) {
-                    bool need_cp = true;
+                if ((unmatched = (std::memcmp(dd.data(), ack.c_str(), (std::min)(dd.size(), ack.size())) != 0))) {
                     const char cp[] = "copy:";
-                    for (std::size_t i = 0; i < dd.size() && i < sizeof(cp); ++i) {
-                        if (dd[i] != cp[i]) {
-                            need_cp = false;
-                            break;
-                        }
-                    }
-                    if (need_cp) {
-                        cc.send(dd.data(), dd.size());
+                    if (std::memcmp(dd.data(), cp, sizeof(cp) - 1) == 0) {
+                        std::cout << "cc.send(dd)" << std::endl;
+                        cc.send(dd);
                     }
                 }
                 else std::cout << id << " matched!" << std::endl;
             } while (unmatched.load(std::memory_order_relaxed));
         }};
         while (unmatched.load(std::memory_order_relaxed)) {
-            if (!cc.send(const_cast<char*>(ack.c_str()), ack.size())) {
+            if (!cc.send(ack)) {
                 std::cout << "send failed!" << std::endl;
                 unmatched = false;
                 break;

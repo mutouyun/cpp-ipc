@@ -1,6 +1,10 @@
+#if __has_include(<pthread.h>)
+#include "tls_pointer_linux.cpp"
+#else /*!__has_include(<pthread.h>)*/
+
 #include "tls_pointer.h"
 
-#include <windows.h>     // ::Tls...
+#include <Windows.h>     // ::Tls...
 #include <unordered_map> // std::unordered_map
 
 namespace ipc {
@@ -117,7 +121,7 @@ void NTAPI OnTlsCallback(PVOID, DWORD dwReason, PVOID) {
 
 #if defined(_MSC_VER)
 
-#if defined(IPC_OS_WIN64_)
+#if defined(WIN64) || defined(_WIN64) || defined(__WIN64__)
 
 #pragma comment(linker, "/INCLUDE:_tls_used")
 #pragma comment(linker, "/INCLUDE:_tls_xl_b__")
@@ -129,7 +133,7 @@ extern "C" {
 #   pragma const_seg()
 }
 
-#else /*!IPC_OS_WIN64_*/
+#else /*!WIN64*/
 
 #pragma comment(linker, "/INCLUDE:__tls_used")
 #pragma comment(linker, "/INCLUDE:__tls_xl_b__")
@@ -140,7 +144,7 @@ extern "C" {
 #   pragma data_seg()
 }
 
-#endif/*!IPC_OS_WIN64_*/
+#endif/*!WIN64*/
 
 #elif defined(__GNUC__)
 
@@ -153,7 +157,7 @@ extern "C" {
     IPC_CRTALLOC__(".CRT$XLB") PIMAGE_TLS_CALLBACK _tls_xl_b__ = OnTlsCallback;
 }
 
-#else /*!__MINGW*/
+#else /*!MINGW*/
 
 extern "C" {
     ULONG _tls_index__ = 0;
@@ -174,8 +178,10 @@ extern "C" NX_CRTALLOC_(".tls") const IMAGE_TLS_DIRECTORY _tls_used = {
     (ULONG)0, (ULONG)0
 }
 
-#endif/*!__MINGW*/
+#endif/*!MINGW*/
 
 #endif/*_MSC_VER, __GNUC__*/
 
 } // namespace ipc
+
+#endif/*!__has_include(<pthread.h>)*/
