@@ -4,6 +4,8 @@
 #include <utility>
 #include <limits>
 
+#include "export.h"
+
 namespace ipc {
 namespace tls {
 
@@ -14,11 +16,11 @@ enum : key_t {
     invalid_value = (std::numeric_limits<key_t>::max)()
 };
 
-key_t create (destructor_t destructor = nullptr);
-void  release(key_t key);
+IPC_EXPORT key_t create (destructor_t destructor = nullptr);
+IPC_EXPORT void  release(key_t key);
 
-bool  set(key_t key, void* ptr);
-void* get(key_t key);
+IPC_EXPORT bool  set(key_t key, void* ptr);
+IPC_EXPORT void* get(key_t key);
 
 ////////////////////////////////////////////////////////////////
 /// Thread-local pointer
