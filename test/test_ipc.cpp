@@ -156,39 +156,43 @@ void Unit::test_send_recv() {
 
 void Unit::test_channel() {
     auto wait_for_handshake = [](int id) {
-        std::string ack = "copy:" + std::to_string(id);
         ipc::channel cc { "my-ipc-channel" };
+        std::string cfm = "copy:" + std::to_string(id), ack = "re-" + cfm;
         std::atomic_bool unmatched { true };
         std::thread re {[&] {
-            bool re_ack = false;
+            bool has_re = false;
             do {
                 auto dd = cc.recv();
                 QVERIFY(!dd.empty());
                 std::string got { reinterpret_cast<char*>(dd.data()), dd.size() - 1 };
+                if (cfm == got) continue;
                 std::cout << id << "-recv: " << got << "[" << dd.size() << "]" << std::endl;
                 if (ack != got) {
-                    const char cp[] = "copy:";
+                    char const cp[] = "copy:";
+                    // check header
                     if (std::memcmp(dd.data(), cp, sizeof(cp) - 1) == 0) {
-                        std::cout << id << " re_ack cc.send(dd)" << std::endl;
-                        QVERIFY(re_ack = cc.send(dd));
+                        std::cout << id << "-re: " << got << std::endl;
+                        QVERIFY(has_re = cc.send(
+                                    std::string{ "re-" }.append(
+                                        reinterpret_cast<char*>(dd.data()), dd.size() - 1)));
                     }
                 }
                 else if (unmatched.load(std::memory_order_relaxed)) {
                     unmatched.store(false, std::memory_order_release);
-                    std::cout << id << " matched!" << std::endl;
+                    std::cout << id << "-matched!" << std::endl;
                 }
-            } while (!re_ack || unmatched.load(std::memory_order_relaxed));
+            } while (!has_re || unmatched.load(std::memory_order_relaxed));
         }};
         while (unmatched.load(std::memory_order_acquire)) {
-            if (!cc.send(ack)) {
-                std::cout << "send failed!" << std::endl;
+            if (!cc.send(cfm)) {
+                std::cout << id << "-send failed!" << std::endl;
                 unmatched = false;
                 break;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         re.join();
-        std::cout << "fini conn " << id << std::endl;
+        std::cout << id << "-fini handshake!" << std::endl;
         return cc;
     };
 
