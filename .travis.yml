@@ -8,7 +8,7 @@ matrix:
 
 install:
   - sudo apt-get update
-  - sudo apt-get install libqt5-dev qt5-qmake
+  - sudo apt-get install libqt5test5 qt5-qmake
 
 script:
   - gcc -v
