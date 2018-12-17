@@ -2,7 +2,7 @@ TEMPLATE = app
 
 QT += core testlib
 QT -= gui
-CONFIG += console
+CONFIG += console c++1z
 CONFIG -= app_bundle
 
 msvc:QMAKE_CXXFLAGS += /std:c++17

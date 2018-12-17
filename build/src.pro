@@ -2,6 +2,7 @@ TEMPLATE = lib
 TARGET = ipc
 
 CONFIG -= qt
+CONFIG += c++1z # may be useless
 
 msvc:QMAKE_CXXFLAGS += /std:c++17
 else:QMAKE_CXXFLAGS += -std=gnu++1z
