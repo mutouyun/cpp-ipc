@@ -5,6 +5,8 @@ matrix:
   include:
     - os: linux
       compiler: gcc
+    - os: linux
+      compiler: clang
 
 install:
   - sudo apt-get update
