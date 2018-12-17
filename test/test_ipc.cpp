@@ -9,6 +9,9 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+#include <array>
+#include <limits>
+#include <utility>
 
 #if defined(__GNUC__)
 #   include <cxxabi.h>  // abi::__cxa_demangle
@@ -18,7 +21,85 @@
 #include "rw_lock.h"
 #include "stopwatch.hpp"
 #include "spin_lock.hpp"
+#include "random.hpp"
 #include "test.h"
+
+namespace {
+
+std::vector<ipc::buff_t> datas__;
+
+constexpr int DataMin   = 2;
+constexpr int DataMax   = 512;
+constexpr int LoopCount = 100/*0*//*000*/;
+
+} // internal-linkage
+
+template <>
+struct test_cq<ipc::channel> {
+    using cn_t = ipc::channel;
+
+    std::string conn_name_;
+    std::size_t conn_count_ = 0;
+
+    test_cq(void*)
+        : conn_name_("test-ipc-channel")
+    {}
+
+    cn_t connect() {
+        cn_t cn { conn_name_.c_str() };
+        conn_count_ = cn.conn_count();
+        return cn;
+    }
+
+    void disconnect(cn_t&) {}
+
+    void wait_start(int M) {
+        while (conn_count_ != static_cast<std::size_t>(M)) {
+            std::this_thread::yield();
+        }
+    }
+
+    template <typename F>
+    void recv(cn_t& cn, F&& proc) {
+        do {
+            auto msg = cn.recv();
+            if (msg.size() < 2) return;
+            proc(msg);
+        } while(1);
+    }
+
+    void send(const std::array<int, 2>& info) {
+        thread_local auto cn = connect();
+        int n = info[1];
+        if (n < 0) {
+            cn.send(ipc::buff_t { '\0' });
+        }
+        else cn.send(datas__[n]);
+    }
+};
+
+//template <>
+//struct test_verify<true> {
+//    std::unordered_map<int, std::vector<ipc::buff_t>> list_;
+//    int lcount_;
+
+//    test_verify(int M) : lcount_{ M } {}
+
+//    void prepare(void* pt) {
+//        std::cout << "start consumer: " << pt << std::endl;
+//    }
+
+//    void push_data(int cid, ipc::buff_t const & msg) {
+//        list_[cid].emplace_back(std::move(msg));
+//    }
+
+//    void verify(int /*N*/, int /*Loops*/) {
+//        std::cout << "verifying..." << std::endl;
+//        for (int m = 0; m < lcount_; ++m) {
+//            QCOMPARE(datas__, list_[m]);
+//        }
+//    }
+//};
 
 namespace {
 
@@ -30,12 +111,36 @@ class Unit : public TestSuite {
     }
 
 private slots:
+    void initTestCase();
+    void cleanupTestCase();
+
     void test_rw_lock();
     void test_send_recv();
     void test_channel();
+    void test_channel_performance();
 } unit__;
 
 #include "test_ipc.moc"
+
+void Unit::initTestCase() {
+    TestSuite::initTestCase();
+
+    capo::random<> rdm { DataMin, DataMax };
+    capo::random<> bit { 0, (std::numeric_limits<ipc::buff_t::value_type>::max)() };
+
+    for (int i = 0; i < LoopCount; ++i) {
+        auto n = rdm();
+        ipc::buff_t buff(static_cast<ipc::buff_t::size_type>(n));
+        for (std::size_t k = 0; k < buff.size(); ++k) {
+            buff[k] = static_cast<ipc::buff_t::value_type>(bit());
+        }
+        datas__.emplace_back(std::move(buff));
+    }
+}
+
+void Unit::cleanupTestCase() {
+    datas__.clear();
+}
 
 template <typename T>
 constexpr T acc(T b, T e) {
@@ -233,6 +338,10 @@ void Unit::test_channel() {
 
     t1.join();
     t2.join();
+}
+
+void Unit::test_channel_performance() {
+    benchmark_prod_cons<1, 1, LoopCount, false>((ipc::channel*)nullptr);
 }
 
 } // internal-linkage

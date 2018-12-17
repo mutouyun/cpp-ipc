@@ -90,15 +90,24 @@ handle_t connect(char const * name) {
     if (mem == nullptr) {
         return nullptr;
     }
+    queue_t* queue;
     {
         std::unique_lock<rw_lock> guard { h2q_lc__ };
-        h2q__[h].attach(&(static_cast<shm_info_t*>(mem)->elems_));
+        queue = &(h2q__[h]);
+        if (queue == nullptr) {
+            return nullptr;
+        }
+        queue->attach(&(static_cast<shm_info_t*>(mem)->elems_));
+        queue->connect();
     }
     h_guard.release();
     return h;
 }
 
 void disconnect(handle_t h) {
+    if (h == nullptr) {
+        return;
+    }
     void* mem = nullptr;
     {
         std::unique_lock<rw_lock> guard { h2q_lc__ };
@@ -110,6 +119,14 @@ void disconnect(handle_t h) {
     }
     shm::close(mem);
     shm::release(h, sizeof(queue_t));
+}
+
+std::size_t conn_count(handle_t h) {
+    auto queue = queue_of(h);
+    if (queue == nullptr) {
+        return error_count;
+    }
+    return queue->conn_count();
 }
 
 bool send(handle_t h, void const * data, std::size_t size) {
@@ -196,7 +213,7 @@ public:
     std::string n_;
 };
 
-channel::channel(void)
+channel::channel()
     : p_(p_->make()) {
 }
 
@@ -210,7 +227,7 @@ channel::channel(channel&& rhs)
     swap(rhs);
 }
 
-channel::~channel(void) {
+channel::~channel() {
     p_->clear();
 }
 
@@ -223,15 +240,15 @@ channel& channel::operator=(channel rhs) {
     return *this;
 }
 
-bool channel::valid(void) const {
+bool channel::valid() const {
     return (impl(p_)->h_ != nullptr);
 }
 
-char const * channel::name(void) const {
+char const * channel::name() const {
     return impl(p_)->n_.c_str();
 }
 
-channel channel::clone(void) const {
+channel channel::clone() const {
     return { name() };
 }
 
@@ -242,9 +259,12 @@ bool channel::connect(char const * name) {
     return valid();
 }
 
-void channel::disconnect(void) {
-    if (!valid()) return;
+void channel::disconnect() {
     ipc::disconnect(impl(p_)->h_);
+}
+
+std::size_t channel::conn_count() const {
+    return ipc::conn_count(impl(p_)->h_);
 }
 
 bool channel::send(void const *data, std::size_t size) {

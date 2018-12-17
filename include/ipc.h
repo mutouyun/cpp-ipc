@@ -20,27 +20,30 @@ buff_t make_buff(byte_t const (& data)[N]) { return make_buff(data, N); }
 IPC_EXPORT handle_t connect   (char const * name);
 IPC_EXPORT void     disconnect(handle_t h);
 
+IPC_EXPORT std::size_t conn_count(handle_t h);
+
 IPC_EXPORT bool   send(handle_t h, void const * data, std::size_t size);
 IPC_EXPORT buff_t recv(handle_t h);
 
 class IPC_EXPORT channel {
 public:
-    channel(void);
+    channel();
     channel(char const * name);
     channel(channel&& rhs);
 
-    ~channel(void);
+    ~channel();
 
     void swap(channel& rhs);
     channel& operator=(channel rhs);
 
-    bool         valid(void) const;
-    char const * name (void) const;
+    bool         valid() const;
+    char const * name () const;
 
-    channel clone(void) const;
+    channel clone() const;
 
     bool connect(char const * name);
-    void disconnect(void);
+    void disconnect();
+    std::size_t conn_count() const;
 
     bool send(void const * data, std::size_t size);
     bool send(buff_t const & buff);

@@ -23,7 +23,7 @@ private:
     bool connected_ = false;
 
 public:
-    queue(void) = default;
+    queue() = default;
 
     explicit queue(array_t* arr) : queue() {
         attach(arr);
@@ -44,29 +44,29 @@ public:
         return *this;
     }
 
-    array_t * elems(void) {
+    array_t * elems() {
         return elems_;
     }
 
-    std::size_t connect(void) {
+    std::size_t connect() {
         if (elems_ == nullptr) return error_count;
         if (connected_) return error_count;
         connected_ = true;
         return elems_->connect();
     }
 
-    std::size_t disconnect(void) {
+    std::size_t disconnect() {
         if (elems_ == nullptr) return error_count;
         if (!connected_) return error_count;
         connected_ = false;
         return elems_->disconnect();
     }
 
-    std::size_t conn_count(void) const {
+    std::size_t conn_count() const {
         return (elems_ == nullptr) ? error_count : elems_->conn_count();
     }
 
-    bool connected(void) const {
+    bool connected() const {
         return connected_;
     }
 
@@ -78,7 +78,7 @@ public:
         return old;
     }
 
-    array_t* detach(void) {
+    array_t* detach() {
         if (elems_ == nullptr) return nullptr;
         auto old = elems_;
         elems_ = nullptr;
@@ -113,7 +113,7 @@ public:
         return true;
     }
 
-    T pop(void) {
+    T pop() {
         if (elems_ == nullptr) throw std::invalid_argument {
             "This queue hasn't attached any elem_array."
         };

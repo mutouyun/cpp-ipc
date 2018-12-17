@@ -21,30 +21,30 @@ struct alignas(std::max_align_t) elem_array_head {
 
     static u1_t index_of(u2_t c) { return static_cast<u1_t>(c); }
 
-    std::size_t connect(void) {
+    std::size_t connect() {
         return cc_.fetch_add(1, std::memory_order_release);
     }
 
-    std::size_t disconnect(void) {
+    std::size_t disconnect() {
         return cc_.fetch_sub(1, std::memory_order_release);
     }
 
-    std::size_t conn_count(void) const {
+    std::size_t conn_count() const {
         return cc_.load(std::memory_order_acquire);
     }
 
-    u2_t cursor(void) const {
+    u2_t cursor() const {
         return wt_.load(std::memory_order_acquire);
     }
 
-    auto acquire(void) {
+    auto acquire() {
         while (lc_.exchange(1, std::memory_order_acquire)) {
             std::this_thread::yield();
         }
         return index_of(wt_.load(std::memory_order_relaxed));
     }
 
-    void commit(void) {
+    void commit() {
         wt_.fetch_add(1, std::memory_order_relaxed);
         lc_.store(0, std::memory_order_release);
     }
@@ -84,7 +84,7 @@ private:
     };
     elem_t block_[elem_max];
 
-    elem_t* elem_start(void) {
+    elem_t* elem_start() {
         return block_;
     }
 
@@ -92,7 +92,7 @@ private:
            elem_t* elem(u1_t i   ) { return elem_start() + i; }
 
 public:
-    elem_array(void) = default;
+    elem_array() = default;
 
     elem_array(const elem_array&) = delete;
     elem_array& operator=(const elem_array&) = delete;
@@ -104,7 +104,7 @@ public:
     using base_t::conn_count;
     using base_t::cursor;
 
-    void* acquire(void) {
+    void* acquire() {
         elem_t* el = elem(base_t::acquire());
         // check all consumers have finished reading
         while(1) {

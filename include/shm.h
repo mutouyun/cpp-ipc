@@ -16,24 +16,24 @@ IPC_EXPORT void     close  (void* mem);
 
 class IPC_EXPORT handle {
 public:
-    handle(void);
+    handle();
     handle(char const * name, std::size_t size);
     handle(handle&& rhs);
 
-    ~handle(void);
+    ~handle();
 
     void swap(handle& rhs);
     handle& operator=(handle rhs);
 
-    bool         valid(void) const;
-    std::size_t  size (void) const;
-    char const * name (void) const;
+    bool         valid() const;
+    std::size_t  size () const;
+    char const * name () const;
 
     bool acquire(char const * name, std::size_t size);
-    void release(void);
+    void release();
 
-    void* get  (void);
-    void  close(void);
+    void* get  ();
+    void  close();
 
 private:
     class handle_;

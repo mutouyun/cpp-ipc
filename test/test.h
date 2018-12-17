@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <atomic>
+#include <thread>
 
 #include "stopwatch.hpp"
 
@@ -38,3 +39,65 @@ struct test_stopwatch {
                   << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
     }
 };
+
+template <bool V>
+struct test_verify;
+
+template <>
+struct test_verify<false> {
+    test_verify   (int)      {}
+    void prepare  (void*)    {}
+    void push_data(int, ...) {}
+    void verify   (int, int) {}
+};
+
+template <typename T>
+struct test_cq;
+
+template <int N, int M, int Loops, bool V = true, typename T>
+void benchmark_prod_cons(T* cq) {
+    test_cq<T> tcq { cq };
+
+    std::thread producers[N];
+    std::thread consumers[M];
+    std::atomic_int fini { 0 };
+
+    test_stopwatch sw;
+    test_verify<V> vf { M };
+
+    int cid = 0;
+    for (auto& t : consumers) {
+        t = std::thread{[&, cid] {
+            vf.prepare(&t);
+            auto cn = tcq.connect();
+
+            using namespace std::placeholders;
+            tcq.recv(cn, std::bind(&test_verify<V>::push_data, &vf, cid, _1));
+
+            tcq.disconnect(cn);
+            if (++fini != std::extent<decltype(consumers)>::value) return;
+            sw.print_elapsed(N, M, Loops);
+            vf.verify(N, Loops);
+        }};
+        ++cid;
+    }
+
+    tcq.wait_start(M);
+
+    std::cout << "start producers..." << std::endl;
+    int pid = 0;
+    for (auto& t : producers) {
+        t = std::thread{[&, pid] {
+            sw.start();
+            for (int i = 0; i < Loops; ++i) {
+                tcq.send({ pid, i });
+            }
+        }};
+        ++pid;
+    }
+    for (auto& t : producers) t.join();
+    // quit
+    tcq.send({ -1, -1 });
+
+    for (auto& t : consumers) t.join();
+}

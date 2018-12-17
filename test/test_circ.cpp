@@ -13,64 +13,15 @@
 
 namespace {
 
-class Unit : public TestSuite {
-    Q_OBJECT
-
-    const char* name() const {
-        return "test_circ";
-    }
-
-private slots:
-    void initTestCase();
-    void cleanupTestCase();
-
-    void test_inst();
-    void test_prod_cons_1v1();
-    void test_prod_cons_1v3();
-    void test_prod_cons_3v1();
-    void test_prod_cons_performance();
-
-    void test_queue();
-} unit__;
-
-#include "test_circ.moc"
-
 using cq_t = ipc::circ::elem_array<12>;
 cq_t* cq__;
-
-constexpr int LoopCount = 1000000;
-
-void Unit::initTestCase() {
-    TestSuite::initTestCase();
-    cq__ = new cq_t;
-}
-
-void Unit::cleanupTestCase() {
-    delete cq__;
-}
-
-void Unit::test_inst() {
-    std::cout << "cq_t::head_size  = " << cq_t::head_size  << std::endl;
-    std::cout << "cq_t::data_size  = " << cq_t::data_size  << std::endl;
-    std::cout << "cq_t::elem_size  = " << cq_t::elem_size  << std::endl;
-    std::cout << "cq_t::block_size = " << cq_t::block_size << std::endl;
-
-    QCOMPARE(static_cast<std::size_t>(cq_t::data_size) , static_cast<std::size_t>(12));
-    QCOMPARE(sizeof(cq_t), static_cast<std::size_t>(cq_t::block_size + cq_t::head_size));
-
-    std::cout << "sizeof(ipc::circ::elem_array<4096>) = " << sizeof(*cq__) << std::endl;
-
-    auto a = cq__->take(1);
-    auto b = cq__->take(2);
-    QCOMPARE(static_cast<std::size_t>(static_cast<ipc::byte_t*>(b) -
-                                      static_cast<ipc::byte_t*>(a)),
-             static_cast<std::size_t>(cq_t::elem_size));
-}
 
 struct msg_t {
     int pid_;
     int dat_;
 };
+
+} // internal-linkage
 
 template <bool V>
 struct test_verify {
@@ -111,17 +62,6 @@ struct test_verify {
         }
     }
 };
-
-template <>
-struct test_verify<false> {
-    test_verify   (int)                {}
-    void prepare  (void*)              {}
-    void push_data(int, msg_t const &) {}
-    void verify   (int, int)           {}
-};
-
-template <typename T>
-struct test_cq;
 
 template <std::size_t D>
 struct test_cq<ipc::circ::elem_array<D>> {
@@ -217,57 +157,62 @@ struct test_cq<ipc::circ::queue<T>> {
     }
 };
 
-template <int N, int M, bool V = true, int Loops = LoopCount, typename T>
-void test_prod_cons(T* cq) {
-    test_cq<T> tcq { cq };
+namespace {
 
-    std::thread producers[N];
-    std::thread consumers[M];
-    std::atomic_int fini { 0 };
+class Unit : public TestSuite {
+    Q_OBJECT
 
-    test_stopwatch sw;
-    test_verify<V> vf { M };
-
-    int cid = 0;
-    for (auto& t : consumers) {
-        t = std::thread{[&, cid] {
-            vf.prepare(&t);
-            auto cn = tcq.connect();
-
-            using namespace std::placeholders;
-            tcq.recv(cn, std::bind(&test_verify<V>::push_data, &vf, cid, _1));
-
-            tcq.disconnect(cn);
-            if (++fini != std::extent<decltype(consumers)>::value) return;
-            sw.print_elapsed(N, M, Loops);
-            vf.verify(N, Loops);
-        }};
-        ++cid;
+    const char* name() const {
+        return "test_circ";
     }
 
-    tcq.wait_start(M);
+private slots:
+    void initTestCase();
+    void cleanupTestCase();
 
-    std::cout << "start producers..." << std::endl;
-    int pid = 0;
-    for (auto& t : producers) {
-        t = std::thread{[&, pid] {
-            sw.start();
-            for (int i = 0; i < Loops; ++i) {
-                tcq.send({ pid, i });
-            }
-        }};
-        ++pid;
-    }
-    for (auto& t : producers) t.join();
-    // quit
-    tcq.send({ -1, -1 });
+    void test_inst();
+    void test_prod_cons_1v1();
+    void test_prod_cons_1v3();
+    void test_prod_cons_3v1();
+    void test_prod_cons_performance();
 
-    for (auto& t : consumers) t.join();
+    void test_queue();
+} unit__;
+
+#include "test_circ.moc"
+
+constexpr int LoopCount = 1000000;
+
+void Unit::initTestCase() {
+    TestSuite::initTestCase();
+    cq__ = new cq_t;
+}
+
+void Unit::cleanupTestCase() {
+    delete cq__;
+}
+
+void Unit::test_inst() {
+    std::cout << "cq_t::head_size  = " << cq_t::head_size  << std::endl;
+    std::cout << "cq_t::data_size  = " << cq_t::data_size  << std::endl;
+    std::cout << "cq_t::elem_size  = " << cq_t::elem_size  << std::endl;
+    std::cout << "cq_t::block_size = " << cq_t::block_size << std::endl;
+
+    QCOMPARE(static_cast<std::size_t>(cq_t::data_size) , static_cast<std::size_t>(12));
+    QCOMPARE(sizeof(cq_t), static_cast<std::size_t>(cq_t::block_size + cq_t::head_size));
+
+    std::cout << "sizeof(ipc::circ::elem_array<4096>) = " << sizeof(*cq__) << std::endl;
+
+    auto a = cq__->take(1);
+    auto b = cq__->take(2);
+    QCOMPARE(static_cast<std::size_t>(static_cast<ipc::byte_t*>(b) -
+                                      static_cast<ipc::byte_t*>(a)),
+             static_cast<std::size_t>(cq_t::elem_size));
 }
 
 template <int N, int M, bool V = true, int Loops = LoopCount>
 void test_prod_cons() {
-    test_prod_cons<N, M, V, Loops>(cq__);
+    benchmark_prod_cons<N, M, Loops, V>(cq__);
 }
 
 void Unit::test_prod_cons_1v1() {
@@ -354,9 +299,9 @@ void Unit::test_queue() {
     queue.attach(cq);
     QVERIFY(queue.detach() != nullptr);
 
-    test_prod_cons<1, 3>((ipc::circ::queue<msg_t>*)nullptr);
-    test_prod_cons<3, 1>((ipc::circ::queue<msg_t>*)nullptr);
-    test_prod_cons<3, 3>((ipc::circ::queue<msg_t>*)nullptr);
+    benchmark_prod_cons<1, 3, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+    benchmark_prod_cons<3, 1, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+    benchmark_prod_cons<3, 3, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
 }
 
 } // internal-linkage

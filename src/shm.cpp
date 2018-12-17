@@ -20,13 +20,13 @@ public:
     handle_() = default;
     handle_(handle* t) : t_{t} {}
 
-    ~handle_(void) {
+    ~handle_() {
         t_->close();
         t_->release();
     }
 };
 
-handle::handle(void)
+handle::handle()
     : p_(p_->make(this)) {
 }
 
@@ -40,7 +40,7 @@ handle::handle(handle&& rhs)
     swap(rhs);
 }
 
-handle::~handle(void) {
+handle::~handle() {
     p_->clear();
 }
 
@@ -53,15 +53,15 @@ handle& handle::operator=(handle rhs) {
     return *this;
 }
 
-bool handle::valid(void) const {
+bool handle::valid() const {
     return impl(p_)->h_ != nullptr;
 }
 
-std::size_t handle::size(void) const {
+std::size_t handle::size() const {
     return impl(p_)->s_;
 }
 
-char const * handle::name(void) const {
+char const * handle::name() const {
     return impl(p_)->n_.c_str();
 }
 
@@ -73,7 +73,7 @@ bool handle::acquire(char const * name, std::size_t size) {
     return valid();
 }
 
-void handle::release(void) {
+void handle::release() {
     if (!valid()) return;
     shm::release(impl(p_)->h_, impl(p_)->s_);
     impl(p_)->h_ = nullptr;
@@ -81,7 +81,7 @@ void handle::release(void) {
     impl(p_)->n_.clear();
 }
 
-void* handle::get(void) {
+void* handle::get() {
     if (!valid()) return nullptr;
     if (impl(p_)->m_ == nullptr) {
         return impl(p_)->m_ = shm::open(impl(p_)->h_);
@@ -89,7 +89,7 @@ void* handle::get(void) {
     else return impl(p_)->m_;
 }
 
-void handle::close(void) {
+void handle::close() {
     if (!valid()) return;
     shm::close(impl(p_)->m_);
     impl(p_)->m_ = nullptr;
