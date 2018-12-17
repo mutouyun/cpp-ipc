@@ -107,7 +107,7 @@ public:
             }
             // otherwise try cas lc + 1 (set r-lock)
             else if (lc_.compare_exchange_weak(old, old + 1, std::memory_order_acquire)) {
-                break;
+                return;
             }
             // set r-lock failed, old has been updated
         }

@@ -138,10 +138,10 @@ void test_performance() {
 }
 
 void Unit::test_rw_lock() {
-//    test_performance<1, 1>();
-//    test_performance<4, 4>();
-//    test_performance<1, 8>();
-//    test_performance<8, 1>();
+    test_performance<1, 1>();
+    test_performance<4, 4>();
+    test_performance<1, 8>();
+    test_performance<8, 1>();
 }
 
 void Unit::test_send_recv() {
@@ -155,33 +155,37 @@ void Unit::test_send_recv() {
 }
 
 void Unit::test_channel() {
-    auto wait_for_connected = [](int id) {
+    auto wait_for_handshake = [](int id) {
         std::string ack = "copy:" + std::to_string(id);
         ipc::channel cc { "my-ipc-channel" };
         std::atomic_bool unmatched { true };
         std::thread re {[&] {
+            bool re_ack = false;
             do {
                 auto dd = cc.recv();
-                std::cout << id << "-recv: "
-                          << std::string { reinterpret_cast<char*>(dd.data()), dd.size() }
-                          << "[" << dd.size() << "]" << std::endl;
-                if ((unmatched = (std::memcmp(dd.data(), ack.c_str(), (std::min)(dd.size(), ack.size())) != 0))) {
+                QVERIFY(!dd.empty());
+                std::string got { reinterpret_cast<char*>(dd.data()), dd.size() - 1 };
+                std::cout << id << "-recv: " << got << "[" << dd.size() << "]" << std::endl;
+                if (ack != got) {
                     const char cp[] = "copy:";
                     if (std::memcmp(dd.data(), cp, sizeof(cp) - 1) == 0) {
-                        std::cout << "cc.send(dd)" << std::endl;
-                        cc.send(dd);
+                        std::cout << id << " re_ack cc.send(dd)" << std::endl;
+                        QVERIFY(re_ack = cc.send(dd));
                     }
                 }
-                else std::cout << id << " matched!" << std::endl;
-            } while (unmatched.load(std::memory_order_relaxed));
+                else if (unmatched.load(std::memory_order_relaxed)) {
+                    unmatched.store(false, std::memory_order_release);
+                    std::cout << id << " matched!" << std::endl;
+                }
+            } while (!re_ack || unmatched.load(std::memory_order_relaxed));
         }};
-        while (unmatched.load(std::memory_order_relaxed)) {
+        while (unmatched.load(std::memory_order_acquire)) {
             if (!cc.send(ack)) {
                 std::cout << "send failed!" << std::endl;
                 unmatched = false;
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         re.join();
         std::cout << "fini conn " << id << std::endl;
@@ -200,16 +204,22 @@ void Unit::test_channel() {
     };
 
     std::thread t1 {[&] {
-        auto cc = wait_for_connected(1);
-        for (std::size_t i = 0; i < datas.size(); ++i) {
-            auto dd = cc.recv();
+        auto cc = wait_for_handshake(1);
+        const char cp[] = "copy:";
+        bool unchecked = true;
+        for (std::size_t i = 0; i < datas.size(); ++i, unchecked = false) {
+            ipc::buff_t dd;
+            do {
+                dd = cc.recv();
+            } while (unchecked && (dd.size() > sizeof(cp)) &&
+                     std::memcmp(dd.data(), cp, sizeof(cp) - 1) == 0);
             QCOMPARE(dd.size(), std::strlen(datas[i]) + 1);
             QVERIFY(std::memcmp(dd.data(), datas[i], dd.size()) == 0);
         }
     }};
 
     std::thread t2 {[&] {
-        auto cc = wait_for_connected(2);
+        auto cc = wait_for_handshake(2);
         for (std::size_t i = 0; i < datas.size(); ++i) {
             std::cout << "sending: " << datas[i] << std::endl;
             cc.send(datas[i]);

@@ -18,7 +18,6 @@
 namespace {
 
 using namespace ipc;
-
 using data_t = byte_t[data_length];
 
 #pragma pack(1)
@@ -43,7 +42,7 @@ struct shm_info_t {
  *      https://sourceforge.net/p/mingw-w64/bugs/727/
 */
 /*thread_local*/
-tls::pointer<std::unordered_map<decltype(msg_t::id_), std::vector<byte_t>>> recv_caches__;
+tls::pointer<std::unordered_map<decltype(msg_t::id_), buff_t>> recv_caches__;
 
 std::unordered_map<handle_t, queue_t> h2q__;
 rw_lock h2q_lc__;
@@ -71,6 +70,13 @@ inline std::atomic_size_t* acc_of(queue_t* queue) {
 } // internal-linkage
 
 namespace ipc {
+
+buff_t make_buff(void const * data, std::size_t size) {
+    return {
+        static_cast<buff_t::value_type const *>(data),
+        static_cast<buff_t::value_type const *>(data) + size
+    };
+}
 
 handle_t connect(char const * name) {
     auto h = shm::acquire(name, sizeof(shm_info_t));
@@ -137,13 +143,13 @@ bool send(handle_t h, void const * data, std::size_t size) {
             msg_id, { 0 }
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset,
-                    static_cast<std::size_t>(remain));
+                               static_cast<std::size_t>(remain));
         queue->push(msg);
     }
     return true;
 }
 
-std::vector<byte_t> recv(handle_t h) {
+buff_t recv(handle_t h) {
     auto queue = queue_of(h);
     if (queue == nullptr) {
         return {};
@@ -155,30 +161,32 @@ std::vector<byte_t> recv(handle_t h) {
     while(1) {
         // pop a new message
         auto msg = queue->pop();
-        // remain_ may minus & abs(remain_) < data_length
+        // msg.remain_ may minus & abs(msg.remain_) < data_length
         std::size_t remain = static_cast<std::size_t>(
                              static_cast<int>(data_length) + msg.remain_);
+        // find cache with msg.id_
         auto cache_it = rcs->find(msg.id_);
         if (cache_it == rcs->end()) {
-            std::vector<byte_t> buf(remain);
-            std::memcpy(buf.data(), msg.data_, remain);
-            return buf;
+            if (remain <= data_length) {
+                return make_buff(msg.data_, remain);
+            }
+            // cache the first message fragment
+            else rcs->emplace(msg.id_, make_buff(msg.data_));
         }
-        // has cache before this message
-        auto& cache = cache_it->second;
-        auto last_size = cache.size();
-        // this is the last message fragment
-        if (msg.remain_ <= 0) {
-            cache.resize(last_size + remain);
-            std::memcpy(cache.data() + last_size, msg.data_, remain);
-            // finish this message, erase it from cache
-            auto buf = std::move(cache);
-            rcs->erase(cache_it);
-            return buf;
+        // has cached before this message
+        else {
+            auto& cache = cache_it->second;
+            // this is the last message fragment
+            if (msg.remain_ <= 0) {
+                cache.insert(cache.end(), msg.data_, msg.data_ + remain);
+                // finish this message, erase it from cache
+                auto buf = std::move(cache);
+                rcs->erase(cache_it);
+                return buf;
+            }
+            // there are remain datas after this message
+            cache.insert(cache.end(), msg.data_, msg.data_ + data_length);
         }
-        // there are remain datas after this message
-        cache.resize(last_size + data_length);
-        std::memcpy(cache.data() + last_size, msg.data_, data_length);
     }
 }
 
@@ -243,7 +251,7 @@ bool channel::send(void const *data, std::size_t size) {
     return ipc::send(impl(p_)->h_, data, size);
 }
 
-bool channel::send(std::vector<byte_t> const & buff) {
+bool channel::send(buff_t const & buff) {
     return channel::send(buff.data(), buff.size());
 }
 
@@ -251,7 +259,7 @@ bool channel::send(std::string const & str) {
     return channel::send(str.c_str(), str.size() + 1);
 }
 
-std::vector<byte_t> channel::recv() {
+buff_t channel::recv() {
     return ipc::recv(impl(p_)->h_);
 }
 
