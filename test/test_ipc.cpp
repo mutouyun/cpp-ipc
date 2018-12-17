@@ -12,6 +12,7 @@
 #include <array>
 #include <limits>
 #include <utility>
+#include <unordered_map>
 
 #if defined(__GNUC__)
 #   include <cxxabi.h>  // abi::__cxa_demangle
