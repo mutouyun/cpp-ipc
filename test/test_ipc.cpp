@@ -384,9 +384,9 @@ struct test_performance<1, 1> {
 void Unit::test_channel_performance() {
     test_prod_cons<1, 1>();
 
-    test_performance<1 , 10>::start();
-    test_performance<10, 1 >::start();
-    test_performance<10, 10>::start();
+//    test_performance<1, 8>::start();
+//    test_performance<8, 1>::start();
+//    test_performance<8, 8>::start();
 }
 
 } // internal-linkage
