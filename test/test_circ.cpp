@@ -23,8 +23,8 @@ struct msg_t {
 
 } // internal-linkage
 
-template <bool V>
-struct test_verify {
+template <>
+struct test_verify<cq_t> {
     std::unordered_map<int, std::vector<int>>* list_;
     int lcount_;
 
@@ -212,7 +212,7 @@ void Unit::test_inst() {
 
 template <int N, int M, bool V = true, int Loops = LoopCount>
 void test_prod_cons() {
-    benchmark_prod_cons<N, M, Loops, V>(cq__);
+    benchmark_prod_cons<N, M, Loops, std::conditional_t<V, cq_t, void>>(cq__);
 }
 
 void Unit::test_prod_cons_1v1() {

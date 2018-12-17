@@ -40,11 +40,11 @@ struct test_stopwatch {
     }
 };
 
-template <bool V>
+template <typename V>
 struct test_verify;
 
 template <>
-struct test_verify<false> {
+struct test_verify<void> {
     test_verify   (int)      {}
     void prepare  (void*)    {}
     void push_data(int, ...) {}
@@ -54,7 +54,7 @@ struct test_verify<false> {
 template <typename T>
 struct test_cq;
 
-template <int N, int M, int Loops, bool V = true, typename T>
+template <int N, int M, int Loops, typename V = void, typename T>
 void benchmark_prod_cons(T* cq) {
     test_cq<T> tcq { cq };
 

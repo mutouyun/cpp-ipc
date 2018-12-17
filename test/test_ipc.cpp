@@ -17,11 +17,13 @@
 #   include <cxxabi.h>  // abi::__cxa_demangle
 #endif/*__GNUC__*/
 
-#include "ipc.h"
-#include "rw_lock.h"
 #include "stopwatch.hpp"
 #include "spin_lock.hpp"
 #include "random.hpp"
+
+#include "ipc.h"
+#include "rw_lock.h"
+
 #include "test.h"
 
 namespace {
@@ -29,8 +31,8 @@ namespace {
 std::vector<ipc::buff_t> datas__;
 
 constexpr int DataMin   = 2;
-constexpr int DataMax   = 512;
-constexpr int LoopCount = 100/*0*//*000*/;
+constexpr int DataMax   = 256;
+constexpr int LoopCount = 100000;
 
 } // internal-linkage
 
@@ -39,22 +41,24 @@ struct test_cq<ipc::channel> {
     using cn_t = ipc::channel;
 
     std::string conn_name_;
-    std::size_t conn_count_ = 0;
 
     test_cq(void*)
-        : conn_name_("test-ipc-channel")
-    {}
-
-    cn_t connect() {
-        cn_t cn { conn_name_.c_str() };
-        conn_count_ = cn.conn_count();
-        return cn;
+        : conn_name_("test-ipc-channel") {
+        auto watcher = connect();
+        QCOMPARE(watcher.recv_count(), 0);
     }
 
-    void disconnect(cn_t&) {}
+    cn_t connect() {
+        return { conn_name_.c_str() };
+    }
+
+    void disconnect(cn_t& cn) {
+        cn.disconnect();
+    }
 
     void wait_start(int M) {
-        while (conn_count_ != static_cast<std::size_t>(M)) {
+        auto watcher = connect();
+        while (watcher.recv_count() != static_cast<std::size_t>(M)) {
             std::this_thread::yield();
         }
     }
@@ -74,32 +78,32 @@ struct test_cq<ipc::channel> {
         if (n < 0) {
             cn.send(ipc::buff_t { '\0' });
         }
-        else cn.send(datas__[n]);
+        else cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]);
     }
 };
 
-//template <>
-//struct test_verify<true> {
-//    std::unordered_map<int, std::vector<ipc::buff_t>> list_;
-//    int lcount_;
+template <>
+struct test_verify<ipc::channel> {
+    std::unordered_map<int, std::vector<ipc::buff_t>> list_;
+    int lcount_;
 
-//    test_verify(int M) : lcount_{ M } {}
+    test_verify(int M) : lcount_{ M } {}
 
-//    void prepare(void* pt) {
-//        std::cout << "start consumer: " << pt << std::endl;
-//    }
+    void prepare(void* pt) {
+        std::cout << "start consumer: " << pt << std::endl;
+    }
 
-//    void push_data(int cid, ipc::buff_t const & msg) {
-//        list_[cid].emplace_back(std::move(msg));
-//    }
+    void push_data(int cid, ipc::buff_t const & msg) {
+        list_[cid].emplace_back(std::move(msg));
+    }
 
-//    void verify(int /*N*/, int /*Loops*/) {
-//        std::cout << "verifying..." << std::endl;
-//        for (int m = 0; m < lcount_; ++m) {
-//            QCOMPARE(datas__, list_[m]);
-//        }
-//    }
-//};
+    void verify(int /*N*/, int /*Loops*/) {
+        std::cout << "verifying..." << std::endl;
+        for (int m = 0; m < lcount_; ++m) {
+            QCOMPARE(datas__, list_[m]);
+        }
+    }
+};
 
 namespace {
 
@@ -201,7 +205,7 @@ void benchmark_lc() {
                 sw.print_elapsed(W, R, Loops);
             }
             std::uint64_t sum = 0;
-            for (int i : seq) sum += i;
+            for (int i : seq) sum += static_cast<std::uint64_t>(i);
             QCOMPARE(sum, acc<std::uint64_t>(1, Loops) * std::extent<decltype(w_trd)>::value);
         });
     }
@@ -230,10 +234,10 @@ void benchmark_lc() {
 }
 
 template <int W, int R>
-void test_performance() {
+void test_lock_performance() {
 
     std::cout << std::endl
-              << "test_performance: [" << W << ":" << R << "]"
+              << "test_lock_performance: [" << W << ":" << R << "]"
               << std::endl;
 
     benchmark_lc<ipc::rw_lock               , W, R>();
@@ -243,10 +247,10 @@ void test_performance() {
 }
 
 void Unit::test_rw_lock() {
-    test_performance<1, 1>();
-    test_performance<4, 4>();
-    test_performance<1, 8>();
-    test_performance<8, 1>();
+    test_lock_performance<1, 1>();
+    test_lock_performance<4, 4>();
+    test_lock_performance<1, 8>();
+    test_lock_performance<8, 1>();
 }
 
 void Unit::test_send_recv() {
@@ -340,8 +344,49 @@ void Unit::test_channel() {
     t2.join();
 }
 
+template <int N, int M, bool V = true, int Loops = LoopCount>
+void test_prod_cons() {
+    benchmark_prod_cons<N, M, Loops, std::conditional_t<V, ipc::channel, void>>((ipc::channel*)nullptr);
+}
+
+template <int P, int C>
+struct test_performance {
+    static void start() {
+        test_performance<P - 1, C - 1>::start();
+        test_prod_cons<P, C, false>();
+    }
+};
+
+template <int C>
+struct test_performance<1, C> {
+    static void start() {
+        test_performance<1, C - 1>::start();
+        test_prod_cons<1, C, false>();
+    }
+};
+
+template <int P>
+struct test_performance<P, 1> {
+    static void start() {
+        test_performance<P - 1, 1>::start();
+        test_prod_cons<P, 1, false>();
+    }
+};
+
+template <>
+struct test_performance<1, 1> {
+    static void start() {
+        test_prod_cons<1, 1, false>();
+    }
+};
+
 void Unit::test_channel_performance() {
-    benchmark_prod_cons<1, 1, LoopCount, false>((ipc::channel*)nullptr);
+    test_prod_cons<1, 1>();
+    test_prod_cons<1, 8>();
+
+    test_performance<1 , 10>::start();
+    test_performance<10, 1 >::start();
+    test_performance<10, 10>::start();
 }
 
 } // internal-linkage

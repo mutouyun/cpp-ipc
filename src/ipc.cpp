@@ -13,7 +13,7 @@
 #include "def.h"
 #include "circ_queue.h"
 #include "rw_lock.h"
-#include "tls_pointer.h"
+//#include "tls_pointer.h"
 
 namespace {
 
@@ -36,13 +36,13 @@ struct shm_info_t {
     queue_t::array_t   elems_;  // the circ_elem_array in shm
 };
 
-/*
- * thread_local stl object's destructor causing crash
- * See: https://sourceforge.net/p/mingw-w64/bugs/527/
- *      https://sourceforge.net/p/mingw-w64/bugs/727/
-*/
-/*thread_local*/
-tls::pointer<std::unordered_map<decltype(msg_t::id_), buff_t>> recv_caches__;
+///*
+// * thread_local stl object's destructor causing crash
+// * See: https://sourceforge.net/p/mingw-w64/bugs/527/
+// *      https://sourceforge.net/p/mingw-w64/bugs/727/
+//*/
+///*thread_local*/
+//tls::pointer<std::unordered_map<decltype(msg_t::id_), buff_t>> recv_caches__;
 
 std::unordered_map<handle_t, queue_t> h2q__;
 rw_lock h2q_lc__;
@@ -90,15 +90,9 @@ handle_t connect(char const * name) {
     if (mem == nullptr) {
         return nullptr;
     }
-    queue_t* queue;
     {
         std::unique_lock<rw_lock> guard { h2q_lc__ };
-        queue = &(h2q__[h]);
-        if (queue == nullptr) {
-            return nullptr;
-        }
-        queue->attach(&(static_cast<shm_info_t*>(mem)->elems_));
-        queue->connect();
+        h2q__[h].attach(&(static_cast<shm_info_t*>(mem)->elems_));
     }
     h_guard.release();
     return h;
@@ -121,7 +115,7 @@ void disconnect(handle_t h) {
     shm::release(h, sizeof(queue_t));
 }
 
-std::size_t conn_count(handle_t h) {
+std::size_t recv_count(handle_t h) {
     auto queue = queue_of(h);
     if (queue == nullptr) {
         return error_count;
@@ -174,7 +168,7 @@ buff_t recv(handle_t h) {
     if (!queue->connected()) {
         queue->connect();
     }
-    auto rcs = recv_caches__.create();
+    thread_local std::unordered_map<decltype(msg_t::id_), buff_t> rcs;
     while(1) {
         // pop a new message
         auto msg = queue->pop();
@@ -182,13 +176,13 @@ buff_t recv(handle_t h) {
         std::size_t remain = static_cast<std::size_t>(
                              static_cast<int>(data_length) + msg.remain_);
         // find cache with msg.id_
-        auto cache_it = rcs->find(msg.id_);
-        if (cache_it == rcs->end()) {
+        auto cache_it = rcs.find(msg.id_);
+        if (cache_it == rcs.end()) {
             if (remain <= data_length) {
                 return make_buff(msg.data_, remain);
             }
             // cache the first message fragment
-            else rcs->emplace(msg.id_, make_buff(msg.data_));
+            else rcs.emplace(msg.id_, make_buff(msg.data_));
         }
         // has cached before this message
         else {
@@ -198,7 +192,7 @@ buff_t recv(handle_t h) {
                 cache.insert(cache.end(), msg.data_, msg.data_ + remain);
                 // finish this message, erase it from cache
                 auto buf = std::move(cache);
-                rcs->erase(cache_it);
+                rcs.erase(cache_it);
                 return buf;
             }
             // there are remain datas after this message
@@ -263,8 +257,8 @@ void channel::disconnect() {
     ipc::disconnect(impl(p_)->h_);
 }
 
-std::size_t channel::conn_count() const {
-    return ipc::conn_count(impl(p_)->h_);
+std::size_t channel::recv_count() const {
+    return ipc::recv_count(impl(p_)->h_);
 }
 
 bool channel::send(void const *data, std::size_t size) {
