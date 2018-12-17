@@ -6,7 +6,7 @@ CONFIG += console
 CONFIG -= app_bundle
 
 msvc:QMAKE_CXXFLAGS += /std:c++17
-else:CONFIG += c++1z
+else:QMAKE_CXXFLAGS += -std=gnu++1z
 
 DESTDIR = ../output
 
