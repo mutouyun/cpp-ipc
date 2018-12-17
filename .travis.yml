@@ -13,8 +13,9 @@ install:
 script:
   - qmake -v
   - cd ./build
-  - qmake src.pro
-  - make
+  - qmake -o Makefile src.pro
+  - qmake -o MakefileTest test.pro
+  - make && make -f MakefileTest
 
 notifications:
   slack:
