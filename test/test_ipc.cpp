@@ -95,9 +95,9 @@ void benchmark_lc() {
             if (++fini == std::extent<decltype(r_trd)>::value) {
                 sw.print_elapsed(W, R, Loops);
             }
-            std::int64_t sum = 0;
+            std::uint64_t sum = 0;
             for (int i : seq) sum += i;
-            QCOMPARE(sum, acc<std::int64_t>(1, Loops) * std::extent<decltype(w_trd)>::value);
+            QCOMPARE(sum, acc<std::uint64_t>(1, Loops) * std::extent<decltype(w_trd)>::value);
         });
     }
 
