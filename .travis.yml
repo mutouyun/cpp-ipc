@@ -11,8 +11,10 @@ install:
   - sudo apt-get install libqt5test5 qt5-qmake
 
 script:
-  - gcc -v
   - qmake -v
+  - cd .build
+  - qmake src.pro
+  - make
 
 notifications:
   slack:
