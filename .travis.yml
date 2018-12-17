@@ -12,7 +12,7 @@ install:
 
 script:
   - qmake -v
-  - cd .build
+  - cd ./build
   - qmake src.pro
   - make
 
