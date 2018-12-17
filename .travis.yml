@@ -1,0 +1,16 @@
+language: cpp
+dist: xenial
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+
+install:
+  - sudo apt-get update
+  - sudo apt-get install libqt5-dev qt5-qmake
+
+notifications:
+  slack:
+    on_success: never
+    on_failure: never
