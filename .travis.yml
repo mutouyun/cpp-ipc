@@ -8,14 +8,14 @@ matrix:
 
 install:
   - sudo apt-get update
-  - sudo apt-get install qtbase5-dev
+  - sudo apt-get install qt5-qmake libqt5test5
 
 script:
   - qmake -v
   - cd ./build
   - qmake -o Makefile src.pro
   - qmake -o MakefileTest test.pro
-  - make && make -f MakefileTest
+  - make && make -f MakefileTest && ../output/test
 
 notifications:
   slack:
