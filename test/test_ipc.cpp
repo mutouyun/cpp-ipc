@@ -209,14 +209,15 @@ void Unit::test_channel() {
 
     std::thread t1 {[&] {
         auto cc = wait_for_handshake(1);
-        const char cp[] = "copy:";
+        const char cp[] = "copy:", re[] = "re-copy:";
         bool unchecked = true;
         for (std::size_t i = 0; i < datas.size(); ++i, unchecked = false) {
             ipc::buff_t dd;
             do {
                 dd = cc.recv();
-            } while (unchecked && (dd.size() > sizeof(cp)) &&
-                     std::memcmp(dd.data(), cp, sizeof(cp) - 1) == 0);
+            } while (unchecked &&
+                     (((dd.size() > sizeof(cp)) && std::memcmp(dd.data(), cp, sizeof(cp) - 1) == 0) ||
+                      ((dd.size() > sizeof(re)) && std::memcmp(dd.data(), re, sizeof(re) - 1) == 0)));
             QCOMPARE(dd.size(), std::strlen(datas[i]) + 1);
             QVERIFY(std::memcmp(dd.data(), datas[i], dd.size()) == 0);
         }
