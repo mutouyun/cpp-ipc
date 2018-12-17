@@ -10,6 +10,10 @@ install:
   - sudo apt-get update
   - sudo apt-get install libqt5-dev qt5-qmake
 
+script:
+  - gcc -v
+  - qmake -v
+
 notifications:
   slack:
     on_success: never
