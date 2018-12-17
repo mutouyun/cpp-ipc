@@ -45,7 +45,7 @@ struct test_cq<ipc::channel> {
     test_cq(void*)
         : conn_name_("test-ipc-channel") {
         auto watcher = connect();
-        QCOMPARE(watcher.recv_count(), 0);
+        QCOMPARE(watcher.recv_count(), static_cast<std::size_t>(0));
     }
 
     cn_t connect() {
