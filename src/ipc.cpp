@@ -38,7 +38,7 @@ constexpr queue_t* queue_of(handle_t h) {
     return static_cast<queue_t*>(h);
 }
 
-constexpr std::atomic_size_t* acc_of(queue_t* queue) {
+inline std::atomic_size_t* acc_of(queue_t* queue) {
     return reinterpret_cast<std::atomic_size_t*>(queue->elems()) - 1;
 }
 
