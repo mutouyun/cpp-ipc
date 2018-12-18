@@ -123,18 +123,16 @@ struct test_cq<ipc::circ::queue<T>> {
         ::new (ca_) ca_t;
     }
 
-    cn_t connect() {
-        cn_t queue;
-        [&] {
-            queue.attach(ca_);
-            QVERIFY(queue.connect() != ipc::error_count);
-        } ();
+    cn_t* connect() {
+        cn_t* queue = new cn_t { ca_ };
+        [&] { QVERIFY(queue->connect() != ipc::error_count); } ();
         return queue;
     }
 
-    void disconnect(cn_t& queue) {
-        QVERIFY(queue.disconnect() != ipc::error_count);
-        QVERIFY(queue.detach() != nullptr);
+    void disconnect(cn_t* queue) {
+        QVERIFY(queue->disconnect() != ipc::error_count);
+        QVERIFY(queue->detach() != nullptr);
+        delete queue;
     }
 
     void wait_start(int M) {
@@ -144,9 +142,9 @@ struct test_cq<ipc::circ::queue<T>> {
     }
 
     template <typename F>
-    void recv(cn_t& queue, F&& proc) {
+    void recv(cn_t* queue, F&& proc) {
         do {
-            auto msg = queue.pop();
+            auto msg = queue->pop();
             if (msg.pid_ < 0) return;
             proc(msg);
         } while(1);
@@ -173,9 +171,7 @@ private slots:
     void test_inst();
     void test_prod_cons_1v1();
     void test_prod_cons_1v3();
-    void test_prod_cons_3v1();
     void test_prod_cons_performance();
-
     void test_queue();
 } unit__;
 
@@ -223,10 +219,6 @@ void Unit::test_prod_cons_1v3() {
     test_prod_cons<1, 3>();
 }
 
-void Unit::test_prod_cons_3v1() {
-    test_prod_cons<3, 1>();
-}
-
 template <int P, int C>
 struct test_performance {
     static void start() {
@@ -259,10 +251,8 @@ struct test_performance<1, 1> {
 };
 
 void Unit::test_prod_cons_performance() {
-    test_performance<1 , 10>::start();
-    test_performance<10, 1 >::start();
-    test_performance<10, 10>::start();
-    test_prod_cons  <3 , 3 >(); // test & verify
+    test_performance<1, 10>::start();
+    test_prod_cons  <1, 10>(); // test & verify
 }
 
 #ifndef QVERIFY_EXCEPTION_THROWN
@@ -299,9 +289,10 @@ void Unit::test_queue() {
     queue.attach(cq);
     QVERIFY(queue.detach() != nullptr);
 
-    benchmark_prod_cons<1, 3, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
-    benchmark_prod_cons<3, 1, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
-    benchmark_prod_cons<3, 3, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+    benchmark_prod_cons<1, 1, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+    benchmark_prod_cons<1, 2, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+    benchmark_prod_cons<1, 4, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+    benchmark_prod_cons<1, 8, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
 }
 
 } // internal-linkage

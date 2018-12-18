@@ -38,13 +38,13 @@ constexpr int LoopCount = 100000;
 } // internal-linkage
 
 template <>
-struct test_cq<ipc::channel> {
-    using cn_t = ipc::channel;
+struct test_cq<ipc::route> {
+    using cn_t = ipc::route;
 
     std::string conn_name_;
 
     test_cq(void*)
-        : conn_name_("test-ipc-channel") {
+        : conn_name_("test-ipc-route") {
         auto watcher = connect();
         QCOMPARE(watcher.recv_count(), static_cast<std::size_t>(0));
     }
@@ -84,7 +84,7 @@ struct test_cq<ipc::channel> {
 };
 
 template <>
-struct test_verify<ipc::channel> {
+struct test_verify<ipc::route> {
     std::unordered_map<int, std::vector<ipc::buff_t>> list_;
     int lcount_;
 
@@ -121,8 +121,8 @@ private slots:
 
     void test_rw_lock();
     void test_send_recv();
-    void test_channel();
-    void test_channel_performance();
+    void test_route();
+    void test_route_performance();
 } unit__;
 
 #include "test_ipc.moc"
@@ -264,9 +264,9 @@ void Unit::test_send_recv() {
     ipc::disconnect(h);
 }
 
-void Unit::test_channel() {
+void Unit::test_route() {
     auto wait_for_handshake = [](int id) {
-        ipc::channel cc { "my-ipc-channel" };
+        ipc::route cc { "my-ipc-route" };
         std::string cfm = "copy:" + std::to_string(id), ack = "re-" + cfm;
         std::atomic_bool unmatched { true };
         std::thread re {[&] {
@@ -347,7 +347,7 @@ void Unit::test_channel() {
 
 template <int N, int M, bool V = true, int Loops = LoopCount>
 void test_prod_cons() {
-    benchmark_prod_cons<N, M, Loops, std::conditional_t<V, ipc::channel, void>>((ipc::channel*)nullptr);
+    benchmark_prod_cons<N, M, Loops, std::conditional_t<V, ipc::route, void>>((ipc::route*)nullptr);
 }
 
 template <int P, int C>
@@ -381,12 +381,9 @@ struct test_performance<1, 1> {
     }
 };
 
-void Unit::test_channel_performance() {
+void Unit::test_route_performance() {
     test_prod_cons<1, 1>();
-
-//    test_performance<1, 8>::start();
-//    test_performance<8, 1>::start();
-//    test_performance<8, 8>::start();
+    test_performance<1, 10>::start();
 }
 
 } // internal-linkage

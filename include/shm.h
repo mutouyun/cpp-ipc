@@ -7,12 +7,8 @@
 namespace ipc {
 namespace shm {
 
-using handle_t = void*;
-
-IPC_EXPORT handle_t acquire(char const * name, std::size_t size);
-IPC_EXPORT void     release(handle_t h, std::size_t size);
-IPC_EXPORT void*    open   (handle_t h);
-IPC_EXPORT void     close  (void* mem);
+IPC_EXPORT void* acquire(char const * name, std::size_t size);
+IPC_EXPORT void  release(void* mem, std::size_t size);
 
 class IPC_EXPORT handle {
 public:
@@ -32,8 +28,7 @@ public:
     bool acquire(char const * name, std::size_t size);
     void release();
 
-    void* get  ();
-    void  close();
+    void* get() const;
 
 private:
     class handle_;

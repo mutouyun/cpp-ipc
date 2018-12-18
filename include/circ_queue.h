@@ -5,6 +5,7 @@
 #include <exception>
 #include <utility>
 #include <algorithm>
+#include <atomic>
 
 #include "def.h"
 #include "circ_elem_array.h"
@@ -20,7 +21,7 @@ public:
 private:
     array_t* elems_ = nullptr;
     typename array_t::u2_t cursor_ = 0;
-    bool connected_ = false;
+    std::atomic_bool connected_ { false };
 
 public:
     queue() = default;
@@ -29,36 +30,30 @@ public:
         attach(arr);
     }
 
-    queue(queue&& rhs) : queue() {
-        swap(rhs);
-    }
+    queue(const queue&) = delete;
+    queue& operator=(const queue&) = delete;
+    queue(queue&&) = delete;
+    queue& operator=(queue&&) = delete;
 
-    void swap(queue& rhs) {
-        std::swap(elems_    , rhs.elems_    );
-        std::swap(cursor_   , rhs.cursor_   );
-        std::swap(connected_, rhs.connected_);
-    }
-
-    queue& operator=(queue rhs) {
-        swap(rhs);
-        return *this;
-    }
-
-    array_t * elems() {
+    constexpr array_t * elems() const {
         return elems_;
     }
 
     std::size_t connect() {
         if (elems_ == nullptr) return error_count;
-        if (connected_) return error_count;
-        connected_ = true;
+        if (connected_.exchange(true, std::memory_order_relaxed)) {
+            // if it's already connected, just return an error count
+            return error_count;
+        }
         return elems_->connect();
     }
 
     std::size_t disconnect() {
         if (elems_ == nullptr) return error_count;
-        if (!connected_) return error_count;
-        connected_ = false;
+        if (!connected_.exchange(false, std::memory_order_relaxed)) {
+            // if it's already disconnected, just return an error count
+            return error_count;
+        }
         return elems_->disconnect();
     }
 
@@ -67,7 +62,7 @@ public:
     }
 
     bool connected() const {
-        return connected_;
+        return connected_.load(std::memory_order_relaxed);
     }
 
     array_t* attach(array_t* arr) {
@@ -95,7 +90,7 @@ public:
 
     template <typename P>
     auto push(P&& param) // disable this if P is the same as T
-     -> std::enable_if_t<!std::is_same<std::remove_reference_t<P>, T>::value, bool> {
+     -> Requires<!std::is_same<std::remove_reference_t<P>, T>::value, bool> {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
         ::new (ptr) T { std::forward<P>(param) };
@@ -105,7 +100,7 @@ public:
 
     template <typename... P>
     auto push(P&&... params) // some old compilers are not support this well
-     -> std::enable_if_t<(sizeof...(P) != 1), bool> {
+     -> Requires<(sizeof...(P) != 1), bool> {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
         ::new (ptr) T { std::forward<P>(params)... };
@@ -113,18 +108,40 @@ public:
         return true;
     }
 
-    T pop() {
-        if (elems_ == nullptr) throw std::invalid_argument {
-            "This queue hasn't attached any elem_array."
-        };
-        while (cursor_ == elems_->cursor()) {
+    template <typename QArr, typename At>
+    static T multi_pop(QArr& ques, std::size_t size, At&& at) {
+        if (size == 0) throw std::invalid_argument { "Invalid size." };
+        while (1) {
+            for (std::size_t i = 0; i < size; ++i) {
+                queue* cq = at(ques, i);
+                if (cq->elems_ == nullptr) throw std::logic_error {
+                    "This queue hasn't attached any elem_array."
+                };
+                if (cq->cursor_ != cq->elems_->cursor()) {
+                    auto item_ptr = static_cast<T*>(cq->elems_->take(cq->cursor_++));
+                    T item = std::move(*item_ptr);
+                    cq->elems_->put(item_ptr);
+                    return item;
+                }
+            }
             std::this_thread::yield();
         }
-        auto item_ptr = static_cast<T*>(elems_->take(cursor_++));
-        T item = *item_ptr;
-        elems_->put(item_ptr);
-        return item;
     }
+
+    static T multi_pop(queue* ques, std::size_t size) {
+        if (ques == nullptr) throw std::invalid_argument { "Invalid ques pointer." };
+        return multi_pop(ques, size, [](queue* ques, std::size_t i) {
+            return ques + i;
+        });
+    }
+
+    static T multi_pop(std::vector<queue*>& ques) {
+        return multi_pop(ques, ques.size(), [](auto& ques, std::size_t i) {
+            return ques[i];
+        });
+    }
+
+    T pop() { return multi_pop(this, 1); }
 };
 
 } // namespace circ

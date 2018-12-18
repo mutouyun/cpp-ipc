@@ -62,8 +62,8 @@ void Unit::test_get() {
     memset(buf, 0, sizeof(buf));
     QVERIFY(memcmp(mem, buf, sizeof(buf)) == 0);
 
-    shm_hd__.close();
-    QVERIFY(mem == shm_hd__.get());
+    handle shm_other(shm_hd__.name(), shm_hd__.size());
+    QVERIFY(shm_other.get() != shm_hd__.get());
 }
 
 void Unit::test_hello() {
@@ -72,7 +72,6 @@ void Unit::test_hello() {
 
     constexpr char hello[] = "hello!";
     std::memcpy(mem, hello, sizeof(hello));
-    shm_hd__.close();
     QCOMPARE((char*)shm_hd__.get(), hello);
 }
 
@@ -81,7 +80,6 @@ void Unit::test_mt() {
         [] {
             handle shm_mt(shm_hd__.name(), shm_hd__.size());
 
-            shm_hd__.close();
             shm_hd__.release();
 
             constexpr char hello[] = "hello!";

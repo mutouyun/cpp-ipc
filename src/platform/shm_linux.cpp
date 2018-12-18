@@ -9,7 +9,7 @@
 namespace ipc {
 namespace shm {
 
-handle_t acquire(char const * name, std::size_t size) {
+void* acquire(char const * name, std::size_t size) {
     if (name == nullptr || name[0] == '\0' || size == 0) {
         return nullptr;
     }
@@ -32,18 +32,11 @@ handle_t acquire(char const * name, std::size_t size) {
     return mem;
 }
 
-void release(handle_t h, std::size_t size) {
-    if (h == nullptr) {
+void release(void* mem, std::size_t size) {
+    if (mem == nullptr) {
         return;
     }
-    ::munmap(h, size);
-}
-
-void* open(handle_t h) {
-    return h;
-}
-
-void close(void* /*mem*/) {
+    ::munmap(mem, size);
 }
 
 } // namespace shm

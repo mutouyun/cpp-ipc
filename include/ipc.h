@@ -9,8 +9,8 @@
 
 namespace ipc {
 
-using shm::handle_t;
-using buff_t = std::vector<byte_t>;
+using handle_t = void*;
+using buff_t   = std::vector<byte_t>;
 
 IPC_EXPORT buff_t make_buff(void const * data, std::size_t size);
 
@@ -25,21 +25,30 @@ IPC_EXPORT std::size_t recv_count(handle_t h);
 IPC_EXPORT bool   send(handle_t h, void const * data, std::size_t size);
 IPC_EXPORT buff_t recv(handle_t h);
 
-class IPC_EXPORT channel {
+/*
+ * This function could wait & recv messages from multi handles
+ * which have the *SAME* connected name.
+*/
+IPC_EXPORT buff_t recv(handle_t const * hs, std::size_t size);
+
+template <std::size_t N>
+buff_t recv(handle_t const (& hs)[N]) { return recv(hs, N); }
+
+class IPC_EXPORT route {
 public:
-    channel();
-    channel(char const * name);
-    channel(channel&& rhs);
+    route();
+    route(char const * name);
+    route(route&& rhs);
 
-    ~channel();
+    ~route();
 
-    void swap(channel& rhs);
-    channel& operator=(channel rhs);
+    void swap(route& rhs);
+    route& operator=(route rhs);
 
     bool         valid() const;
     char const * name () const;
 
-    channel clone() const;
+    route clone() const;
 
     bool connect(char const * name);
     void disconnect();
@@ -53,8 +62,8 @@ public:
     buff_t recv();
 
 private:
-    class channel_;
-    channel_* p_;
+    class route_;
+    route_* p_;
 };
 
 } // namespace ipc

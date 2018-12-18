@@ -17,36 +17,31 @@ struct alignas(std::max_align_t) elem_array_head {
 
     std::atomic<u2_t> cc_ { 0 }; // connection counter, using for broadcast
     std::atomic<u2_t> wt_ { 0 }; // write index
-    std::atomic<u2_t> lc_ { 0 }; // write spin lock flag
 
     static u1_t index_of(u2_t c) { return static_cast<u1_t>(c); }
 
     std::size_t connect() {
-        return cc_.fetch_add(1, std::memory_order_release);
+        return cc_.fetch_add(1, std::memory_order_relaxed);
     }
 
     std::size_t disconnect() {
-        return cc_.fetch_sub(1, std::memory_order_release);
+        return cc_.fetch_sub(1, std::memory_order_relaxed);
     }
 
     std::size_t conn_count() const {
-        return cc_.load(std::memory_order_acquire);
+        return cc_.load(std::memory_order_relaxed);
     }
 
     u2_t cursor() const {
-        return wt_.load(std::memory_order_acquire);
+        return wt_.load(std::memory_order_relaxed);
     }
 
     auto acquire() {
-        while (lc_.exchange(1, std::memory_order_acquire)) {
-            std::this_thread::yield();
-        }
-        return index_of(wt_.load(std::memory_order_relaxed));
+        return index_of(wt_.load(std::memory_order_acquire));
     }
 
     void commit() {
-        wt_.fetch_add(1, std::memory_order_relaxed);
-        lc_.store(0, std::memory_order_release);
+        wt_.fetch_add(1, std::memory_order_release);
     }
 };
 
@@ -112,10 +107,11 @@ public:
             if (el->head_.rc_.compare_exchange_weak(
                         expected,
                         static_cast<uint_t<32>>(conn_count()),
-                        std::memory_order_release)) {
+                        std::memory_order_relaxed)) {
                 break;
             }
             std::this_thread::yield();
+            std::atomic_thread_fence(std::memory_order_acquire);
         }
         return el->data_;
     }

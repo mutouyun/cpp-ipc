@@ -10,9 +10,8 @@ namespace shm {
 
 class handle::handle_ : public pimpl<handle_> {
 public:
-    handle*  t_ = nullptr;
-    handle_t h_ = nullptr;
-    void*    m_ = nullptr;
+    handle* t_ = nullptr;
+    void*   m_ = nullptr;
 
     std::string n_ {};
     std::size_t s_ = 0;
@@ -20,10 +19,7 @@ public:
     handle_() = default;
     handle_(handle* t) : t_{t} {}
 
-    ~handle_() {
-        t_->close();
-        t_->release();
-    }
+    ~handle_() { t_->release(); }
 };
 
 handle::handle()
@@ -54,7 +50,7 @@ handle& handle::operator=(handle rhs) {
 }
 
 bool handle::valid() const {
-    return impl(p_)->h_ != nullptr;
+    return impl(p_)->m_ != nullptr;
 }
 
 std::size_t handle::size() const {
@@ -66,33 +62,23 @@ char const * handle::name() const {
 }
 
 bool handle::acquire(char const * name, std::size_t size) {
-    close();
     release();
-    impl(p_)->h_ = shm::acquire((impl(p_)->n_ = name).c_str(),
+    impl(p_)->m_ = shm::acquire((impl(p_)->n_ = name).c_str(),
                                  impl(p_)->s_ = size);
     return valid();
 }
 
 void handle::release() {
     if (!valid()) return;
-    shm::release(impl(p_)->h_, impl(p_)->s_);
-    impl(p_)->h_ = nullptr;
+    shm::release(impl(p_)->m_, impl(p_)->s_);
+    impl(p_)->m_ = nullptr;
     impl(p_)->s_ = 0;
     impl(p_)->n_.clear();
 }
 
-void* handle::get() {
+void* handle::get() const {
     if (!valid()) return nullptr;
-    if (impl(p_)->m_ == nullptr) {
-        return impl(p_)->m_ = shm::open(impl(p_)->h_);
-    }
-    else return impl(p_)->m_;
-}
-
-void handle::close() {
-    if (!valid()) return;
-    shm::close(impl(p_)->m_);
-    impl(p_)->m_ = nullptr;
+    return impl(p_)->m_;
 }
 
 } // namespace shm
