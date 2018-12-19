@@ -17,7 +17,9 @@ script:
   - cd ./build
   - qmake -o Makefile src.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX
   - qmake -o MakefileTest test.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX
-  - make && make -f MakefileTest && export LD_LIBRARY_PATH=../output:$LD_LIBRARY_PATH && ../output/test
+  - make
+  - make -f MakefileTest
+  - export LD_LIBRARY_PATH=../output:$LD_LIBRARY_PATH && ../output/test
 
 notifications:
   slack:
