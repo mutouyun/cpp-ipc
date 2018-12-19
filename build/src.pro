@@ -23,12 +23,13 @@ HEADERS += \
     ../include/ipc.h \
     ../include/def.h \
     ../include/rw_lock.h \
-    ../include/tls_pointer.h
+    ../include/tls_pointer.h \
+    ../src/route.hpp \
+    ../src/channel.hpp
 
 SOURCES += \
     ../src/shm.cpp \
-    ../src/ipc.cpp \
-    ../src/route.cpp
+    ../src/ipc.cpp
 
 unix {
 

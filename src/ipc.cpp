@@ -42,6 +42,15 @@ inline std::atomic_size_t* acc_of(queue_t* que) {
     return reinterpret_cast<std::atomic_size_t*>(que->elems()) - 1;
 }
 
+inline auto& recv_cache() {
+    /*
+     * the performance of tls::pointer is not good enough
+     * so regardless of the mingw-crash-problem for the moment
+    */
+    thread_local std::unordered_map<decltype(msg_t::id_), buff_t> rc;
+    return rc;
+}
+
 } // internal-linkage
 
 namespace ipc {
@@ -130,8 +139,39 @@ bool send(handle_t h, void const * data, std::size_t size) {
     return true;
 }
 
-buff_t recv(handle_t h) {
-    return recv(&h, 1);
+template <typename F>
+buff_t updating_recv(F&& upd) {
+    auto& rc = recv_cache();
+    while(1) {
+        // pop a new message
+        auto msg = queue_t::pop(queue_t::multi_wait_for(upd));
+        // msg.remain_ may minus & abs(msg.remain_) < data_length
+        std::size_t remain = static_cast<std::size_t>(
+                             static_cast<int>(data_length) + msg.remain_);
+        // find cache with msg.id_
+        auto cache_it = rc.find(msg.id_);
+        if (cache_it == rc.end()) {
+            if (remain <= data_length) {
+                return make_buff(msg.data_, remain);
+            }
+            // cache the first message fragment
+            else rc.emplace(msg.id_, make_buff(msg.data_));
+        }
+        // has cached before this message
+        else {
+            auto& cache = cache_it->second;
+            // this is the last message fragment
+            if (msg.remain_ <= 0) {
+                cache.insert(cache.end(), msg.data_, msg.data_ + remain);
+                // finish this message, erase it from cache
+                auto buf = std::move(cache);
+                rc.erase(cache_it);
+                return buf;
+            }
+            // there are remain datas after this message
+            cache.insert(cache.end(), msg.data_, msg.data_ + data_length);
+        }
+    }
 }
 
 buff_t recv(handle_t const * hs, std::size_t size) {
@@ -146,41 +186,16 @@ buff_t recv(handle_t const * hs, std::size_t size) {
     if (q_arr.empty()) {
         return {};
     }
-    /*
-     * the performance of tls::pointer is not good enough
-     * so regardless of the mingw-crash-problem for the moment
-    */
-    thread_local std::unordered_map<decltype(msg_t::id_), buff_t> rcs;
-    while(1) {
-        // pop a new message
-        auto msg = queue_t::multi_pop(q_arr);
-        // msg.remain_ may minus & abs(msg.remain_) < data_length
-        std::size_t remain = static_cast<std::size_t>(
-                             static_cast<int>(data_length) + msg.remain_);
-        // find cache with msg.id_
-        auto cache_it = rcs.find(msg.id_);
-        if (cache_it == rcs.end()) {
-            if (remain <= data_length) {
-                return make_buff(msg.data_, remain);
-            }
-            // cache the first message fragment
-            else rcs.emplace(msg.id_, make_buff(msg.data_));
-        }
-        // has cached before this message
-        else {
-            auto& cache = cache_it->second;
-            // this is the last message fragment
-            if (msg.remain_ <= 0) {
-                cache.insert(cache.end(), msg.data_, msg.data_ + remain);
-                // finish this message, erase it from cache
-                auto buf = std::move(cache);
-                rcs.erase(cache_it);
-                return buf;
-            }
-            // there are remain datas after this message
-            cache.insert(cache.end(), msg.data_, msg.data_ + data_length);
-        }
-    }
+    return updating_recv([&] {
+        return std::forward_as_tuple(q_arr, q_arr.size());
+    });
+}
+
+buff_t recv(handle_t h) {
+    return recv(&h, 1);
 }
 
 } // namespace ipc
+
+#include "route.hpp"
+#include "channel.hpp"

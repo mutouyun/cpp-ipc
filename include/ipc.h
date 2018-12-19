@@ -78,28 +78,43 @@ private:
     route_* p_;
 };
 
-///*
-// * class channel
-//*/
-//class IPC_EXPORT channel {
-//public:
-//    channel();
-//    channel(char const * name);
-//    channel(channel&& rhs);
+/*
+ * class channel
+ *
+ * You could use multi producers/servers/senders for sending messages to a channel,
+ * then all the consumers/clients/receivers which are receiving with this channel,
+ * would receive your sent messages.
+*/
+class IPC_EXPORT channel {
+public:
+    channel();
+    channel(char const * name);
+    channel(channel&& rhs);
 
-//    ~channel();
+    ~channel();
 
-//    void swap(channel& rhs);
-//    channel& operator=(channel rhs);
+    void swap(channel& rhs);
+    channel& operator=(channel rhs);
 
-//    bool         valid() const;
-//    char const * name () const;
+    bool         valid() const;
+    char const * name () const;
 
-//    channel clone() const;
+    channel clone() const;
 
-//private:
-//    class channel_;
-//    channel_* p_;
-//};
+    bool connect(char const * name);
+    void disconnect();
+
+    std::size_t recv_count() const;
+
+    bool send(void const * data, std::size_t size);
+    bool send(buff_t const & buff);
+    bool send(std::string const & str);
+
+    buff_t recv();
+
+private:
+    class channel_;
+    channel_* p_;
+};
 
 } // namespace ipc

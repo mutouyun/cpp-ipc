@@ -6,6 +6,7 @@
 #include <utility>
 #include <algorithm>
 #include <atomic>
+#include <tuple>
 
 #include "def.h"
 #include "circ_elem_array.h"
@@ -108,40 +109,42 @@ public:
         return true;
     }
 
-    template <typename QArr, typename At>
-    static T multi_pop(QArr& ques, std::size_t size, At&& at) {
-        if (size == 0) throw std::invalid_argument { "Invalid size." };
+    template <typename F>
+    static queue* multi_wait_for(F&& upd) {
         while (1) {
+            auto [ques, size] = upd();
+            if (size == 0) throw std::invalid_argument { "Invalid size." };
             for (std::size_t i = 0; i < size; ++i) {
-                queue* cq = at(ques, i);
-                if (cq->elems_ == nullptr) throw std::logic_error {
+                queue* que = ques[i];
+                if (que->elems_ == nullptr) throw std::logic_error {
                     "This queue hasn't attached any elem_array."
                 };
-                if (cq->cursor_ != cq->elems_->cursor()) {
-                    auto item_ptr = static_cast<T*>(cq->elems_->take(cq->cursor_++));
-                    T item = std::move(*item_ptr);
-                    cq->elems_->put(item_ptr);
-                    return item;
+                if (que->cursor_ != que->elems_->cursor()) {
+                    return que;
                 }
             }
             std::this_thread::yield();
         }
     }
 
-    static T multi_pop(queue* ques, std::size_t size) {
-        if (ques == nullptr) throw std::invalid_argument { "Invalid ques pointer." };
-        return multi_pop(ques, size, [](queue* ques, std::size_t i) {
-            return ques + i;
-        });
+    static T pop(queue* que) {
+        if (que == nullptr) throw std::invalid_argument {
+            "Invalid ques pointer."
+        };
+        if (que->elems_ == nullptr) throw std::logic_error {
+            "This queue hasn't attached any elem_array."
+        };
+        auto item_ptr = static_cast<T*>(que->elems_->take(que->cursor_++));
+        T item = std::move(*item_ptr);
+        que->elems_->put(item_ptr);
+        return item;
     }
 
-    static T multi_pop(std::vector<queue*>& ques) {
-        return multi_pop(ques, ques.size(), [](auto& ques, std::size_t i) {
-            return ques[i];
-        });
+    T pop() {
+        return pop(multi_wait_for([this] {
+            return std::make_tuple(&this, 1);
+        }));
     }
-
-    T pop() { return multi_pop(this, 1); }
 };
 
 } // namespace circ
