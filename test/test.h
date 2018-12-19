@@ -47,8 +47,10 @@ template <>
 struct test_verify<void> {
     test_verify   (int)      {}
     void prepare  (void*)    {}
-    void push_data(int, ...) {}
     void verify   (int, int) {}
+
+    template <typename U>
+    void push_data(int, U&&) {}
 };
 
 template <typename T>
@@ -70,10 +72,7 @@ void benchmark_prod_cons(T* cq) {
         t = std::thread{[&, cid] {
             vf.prepare(&t);
             auto cn = tcq.connect();
-
-            using namespace std::placeholders;
-            tcq.recv(cn, std::bind(&test_verify<V>::push_data, &vf, cid, _1));
-
+            tcq.recv(cn, [&](auto&& msg) { vf.push_data(cid, msg); });
             tcq.disconnect(cn);
             if (++fini != std::extent<decltype(consumers)>::value) return;
             sw.print_elapsed(N, M, Loops);

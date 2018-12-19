@@ -38,8 +38,8 @@ constexpr queue_t* queue_of(handle_t h) {
     return static_cast<queue_t*>(h);
 }
 
-inline std::atomic_size_t* acc_of(queue_t* queue) {
-    return reinterpret_cast<std::atomic_size_t*>(queue->elems()) - 1;
+inline std::atomic_size_t* acc_of(queue_t* que) {
+    return reinterpret_cast<std::atomic_size_t*>(que->elems()) - 1;
 }
 
 } // internal-linkage
@@ -72,11 +72,25 @@ void disconnect(handle_t h) {
 }
 
 std::size_t recv_count(handle_t h) {
-    auto queue = queue_of(h);
-    if (queue == nullptr) {
+    auto que = queue_of(h);
+    if (que == nullptr) {
         return error_count;
     }
-    return queue->conn_count();
+    return que->conn_count();
+}
+
+void clear_recv(handle_t h) {
+    auto* head = acc_of(queue_of(h));
+    if (head == nullptr) {
+        return;
+    }
+    std::memset(head, 0, sizeof(shm_info_t));
+}
+
+void clear_recv(char const * name) {
+    auto h = ipc::connect(name);
+    ipc::clear_recv(h);
+    ipc::disconnect(h);
 }
 
 bool send(handle_t h, void const * data, std::size_t size) {
@@ -86,12 +100,12 @@ bool send(handle_t h, void const * data, std::size_t size) {
     if (size == 0) {
         return false;
     }
-    auto queue = queue_of(h);
-    if (queue == nullptr) {
+    auto que = queue_of(h);
+    if (que == nullptr) {
         return false;
     }
     // calc a new message id
-    auto msg_id = acc_of(queue)->fetch_add(1, std::memory_order_relaxed);
+    auto msg_id = acc_of(que)->fetch_add(1, std::memory_order_relaxed);
     // push message fragment, one fragment size is data_length
     int offset = 0;
     for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
@@ -100,7 +114,7 @@ bool send(handle_t h, void const * data, std::size_t size) {
             msg_id, { 0 }
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset, data_length);
-        queue->push(msg);
+        que->push(msg);
     }
     // if remain > 0, this is the last message fragment
     int remain = static_cast<int>(size) - offset;
@@ -111,7 +125,7 @@ bool send(handle_t h, void const * data, std::size_t size) {
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset,
                                static_cast<std::size_t>(remain));
-        queue->push(msg);
+        que->push(msg);
     }
     return true;
 }
@@ -124,10 +138,10 @@ buff_t recv(handle_t const * hs, std::size_t size) {
     thread_local std::vector<queue_t*> q_arr(size);
     q_arr.clear(); // make the size to 0
     for (size_t i = 0; i < size; ++i) {
-        auto queue = queue_of(hs[i]);
-        if (queue == nullptr) continue;
-        queue->connect(); // wouldn't connect twice
-        q_arr.push_back(queue);
+        auto que = queue_of(hs[i]);
+        if (que == nullptr) continue;
+        que->connect(); // wouldn't connect twice
+        q_arr.push_back(que);
     }
     if (q_arr.empty()) {
         return {};
@@ -190,6 +204,7 @@ route::route(route&& rhs)
 }
 
 route::~route() {
+    disconnect();
     p_->clear();
 }
 
@@ -223,6 +238,7 @@ bool route::connect(char const * name) {
 
 void route::disconnect() {
     ipc::disconnect(impl(p_)->h_);
+    impl(p_)->h_ = nullptr;
 }
 
 std::size_t route::recv_count() const {

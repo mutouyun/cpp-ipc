@@ -5,7 +5,6 @@
 #include <new>
 #include <vector>
 #include <unordered_map>
-#include <functional>
 
 #include "circ_elem_array.h"
 #include "circ_queue.h"

@@ -21,6 +21,8 @@ IPC_EXPORT handle_t connect   (char const * name);
 IPC_EXPORT void     disconnect(handle_t h);
 
 IPC_EXPORT std::size_t recv_count(handle_t h);
+IPC_EXPORT void        clear_recv(handle_t h);
+IPC_EXPORT void        clear_recv(char const * name);
 
 IPC_EXPORT bool   send(handle_t h, void const * data, std::size_t size);
 IPC_EXPORT buff_t recv(handle_t h);

@@ -45,8 +45,7 @@ struct test_cq<ipc::route> {
 
     test_cq(void*)
         : conn_name_("test-ipc-route") {
-        auto watcher = connect();
-        QCOMPARE(watcher.recv_count(), static_cast<std::size_t>(0));
+        ipc::clear_recv(conn_name_.c_str());
     }
 
     cn_t connect() {
@@ -58,8 +57,8 @@ struct test_cq<ipc::route> {
     }
 
     void wait_start(int M) {
-        auto watcher = connect();
-        while (watcher.recv_count() != static_cast<std::size_t>(M)) {
+        auto watcher = ipc::connect(conn_name_.c_str());
+        while (ipc::recv_count(watcher) != static_cast<std::size_t>(M)) {
             std::this_thread::yield();
         }
     }
@@ -257,6 +256,7 @@ void Unit::test_rw_lock() {
 void Unit::test_send_recv() {
     auto h = ipc::connect("my-ipc");
     QVERIFY(h != nullptr);
+    ipc::clear_recv(h);
     char data[] = "hello ipc!";
     QVERIFY(ipc::send(h, data, sizeof(data)));
     auto got = ipc::recv(h);
@@ -265,6 +265,8 @@ void Unit::test_send_recv() {
 }
 
 void Unit::test_route() {
+    ipc::clear_recv("my-ipc-route");
+
     auto wait_for_handshake = [](int id) {
         ipc::route cc { "my-ipc-route" };
         std::string cfm = "copy:" + std::to_string(id), ack = "re-" + cfm;

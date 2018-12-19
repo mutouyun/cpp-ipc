@@ -10,20 +10,14 @@ namespace shm {
 
 class handle::handle_ : public pimpl<handle_> {
 public:
-    handle* t_ = nullptr;
-    void*   m_ = nullptr;
+    void* m_ = nullptr;
 
-    std::string n_ {};
+    std::string n_;
     std::size_t s_ = 0;
-
-    handle_() = default;
-    handle_(handle* t) : t_{t} {}
-
-    ~handle_() { t_->release(); }
 };
 
 handle::handle()
-    : p_(p_->make(this)) {
+    : p_(p_->make()) {
 }
 
 handle::handle(char const * name, std::size_t size)
@@ -37,6 +31,7 @@ handle::handle(handle&& rhs)
 }
 
 handle::~handle() {
+    release();
     p_->clear();
 }
 
