@@ -16,6 +16,9 @@ matrix:
     - os: linux
       compiler: clang
 
+before_install:
+    - eval "${MATRIX_EVAL}"
+
 install:
   - sudo apt-get update
   - sudo apt-get install qt5-qmake libqt5test5
