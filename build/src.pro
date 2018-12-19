@@ -27,7 +27,8 @@ HEADERS += \
 
 SOURCES += \
     ../src/shm.cpp \
-    ../src/ipc.cpp
+    ../src/ipc.cpp \
+    ../src/route.cpp
 
 unix {
 
