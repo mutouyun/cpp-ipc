@@ -101,15 +101,15 @@ std::size_t channel::recv_count() const {
     return 0;
 }
 
-bool channel::send(void const *data, std::size_t size) {
+bool channel::send(void const * /*data*/, std::size_t /*size*/) {
     return false;
 }
 
-bool channel::send(buff_t const & buff) {
+bool channel::send(buff_t const & /*buff*/) {
     return false;
 }
 
-bool channel::send(std::string const & str) {
+bool channel::send(std::string const & /*str*/) {
     return false;
 }
 

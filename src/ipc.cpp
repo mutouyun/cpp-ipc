@@ -187,7 +187,7 @@ buff_t recv(handle_t const * hs, std::size_t size) {
         return {};
     }
     return updating_recv([&] {
-        return std::forward_as_tuple(q_arr, q_arr.size());
+        return std::make_tuple(q_arr.data(), q_arr.size());
     });
 }
 

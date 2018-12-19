@@ -141,8 +141,8 @@ public:
     }
 
     T pop() {
-        return pop(multi_wait_for([this] {
-            return std::make_tuple(&this, 1);
+        return pop(multi_wait_for([que = this] {
+            return std::make_tuple(&que, 1);
         }));
     }
 };
