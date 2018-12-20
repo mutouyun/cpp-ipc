@@ -2,17 +2,28 @@
 
 #include <atomic>
 #include <string>
+#include <array>
+#include <limits>
+#include <shared_mutex>
+#include <mutex>
+#include <unordered_map>
 
 #include "def.h"
 #include "shm.h"
+#include "rw_lock.h"
+
+#include "id_pool.hpp"
 
 namespace {
 
 using namespace ipc;
 
+#pragma pack(1)
 struct ch_info_t {
-    std::atomic<uint_t<8>> ch_acc_; // only support 256 channels with one name
+    rw_lock lc_;
+    id_pool ch_acc_; // only support 255 channels with one name
 };
+#pragma pack()
 
 } // internal-linkage
 
@@ -27,12 +38,19 @@ public:
     shm::handle h_;
     route       r_;
 
-    ch_info_t* info() {
-        return static_cast<ch_info_t*>(h_.get());
+    std::string n_;
+    std::size_t id_;
+
+    std::unordered_map<std::size_t, route> rts_;
+
+    ~channel_(void) { rts_.clear(); }
+
+    ch_info_t& info() {
+        return *static_cast<ch_info_t*>(h_.get());
     }
 
     auto& acc() {
-        return info()->ch_acc_;
+        return info().ch_acc_;
     }
 };
 
@@ -69,9 +87,7 @@ bool channel::valid() const {
 }
 
 char const * channel::name() const {
-    std::string n { impl(p_)->h_.name() };
-    n.pop_back();
-    return n.c_str();
+    return impl(p_)->n_.c_str();
 }
 
 channel channel::clone() const {
@@ -83,38 +99,85 @@ bool channel::connect(char const * name) {
         return false;
     }
     this->disconnect();
-    using namespace std::literals::string_literals;
-    if (!impl(p_)->h_.acquire((name + "_"s).c_str(), sizeof(ch_info_t))) {
+    if (!impl(p_)->h_.acquire(((impl(p_)->n_ = name) + "_").c_str(), sizeof(ch_info_t))) {
         return false;
     }
-    auto cur_id = impl(p_)->acc().fetch_add(1, std::memory_order_relaxed);
-    impl(p_)->r_.connect((name + std::to_string(cur_id)).c_str());
+    {
+        std::unique_lock<rw_lock> guard { impl(p_)->info().lc_ };
+        if (impl(p_)->acc().invalid()) {
+            impl(p_)->acc().init();
+        }
+        impl(p_)->id_ = impl(p_)->acc().acquire();
+    }
+    if (impl(p_)->id_ == invalid_value) {
+        return false;
+    }
+    impl(p_)->r_.connect((name + std::to_string(impl(p_)->id_)).c_str());
     return valid();
 }
 
 void channel::disconnect() {
+    if (!valid()) return;
+    {
+        std::unique_lock<rw_lock> guard { impl(p_)->info().lc_ };
+        impl(p_)->acc().release(impl(p_)->id_);
+    }
+    impl(p_)->rts_.clear();
     impl(p_)->r_.disconnect();
     impl(p_)->h_.release();
 }
 
 std::size_t channel::recv_count() const {
-    return 0;
+    return impl(p_)->r_.recv_count();
 }
 
-bool channel::send(void const * /*data*/, std::size_t /*size*/) {
-    return false;
+bool channel::send(void const * data, std::size_t size) {
+    return impl(p_)->r_.send(data, size);
 }
 
-bool channel::send(buff_t const & /*buff*/) {
-    return false;
+bool channel::send(buff_t const & buff) {
+    return impl(p_)->r_.send(buff);
 }
 
-bool channel::send(std::string const & /*str*/) {
-    return false;
+bool channel::send(std::string const & str) {
+    return impl(p_)->r_.send(str);
 }
 
 buff_t channel::recv() {
-    return {};
+    if (!valid()) return {};
+    std::array<queue_t*, id_pool::max_count> ques;
+    return ipc::multi_recv([&] {
+        std::array<std::size_t, id_pool::max_count> acqeds;
+        std::size_t counter = 0;
+        std::unordered_map<std::size_t, route> cache;
+        // get all acquired ids
+        {
+            std::shared_lock<rw_lock> guard { impl(p_)->info().lc_ };
+            impl(p_)->acc().for_each([&](std::size_t id, bool acquired) {
+                if (id == impl(p_)->id_) return;
+                if (acquired) {
+                    acqeds[counter++] = id;
+                }
+            });
+        }
+        // populate route cache & ques
+        for (std::size_t i = 0; i < counter; ++i) {
+            auto id = acqeds[i];
+            auto it = impl(p_)->rts_.find(id);
+            // it's a new id
+            if (it == impl(p_)->rts_.end()) {
+                it = cache.emplace(id, (impl(p_)->n_ + std::to_string(id)).c_str()).first;
+                queue_of(it->second.handle())->connect();
+            }
+            // it's an existing id
+            else it = cache.insert(impl(p_)->rts_.extract(it)).position;
+            // get queue of this route
+            ques[i] = queue_of(it->second.handle());
+        }
+        // update rts mapping
+        impl(p_)->rts_.swap(cache);
+        return std::make_tuple(ques.data(), counter);
+    });
 }
 
 } // namespace ipc

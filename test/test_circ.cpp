@@ -124,12 +124,12 @@ struct test_cq<ipc::circ::queue<T>> {
 
     cn_t* connect() {
         cn_t* queue = new cn_t { ca_ };
-        [&] { QVERIFY(queue->connect() != ipc::error_count); } ();
+        [&] { QVERIFY(queue->connect() != ipc::invalid_value); } ();
         return queue;
     }
 
     void disconnect(cn_t* queue) {
-        QVERIFY(queue->disconnect() != ipc::error_count);
+        QVERIFY(queue->disconnect() != ipc::invalid_value);
         QVERIFY(queue->detach() != nullptr);
         delete queue;
     }

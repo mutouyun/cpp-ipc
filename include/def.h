@@ -27,8 +27,8 @@ using uint_t = typename uint<N>::type;
 // constants
 
 enum : std::size_t {
-    error_count = (std::numeric_limits<std::size_t>::max)(),
-    data_length = 16
+    invalid_value = (std::numeric_limits<std::size_t>::max)(),
+    data_length   = 16
 };
 
 // concept helpers

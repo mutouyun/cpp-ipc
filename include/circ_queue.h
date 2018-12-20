@@ -41,25 +41,25 @@ public:
     }
 
     std::size_t connect() {
-        if (elems_ == nullptr) return error_count;
+        if (elems_ == nullptr) return invalid_value;
         if (connected_.exchange(true, std::memory_order_relaxed)) {
             // if it's already connected, just return an error count
-            return error_count;
+            return invalid_value;
         }
         return elems_->connect();
     }
 
     std::size_t disconnect() {
-        if (elems_ == nullptr) return error_count;
+        if (elems_ == nullptr) return invalid_value;
         if (!connected_.exchange(false, std::memory_order_relaxed)) {
             // if it's already disconnected, just return an error count
-            return error_count;
+            return invalid_value;
         }
         return elems_->disconnect();
     }
 
     std::size_t conn_count() const {
-        return (elems_ == nullptr) ? error_count : elems_->conn_count();
+        return (elems_ == nullptr) ? invalid_value : elems_->conn_count();
     }
 
     bool connected() const {
@@ -116,6 +116,7 @@ public:
             if (size == 0) throw std::invalid_argument { "Invalid size." };
             for (std::size_t i = 0; i < static_cast<std::size_t>(size); ++i) {
                 queue* que = ques[i];
+                if (que == nullptr) continue;
                 if (que->elems_ == nullptr) throw std::logic_error {
                     "This queue hasn't attached any elem_array."
                 };

@@ -5,14 +5,10 @@
 #include <cstring>
 #include <algorithm>
 #include <utility>
-//#include <shared_mutex>
-//#include <mutex>
 #include <atomic>
 
 #include "def.h"
 #include "circ_queue.h"
-//#include "rw_lock.h"
-//#include "tls_pointer.h"
 
 namespace {
 
@@ -83,7 +79,7 @@ void disconnect(handle_t h) {
 std::size_t recv_count(handle_t h) {
     auto que = queue_of(h);
     if (que == nullptr) {
-        return error_count;
+        return invalid_value;
     }
     return que->conn_count();
 }

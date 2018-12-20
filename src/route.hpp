@@ -42,11 +42,15 @@ route& route::operator=(route rhs) {
 }
 
 bool route::valid() const {
-    return (impl(p_)->h_ != nullptr);
+    return (handle() != nullptr);
 }
 
 char const * route::name() const {
     return impl(p_)->n_.c_str();
+}
+
+handle_t route::handle() const {
+    return impl(p_)->h_;
 }
 
 route route::clone() const {

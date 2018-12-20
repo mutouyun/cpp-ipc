@@ -122,6 +122,7 @@ private slots:
     void test_send_recv();
     void test_route();
     void test_route_performance();
+    void test_channel();
 } unit__;
 
 #include "test_ipc.moc"
@@ -386,6 +387,32 @@ struct test_performance<1, 1> {
 void Unit::test_route_performance() {
     test_prod_cons<1, 1>();
     test_performance<1, 10>::start();
+}
+
+void Unit::test_channel() {
+    std::thread t1 {[&] {
+        ipc::channel cc { "my-ipc-channel" };
+        for (std::size_t i = 0;; ++i) {
+            ipc::buff_t dd = cc.recv();
+            if (dd.size() < 2) return;
+            QCOMPARE(dd, datas__[i]);
+        }
+    }};
+
+    std::thread t2 {[&] {
+        ipc::channel cc { "my-ipc-channel" };
+        while (cc.recv_count() == 0) {
+            std::this_thread::yield();
+        }
+        for (std::size_t i = 0; i < (std::min)(100, LoopCount); ++i) {
+            std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
+            cc.send(datas__[i]);
+        }
+        cc.send(ipc::buff_t { '\0' });
+        t1.join();
+    }};
+
+    t2.join();
 }
 
 } // internal-linkage

@@ -57,8 +57,9 @@ public:
     void swap(route& rhs);
     route& operator=(route rhs);
 
-    bool         valid() const;
-    char const * name () const;
+    bool         valid () const;
+    char const * name  () const;
+    handle_t     handle() const;
 
     route clone() const;
 
