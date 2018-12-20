@@ -90,7 +90,7 @@ public:
     }
 
     template <typename P>
-    auto push(P&& param) // disable this if P is the same as T
+    auto push(P&& param) // disable this if P is as same as T
      -> Requires<!std::is_same<std::remove_reference_t<P>, T>::value, bool> {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
@@ -100,7 +100,7 @@ public:
     }
 
     template <typename... P>
-    auto push(P&&... params) // some old compilers are not support this well
+    auto push(P&&... params) // some compilers are not support this well
      -> Requires<(sizeof...(P) != 1), bool> {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
@@ -114,7 +114,7 @@ public:
         while (1) {
             auto [ques, size] = upd();
             if (size == 0) throw std::invalid_argument { "Invalid size." };
-            for (std::size_t i = 0; i < size; ++i) {
+            for (std::size_t i = 0; i < static_cast<std::size_t>(size); ++i) {
                 queue* que = ques[i];
                 if (que->elems_ == nullptr) throw std::logic_error {
                     "This queue hasn't attached any elem_array."

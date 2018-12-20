@@ -26,7 +26,10 @@ constexpr auto to_tchar(std::string && str) -> IsSame<T, std::wstring> {
     return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(std::move(str));
 }
 
-std::unordered_map<void*, HANDLE> m2h__;
+inline auto& m2h() {
+    thread_local std::unordered_map<void*, HANDLE> cache;
+    return cache;
+}
 
 } // internal-linkage
 
@@ -49,7 +52,7 @@ void* acquire(char const * name, std::size_t size) {
         ::CloseHandle(h);
         return nullptr;
     }
-    m2h__.emplace(mem, h);
+    m2h().emplace(mem, h);
     return mem;
 }
 
@@ -57,13 +60,14 @@ void release(void* mem, std::size_t /*size*/) {
     if (mem == nullptr) {
         return;
     }
-    auto it = m2h__.find(mem);
-    if (it == m2h__.end()) {
+    auto& cc = m2h();
+    auto it = cc.find(mem);
+    if (it == cc.end()) {
         return;
     }
     ::UnmapViewOfFile(mem);
     ::CloseHandle(it->second);
-    m2h__.erase(it);
+    cc.erase(it);
 }
 
 } // namespace shm

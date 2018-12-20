@@ -69,7 +69,7 @@ std::size_t route::recv_count() const {
     return ipc::recv_count(impl(p_)->h_);
 }
 
-bool route::send(void const *data, std::size_t size) {
+bool route::send(void const * data, std::size_t size) {
     return ipc::send(impl(p_)->h_, data, size);
 }
 

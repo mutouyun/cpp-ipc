@@ -58,8 +58,7 @@ void Unit::test_get() {
     QVERIFY(mem != nullptr);
     QVERIFY(mem == shm_hd__.get());
 
-    std::uint8_t buf[1024];
-    memset(buf, 0, sizeof(buf));
+    std::uint8_t buf[1024] = {};
     QVERIFY(memcmp(mem, buf, sizeof(buf)) == 0);
 
     handle shm_other(shm_hd__.name(), shm_hd__.size());
@@ -71,6 +70,16 @@ void Unit::test_hello() {
     QVERIFY(mem != nullptr);
 
     constexpr char hello[] = "hello!";
+    std::memcpy(mem, hello, sizeof(hello));
+    QCOMPARE((char*)shm_hd__.get(), hello);
+
+    shm_hd__.release();
+    QVERIFY(shm_hd__.get() == nullptr);
+    QVERIFY(shm_hd__.acquire("my-test", 1024));
+
+    std::uint8_t buf[1024] = {};
+    QVERIFY(memcmp(mem, buf, sizeof(buf)) == 0);
+
     std::memcpy(mem, hello, sizeof(hello));
     QCOMPARE((char*)shm_hd__.get(), hello);
 }

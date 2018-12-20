@@ -140,7 +140,7 @@ bool send(handle_t h, void const * data, std::size_t size) {
 }
 
 template <typename F>
-buff_t updating_recv(F&& upd) {
+buff_t multi_recv(F&& upd) {
     auto& rc = recv_cache();
     while(1) {
         // pop a new message
@@ -186,7 +186,7 @@ buff_t recv(handle_t const * hs, std::size_t size) {
     if (q_arr.empty()) {
         return {};
     }
-    return updating_recv([&] {
+    return multi_recv([&] {
         return std::make_tuple(q_arr.data(), q_arr.size());
     });
 }
