@@ -1,27 +1,25 @@
 language: cpp
+os: linux
 dist: xenial
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-7
+      - qt5-qmake
+      - libqt5test5
 
 matrix:
   include:
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-7
+    - compiler: gcc
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
-
-    - os: linux
-      compiler: clang
+    - compiler: clang
 
 before_install:
     - eval "${MATRIX_EVAL}"
-
-install:
-  - sudo apt-get update
-  - sudo apt-get install qt5-qmake libqt5test5
 
 script:
   - qmake -v
