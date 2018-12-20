@@ -126,7 +126,7 @@ public:
                 }
             }
             if (k < 1024) std::this_thread::yield();
-            // yielding coarsening
+            // yielding => sleeping
             else std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
