@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <atomic>
 #include <tuple>
+#include <thread>
+#include <chrono>
 
 #include "def.h"
 #include "circ_elem_array.h"
@@ -111,9 +113,8 @@ public:
 
     template <typename F>
     static queue* multi_wait_for(F&& upd) {
-        while (1) {
+        for (unsigned k = 0;; ++k) {
             auto [ques, size] = upd();
-            if (size == 0) throw std::invalid_argument { "Invalid size." };
             for (std::size_t i = 0; i < static_cast<std::size_t>(size); ++i) {
                 queue* que = ques[i];
                 if (que == nullptr) continue;
@@ -124,7 +125,9 @@ public:
                     return que;
                 }
             }
-            std::this_thread::yield();
+            if (k < 1024) std::this_thread::yield();
+            // yielding coarsening
+            else std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 
