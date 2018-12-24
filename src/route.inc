@@ -65,8 +65,10 @@ bool route::connect(char const * name) {
 }
 
 void route::disconnect() {
+    if (!valid()) return;
     ipc::disconnect(impl(p_)->h_);
     impl(p_)->h_ = nullptr;
+    impl(p_)->n_.clear();
 }
 
 std::size_t route::recv_count() const {

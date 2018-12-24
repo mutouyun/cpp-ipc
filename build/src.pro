@@ -24,9 +24,9 @@ HEADERS += \
     ../include/def.h \
     ../include/rw_lock.h \
     ../include/tls_pointer.h \
-    ../src/route.hpp \
-    ../src/channel.hpp \
-    ../src/id_pool.hpp
+    ../src/channel.inc \
+    ../src/route.inc \
+    ../src/id_pool.inc
 
 SOURCES += \
     ../src/shm.cpp \

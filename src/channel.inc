@@ -7,12 +7,13 @@
 #include <shared_mutex>
 #include <mutex>
 #include <unordered_map>
+#include <thread>
 
 #include "def.h"
 #include "shm.h"
 #include "rw_lock.h"
 
-#include "id_pool.hpp"
+#include "id_pool.inc"
 
 namespace {
 
@@ -131,23 +132,31 @@ std::size_t channel::recv_count() const {
     return impl(p_)->r_.recv_count();
 }
 
+template <typename... P>
+inline bool channel_send(route& rt, P&&... params) {
+    while (rt.recv_count() == 0) {
+        std::this_thread::yield();
+    }
+    return rt.send(params...); // no need std::forward
+}
+
 bool channel::send(void const * data, std::size_t size) {
-    return impl(p_)->r_.send(data, size);
+    return channel_send(impl(p_)->r_, data, size);
 }
 
 bool channel::send(buff_t const & buff) {
-    return impl(p_)->r_.send(buff);
+    return channel_send(impl(p_)->r_, buff);
 }
 
 bool channel::send(std::string const & str) {
-    return impl(p_)->r_.send(str);
+    return channel_send(impl(p_)->r_, str);
 }
 
 buff_t channel::recv() {
     if (!valid()) return {};
     std::array<queue_t*, id_pool::max_count> ques;
     return ipc::multi_recv([&] {
-        std::array<std::size_t, id_pool::max_count> acqeds;
+        std::array<std::size_t, id_pool::max_count> acqs;
         std::size_t counter = 0;
         std::unordered_map<std::size_t, route> cache;
         // get all acquired ids
@@ -156,13 +165,13 @@ buff_t channel::recv() {
             impl(p_)->acc().for_each([&](std::size_t id, bool acquired) {
                 if (id == impl(p_)->id_) return;
                 if (acquired) {
-                    acqeds[counter++] = id;
+                    acqs[counter++] = id;
                 }
             });
         }
         // populate route cache & ques
         for (std::size_t i = 0; i < counter; ++i) {
-            auto id = acqeds[i];
+            auto id = acqs[i];
             auto it = impl(p_)->rts_.find(id);
             // it's a new id
             if (it == impl(p_)->rts_.end()) {

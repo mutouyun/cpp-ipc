@@ -123,6 +123,7 @@ private slots:
     void test_route();
     void test_route_performance();
     void test_channel();
+    void test_channel_rtt();
 } unit__;
 
 #include "test_ipc.moc"
@@ -158,7 +159,7 @@ struct lc_wrapper : Mutex {
     void unlock_shared() { Mutex::unlock(); }
 };
 
-template <typename Lc, int W, int R, int Loops = 100000>
+template <typename Lc, int W, int R, int Loops = LoopCount>
 void benchmark_lc() {
     std::thread w_trd[W];
     std::thread r_trd[R];
@@ -410,6 +411,38 @@ void Unit::test_channel() {
         }
         cc.send(ipc::buff_t { '\0' });
         t1.join();
+    }};
+
+    t2.join();
+}
+
+void Unit::test_channel_rtt() {
+    test_stopwatch sw;
+
+    std::thread t1 {[&] {
+        ipc::channel cc { "my-ipc-channel" };
+        for (std::size_t i = 0;; ++i) {
+            auto dd = cc.recv();
+            if (dd.size() < 2) return;
+//            std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
+            cc.send(ipc::buff_t { 'a' });
+        }
+    }};
+
+    std::thread t2 {[&] {
+        ipc::channel cc { "my-ipc-channel" };
+        sw.start();
+        for (std::size_t i = 0; i < LoopCount; ++i) {
+//            std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
+            cc.send(datas__[i]);
+            /*auto dd = */cc.recv();
+//            if (dd.size() != 1 || dd[0] != 'a') {
+//                QVERIFY(false);
+//            }
+        }
+        cc.send(ipc::buff_t { '\0' });
+        t1.join();
+        sw.print_elapsed(DataMin, DataMax, LoopCount);
     }};
 
     t2.join();

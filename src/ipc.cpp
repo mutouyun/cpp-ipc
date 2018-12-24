@@ -193,5 +193,5 @@ buff_t recv(handle_t h) {
 
 } // namespace ipc
 
-#include "route.hpp"
-#include "channel.hpp"
+#include "route.inc"
+#include "channel.inc"
