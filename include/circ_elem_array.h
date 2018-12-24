@@ -21,8 +21,7 @@ struct alignas(std::max_align_t) elem_array_head {
     static u1_t index_of(u2_t c) noexcept { return static_cast<u1_t>(c); }
 
     std::size_t connect() noexcept {
-        // connect should be called before cursor
-        return cc_.fetch_add(1, std::memory_order_relaxed);
+        return cc_.fetch_add(1, std::memory_order_release);
     }
 
     std::size_t disconnect() noexcept {
