@@ -134,7 +134,8 @@ std::size_t channel::recv_count() const {
 
 template <typename... P>
 inline bool channel_send(route& rt, P&&... params) {
-    while (rt.recv_count() == 0) {
+    for (int k = 0; rt.recv_count() == 0; ++k) {
+        if (k >= 1024) return false;
         std::this_thread::yield();
     }
     return rt.send(params...); // no need std::forward

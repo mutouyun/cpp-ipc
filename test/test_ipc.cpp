@@ -425,7 +425,7 @@ void Unit::test_channel_rtt() {
             auto dd = cc.recv();
             if (dd.size() < 2) return;
 //            std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
-            cc.send(ipc::buff_t { 'a' });
+            while (!cc.send(ipc::buff_t { 'a' })) {}
         }
     }};
 
@@ -434,7 +434,7 @@ void Unit::test_channel_rtt() {
         sw.start();
         for (std::size_t i = 0; i < LoopCount; ++i) {
 //            std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
-            cc.send(datas__[i]);
+            while (!cc.send(datas__[i])) {}
             /*auto dd = */cc.recv();
 //            if (dd.size() != 1 || dd[0] != 'a') {
 //                QVERIFY(false);
