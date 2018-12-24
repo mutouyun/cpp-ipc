@@ -56,7 +56,7 @@
 
 namespace ipc {
 
-inline void yield(unsigned k) {
+inline void yield(unsigned k) noexcept {
     if (k < 4)  { /* Do nothing */ }
     else
     if (k < 16) { IPC_LOCK_PAUSE_(); }
@@ -80,7 +80,7 @@ class rw_lock {
     };
 
 public:
-    void lock() {
+    void lock() noexcept {
         for (unsigned k = 0;; ++k) {
             auto old = lc_.fetch_or(w_flag, std::memory_order_acquire);
             if (!old) return;           // got w-lock
@@ -93,11 +93,11 @@ public:
         }
     }
 
-    void unlock() {
+    void unlock() noexcept {
         lc_.store(0, std::memory_order_release);
     }
 
-    void lock_shared() {
+    void lock_shared() noexcept {
         auto old = lc_.load(std::memory_order_relaxed);
         for (unsigned k = 0;; ++k) {
             // if w_flag set, just continue
@@ -113,7 +113,7 @@ public:
         }
     }
 
-    void unlock_shared() {
+    void unlock_shared() noexcept {
         lc_.fetch_sub(1, std::memory_order_release);
     }
 };

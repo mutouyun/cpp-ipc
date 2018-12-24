@@ -2,7 +2,6 @@
 
 #include <type_traits>
 #include <new>
-#include <exception>
 #include <utility>
 #include <algorithm>
 #include <atomic>
@@ -38,11 +37,11 @@ public:
     queue(queue&&) = delete;
     queue& operator=(queue&&) = delete;
 
-    constexpr array_t * elems() const {
+    constexpr array_t * elems() const noexcept {
         return elems_;
     }
 
-    std::size_t connect() {
+    std::size_t connect() noexcept {
         if (elems_ == nullptr) return invalid_value;
         if (connected_.exchange(true, std::memory_order_relaxed)) {
             // if it's already connected, just return an error count
@@ -51,7 +50,7 @@ public:
         return elems_->connect();
     }
 
-    std::size_t disconnect() {
+    std::size_t disconnect() noexcept {
         if (elems_ == nullptr) return invalid_value;
         if (!connected_.exchange(false, std::memory_order_relaxed)) {
             // if it's already disconnected, just return an error count
@@ -60,15 +59,15 @@ public:
         return elems_->disconnect();
     }
 
-    std::size_t conn_count() const {
+    std::size_t conn_count() const noexcept {
         return (elems_ == nullptr) ? invalid_value : elems_->conn_count();
     }
 
-    bool connected() const {
+    bool connected() const noexcept {
         return connected_.load(std::memory_order_relaxed);
     }
 
-    array_t* attach(array_t* arr) {
+    array_t* attach(array_t* arr) noexcept {
         if (arr == nullptr) return nullptr;
         auto old = elems_;
         elems_  = arr;
@@ -76,14 +75,14 @@ public:
         return old;
     }
 
-    array_t* detach() {
+    array_t* detach() noexcept {
         if (elems_ == nullptr) return nullptr;
         auto old = elems_;
         elems_ = nullptr;
         return old;
     }
 
-    bool push(T const & item) {
+    bool push(T const & item) noexcept {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
         ::new (ptr) T(item);
@@ -92,7 +91,7 @@ public:
     }
 
     template <typename P>
-    auto push(P&& param) // disable this if P is as same as T
+    auto push(P&& param) noexcept // disable this if P is as same as T
      -> Requires<!std::is_same<std::remove_reference_t<P>, T>::value, bool> {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
@@ -102,7 +101,7 @@ public:
     }
 
     template <typename... P>
-    auto push(P&&... params) // some compilers are not support this well
+    auto push(P&&... params) noexcept // some compilers are not support this well
      -> Requires<(sizeof...(P) != 1), bool> {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
@@ -112,15 +111,13 @@ public:
     }
 
     template <typename F>
-    static queue* multi_wait_for(F&& upd) {
+    static queue* multi_wait_for(F&& upd) noexcept {
         for (unsigned k = 0;; ++k) {
             auto [ques, size] = upd();
             for (std::size_t i = 0; i < static_cast<std::size_t>(size); ++i) {
                 queue* que = ques[i];
                 if (que == nullptr) continue;
-                if (que->elems_ == nullptr) throw std::logic_error {
-                    "This queue hasn't attached any elem_array."
-                };
+                if (que->elems_ == nullptr) return nullptr;
                 if (que->cursor_ != que->elems_->cursor()) {
                     return que;
                 }
@@ -131,20 +128,16 @@ public:
         }
     }
 
-    static T pop(queue* que) {
-        if (que == nullptr) throw std::invalid_argument {
-            "Invalid ques pointer."
-        };
-        if (que->elems_ == nullptr) throw std::logic_error {
-            "This queue hasn't attached any elem_array."
-        };
+    static T pop(queue* que) noexcept {
+        if (que == nullptr) return {};
+        if (que->elems_ == nullptr) return {};
         auto item_ptr = static_cast<T*>(que->elems_->take(que->cursor_++));
         T item = std::move(*item_ptr);
         que->elems_->put(item_ptr);
         return item;
     }
 
-    T pop() {
+    T pop() noexcept {
         return pop(multi_wait_for([que = this] {
             return std::make_tuple(&que, 1);
         }));

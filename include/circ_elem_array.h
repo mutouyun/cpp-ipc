@@ -18,29 +18,30 @@ struct alignas(std::max_align_t) elem_array_head {
     std::atomic<u2_t> cc_ { 0 }; // connection counter, using for broadcast
     std::atomic<u2_t> wt_ { 0 }; // write index
 
-    static u1_t index_of(u2_t c) { return static_cast<u1_t>(c); }
+    static u1_t index_of(u2_t c) noexcept { return static_cast<u1_t>(c); }
 
-    std::size_t connect() {
+    std::size_t connect() noexcept {
+        // connect should be called before cursor
         return cc_.fetch_add(1, std::memory_order_relaxed);
     }
 
-    std::size_t disconnect() {
-        return cc_.fetch_sub(1, std::memory_order_relaxed);
+    std::size_t disconnect() noexcept {
+        return cc_.fetch_sub(1, std::memory_order_release);
     }
 
-    std::size_t conn_count() const {
-        return cc_.load(std::memory_order_relaxed);
+    std::size_t conn_count() const noexcept {
+        return cc_.load(std::memory_order_acquire);
     }
 
-    u2_t cursor() const {
-        return wt_.load(std::memory_order_relaxed);
+    u2_t cursor() const noexcept {
+        return wt_.load(std::memory_order_acquire);
     }
 
-    auto acquire() {
-        return index_of(wt_.load(std::memory_order_acquire));
+    auto acquire() noexcept {
+        return index_of(wt_.load(std::memory_order_relaxed));
     }
 
-    void commit() {
+    void commit() noexcept {
         wt_.fetch_add(1, std::memory_order_release);
     }
 };
@@ -79,12 +80,12 @@ private:
     };
     elem_t block_[elem_max];
 
-    elem_t* elem_start() {
+    elem_t* elem_start() noexcept {
         return block_;
     }
 
-    static elem_t* elem(void* ptr) { return reinterpret_cast<elem_t*>(static_cast<byte_t*>(ptr) - sizeof(head_t)); }
-           elem_t* elem(u1_t i   ) { return elem_start() + i; }
+    static elem_t* elem(void* ptr) noexcept { return reinterpret_cast<elem_t*>(static_cast<byte_t*>(ptr) - sizeof(head_t)); }
+           elem_t* elem(u1_t i   ) noexcept { return elem_start() + i; }
 
 public:
     elem_array() = default;
@@ -99,32 +100,31 @@ public:
     using base_t::conn_count;
     using base_t::cursor;
 
-    void* acquire() {
+    void* acquire() noexcept {
         elem_t* el = elem(base_t::acquire());
         // check all consumers have finished reading
         while(1) {
-            uint_t<32> expected = 0;
+            uint_t<32> expected = 0,
+                       conn_cnt = cc_.load(std::memory_order_acquire);
             if (el->head_.rc_.compare_exchange_weak(
-                        expected,
-                        static_cast<uint_t<32>>(conn_count()),
-                        std::memory_order_relaxed)) {
+                        expected, conn_cnt, std::memory_order_relaxed)) {
                 break;
             }
             std::this_thread::yield();
-            std::atomic_thread_fence(std::memory_order_acquire);
         }
         return el->data_;
     }
 
-    void commit(void* /*ptr*/) {
+    void commit(void* /*ptr*/) noexcept {
         base_t::commit();
     }
 
-    void* take(u2_t cursor) {
+    void* take(u2_t cursor) noexcept {
+        std::atomic_thread_fence(std::memory_order_acquire);
         return elem(base_t::index_of(cursor))->data_;
     }
 
-    void put(void* ptr) {
+    void put(void* ptr) noexcept {
         elem(ptr)->head_.rc_.fetch_sub(1, std::memory_order_release);
     }
 };

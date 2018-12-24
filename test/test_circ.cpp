@@ -20,6 +20,10 @@ struct msg_t {
     int dat_;
 };
 
+bool operator==(msg_t const & m1, msg_t const & m2) {
+    return (m1.pid_ == m2.pid_) && (m1.dat_ == m2.dat_);
+}
+
 } // internal-linkage
 
 template <>
@@ -254,34 +258,10 @@ void Unit::test_prod_cons_performance() {
     test_prod_cons  <1, 10>(); // test & verify
 }
 
-#ifndef QVERIFY_EXCEPTION_THROWN
-#define QVERIFY_EXCEPTION_THROWN(expression, exceptiontype) \
-do {\
-    QT_TRY {\
-        QT_TRY {\
-            expression;\
-            QTest::qFail("Expected exception of type " #exceptiontype " to be thrown" \
-                         " but no exception caught", __FILE__, __LINE__);\
-            return;\
-        } QT_CATCH (const exceptiontype &) {\
-        }\
-    } QT_CATCH (const std::exception &e) {\
-        QByteArray msg = QByteArray() + "Expected exception of type " #exceptiontype \
-                         " to be thrown but std::exception caught with message: " + e.what(); \
-        QTest::qFail(msg.constData(), __FILE__, __LINE__);\
-        return;\
-    } QT_CATCH (...) {\
-        QTest::qFail("Expected exception of type " #exceptiontype " to be thrown" \
-                     " but unknown exception caught", __FILE__, __LINE__);\
-        return;\
-    }\
-} while (false)
-#endif/*!QVERIFY_EXCEPTION_THROWN*/
-
 void Unit::test_queue() {
     ipc::circ::queue<msg_t> queue;
     queue.push(1, 2);
-    QVERIFY_EXCEPTION_THROWN(queue.pop(), std::exception);
+    QCOMPARE(queue.pop(), msg_t{});
     QVERIFY(sizeof(decltype(queue)::array_t) <= sizeof(*cq__));
 
     auto cq = ::new (cq__) decltype(queue)::array_t;
