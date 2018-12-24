@@ -105,7 +105,7 @@ public:
         // check all consumers have finished reading
         while(1) {
             uint_t<32> expected = 0,
-                       conn_cnt = cc_.load(std::memory_order_acquire);
+                       conn_cnt = static_cast<uint_t<32>>(conn_count()); // acquire
             if (el->head_.rc_.compare_exchange_weak(
                         expected, conn_cnt, std::memory_order_relaxed)) {
                 break;
