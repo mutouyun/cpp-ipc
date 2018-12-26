@@ -6,8 +6,9 @@
 #include <limits>
 #include <shared_mutex>
 #include <mutex>
-#include <unordered_map>
 #include <thread>
+#include <memory>
+#include <utility>
 
 #include "def.h"
 #include "shm.h"
@@ -26,6 +27,20 @@ struct ch_info_t {
 };
 #pragma pack()
 
+inline bool wait_for_recv(route const & rt, std::size_t r_count, std::size_t until) {
+    for (unsigned k = 0; rt.recv_count() < r_count; ++k) {
+        if (k > until) return false;
+        std::this_thread::yield();
+    }
+    return true;
+}
+
+template <typename... P>
+inline bool channel_send(route& rt, std::size_t r_count, P&&... params) {
+    if (!wait_for_recv(rt, r_count, 1024)) return false;
+    return rt.send(params...); // no need std::forward
+}
+
 } // internal-linkage
 
 ////////////////////////////////////////////////////////////////
@@ -42,9 +57,7 @@ public:
     std::string n_;
     std::size_t id_;
 
-    std::unordered_map<std::size_t, route> rts_;
-
-    ~channel_(void) { rts_.clear(); }
+    std::array<route, id_pool::max_count> rts_;
 
     ch_info_t& info() {
         return *static_cast<ch_info_t*>(h_.get());
@@ -92,7 +105,7 @@ char const * channel::name() const {
 }
 
 channel channel::clone() const {
-    return { name() };
+    return channel { name() };
 }
 
 bool channel::connect(char const * name) {
@@ -123,7 +136,9 @@ void channel::disconnect() {
         std::unique_lock<rw_lock> guard { impl(p_)->info().lc_ };
         impl(p_)->acc().release(impl(p_)->id_);
     }
-    impl(p_)->rts_.clear();
+    for (auto& rt : impl(p_)->rts_) {
+        rt.disconnect();
+    }
     impl(p_)->r_.disconnect();
     impl(p_)->h_.release();
 }
@@ -132,25 +147,36 @@ std::size_t channel::recv_count() const {
     return impl(p_)->r_.recv_count();
 }
 
-template <typename... P>
-inline bool channel_send(route& rt, P&&... params) {
-    for (unsigned k = 0; rt.recv_count() == 0; ++k) {
-        if (k >= 1024) return false;
-        std::this_thread::yield();
-    }
-    return rt.send(params...); // no need std::forward
+bool channel::wait_for_recv(std::size_t r_count, std::size_t until) const {
+    return ::wait_for_recv(impl(p_)->r_, r_count, until);
+}
+
+bool channel::wait_for_recv(std::size_t r_count) const {
+    return wait_for_recv(r_count, (std::numeric_limits<std::size_t>::max)());
 }
 
 bool channel::send(void const * data, std::size_t size) {
-    return channel_send(impl(p_)->r_, data, size);
+    return impl(p_)->r_.send(data, size);
 }
 
 bool channel::send(buff_t const & buff) {
-    return channel_send(impl(p_)->r_, buff);
+    return impl(p_)->r_.send(buff);
 }
 
 bool channel::send(std::string const & str) {
-    return channel_send(impl(p_)->r_, str);
+    return impl(p_)->r_.send(str);
+}
+
+bool channel::send_for(std::size_t r_count, void const * data, std::size_t size) {
+    return ::channel_send(impl(p_)->r_, r_count, data, size);
+}
+
+bool channel::send_for(std::size_t r_count, buff_t const & buff) {
+    return ::channel_send(impl(p_)->r_, r_count, buff);
+}
+
+bool channel::send_for(std::size_t r_count, std::string const & str) {
+    return ::channel_send(impl(p_)->r_, r_count, str);
 }
 
 buff_t channel::recv() {
@@ -159,33 +185,26 @@ buff_t channel::recv() {
     return ipc::multi_recv([&] {
         std::array<std::size_t, id_pool::max_count> acqs;
         std::size_t counter = 0;
-        std::unordered_map<std::size_t, route> cache;
         // get all acquired ids
         {
             std::shared_lock<rw_lock> guard { impl(p_)->info().lc_ };
-            impl(p_)->acc().for_each([&](std::size_t id, bool acquired) {
+            impl(p_)->acc().for_acquired([this, &acqs, &counter](std::size_t id) {
                 if (id == impl(p_)->id_) return;
-                if (acquired) {
-                    acqs[counter++] = id;
-                }
+                acqs[counter++] = id;
             });
         }
         // populate route cache & ques
-        for (std::size_t i = 0; i < counter; ++i) {
-            auto id = acqs[i];
-            auto it = impl(p_)->rts_.find(id);
+        for (std::size_t k = 0; k < counter; ++k) {
+            std::size_t id = acqs[k];
+            auto& it = impl(p_)->rts_[id];
             // it's a new id
-            if (it == impl(p_)->rts_.end()) {
-                it = cache.emplace(id, (impl(p_)->n_ + std::to_string(id)).c_str()).first;
-                queue_of(it->second.handle())->connect();
+            if (!it.valid()) {
+                it.connect((impl(p_)->n_ + std::to_string(id)).c_str());
+                queue_of(it.handle())->connect();
             }
-            // it's an existing id
-            else it = cache.insert(impl(p_)->rts_.extract(it)).position;
             // get queue of this route
-            ques[i] = queue_of(it->second.handle());
+            ques[k] = queue_of(it.handle());
         }
-        // update rts mapping
-        impl(p_)->rts_.swap(cache);
         return std::make_tuple(ques.data(), counter);
     });
 }

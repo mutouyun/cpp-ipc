@@ -100,16 +100,18 @@ public:
     using base_t::cursor;
 
     void* acquire() noexcept {
+        uint_t<32> conn_cnt = static_cast<uint_t<32>>(conn_count()); // acquire
+        if (conn_cnt == 0) return nullptr;
         elem_t* el = elem(base_t::acquire());
         // check all consumers have finished reading
         while(1) {
-            uint_t<32> expected = 0,
-                       conn_cnt = static_cast<uint_t<32>>(conn_count()); // acquire
+            uint_t<32> expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
                         expected, conn_cnt, std::memory_order_relaxed)) {
                 break;
             }
             std::this_thread::yield();
+            conn_cnt = static_cast<uint_t<32>>(conn_count()); // acquire
         }
         return el->data_;
     }

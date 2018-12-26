@@ -49,7 +49,7 @@ buff_t recv(handle_t const (& hs)[N]) { return recv(hs, N); }
 class IPC_EXPORT route {
 public:
     route();
-    route(char const * name);
+    explicit route(char const * name);
     route(route&& rhs);
 
     ~route();
@@ -89,7 +89,7 @@ private:
 class IPC_EXPORT channel {
 public:
     channel();
-    channel(char const * name);
+    explicit channel(char const * name);
     channel(channel&& rhs);
 
     ~channel();
@@ -110,6 +110,13 @@ public:
     bool send(void const * data, std::size_t size);
     bool send(buff_t const & buff);
     bool send(std::string const & str);
+
+    bool wait_for_recv(std::size_t r_count, std::size_t until) const;
+    bool wait_for_recv(std::size_t r_count) const;
+
+    bool send_for(std::size_t r_count, void const * data, std::size_t size);
+    bool send_for(std::size_t r_count, buff_t const & buff);
+    bool send_for(std::size_t r_count, std::string const & str);
 
     buff_t recv();
 

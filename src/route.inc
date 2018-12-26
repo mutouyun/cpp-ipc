@@ -54,7 +54,7 @@ handle_t route::handle() const {
 }
 
 route route::clone() const {
-    return { name() };
+    return route { name() };
 }
 
 bool route::connect(char const * name) {

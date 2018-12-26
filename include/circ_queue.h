@@ -43,7 +43,7 @@ public:
 
     std::size_t connect() noexcept {
         if (elems_ == nullptr) return invalid_value;
-        if (connected_.exchange(true, std::memory_order_relaxed)) {
+        if (connected_.exchange(true, std::memory_order_acq_rel)) {
             // if it's already connected, just return an error count
             return invalid_value;
         }
@@ -52,7 +52,7 @@ public:
 
     std::size_t disconnect() noexcept {
         if (elems_ == nullptr) return invalid_value;
-        if (!connected_.exchange(false, std::memory_order_relaxed)) {
+        if (!connected_.exchange(false, std::memory_order_acq_rel)) {
             // if it's already disconnected, just return an error count
             return invalid_value;
         }
@@ -63,8 +63,12 @@ public:
         return (elems_ == nullptr) ? invalid_value : elems_->conn_count();
     }
 
+    bool empty() const noexcept {
+        return (elems_ == nullptr) ? true : (cursor_ == elems_->cursor());
+    }
+
     bool connected() const noexcept {
-        return connected_.load(std::memory_order_relaxed);
+        return connected_.load(std::memory_order_acquire);
     }
 
     array_t* attach(array_t* arr) noexcept {
@@ -82,30 +86,12 @@ public:
         return old;
     }
 
-    bool push(T const & item) noexcept {
-        if (elems_ == nullptr) return false;
-        auto ptr = elems_->acquire();
-        ::new (ptr) T(item);
-        elems_->commit(ptr);
-        return true;
-    }
-
-    template <typename P>
-    auto push(P&& param) noexcept // disable this if P is as same as T
-     -> Requires<!std::is_same<std::remove_reference_t<P>, T>::value, bool> {
-        if (elems_ == nullptr) return false;
-        auto ptr = elems_->acquire();
-        ::new (ptr) T { std::forward<P>(param) };
-        elems_->commit(ptr);
-        return true;
-    }
-
     template <typename... P>
-    auto push(P&&... params) noexcept // some compilers are not support this well
-     -> Requires<(sizeof...(P) != 1), bool> {
+    auto push(P&&... params) noexcept {
         if (elems_ == nullptr) return false;
         auto ptr = elems_->acquire();
-        ::new (ptr) T { std::forward<P>(params)... };
+        if (ptr == nullptr) return false;
+        ::new (ptr) T(std::forward<P>(params)...);
         elems_->commit(ptr);
         return true;
     }
@@ -116,9 +102,9 @@ public:
             auto [ques, size] = upd();
             for (std::size_t i = 0; i < static_cast<std::size_t>(size); ++i) {
                 queue* que = ques[i];
-                if (que == nullptr) continue;
-                if (que->elems_ == nullptr) return nullptr;
-                if (que->cursor_ != que->elems_->cursor()) {
+                if ((que != nullptr) && (que->elems_ == nullptr ||
+                                         que->elems_->cursor() != que->cursor_)) {
+                    // may que->elems_ == nullptr
                     return que;
                 }
             }
@@ -129,8 +115,12 @@ public:
     }
 
     static T pop(queue* que) noexcept {
-        if (que == nullptr) return {};
-        if (que->elems_ == nullptr) return {};
+        if (que == nullptr) {
+            return {};
+        }
+        if (que->elems_ == nullptr) {
+            return {};
+        }
         auto item_ptr = static_cast<T*>(que->elems_->take(que->cursor_++));
         T item = std::move(*item_ptr);
         que->elems_->put(item_ptr);

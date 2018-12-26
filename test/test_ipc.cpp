@@ -14,10 +14,6 @@
 #include <utility>
 #include <unordered_map>
 
-#if defined(__GNUC__)
-#   include <cxxabi.h>  // abi::__cxa_demangle
-#endif/*__GNUC__*/
-
 #include "stopwatch.hpp"
 #include "spin_lock.hpp"
 #include "random.hpp"
@@ -37,53 +33,8 @@ constexpr int LoopCount = 100000;
 
 } // internal-linkage
 
-template <>
-struct test_cq<ipc::route> {
-    using cn_t = ipc::route;
-
-    std::string conn_name_;
-
-    test_cq(void*)
-        : conn_name_("test-ipc-route") {
-        ipc::clear_recv(conn_name_.c_str());
-    }
-
-    cn_t connect() {
-        return { conn_name_.c_str() };
-    }
-
-    void disconnect(cn_t& cn) {
-        cn.disconnect();
-    }
-
-    void wait_start(int M) {
-        auto watcher = ipc::connect(conn_name_.c_str());
-        while (ipc::recv_count(watcher) != static_cast<std::size_t>(M)) {
-            std::this_thread::yield();
-        }
-    }
-
-    template <typename F>
-    void recv(cn_t& cn, F&& proc) {
-        do {
-            auto msg = cn.recv();
-            if (msg.size() < 2) return;
-            proc(msg);
-        } while(1);
-    }
-
-    void send(const std::array<int, 2>& info) {
-        thread_local auto cn = connect();
-        int n = info[1];
-        if (n < 0) {
-            cn.send(ipc::buff_t { '\0' });
-        }
-        else cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]);
-    }
-};
-
-template <>
-struct test_verify<ipc::route> {
+template <typename T>
+struct test_verify {
     std::unordered_map<int, std::vector<ipc::buff_t>> list_;
     int lcount_;
 
@@ -105,6 +56,120 @@ struct test_verify<ipc::route> {
     }
 };
 
+template <>
+struct test_cq<ipc::route> {
+    using cn_t = ipc::route;
+
+    std::string conn_name_;
+
+    test_cq(void*)
+        : conn_name_("test-ipc-route") {
+        ipc::clear_recv(conn_name_.c_str());
+    }
+
+    cn_t connect() {
+        return cn_t { conn_name_.c_str() };
+    }
+
+    void disconnect(cn_t& cn) {
+        cn.disconnect();
+    }
+
+    void wait_start(int M) {
+        auto watcher = ipc::connect(conn_name_.c_str());
+        while (ipc::recv_count(watcher) != static_cast<std::size_t>(M)) {
+            std::this_thread::yield();
+        }
+    }
+
+    template <typename F>
+    void recv(cn_t& cn, F&& proc) {
+        do {
+            auto msg = cn.recv();
+            if (msg.size() < 2) {
+                QCOMPARE(msg, ipc::buff_t { '\0' });
+                return;
+            }
+            proc(msg);
+        } while(1);
+    }
+
+    cn_t connect_send() {
+        return connect();
+    }
+
+    void send(cn_t& cn, const std::array<int, 2>& info) {
+        int n = info[1];
+        if (n < 0) {
+            cn.send(ipc::buff_t { '\0' });
+        }
+        else cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]);
+    }
+};
+
+template <>
+struct test_cq<ipc::channel> {
+    using cn_t = ipc::channel;
+
+    std::string conn_name_;
+    int m_ = 0;
+    std::vector<cn_t*> s_cns_;
+    ipc::rw_lock lc_;
+
+    test_cq(void*)
+        : conn_name_("test-ipc-channel") {
+    }
+
+    ~test_cq() {
+        for (auto p : s_cns_) delete p;
+    }
+
+    cn_t connect() {
+        return cn_t { conn_name_.c_str() };
+    }
+
+    void disconnect(cn_t& cn) {
+        cn.disconnect();
+    }
+
+    void wait_start(int M) { m_ = M; }
+
+    template <typename F>
+    void recv(cn_t& cn, F&& proc) {
+        do {
+            auto msg = cn.recv();
+            if (msg.size() < 2) {
+                QCOMPARE(msg, ipc::buff_t { '\0' });
+                return;
+            }
+            proc(msg);
+        } while(1);
+    }
+
+    cn_t* connect_send() {
+        auto p = new cn_t { conn_name_.c_str() };
+        {
+            std::unique_lock<ipc::rw_lock> guard { lc_ };
+            s_cns_.push_back(p);
+        }
+        return p;
+    }
+
+    void send(cn_t* cn, const std::array<int, 2>& info) {
+        thread_local struct s_dummy {
+            s_dummy(cn_t* cn, int m) {
+                cn->wait_for_recv(m);
+                std::printf("start to send: %d.\n", m);
+            }
+        } _(cn, m_);
+        int n = info[1];
+        if (n < 0) {
+            cn->send(ipc::buff_t { '\0' });
+        }
+        else cn->send(datas__[static_cast<decltype(datas__)::size_type>(n)]);
+    }
+};
+
 namespace {
 
 class Unit : public TestSuite {
@@ -121,9 +186,13 @@ private slots:
     void test_rw_lock();
     void test_send_recv();
     void test_route();
+    void test_route_rtt();
     void test_route_performance();
     void test_channel();
     void test_channel_rtt();
+    void test_channel_performance_1vN();
+    void test_channel_performance_Nv1();
+    void test_channel_performance_NvN();
 } unit__;
 
 #include "test_ipc.moc"
@@ -170,17 +239,7 @@ void benchmark_lc() {
     Lc lc;
 
     test_stopwatch sw;
-#if defined(__GNUC__)
-    {
-        const char* typeid_name = typeid(Lc).name();
-        const char* real_name = abi::__cxa_demangle(typeid_name, nullptr, nullptr, nullptr);
-        std::unique_ptr<void, decltype(::free)*> guard { (void*)real_name, ::free };
-        if (real_name == nullptr) real_name = typeid_name;
-        std::cout << std::endl << real_name << std::endl;
-    }
-#else
-    std::cout << std::endl << typeid(Lc).name() << std::endl;
-#endif/*__GNUC__*/
+    std::cout << std::endl << type_name<Lc>() << std::endl;
 
     for (auto& t : r_trd) {
         t = std::thread([&] {
@@ -260,55 +319,24 @@ void Unit::test_send_recv() {
     QVERIFY(h != nullptr);
     ipc::clear_recv(h);
     char data[] = "hello ipc!";
-    QVERIFY(ipc::send(h, data, sizeof(data)));
-    auto got = ipc::recv(h);
-    QCOMPARE((char*)got.data(), data);
+    std::thread xx([h, data] {
+        auto got = ipc::recv(h);
+        QCOMPARE((char*)got.data(), data);
+    });
+    while (!ipc::send(h, data, sizeof(data))) {
+        std::this_thread::yield();
+    }
+    xx.join();
     ipc::disconnect(h);
+}
+
+template <typename T, int N, int M, bool V = true, int Loops = LoopCount>
+void test_prod_cons() {
+    benchmark_prod_cons<N, M, Loops, std::conditional_t<V, T, void>>((T*)nullptr);
 }
 
 void Unit::test_route() {
     ipc::clear_recv("my-ipc-route");
-
-    auto wait_for_handshake = [](int id) {
-        ipc::route cc { "my-ipc-route" };
-        std::string cfm = "copy:" + std::to_string(id), ack = "re-" + cfm;
-        std::atomic_bool unmatched { true };
-        std::thread re {[&] {
-            bool has_re = false;
-            do {
-                auto dd = cc.recv();
-                QVERIFY(!dd.empty());
-                std::string got { reinterpret_cast<char*>(dd.data()), dd.size() - 1 };
-                if (cfm == got) continue;
-                std::cout << id << "-recv: " << got << "[" << dd.size() << "]" << std::endl;
-                if (ack != got) {
-                    char const cp[] = "copy:";
-                    // check header
-                    if (std::memcmp(dd.data(), cp, sizeof(cp) - 1) == 0) {
-                        std::cout << id << "-re: " << got << std::endl;
-                        QVERIFY(has_re = cc.send(
-                                    std::string{ "re-" }.append(
-                                        reinterpret_cast<char*>(dd.data()), dd.size() - 1)));
-                    }
-                }
-                else if (unmatched.load(std::memory_order_relaxed)) {
-                    unmatched.store(false, std::memory_order_release);
-                    std::cout << id << "-matched!" << std::endl;
-                }
-            } while (!has_re || unmatched.load(std::memory_order_relaxed));
-        }};
-        while (unmatched.load(std::memory_order_acquire)) {
-            if (!cc.send(cfm)) {
-                std::cout << id << "-send failed!" << std::endl;
-                unmatched = false;
-                break;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        re.join();
-        std::cout << id << "-fini handshake!" << std::endl;
-        return cc;
-    };
 
     std::vector<char const *> const datas = {
         "hello!",
@@ -322,71 +350,106 @@ void Unit::test_route() {
     };
 
     std::thread t1 {[&] {
-        auto cc = wait_for_handshake(1);
-        const char cp[] = "copy:", re[] = "re-copy:";
-        bool unchecked = true;
-        for (std::size_t i = 0; i < datas.size(); ++i, unchecked = false) {
-            ipc::buff_t dd;
-            do {
-                dd = cc.recv();
-            } while (unchecked &&
-                     (((dd.size() > sizeof(cp)) && std::memcmp(dd.data(), cp, sizeof(cp) - 1) == 0) ||
-                      ((dd.size() > sizeof(re)) && std::memcmp(dd.data(), re, sizeof(re) - 1) == 0)));
+        ipc::route cc { "my-ipc-route" };
+        for (std::size_t i = 0; i < datas.size(); ++i) {
+            ipc::buff_t dd = cc.recv();
             QCOMPARE(dd.size(), std::strlen(datas[i]) + 1);
             QVERIFY(std::memcmp(dd.data(), datas[i], dd.size()) == 0);
         }
     }};
 
     std::thread t2 {[&] {
-        auto cc = wait_for_handshake(2);
+        ipc::route cc { "my-ipc-route" };
+        while (cc.recv_count() == 0) {
+            std::this_thread::yield();
+        }
         for (std::size_t i = 0; i < datas.size(); ++i) {
             std::cout << "sending: " << datas[i] << std::endl;
-            cc.send(datas[i]);
+            QVERIFY(cc.send(datas[i]));
         }
     }};
 
     t1.join();
     t2.join();
+
+    test_prod_cons<ipc::route, 1, 1>();
 }
 
-template <int N, int M, bool V = true, int Loops = LoopCount>
-void test_prod_cons() {
-    benchmark_prod_cons<N, M, Loops, std::conditional_t<V, ipc::route, void>>((ipc::route*)nullptr);
+void Unit::test_route_rtt() {
+    test_stopwatch sw;
+
+    std::thread t1 {[&] {
+        ipc::route cc { "my-ipc-route-1" };
+        ipc::route cr { "my-ipc-route-2" };
+        for (std::size_t i = 0;; ++i) {
+            auto dd = cc.recv();
+            if (dd.size() < 2) return;
+//            std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
+            while (!cr.send(ipc::buff_t { 'a' })) {
+                std::this_thread::yield();
+            }
+        }
+    }};
+
+    std::thread t2 {[&] {
+        ipc::route cc { "my-ipc-route-1" };
+        ipc::route cr { "my-ipc-route-2" };
+        while (cc.recv_count() == 0) {
+            std::this_thread::yield();
+        }
+        sw.start();
+        for (std::size_t i = 0; i < LoopCount; ++i) {
+//            std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
+            cc.send(datas__[i]);
+            /*auto dd = */cr.recv();
+//            if (dd.size() != 1 || dd[0] != 'a') {
+//                QVERIFY(false);
+//            }
+        }
+        cc.send(ipc::buff_t { '\0' });
+        t1.join();
+        sw.print_elapsed(1, 1, LoopCount);
+    }};
+
+    t2.join();
 }
 
-template <int P, int C>
+template <int P, int C, bool V = false>
 struct test_performance {
+    template <typename T = ipc::route>
     static void start() {
-        test_performance<P - 1, C - 1>::start();
-        test_prod_cons<P, C, false>();
+        test_performance<P - 1, C - 1, V>::template start<T>();
+        test_prod_cons<T, P, C, V>();
     }
 };
 
-template <int C>
-struct test_performance<1, C> {
+template <int C, bool V>
+struct test_performance<1, C, V> {
+    template <typename T = ipc::route>
     static void start() {
-        test_performance<1, C - 1>::start();
-        test_prod_cons<1, C, false>();
+        test_performance<1, C - 1, V>::template start<T>();
+        test_prod_cons<T, 1, C, V>();
     }
 };
 
-template <int P>
-struct test_performance<P, 1> {
+template <int P, bool V>
+struct test_performance<P, 1, V> {
+    template <typename T = ipc::route>
     static void start() {
-        test_performance<P - 1, 1>::start();
-        test_prod_cons<P, 1, false>();
+        test_performance<P - 1, 1, V>::template start<T>();
+        test_prod_cons<T, P, 1, V>();
     }
 };
 
-template <>
-struct test_performance<1, 1> {
+template <bool V>
+struct test_performance<1, 1, V> {
+    template <typename T = ipc::route>
     static void start() {
-        test_prod_cons<1, 1, false>();
+        test_prod_cons<T, 1, 1, V>();
     }
 };
 
 void Unit::test_route_performance() {
-    test_prod_cons<1, 1>();
     test_performance<1, 10>::start();
 }
 
@@ -402,9 +465,7 @@ void Unit::test_channel() {
 
     std::thread t2 {[&] {
         ipc::channel cc { "my-ipc-channel" };
-        while (cc.recv_count() == 0) {
-            std::this_thread::yield();
-        }
+        cc.wait_for_recv(1);
         for (std::size_t i = 0; i < (std::min)(100, LoopCount); ++i) {
             std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
             cc.send(datas__[i]);
@@ -425,16 +486,19 @@ void Unit::test_channel_rtt() {
             auto dd = cc.recv();
             if (dd.size() < 2) return;
 //            std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
-            while (!cc.send(ipc::buff_t { 'a' })) {}
+            while (!cc.send(ipc::buff_t { 'a' })) {
+                cc.wait_for_recv(1);
+            }
         }
     }};
 
     std::thread t2 {[&] {
         ipc::channel cc { "my-ipc-channel" };
+        cc.wait_for_recv(1);
         sw.start();
         for (std::size_t i = 0; i < LoopCount; ++i) {
 //            std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
-            while (!cc.send(datas__[i])) {}
+            cc.send(datas__[i]);
             /*auto dd = */cc.recv();
 //            if (dd.size() != 1 || dd[0] != 'a') {
 //                QVERIFY(false);
@@ -442,10 +506,27 @@ void Unit::test_channel_rtt() {
         }
         cc.send(ipc::buff_t { '\0' });
         t1.join();
-        sw.print_elapsed(DataMin, DataMax, LoopCount);
+        sw.print_elapsed(1, 1, LoopCount);
     }};
 
     t2.join();
+}
+
+void Unit::test_channel_performance_1vN() {
+    test_performance<1, 10, true>::start<ipc::channel>();
+//    test_prod_cons<ipc::channel, 1, 2, false>();
+}
+
+void Unit::test_channel_performance_Nv1() {
+    test_performance<10, 1>::start<ipc::channel>();
+//    test_prod_cons<ipc::channel, 1, 1, false>();
+//    test_prod_cons<ipc::channel, 2, 1, false>();
+//    test_prod_cons<ipc::channel, 3, 1, false>();
+//    test_prod_cons<ipc::channel, 4, 1, false>();
+}
+
+void Unit::test_channel_performance_NvN() {
+    test_performance<10, 10>::start<ipc::channel>();
 }
 
 } // internal-linkage

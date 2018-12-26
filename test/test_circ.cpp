@@ -108,10 +108,14 @@ struct test_cq<ipc::circ::elem_array<D>> {
         } while(1);
     }
 
-    void send(msg_t const & msg) {
-        msg_t* pmsg = static_cast<msg_t*>(ca_->acquire());
+    ca_t* connect_send() {
+        return ca_;
+    }
+
+    void send(ca_t* ca, msg_t const & msg) {
+        msg_t* pmsg = static_cast<msg_t*>(ca->acquire());
         (*pmsg) = msg;
-        ca_->commit(pmsg);
+        ca->commit(pmsg);
     }
 };
 
@@ -153,8 +157,12 @@ struct test_cq<ipc::circ::queue<T>> {
         } while(1);
     }
 
-    void send(msg_t const & msg) {
-        cn_t{ ca_ }.push(msg);
+    cn_t connect_send() {
+        return cn_t{ ca_ };
+    }
+
+    void send(cn_t& cn, msg_t const & msg) {
+        cn.push(msg);
     }
 };
 
@@ -260,7 +268,7 @@ void Unit::test_prod_cons_performance() {
 
 void Unit::test_queue() {
     ipc::circ::queue<msg_t> queue;
-    queue.push(1, 2);
+    queue.push(msg_t { 1, 2 });
     QCOMPARE(queue.pop(), msg_t{});
     QVERIFY(sizeof(decltype(queue)::array_t) <= sizeof(*cq__));
 

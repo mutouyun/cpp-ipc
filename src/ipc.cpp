@@ -17,25 +17,26 @@ using data_t = byte_t[data_length];
 
 #pragma pack(1)
 struct msg_t {
-    int         remain_;
     std::size_t id_;
+    int         remain_;
     data_t      data_;
 };
 #pragma pack()
 
-using queue_t = circ::queue<msg_t>;
+using queue_t  = circ::queue<msg_t>;
+using msg_id_t = decltype(msg_t::id_);
 
 struct shm_info_t {
-    std::atomic_size_t id_acc_; // message id accumulator
-    queue_t::array_t   elems_;  // the circ_elem_array in shm
+    std::atomic<msg_id_t> id_acc_; // message id accumulator
+    queue_t::array_t      elems_;  // the circ_elem_array in shm
 };
 
 constexpr queue_t* queue_of(handle_t h) {
     return static_cast<queue_t*>(h);
 }
 
-inline std::atomic_size_t* acc_of(queue_t* que) {
-    return reinterpret_cast<std::atomic_size_t*>(que->elems()) - 1;
+inline std::atomic<msg_id_t>* acc_of(queue_t* que) {
+    return reinterpret_cast<std::atomic<msg_id_t>*>(que->elems()) - 1;
 }
 
 inline auto& recv_cache() {
@@ -43,7 +44,7 @@ inline auto& recv_cache() {
      * the performance of tls::pointer is not good enough
      * so regardless of the mingw-crash-problem for the moment
     */
-    thread_local std::unordered_map<decltype(msg_t::id_), buff_t> rc;
+    thread_local std::unordered_map<msg_id_t, buff_t> rc;
     return rc;
 }
 
@@ -109,28 +110,26 @@ bool send(handle_t h, void const * data, std::size_t size) {
     if (que == nullptr) {
         return false;
     }
-    // calc a new message id
-    auto msg_id = acc_of(que)->fetch_add(1, std::memory_order_relaxed);
+    // calc a new message id, start with 1
+    auto msg_id = acc_of(que)->fetch_add(1, std::memory_order_relaxed) + 1;
     // push message fragment, one fragment size is data_length
     int offset = 0;
     for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
         msg_t msg {
-            static_cast<int>(size) - offset - static_cast<int>(data_length),
-            msg_id, { 0 }
+            msg_id, static_cast<int>(size) - offset - static_cast<int>(data_length), {}
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset, data_length);
-        que->push(msg);
+        if (!que->push(msg)) return false;
     }
     // if remain > 0, this is the last message fragment
     int remain = static_cast<int>(size) - offset;
     if (remain > 0) {
         msg_t msg {
-            remain - static_cast<int>(data_length),
-            msg_id, { 0 }
+            msg_id, remain - static_cast<int>(data_length), {}
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset,
                                static_cast<std::size_t>(remain));
-        que->push(msg);
+        if (!que->push(msg)) return false;
     }
     return true;
 }
@@ -141,6 +140,7 @@ buff_t multi_recv(F&& upd) {
     while(1) {
         // pop a new message
         auto msg = queue_t::pop(queue_t::multi_wait_for(upd));
+        if (msg.id_ == 0) return {};
         // msg.remain_ may minus & abs(msg.remain_) < data_length
         std::size_t remain = static_cast<std::size_t>(
                              static_cast<int>(data_length) + msg.remain_);
