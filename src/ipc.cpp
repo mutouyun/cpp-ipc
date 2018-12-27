@@ -9,6 +9,7 @@
 
 #include "def.h"
 #include "circ_queue.h"
+#include "shm.h"
 
 namespace {
 
@@ -27,16 +28,20 @@ using queue_t  = circ::queue<msg_t>;
 using msg_id_t = decltype(msg_t::id_);
 
 struct shm_info_t {
-    std::atomic<msg_id_t> id_acc_; // message id accumulator
-    queue_t::array_t      elems_;  // the circ_elem_array in shm
+    queue_t::array_t elems_;  // the circ_elem_array in shm
 };
+
+inline auto acc_of(queue_t*) {
+    static shm::handle g_shm { "GLOBAL_ACC_STORAGE__", sizeof(std::atomic<msg_id_t>) };
+    return static_cast<std::atomic<msg_id_t>*>(g_shm.get());
+}
+
+constexpr void* head_of(queue_t* que) {
+    return static_cast<void*>(que->elems());
+}
 
 constexpr queue_t* queue_of(handle_t h) {
     return static_cast<queue_t*>(h);
-}
-
-inline std::atomic<msg_id_t>* acc_of(queue_t* que) {
-    return reinterpret_cast<std::atomic<msg_id_t>*>(que->elems()) - 1;
 }
 
 inline auto& recv_cache() {
@@ -73,7 +78,7 @@ void disconnect(handle_t h) {
         return;
     }
     que->disconnect(); // needn't to detach, cause it will be deleted soon.
-    shm::release(acc_of(que), sizeof(shm_info_t));
+    shm::release(head_of(que), sizeof(shm_info_t));
     delete que;
 }
 
@@ -86,7 +91,7 @@ std::size_t recv_count(handle_t h) {
 }
 
 void clear_recv(handle_t h) {
-    auto* head = acc_of(queue_of(h));
+    auto* head = head_of(queue_of(h));
     if (head == nullptr) {
         return;
     }

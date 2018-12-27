@@ -159,7 +159,7 @@ struct test_cq<ipc::channel> {
         thread_local struct s_dummy {
             s_dummy(cn_t* cn, int m) {
                 cn->wait_for_recv(m);
-                std::printf("start to send: %d.\n", m);
+//                std::printf("start to send: %d.\n", m);
             }
         } _(cn, m_);
         int n = info[1];
@@ -190,9 +190,7 @@ private slots:
     void test_route_performance();
     void test_channel();
     void test_channel_rtt();
-    void test_channel_performance_1vN();
-    void test_channel_performance_Nv1();
-    void test_channel_performance_NvN();
+    void test_channel_performance();
 } unit__;
 
 #include "test_ipc.moc"
@@ -450,7 +448,7 @@ struct test_performance<1, 1, V> {
 };
 
 void Unit::test_route_performance() {
-    test_performance<1, 10>::start();
+    test_performance<1, 10, true>::start();
 }
 
 void Unit::test_channel() {
@@ -512,20 +510,9 @@ void Unit::test_channel_rtt() {
     t2.join();
 }
 
-void Unit::test_channel_performance_1vN() {
-    test_performance<1, 10, true>::start<ipc::channel>();
-//    test_prod_cons<ipc::channel, 1, 2, false>();
-}
-
-void Unit::test_channel_performance_Nv1() {
-    test_performance<10, 1>::start<ipc::channel>();
-//    test_prod_cons<ipc::channel, 1, 1, false>();
-//    test_prod_cons<ipc::channel, 2, 1, false>();
-//    test_prod_cons<ipc::channel, 3, 1, false>();
-//    test_prod_cons<ipc::channel, 4, 1, false>();
-}
-
-void Unit::test_channel_performance_NvN() {
+void Unit::test_channel_performance() {
+    test_performance<1 , 10, true>::start<ipc::channel>();
+    test_performance<10, 1 >::start<ipc::channel>();
     test_performance<10, 10>::start<ipc::channel>();
 }
 

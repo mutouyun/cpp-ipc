@@ -40,7 +40,7 @@ struct test_stopwatch {
 
     void print_elapsed(int N, int M, int Loops) {
         auto ts = sw_.elapsed<std::chrono::microseconds>();
-        std::cout << "[" << N << ":" << M << ", " << Loops << "]" << std::endl
+        std::cout << "[" << N << ":" << M << ", " << Loops << "] "
                   << "performance: " << (ts / 1000.0) << " ms, "
                   << (double(ts) / double(Loops * N)) << " us/d" << std::endl;
     }
@@ -94,16 +94,16 @@ void benchmark_prod_cons(T* cq) {
             auto cn = tcq.connect();
             int i = 0;
             tcq.recv(cn, [&](auto&& msg) {
-                if (i % ((Loops * N) / 10) == 0) {
-                    std::printf("%d-recving: %d%%\n", cid, (i * 100) / (Loops * N));
-                }
+//                if (i % ((Loops * N) / 10) == 0) {
+//                    std::printf("%d-recving: %d%%\n", cid, (i * 100) / (Loops * N));
+//                }
                 vf.push_data(cid, msg);
                 ++i;
             });
-            std::printf("%d-consumer-disconnect\n", cid);
+//            std::printf("%d-consumer-disconnect\n", cid);
             tcq.disconnect(cn);
             if (++fini_c != std::extent<decltype(consumers)>::value) {
-                std::printf("%d-consumer-end\n", cid);
+//                std::printf("%d-consumer-end\n", cid);
                 return;
             }
             sw.print_elapsed(N, M, Loops);
@@ -122,9 +122,9 @@ void benchmark_prod_cons(T* cq) {
             sw.start();
             for (int i = 0; i < Loops; ++i) {
                 tcq.send(cn, { pid, i });
-                if (i % (Loops / 10) == 0) {
-                    std::printf("%d-sending: %d%%\n", pid, i * 100 / Loops);
-                }
+//                if (i % (Loops / 10) == 0) {
+//                    std::printf("%d-sending: %d%%\n", pid, i * 100 / Loops);
+//                }
             }
             if (++fini_p != std::extent<decltype(producers)>::value) return;
             // quit
