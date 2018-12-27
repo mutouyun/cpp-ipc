@@ -14,7 +14,7 @@ A high-performance inter-process communication using shared memory on Linux/Wind
  
 ## Performance
 
- | Environment ||
+ | | Environment |
  | ------ | ------ |
  | Device | Lenovo ThinkPad T450 |
  | CPU | Intel(R) Core(TM) i5-4300U @ 2.5 GHz |
@@ -45,22 +45,16 @@ UT & benchmark test function, see: [test](test)
 
 ### ipc::channel
 
- | PROD-CONS: 1-N | DATAS: Random 2-256bits * 100000 |
+ | PROD-CONS: N-M | DATAS: Random 2-256bits * 100000 |
  | ------ | ------ |
  | `RTT` | `221.500 ms, 2.21500 us/d` |
  | `1-1` | `141.013 ms, 1.41013 us/d` |
  | `1-2` | `270.092 ms, 2.70092 us/d` |
  | `1-4` | `609.792 ms, 6.09792 us/d` |
  | `1-8` | `968.309 ms, 9.68309 us/d` |
-
- | PROD-CONS: N-1 | DATAS: Random 2-256bits * 100000 |
- | ------ | ------ |
  | `2-1` | `313.916 ms, 1.56958 us/d` |
  | `4-1` | `804.254 ms, 2.01064 us/d` |
  | `8-1` | `1800.42 ms, 2.25053 us/d` |
-
- | PROD-CONS: N-N | DATAS: Random 2-256bits * 100000 |
- | ------ | ------ |
  | `2-2` | `550.972 ms, 2.75486 us/d` |
  | `4-4` | `1942.46 ms, 4.85616 us/d` |
  | `8-8` | `7684.91 ms, 9.60614 us/d` |
