@@ -1,7 +1,7 @@
+MIT License
+
 C++ IPC Library: A high-performance inter-process communication using shared memory on Linux/Windows.
 Copyright (c) 2018 mutouyun (http://orzz.org). All rights reserved.
-
-MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
