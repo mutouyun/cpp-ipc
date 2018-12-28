@@ -89,7 +89,7 @@ void benchmark_prod_cons(T* cq) {
     test_stopwatch sw;
     test_verify<V> vf { M };
 
-    capo::spin_lock lc;
+//    capo::spin_lock lc;
 
     int cid = 0;
     for (auto& t : consumers) {
