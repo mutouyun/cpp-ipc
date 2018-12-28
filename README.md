@@ -9,7 +9,7 @@ A high-performance inter-process communication using shared memory on Linux/Wind
  * 除STL外，无其他依赖
  * 无锁（lock-free）或轻量级shared-spin-lock（`ipc::channel::connect`/`disconnect`）
  * 底层数据结构为循环数组（circular array）
- * `ipc::route`支持单生产者多消费者（1vN)，`ipc::channel`支持多生产者多消费者（NvM）
+ * `ipc::route`支持单生产多消费，`ipc::channel`支持多生产多消费
  
 ## Performance
 
