@@ -10,6 +10,8 @@
 #include <atomic>
 #include <string>
 
+#include "tls_pointer.h"
+
 namespace {
 
 using acc_t = std::atomic_size_t;
@@ -23,8 +25,8 @@ constexpr void* mem_of(void* mem) {
 }
 
 inline auto& m2h() {
-    thread_local std::unordered_map<void*, std::string> cache;
-    return cache;
+    static ipc::tls::pointer<std::unordered_map<void*, std::string>> cache;
+    return *cache.create();
 }
 
 } // internal-linkage

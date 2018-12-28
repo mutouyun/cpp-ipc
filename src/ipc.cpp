@@ -10,6 +10,7 @@
 #include "def.h"
 #include "circ_queue.h"
 #include "shm.h"
+#include "tls_pointer.h"
 
 namespace {
 
@@ -46,11 +47,21 @@ constexpr queue_t* queue_of(handle_t h) {
 
 inline auto& recv_cache() {
     /*
-     * the performance of tls::pointer is not good enough
-     * so regardless of the mingw-crash-problem for the moment
+        <Remarks> thread_local may have some bugs.
+        See: https://sourceforge.net/p/mingw-w64/bugs/727/
+             https://sourceforge.net/p/mingw-w64/bugs/527/
+             https://github.com/Alexpux/MINGW-packages/issues/2519
+             https://github.com/ChaiScript/ChaiScript/issues/402
+             https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
+             https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
     */
-    thread_local std::unordered_map<msg_id_t, buff_t> rc;
-    return rc;
+    static tls::pointer<std::unordered_map<msg_id_t, buff_t>> rc;
+    return *rc.create();
+}
+
+inline auto& queues_cache() {
+    static tls::pointer<std::vector<queue_t*>> qc;
+    return *qc.create();
 }
 
 } // internal-linkage
@@ -176,7 +187,7 @@ buff_t multi_recv(F&& upd) {
 }
 
 buff_t recv(handle_t const * hs, std::size_t size) {
-    thread_local std::vector<queue_t*> q_arr(size);
+    auto& q_arr = queues_cache();
     q_arr.clear(); // make the size to 0
     for (size_t i = 0; i < size; ++i) {
         auto que = queue_of(hs[i]);
@@ -193,7 +204,12 @@ buff_t recv(handle_t const * hs, std::size_t size) {
 }
 
 buff_t recv(handle_t h) {
-    return recv(&h, 1);
+    auto que = queue_of(h);
+    if (que == nullptr) return {};
+    que->connect(); // wouldn't connect twice
+    return multi_recv([&que] {
+        return std::make_tuple(&que, 1);
+    });
 }
 
 } // namespace ipc

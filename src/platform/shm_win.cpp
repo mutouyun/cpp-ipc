@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "def.h"
+#include "tls_pointer.h"
 
 namespace {
 
@@ -27,8 +28,8 @@ constexpr auto to_tchar(std::string && str) -> IsSame<T, std::wstring> {
 }
 
 inline auto& m2h() {
-    thread_local std::unordered_map<void*, HANDLE> cache;
-    return cache;
+    static ipc::tls::pointer<std::unordered_map<void*, HANDLE>> cache;
+    return *cache.create();
 }
 
 } // internal-linkage

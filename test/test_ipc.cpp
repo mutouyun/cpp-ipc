@@ -12,7 +12,6 @@
 #include <array>
 #include <limits>
 #include <utility>
-#include <unordered_map>
 
 #include "stopwatch.hpp"
 #include "spin_lock.hpp"
@@ -35,14 +34,13 @@ constexpr int LoopCount = 100000;
 
 template <typename T>
 struct test_verify {
-    std::unordered_map<int, std::vector<ipc::buff_t>> list_;
-    int lcount_;
+    std::vector<std::vector<ipc::buff_t>> list_;
 
-    test_verify(int M) : lcount_{ M } {}
+    test_verify(int M)
+        : list_(static_cast<std::size_t>(M))
+    {}
 
-    void prepare(void* pt) {
-        std::cout << "start consumer: " << pt << std::endl;
-    }
+    void prepare(void* /*pt*/) {}
 
     void push_data(int cid, ipc::buff_t const & msg) {
         list_[cid].emplace_back(std::move(msg));
@@ -50,8 +48,8 @@ struct test_verify {
 
     void verify(int /*N*/, int /*Loops*/) {
         std::cout << "verifying..." << std::endl;
-        for (int m = 0; m < lcount_; ++m) {
-            QCOMPARE(datas__, list_[m]);
+        for (auto& c_dats : list_) {
+            QCOMPARE(datas__, c_dats);
         }
     }
 };
@@ -101,9 +99,9 @@ struct test_cq<ipc::route> {
     void send(cn_t& cn, const std::array<int, 2>& info) {
         int n = info[1];
         if (n < 0) {
-            cn.send(ipc::buff_t { '\0' });
+            QVERIFY(cn.send(ipc::buff_t { '\0' }));
         }
-        else cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]);
+        else QVERIFY(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
     }
 };
 
@@ -158,15 +156,15 @@ struct test_cq<ipc::channel> {
     void send(cn_t* cn, const std::array<int, 2>& info) {
         thread_local struct s_dummy {
             s_dummy(cn_t* cn, int m) {
-                cn->wait_for_recv(m);
+                cn->wait_for_recv(static_cast<std::size_t>(m));
 //                std::printf("start to send: %d.\n", m);
             }
         } _(cn, m_);
         int n = info[1];
         if (n < 0) {
-            cn->send(ipc::buff_t { '\0' });
+            QVERIFY(cn->send(ipc::buff_t { '\0' }));
         }
-        else cn->send(datas__[static_cast<decltype(datas__)::size_type>(n)]);
+        else QVERIFY(cn->send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
     }
 };
 

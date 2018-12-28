@@ -6,13 +6,15 @@
 #include <atomic>
 #include <thread>
 #include <string>
-#include <cstdio>
+#include <memory>
+#include <mutex>
 
 #if defined(__GNUC__)
 #   include <cxxabi.h>  // abi::__cxa_demangle
 #endif/*__GNUC__*/
 
 #include "stopwatch.hpp"
+#include "spin_lock.hpp"
 
 class TestSuite : public QObject
 {
@@ -87,6 +89,8 @@ void benchmark_prod_cons(T* cq) {
     test_stopwatch sw;
     test_verify<V> vf { M };
 
+    capo::spin_lock lc;
+
     int cid = 0;
     for (auto& t : consumers) {
         t = std::thread{[&, cid] {
@@ -95,15 +99,20 @@ void benchmark_prod_cons(T* cq) {
             int i = 0;
             tcq.recv(cn, [&](auto&& msg) {
 //                if (i % ((Loops * N) / 10) == 0) {
-//                    std::printf("%d-recving: %d%%\n", cid, (i * 100) / (Loops * N));
+//                    std::unique_lock<capo::spin_lock> guard { lc };
+//                    std::cout << cid << "-recving: " << (i * 100) / (Loops * N) << "%" << std::endl;
 //                }
                 vf.push_data(cid, msg);
                 ++i;
             });
-//            std::printf("%d-consumer-disconnect\n", cid);
+//            {
+//                std::unique_lock<capo::spin_lock> guard { lc };
+//                std::cout << cid << "-consumer-disconnect" << std::endl;
+//            }
             tcq.disconnect(cn);
             if (++fini_c != std::extent<decltype(consumers)>::value) {
-//                std::printf("%d-consumer-end\n", cid);
+//                std::unique_lock<capo::spin_lock> guard { lc };
+//                std::cout << cid << "-consumer-end" << std::endl;
                 return;
             }
             sw.print_elapsed(N, M, Loops);
@@ -121,10 +130,11 @@ void benchmark_prod_cons(T* cq) {
             auto cn = tcq.connect_send();
             sw.start();
             for (int i = 0; i < Loops; ++i) {
-                tcq.send(cn, { pid, i });
 //                if (i % (Loops / 10) == 0) {
-//                    std::printf("%d-sending: %d%%\n", pid, i * 100 / Loops);
+//                    std::unique_lock<capo::spin_lock> guard { lc };
+//                    std::cout << pid << "-sending: " << (i * 100 / Loops) << "%" << std::endl;
 //                }
+                tcq.send(cn, { pid, i });
             }
             if (++fini_p != std::extent<decltype(producers)>::value) return;
             // quit

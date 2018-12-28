@@ -28,18 +28,11 @@ bool operator==(msg_t const & m1, msg_t const & m2) {
 
 template <>
 struct test_verify<cq_t> {
-    std::unordered_map<int, std::vector<int>>* list_;
-    int lcount_;
+    std::vector<std::unordered_map<int, std::vector<int>>> list_;
 
-    test_verify(int M) {
-        list_ = new std::remove_reference_t<decltype(*list_)>[
-                    static_cast<std::size_t>(lcount_ = M)
-                ];
-    }
-
-    ~test_verify() {
-        delete [] list_;
-    }
+    test_verify(int M)
+        : list_(static_cast<std::size_t>(M))
+    {}
 
     void prepare(void* pt) {
         std::cout << "start consumer: " << pt << std::endl;
@@ -51,8 +44,8 @@ struct test_verify<cq_t> {
 
     void verify(int N, int Loops) {
         std::cout << "verifying..." << std::endl;
-        for (int m = 0; m < lcount_; ++m) {
-            auto& cons_vec = list_[m];
+        for (auto& c_dats : list_) {
+            auto& cons_vec = c_dats;
             for (int n = 0; n < N; ++n) {
                 auto& vec = cons_vec[n];
                 QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
