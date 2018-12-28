@@ -1,6 +1,5 @@
 #include "ipc.h"
 
-#include <unordered_map>
 #include <type_traits>
 #include <cstring>
 #include <algorithm>
@@ -11,6 +10,8 @@
 #include "circ_queue.h"
 #include "shm.h"
 #include "tls_pointer.h"
+
+#include "memory/resource.hpp"
 
 namespace {
 
@@ -55,7 +56,7 @@ inline auto& recv_cache() {
              https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
              https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
     */
-    static tls::pointer<std::unordered_map<msg_id_t, buff_t>> rc;
+    static tls::pointer<memory::unordered_map<msg_id_t, buff_t>> rc;
     return *rc.create();
 }
 

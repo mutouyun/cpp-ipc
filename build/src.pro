@@ -26,7 +26,10 @@ HEADERS += \
     ../include/tls_pointer.h \
     ../src/channel.inc \
     ../src/route.inc \
-    ../src/id_pool.inc
+    ../src/id_pool.inc \
+    ../src/memory/alloc.hpp \
+    ../src/memory/wrapper.hpp \
+    ../src/memory/resource.hpp
 
 SOURCES += \
     ../src/shm.cpp \

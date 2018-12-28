@@ -7,10 +7,10 @@
 #include <locale>
 #include <codecvt>
 #include <utility>
-#include <unordered_map>
 
 #include "def.h"
 #include "tls_pointer.h"
+#include "memory/resource.hpp"
 
 namespace {
 
@@ -28,7 +28,7 @@ constexpr auto to_tchar(std::string && str) -> IsSame<T, std::wstring> {
 }
 
 inline auto& m2h() {
-    static ipc::tls::pointer<std::unordered_map<void*, HANDLE>> cache;
+    static ipc::tls::pointer<ipc::memory::unordered_map<void*, HANDLE>> cache;
     return *cache.create();
 }
 

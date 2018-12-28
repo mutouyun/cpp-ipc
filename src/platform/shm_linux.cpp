@@ -6,11 +6,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <unordered_map>
 #include <atomic>
 #include <string>
 
 #include "tls_pointer.h"
+#include "memory/resource.hpp"
 
 namespace {
 
@@ -25,7 +25,7 @@ constexpr void* mem_of(void* mem) {
 }
 
 inline auto& m2h() {
-    static ipc::tls::pointer<std::unordered_map<void*, std::string>> cache;
+    static ipc::tls::pointer<ipc::memory::unordered_map<void*, std::string>> cache;
     return *cache.create();
 }
 
