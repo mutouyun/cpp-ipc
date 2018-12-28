@@ -8,7 +8,7 @@ CONFIG -= app_bundle
 DESTDIR = ../output
 
 msvc:QMAKE_CXXFLAGS += /std:c++17
-else:QMAKE_CXXFLAGS += -std=gnu++1z -Wno-unused-function
+else:QMAKE_CXXFLAGS += -std=gnu++1z -Wno-unused-function -Wno-attributes
 
 INCLUDEPATH += \
     ../test \
