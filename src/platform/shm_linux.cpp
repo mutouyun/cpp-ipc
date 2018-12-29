@@ -25,7 +25,7 @@ constexpr void* mem_of(void* mem) {
 }
 
 inline auto& m2h() {
-    static ipc::tls::pointer<ipc::memory::unordered_map<void*, std::string>> cache;
+    static ipc::tls::pointer<ipc::mem::unordered_map<void*, std::string>> cache;
     return *cache.create();
 }
 

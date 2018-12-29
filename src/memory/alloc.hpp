@@ -2,19 +2,22 @@
 
 #include <limits>
 #include <algorithm>
+#include <utility>
 #include <cstdlib>
 
 #include "def.h"
 
 namespace ipc {
-namespace memory {
+namespace mem {
 
-struct static_alloc {
+class static_alloc {
+public:
     static constexpr std::size_t remain() {
         return (std::numeric_limits<std::size_t>::max)();
     }
 
     static constexpr void clear() {}
+    static constexpr void swap(static_alloc&) {}
 
     static void* alloc(std::size_t size) {
         return size ? std::malloc(size) : nullptr;
@@ -33,18 +36,39 @@ struct static_alloc {
 /// Scope allocation -- The destructor will release all allocated blocks.
 ////////////////////////////////////////////////////////////////
 
+namespace detail {
+
+class scope_alloc_base {
+protected:
+    struct block_t {
+        block_t* next_;
+    };
+    block_t* list_ = nullptr;
+
+public:
+    std::size_t remain() const {
+        std::size_t c = 0;
+        auto curr = list_;
+        while (curr != nullptr) {
+            ++c;
+            curr = curr->next_;
+        }
+        return c;
+    }
+
+    void free(void* /*p*/) {}
+    void free(void* /*p*/, std::size_t) {}
+};
+
+} // namespace detail
+
 template <typename AllocP = static_alloc>
-class scope_alloc {
+class scope_alloc : public detail::scope_alloc_base {
 public:
     using alloc_policy = AllocP;
 
 private:
     alloc_policy alloc_;
-
-    struct block_t {
-        block_t* next_;
-    };
-    block_t* list_ = nullptr;
 
 public:
     scope_alloc() = default;
@@ -58,16 +82,6 @@ public:
     void swap(scope_alloc& rhs) {
         std::swap(this->alloc_, rhs.alloc_);
         std::swap(this->list_ , rhs.list_);
-    }
-
-    std::size_t remain() const {
-        std::size_t c = 0;
-        auto curr = list_;
-        while (curr != nullptr) {
-            ++c;
-            curr = curr->next_;
-        }
-        return c;
     }
 
     void clear() {
@@ -85,16 +99,59 @@ public:
         curr->next_ = list_;
         return ((list_ = curr) + 1);
     }
-
-    void free(void* /*p*/) {}
 };
 
 ////////////////////////////////////////////////////////////////
 /// Fixed-size blocks allocation
 ////////////////////////////////////////////////////////////////
 
+namespace detail {
+
+class fixed_pool_base {
+protected:
+    std::size_t init_expand_;
+    std::size_t iter_;
+    void*       cursor_;
+
+    void init(std::size_t init_expand) {
+        iter_ = init_expand_ = init_expand;
+        cursor_ = nullptr;
+    }
+
+    static void** node_p(void* node) {
+        return reinterpret_cast<void**>(node);
+    }
+
+    static auto& next(void* node) {
+        return *node_p(node);
+    }
+
+public:
+    std::size_t remain() const {
+        std::size_t c = 0;
+        void* curr = cursor_;
+        while (curr != nullptr) {
+            ++c;
+            curr = next(curr);
+        }
+        return c;
+    }
+
+    void free(void* p) {
+        if (p == nullptr) return;
+        next(p) = cursor_;
+        cursor_ = p;
+    }
+
+    void free(void* p, std::size_t) {
+        free(p);
+    }
+};
+
+} // namespace detail
+
 template <std::size_t BlockSize, typename AllocP = scope_alloc<>>
-class fixed_pool {
+class fixed_pool : public detail::fixed_pool_base {
 public:
     using alloc_policy = AllocP;
 
@@ -104,20 +161,13 @@ public:
 
 private:
     alloc_policy alloc_;
-    std::size_t init_expand_, iter_;
-    void*  cursor_;
 
     void expand() {
-        void** p = reinterpret_cast<void**>(cursor_ = alloc_.alloc(block_size * iter_));
+        auto p = node_p(cursor_ = alloc_.alloc(block_size * iter_));
         for (std::size_t i = 0; i < iter_ - 1; ++i)
-            p = reinterpret_cast<void**>((*p) = reinterpret_cast<byte_t*>(p) + block_size);
+            p = node_p((*p) = reinterpret_cast<byte_t*>(p) + block_size);
         (*p) = nullptr;
         iter_ *= 2;
-    }
-
-    void init(std::size_t init_expand) {
-        iter_ = init_expand_ = init_expand;
-        cursor_ = nullptr;
     }
 
 public:
@@ -139,13 +189,7 @@ public:
     }
 
     std::size_t remain() const {
-        std::size_t c = 0;
-        void* curr = cursor_;
-        while (curr != nullptr) {
-            ++c;
-            curr = *reinterpret_cast<void**>(curr); // curr = next
-        }
-        return c * block_size;
+        return detail::fixed_pool_base::remain() * block_size;
     }
 
     void clear() {
@@ -156,16 +200,14 @@ public:
     void* alloc() {
         if (cursor_ == nullptr) expand();
         void* p = cursor_;
-        cursor_ = *reinterpret_cast<void**>(p);
+        cursor_ = next(p);
         return p;
     }
 
-    void free(void* p) {
-        if (p == nullptr) return;
-        *reinterpret_cast<void**>(p) = cursor_;
-        cursor_ = p;
+    void* alloc(std::size_t) {
+        return alloc();
     }
 };
 
-} // namespace memory
+} // namespace mem
 } // namespace ipc

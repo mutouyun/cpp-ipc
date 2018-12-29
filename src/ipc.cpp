@@ -46,6 +46,29 @@ constexpr queue_t* queue_of(handle_t h) {
     return static_cast<queue_t*>(h);
 }
 
+using cache_t = mem::vector<byte_t>;
+
+template <std::size_t N>
+cache_t make_cache(byte_t const (& data)[N]) {
+    return {
+        static_cast<buff_t::value_type const *>(data),
+        static_cast<buff_t::value_type const *>(data) + N
+    };
+}
+
+template <typename T>
+using remove_cv_ref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
+template <typename Cache>
+constexpr auto to_buff(Cache&& cac) -> Requires<std::is_same<remove_cv_ref_t<Cache>, buff_t>::value, buff_t> {
+    return cac;
+}
+
+template <typename Cache>
+auto to_buff(Cache&& cac) -> Requires<!std::is_same<remove_cv_ref_t<Cache>, buff_t>::value, buff_t> {
+    return make_buff(cac.data(), cac.size());
+}
+
 inline auto& recv_cache() {
     /*
         <Remarks> thread_local may have some bugs.
@@ -56,12 +79,12 @@ inline auto& recv_cache() {
              https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
              https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
     */
-    static tls::pointer<memory::unordered_map<msg_id_t, buff_t>> rc;
+    static tls::pointer<mem::unordered_map<msg_id_t, cache_t>> rc;
     return *rc.create();
 }
 
 inline auto& queues_cache() {
-    static tls::pointer<std::vector<queue_t*>> qc;
+    static tls::pointer<mem::vector<queue_t*>> qc;
     return *qc.create();
 }
 
@@ -168,7 +191,7 @@ buff_t multi_recv(F&& upd) {
                 return make_buff(msg.data_, remain);
             }
             // cache the first message fragment
-            else rc.emplace(msg.id_, make_buff(msg.data_));
+            else rc.emplace(msg.id_, make_cache(msg.data_));
         }
         // has cached before this message
         else {
@@ -177,9 +200,9 @@ buff_t multi_recv(F&& upd) {
             if (msg.remain_ <= 0) {
                 cache.insert(cache.end(), msg.data_, msg.data_ + remain);
                 // finish this message, erase it from cache
-                auto buf = std::move(cache);
+                auto cac = std::move(cache);
                 rc.erase(cache_it);
-                return buf;
+                return to_buff(std::move(cac));
             }
             // there are remain datas after this message
             cache.insert(cache.end(), msg.data_, msg.data_ + data_length);

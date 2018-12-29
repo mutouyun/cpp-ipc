@@ -1,14 +1,61 @@
 #pragma once
 
-#include <utility>
 #include <limits>
 #include <new>
+#include <mutex>
+#include <shared_mutex>
+#include <vector>
+#include <utility>
+
+#include "rw_lock.h"
+#include "tls_pointer.h"
 
 namespace ipc {
-namespace memory {
+namespace mem {
 
 ////////////////////////////////////////////////////////////////
-/// The allocator wrapper class
+/// Thread-safe allocation wrapper
+////////////////////////////////////////////////////////////////
+
+template <typename AllocP>
+class synchronized_pool {
+public:
+    using alloc_policy = AllocP;
+
+private:
+    rw_lock lc_;
+    std::vector<alloc_policy*> allocs_;
+
+    struct alloc_t {
+        synchronized_pool* t_;
+        alloc_policy* alc_;
+
+        alloc_t(synchronized_pool* t)
+            : t_ { t }
+        {}
+
+        ~alloc_t() {
+
+        }
+    };
+
+public:
+    static constexpr std::size_t remain() {
+        return (std::numeric_limits<std::size_t>::max)();
+    }
+
+    static void* alloc() {
+        static tls::pointer<alloc_policy> alc;
+        return nullptr;
+    }
+
+    static void* alloc(std::size_t) {
+        return alloc();
+    }
+};
+
+////////////////////////////////////////////////////////////////
+/// The allocator wrapper class for STL
 ////////////////////////////////////////////////////////////////
 
 template <typename T, typename AllocP>
@@ -106,5 +153,5 @@ constexpr bool operator!=(const allocator_wrapper<T, AllocP>&, const allocator_w
     return false;
 }
 
-} // namespace memory
+} // namespace mem
 } // namespace ipc

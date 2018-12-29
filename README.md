@@ -13,7 +13,7 @@ A high-performance inter-process communication using shared memory on Linux/Wind
  
 ## Performance
 
- | | Environment |
+ | Environment | Value |
  | ------ | ------ |
  | Device | Lenovo ThinkPad T450 |
  | CPU | Intel(R) Core(TM) i5-4300U @ 2.5 GHz |

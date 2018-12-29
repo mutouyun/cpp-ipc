@@ -28,7 +28,7 @@ constexpr auto to_tchar(std::string && str) -> IsSame<T, std::wstring> {
 }
 
 inline auto& m2h() {
-    static ipc::tls::pointer<ipc::memory::unordered_map<void*, HANDLE>> cache;
+    static ipc::tls::pointer<ipc::mem::unordered_map<void*, HANDLE>> cache;
     return *cache.create();
 }
 
