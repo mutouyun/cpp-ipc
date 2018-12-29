@@ -56,6 +56,7 @@ public:
 
     std::string n_;
     std::size_t id_;
+    bool        marked_ = false;
 
     std::array<route, id_pool::max_count> rts_;
 
@@ -65,6 +66,18 @@ public:
 
     auto& acc() {
         return info().ch_acc_;
+    }
+
+    void mark_id() {
+        if (marked_) return;
+        marked_ = true;
+        [[maybe_unused]] auto guard = std::unique_lock { info().lc_ };
+        acc().mark_acquired(id_);
+    }
+
+    auto& sender() {
+        mark_id();
+        return r_;
     }
 };
 
@@ -117,7 +130,7 @@ bool channel::connect(char const * name) {
         return false;
     }
     {
-        std::unique_lock<rw_lock> guard { impl(p_)->info().lc_ };
+        [[maybe_unused]] auto guard = std::unique_lock { impl(p_)->info().lc_ };
         if (impl(p_)->acc().invalid()) {
             impl(p_)->acc().init();
         }
@@ -133,7 +146,7 @@ bool channel::connect(char const * name) {
 void channel::disconnect() {
     if (!valid()) return;
     {
-        std::unique_lock<rw_lock> guard { impl(p_)->info().lc_ };
+        [[maybe_unused]] auto guard = std::unique_lock { impl(p_)->info().lc_ };
         impl(p_)->acc().release(impl(p_)->id_);
     }
     for (auto& rt : impl(p_)->rts_) {
@@ -148,7 +161,7 @@ std::size_t channel::recv_count() const {
 }
 
 bool channel::wait_for_recv(std::size_t r_count, std::size_t until) const {
-    return ::wait_for_recv(impl(p_)->r_, r_count, until);
+    return ::wait_for_recv(impl(p_)->sender(), r_count, until);
 }
 
 bool channel::wait_for_recv(std::size_t r_count) const {
@@ -156,27 +169,27 @@ bool channel::wait_for_recv(std::size_t r_count) const {
 }
 
 bool channel::send(void const * data, std::size_t size) {
-    return impl(p_)->r_.send(data, size);
+    return impl(p_)->sender().send(data, size);
 }
 
 bool channel::send(buff_t const & buff) {
-    return impl(p_)->r_.send(buff);
+    return impl(p_)->sender().send(buff);
 }
 
 bool channel::send(std::string const & str) {
-    return impl(p_)->r_.send(str);
+    return impl(p_)->sender().send(str);
 }
 
 bool channel::send_for(std::size_t r_count, void const * data, std::size_t size) {
-    return ::channel_send(impl(p_)->r_, r_count, data, size);
+    return ::channel_send(impl(p_)->sender(), r_count, data, size);
 }
 
 bool channel::send_for(std::size_t r_count, buff_t const & buff) {
-    return ::channel_send(impl(p_)->r_, r_count, buff);
+    return ::channel_send(impl(p_)->sender(), r_count, buff);
 }
 
 bool channel::send_for(std::size_t r_count, std::string const & str) {
-    return ::channel_send(impl(p_)->r_, r_count, str);
+    return ::channel_send(impl(p_)->sender(), r_count, str);
 }
 
 buff_t channel::recv() {
@@ -187,7 +200,7 @@ buff_t channel::recv() {
         std::size_t counter = 0;
         // get all acquired ids
         {
-            std::shared_lock<rw_lock> guard { impl(p_)->info().lc_ };
+            [[maybe_unused]] auto guard = std::shared_lock { impl(p_)->info().lc_ };
             impl(p_)->acc().for_acquired([this, &acqs, &counter](std::size_t id) {
                 if (id == impl(p_)->id_) return;
                 acqs[counter++] = id;

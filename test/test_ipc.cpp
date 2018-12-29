@@ -509,7 +509,7 @@ void Unit::test_channel_rtt() {
 }
 
 void Unit::test_channel_performance() {
-    test_performance<1 , 10, true>::start<ipc::channel>();
+    test_performance<1 , 10>::start<ipc::channel>();
     test_performance<10, 1 >::start<ipc::channel>();
     test_performance<10, 10>::start<ipc::channel>();
 }

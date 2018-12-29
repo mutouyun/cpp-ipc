@@ -38,9 +38,12 @@ public:
         }
         std::size_t id = cursor_;
         cursor_ = next_[id]; // point to next
+        return id;
+    }
+
+    void mark_acquired(std::size_t id) {
         next_[id] = acquir_;
         acquir_ = static_cast<uint_t<8>>(id); // put it in acquired list
-        return id;
     }
 
     bool release(std::size_t id) {
