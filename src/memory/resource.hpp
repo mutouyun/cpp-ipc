@@ -10,8 +10,6 @@
 #include "memory/alloc.hpp"
 #include "memory/wrapper.hpp"
 
-#include "tls_pointer.h"
-
 namespace ipc {
 namespace mem {
 
@@ -34,8 +32,8 @@ class pool_alloc {
 private:
     template <std::size_t Size>
     static auto& fixed() {
-        static tls::pointer<fixed_pool<Size>> fp;
-        return *fp.create();
+        static synchronized<fixed_pool<Size>> pool;
+        return pool;
     }
 
     template <typename F>
@@ -83,11 +81,11 @@ using allocator = allocator_wrapper<T, pool_alloc>;
 
 template <typename Key, typename T>
 using unordered_map = std::unordered_map<
-    Key, T//, std::hash<Key>, std::equal_to<Key>, allocator<std::pair<const Key, T>>
+    Key, T, std::hash<Key>, std::equal_to<Key>, allocator<std::pair<const Key, T>>
 >;
 
 template <typename T>
-using vector = std::vector<T/*, allocator<T>*/>;
+using vector = std::vector<T, allocator<T>>;
 
 } // namespace mem
 } // namespace ipc

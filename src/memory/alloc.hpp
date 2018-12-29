@@ -1,6 +1,5 @@
 #pragma once
 
-#include <limits>
 #include <algorithm>
 #include <utility>
 #include <cstdlib>
@@ -12,10 +11,6 @@ namespace mem {
 
 class static_alloc {
 public:
-    static constexpr std::size_t remain() {
-        return (std::numeric_limits<std::size_t>::max)();
-    }
-
     static constexpr void clear() {}
     static constexpr void swap(static_alloc&) {}
 
@@ -46,16 +41,6 @@ protected:
     block_t* list_ = nullptr;
 
 public:
-    std::size_t remain() const {
-        std::size_t c = 0;
-        auto curr = list_;
-        while (curr != nullptr) {
-            ++c;
-            curr = curr->next_;
-        }
-        return c;
-    }
-
     void free(void* /*p*/) {}
     void free(void* /*p*/, std::size_t) {}
 };
@@ -127,16 +112,6 @@ protected:
     }
 
 public:
-    std::size_t remain() const {
-        std::size_t c = 0;
-        void* curr = cursor_;
-        while (curr != nullptr) {
-            ++c;
-            curr = next(curr);
-        }
-        return c;
-    }
-
     void free(void* p) {
         if (p == nullptr) return;
         next(p) = cursor_;
@@ -186,10 +161,6 @@ public:
         std::swap(this->init_expand_, rhs.init_expand_);
         std::swap(this->iter_       , rhs.iter_);
         std::swap(this->cursor_     , rhs.cursor_);
-    }
-
-    std::size_t remain() const {
-        return detail::fixed_pool_base::remain() * block_size;
     }
 
     void clear() {

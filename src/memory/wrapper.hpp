@@ -4,8 +4,11 @@
 #include <new>
 #include <mutex>
 #include <shared_mutex>
-#include <vector>
+#include <tuple>
+#include <map>
+#include <functional>
 #include <utility>
+#include <cstddef>
 
 #include "rw_lock.h"
 #include "tls_pointer.h"
@@ -18,39 +21,75 @@ namespace mem {
 ////////////////////////////////////////////////////////////////
 
 template <typename AllocP>
-class synchronized_pool {
+class synchronized {
 public:
     using alloc_policy = AllocP;
 
 private:
     rw_lock lc_;
-    std::vector<alloc_policy*> allocs_;
+    std::multimap<std::size_t, alloc_policy*, std::greater<std::size_t>> allocs_;
 
     struct alloc_t {
-        synchronized_pool* t_;
-        alloc_policy* alc_;
+        synchronized* t_;
+        std::size_t   s_ = 0;
+        alloc_policy* a_ = nullptr;
 
-        alloc_t(synchronized_pool* t)
-            : t_ { t }
-        {}
+        alloc_t(synchronized* t)
+            : t_ { t } {
+            {
+                [[maybe_unused]] auto guard = std::unique_lock { t_->lc_ };
+                auto it = t_->allocs_.begin();
+                if (it != t_->allocs_.end()) {
+                    std::tie(s_, a_) = *it;
+                    t_->allocs_.erase(it);
+                }
+            }
+            if (a_ == nullptr) {
+                a_ = new alloc_policy;
+            }
+        }
 
         ~alloc_t() {
+            [[maybe_unused]] auto guard = std::unique_lock { t_->lc_ };
+            t_->allocs_.emplace(s_, a_);
+        }
 
+        void* alloc(std::size_t size) {
+            void* p = a_->alloc(size);
+            if ((p != nullptr) && (s_ > 0)) {
+                --s_;
+            }
+            return p;
+        }
+
+        void free(void* p) {
+            a_->free(p);
+            ++s_;
         }
     };
 
+    auto& alc_info() {
+        static tls::pointer<alloc_t> alc;
+        return *alc.create(this);
+    }
+
 public:
-    static constexpr std::size_t remain() {
-        return (std::numeric_limits<std::size_t>::max)();
+    ~synchronized() {
+        for (auto& pair : allocs_) {
+            delete pair.second;
+        }
     }
 
-    static void* alloc() {
-        static tls::pointer<alloc_policy> alc;
-        return nullptr;
+    void* alloc(std::size_t size) {
+        return alc_info().alloc(size);
     }
 
-    static void* alloc(std::size_t) {
-        return alloc();
+    void free(void* p) {
+        alc_info().free(p);
+    }
+
+    static void free(void* p, std::size_t /*size*/) {
+        free(p);
     }
 };
 
@@ -122,7 +161,7 @@ public:
         return static_cast<pointer>(alloc_.alloc(count * sizeof(T)));
     }
 
-    void deallocate(pointer p, size_type count) {
+    void deallocate(pointer p, size_type count) noexcept {
         alloc_.free(p, count * sizeof(T));
     }
 

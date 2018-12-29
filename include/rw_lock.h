@@ -80,6 +80,13 @@ class rw_lock {
     };
 
 public:
+    rw_lock() = default;
+
+    rw_lock(const rw_lock&) = delete;
+    rw_lock& operator=(const rw_lock&) = delete;
+    rw_lock(rw_lock&&) = delete;
+    rw_lock& operator=(rw_lock&&) = delete;
+
     void lock() noexcept {
         for (unsigned k = 0;; ++k) {
             auto old = lc_.fetch_or(w_flag, std::memory_order_acquire);

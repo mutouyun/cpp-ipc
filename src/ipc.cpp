@@ -60,8 +60,8 @@ template <typename T>
 using remove_cv_ref_t = std::remove_cv_t<std::remove_reference_t<T>>;
 
 template <typename Cache>
-constexpr auto to_buff(Cache&& cac) -> Requires<std::is_same<remove_cv_ref_t<Cache>, buff_t>::value, buff_t> {
-    return cac;
+constexpr auto to_buff(Cache&& cac) -> Requires<std::is_same<remove_cv_ref_t<Cache>, buff_t>::value, Cache&&> {
+    return std::forward<Cache>(cac);
 }
 
 template <typename Cache>
