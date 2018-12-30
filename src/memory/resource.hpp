@@ -16,14 +16,14 @@ namespace mem {
 namespace detail {
 
 template <typename F, typename D>
-constexpr decltype(auto) switch_constexpr(std::size_t /*i*/, std::index_sequence<>, F&& /*f*/, D&& def) {
+constexpr decltype(auto) static_switch(std::size_t /*i*/, std::index_sequence<>, F&& /*f*/, D&& def) {
     return def();
 }
 
 template <typename F, typename D, std::size_t N, std::size_t...I>
-constexpr decltype(auto) switch_constexpr(std::size_t i, std::index_sequence<N, I...>, F&& f, D&& def) {
+constexpr decltype(auto) static_switch(std::size_t i, std::index_sequence<N, I...>, F&& f, D&& def) {
     return (i == N) ? f(std::integral_constant<size_t, N>{}) :
-                      switch_constexpr(i, std::index_sequence<I...>{}, f, def);
+                      static_switch(i, std::index_sequence<I...>{}, f, def);
 }
 
 } // namespace detail
@@ -40,7 +40,7 @@ private:
     static decltype(auto) choose(std::size_t size, F&& f) {
         enum : std::size_t { base_size = sizeof(void*) };
         size = ((size - 1) & (~(base_size - 1))) + base_size;
-        return detail::switch_constexpr(size, std::index_sequence<
+        return detail::static_switch(size, std::index_sequence<
             base_size     , base_size * 2 ,
             base_size * 3 , base_size * 4 ,
             base_size * 5 , base_size * 6 ,

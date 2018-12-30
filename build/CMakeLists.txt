@@ -5,7 +5,7 @@ add_compile_definitions(__IPC_LIBRARY__)
 if(MSVC)
   add_compile_options("/std:c++17")
 else()
-  add_compile_options("-std=gnu++1z")
+  add_compile_options("-std=gnu++1z -O2")
 endif()
 
 include_directories("../include")

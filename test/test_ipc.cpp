@@ -462,7 +462,7 @@ void Unit::test_channel() {
     std::thread t2 {[&] {
         ipc::channel cc { "my-ipc-channel" };
         cc.wait_for_recv(1);
-        for (std::size_t i = 0; i < (std::min)(100, LoopCount); ++i) {
+        for (std::size_t i = 0; i < static_cast<std::size_t>((std::min)(100, LoopCount)); ++i) {
             std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
             cc.send(datas__[i]);
         }
