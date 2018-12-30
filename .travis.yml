@@ -17,6 +17,9 @@ matrix:
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
     - compiler: clang
+    - compiler: clang
+      env:
+        - MATRIX_EVAL="USING_CMAKE=1"
 
 before_install:
     - eval "${MATRIX_EVAL}"
@@ -24,7 +27,7 @@ before_install:
 script:
   - qmake -v
   - cd ./build
-  - qmake -o Makefile src.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX
+  - if [ $USING_CMAKE -eq 1 ]; then cmake CMakeLists.txt; else qmake -o Makefile ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX; fi
   - qmake -o MakefileTest test.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX
   - make
   - make -f MakefileTest
