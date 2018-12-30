@@ -24,6 +24,7 @@ HEADERS += \
     ../include/def.h \
     ../include/rw_lock.h \
     ../include/tls_pointer.h \
+    ../include/pool_alloc.h \
     ../src/channel.inc \
     ../src/route.inc \
     ../src/id_pool.inc \
@@ -33,7 +34,8 @@ HEADERS += \
 
 SOURCES += \
     ../src/shm.cpp \
-    ../src/ipc.cpp
+    ../src/ipc.cpp \
+    ../src/pool_alloc.cpp
 
 unix {
 

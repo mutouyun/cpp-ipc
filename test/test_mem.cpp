@@ -6,6 +6,8 @@
 #include "random.hpp"
 
 #include "memory/resource.hpp"
+#include "pool_alloc.h"
+
 #include "test.h"
 
 namespace {
@@ -21,7 +23,8 @@ private slots:
     void initTestCase();
     void cleanupTestCase();
 
-    void test_alloc();
+    void test_alloc_free();
+    void test_linear();
 } unit__;
 
 #include "test_mem.moc"
@@ -91,6 +94,27 @@ void Unit::cleanupTestCase() {
     sizes__.clear();
 }
 
+template <typename AllocT>
+void benchmark_alloc() {
+    std::cout << std::endl << type_name<AllocT>() << std::endl;
+
+    test_stopwatch sw;
+    sw.start();
+
+    for (std::size_t x = 0; x < 10; ++x)
+    for (std::size_t n = 0; n < LoopCount; ++n) {
+        std::size_t s = sizes__[n];
+        AllocT::free(AllocT::alloc(s), s);
+    }
+
+    sw.print_elapsed<1>(DataMin, DataMax, LoopCount * 10);
+}
+
+void Unit::test_alloc_free() {
+    benchmark_alloc<ipc::mem::static_alloc>();
+    benchmark_alloc<ipc::mem::pool_alloc>();
+}
+
 template <typename AllocT, typename ModeT, int ThreadsN>
 void benchmark_alloc() {
     std::cout << std::endl
@@ -126,7 +150,7 @@ void benchmark_alloc() {
                     }
                 }
             }
-            if (++fini == ThreadsN) {
+            if ((fini.fetch_add(1, std::memory_order_relaxed) + 1) == ThreadsN) {
                 sw.print_elapsed<1>(DataMin, DataMax, LoopCount);
             }
         }};
@@ -152,7 +176,7 @@ struct test_performance<AllocT, ModeT, 1> {
     }
 };
 
-void Unit::test_alloc() {
+void Unit::test_linear() {
     // malloc
     test_performance<ipc::mem::static_alloc, alloc_random, 8>::start();
     test_performance<ipc::mem::static_alloc, alloc_LIFO  , 8>::start();

@@ -258,7 +258,7 @@ void benchmark_lc() {
                 }
                 std::this_thread::yield();
             }
-            if (++fini == std::extent<decltype(r_trd)>::value) {
+            if ((fini.fetch_add(1, std::memory_order_relaxed) + 1) == std::extent<decltype(r_trd)>::value) {
                 sw.print_elapsed(W, R, Loops);
             }
             std::uint64_t sum = 0;
