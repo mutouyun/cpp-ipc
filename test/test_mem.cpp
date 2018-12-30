@@ -112,7 +112,7 @@ void benchmark_alloc() {
 
 void Unit::test_alloc_free() {
     benchmark_alloc<ipc::mem::static_alloc>();
-    benchmark_alloc<ipc::mem::pool_alloc>();
+    benchmark_alloc<ipc::mem::detail::pool_alloc>();
 }
 
 template <typename AllocT, typename ModeT, int ThreadsN>
