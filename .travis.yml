@@ -27,7 +27,7 @@ before_install:
 script:
   - qmake -v
   - cd ./build
-  - if [ $USING_CMAKE -eq 1 ]; then cmake CMakeLists.txt; else qmake -o Makefile ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX; fi
+  - if [ $USING_CMAKE -eq 1 ]; then cmake -DCMAKE_BUILD_TYPE=Release CMakeLists.txt; else qmake -o Makefile ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX; fi
   - qmake -o MakefileTest test.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX
   - make
   - make -f MakefileTest
