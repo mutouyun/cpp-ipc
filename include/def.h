@@ -58,7 +58,7 @@ constexpr auto impl(T* const (& p)) -> IsImplComfortable<T> {
 
 template <typename T>
 constexpr auto clear_impl(T* p) -> IsImplComfortable<T, void> {
-    impl(p)->~T();
+    if (p != nullptr) impl(p)->~T();
 }
 
 template <typename T, typename... P>

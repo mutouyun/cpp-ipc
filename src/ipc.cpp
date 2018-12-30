@@ -51,8 +51,8 @@ using cache_t = mem::vector<byte_t>;
 template <std::size_t N>
 cache_t make_cache(byte_t const (& data)[N]) {
     return {
-        static_cast<buff_t::value_type const *>(data),
-        static_cast<buff_t::value_type const *>(data) + N
+        static_cast<cache_t::value_type const *>(data),
+        static_cast<cache_t::value_type const *>(data) + N
     };
 }
 
