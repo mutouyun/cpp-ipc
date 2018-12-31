@@ -5,17 +5,13 @@
 
 #include "export.h"
 #include "def.h"
+#include "buffer.h"
 #include "shm.h"
 
 namespace ipc {
 
 using handle_t = void*;
-using buff_t   = std::vector<byte_t>;
-
-IPC_EXPORT buff_t make_buff(void const * data, std::size_t size);
-
-template <std::size_t N>
-buff_t make_buff(byte_t const (& data)[N]) { return make_buff(data, N); }
+using buff_t   = buffer;
 
 IPC_EXPORT handle_t connect   (char const * name);
 IPC_EXPORT void     disconnect(handle_t h);

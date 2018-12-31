@@ -46,28 +46,25 @@ constexpr queue_t* queue_of(handle_t h) {
     return static_cast<queue_t*>(h);
 }
 
-using cache_t = mem::vector<byte_t>;
-
-template <std::size_t N>
-cache_t make_cache(byte_t const (& data)[N]) {
-    return {
-        static_cast<cache_t::value_type const *>(data),
-        static_cast<cache_t::value_type const *>(data) + N
-    };
+inline buff_t make_cache(void const * data, std::size_t size) {
+    auto ptr = mem::detail::pool_alloc::alloc(size);
+    std::memcpy(ptr, data, size);
+    return { ptr, size, mem::detail::pool_alloc::free };
 }
 
-template <typename T>
-using remove_cv_ref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+struct cache_t {
+    std::size_t fill_;
+    buff_t      buff_;
 
-template <typename Cache>
-constexpr auto to_buff(Cache&& cac) -> Requires<std::is_same<remove_cv_ref_t<Cache>, buff_t>::value, Cache&&> {
-    return std::forward<Cache>(cac);
-}
+    cache_t(std::size_t f, buff_t&& b)
+        : fill_(f), buff_(std::move(b))
+    {}
 
-template <typename Cache>
-auto to_buff(Cache&& cac) -> Requires<!std::is_same<remove_cv_ref_t<Cache>, buff_t>::value, buff_t> {
-    return make_buff(cac.data(), cac.size());
-}
+    void append(void const * data, std::size_t size) {
+        std::memcpy(static_cast<byte_t*>(buff_.data()) + fill_, data, size);
+        fill_ += size;
+    }
+};
 
 inline auto& recv_cache() {
     /*
@@ -91,13 +88,6 @@ inline auto& queues_cache() {
 } // internal-linkage
 
 namespace ipc {
-
-buff_t make_buff(void const * data, std::size_t size) {
-    return {
-        static_cast<buff_t::value_type const *>(data),
-        static_cast<buff_t::value_type const *>(data) + size
-    };
-}
 
 handle_t connect(char const * name) {
     auto mem = shm::acquire(name, sizeof(shm_info_t));
@@ -185,27 +175,27 @@ buff_t multi_recv(F&& upd) {
         std::size_t remain = static_cast<std::size_t>(
                              static_cast<int>(data_length) + msg.remain_);
         // find cache with msg.id_
-        auto cache_it = rc.find(msg.id_);
-        if (cache_it == rc.end()) {
+        auto cac_it = rc.find(msg.id_);
+        if (cac_it == rc.end()) {
             if (remain <= data_length) {
-                return make_buff(msg.data_, remain);
+                return make_cache(msg.data_, remain);
             }
             // cache the first message fragment
-            else rc.emplace(msg.id_, make_cache(msg.data_));
+            else rc.try_emplace(msg.id_, data_length, make_cache(msg.data_, remain));
         }
         // has cached before this message
         else {
-            auto& cache = cache_it->second;
+            auto& cac = cac_it->second;
             // this is the last message fragment
             if (msg.remain_ <= 0) {
-                cache.insert(cache.end(), msg.data_, msg.data_ + remain);
+                cac.append(msg.data_, remain);
                 // finish this message, erase it from cache
-                auto cac = std::move(cache);
-                rc.erase(cache_it);
-                return to_buff(std::move(cac));
+                auto buff = std::move(cac.buff_);
+                rc.erase(cac_it);
+                return buff;
             }
             // there are remain datas after this message
-            cache.insert(cache.end(), msg.data_, msg.data_ + data_length);
+            cac.append(msg.data_, data_length);
         }
     }
 }

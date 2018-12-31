@@ -42,14 +42,18 @@ struct test_verify {
 
     void prepare(void* /*pt*/) {}
 
-    void push_data(int cid, ipc::buff_t const & msg) {
+    void push_data(int cid, ipc::buff_t & msg) {
         list_[cid].emplace_back(std::move(msg));
     }
 
     void verify(int /*N*/, int /*Loops*/) {
         std::cout << "verifying..." << std::endl;
         for (auto& c_dats : list_) {
-            QCOMPARE(datas__, c_dats);
+            QCOMPARE(datas__.size(), c_dats.size());
+            std::size_t i = 0;
+            for (auto& d : c_dats) {
+                QCOMPARE(datas__[i++], d);
+            }
         }
     }
 };
@@ -85,7 +89,7 @@ struct test_cq<ipc::route> {
         do {
             auto msg = cn.recv();
             if (msg.size() < 2) {
-                QCOMPARE(msg, ipc::buff_t { '\0' });
+                QCOMPARE(msg, ipc::buff_t('\0'));
                 return;
             }
             proc(msg);
@@ -99,7 +103,7 @@ struct test_cq<ipc::route> {
     void send(cn_t& cn, const std::array<int, 2>& info) {
         int n = info[1];
         if (n < 0) {
-            /*QVERIFY*/(cn.send(ipc::buff_t { '\0' }));
+            /*QVERIFY*/(cn.send(ipc::buff_t('\0')));
         }
         else /*QVERIFY*/(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
     }
@@ -137,7 +141,7 @@ struct test_cq<ipc::channel> {
         do {
             auto msg = cn.recv();
             if (msg.size() < 2) {
-                QCOMPARE(msg, ipc::buff_t { '\0' });
+                QCOMPARE(msg, ipc::buff_t('\0'));
                 return;
             }
             proc(msg);
@@ -162,7 +166,7 @@ struct test_cq<ipc::channel> {
         } _(cn, m_);
         int n = info[1];
         if (n < 0) {
-            /*QVERIFY*/(cn->send(ipc::buff_t { '\0' }));
+            /*QVERIFY*/(cn->send(ipc::buff_t('\0')));
         }
         else /*QVERIFY*/(cn->send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
     }
@@ -197,13 +201,18 @@ void Unit::initTestCase() {
     TestSuite::initTestCase();
 
     capo::random<> rdm { DataMin, DataMax };
-    capo::random<> bit { 0, (std::numeric_limits<ipc::buff_t::value_type>::max)() };
+    capo::random<> bit { 0, (std::numeric_limits<ipc::byte_t>::max)() };
 
     for (int i = 0; i < LoopCount; ++i) {
-        auto n = rdm();
-        ipc::buff_t buff(static_cast<ipc::buff_t::size_type>(n));
+        std::size_t n = static_cast<std::size_t>(rdm());
+        ipc::buff_t buff {
+            new ipc::byte_t[n], n,
+            [](void* p, std::size_t) {
+                delete [] static_cast<ipc::byte_t*>(p);
+            }
+        };
         for (std::size_t k = 0; k < buff.size(); ++k) {
-            buff[k] = static_cast<ipc::buff_t::value_type>(bit());
+            static_cast<ipc::byte_t*>(buff.data())[k] = static_cast<ipc::byte_t>(bit());
         }
         datas__.emplace_back(std::move(buff));
     }
@@ -381,7 +390,7 @@ void Unit::test_route_rtt() {
             auto dd = cc.recv();
             if (dd.size() < 2) return;
 //            std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
-            while (!cr.send(ipc::buff_t { 'a' })) {
+            while (!cr.send(ipc::buff_t('a'))) {
                 std::this_thread::yield();
             }
         }
@@ -402,7 +411,7 @@ void Unit::test_route_rtt() {
 //                QVERIFY(false);
 //            }
         }
-        cc.send(ipc::buff_t { '\0' });
+        cc.send(ipc::buff_t('\0'));
         t1.join();
         sw.print_elapsed(1, 1, LoopCount);
     }};
@@ -466,7 +475,7 @@ void Unit::test_channel() {
             std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
             cc.send(datas__[i]);
         }
-        cc.send(ipc::buff_t { '\0' });
+        cc.send(ipc::buff_t('\0'));
         t1.join();
     }};
 
@@ -482,7 +491,7 @@ void Unit::test_channel_rtt() {
             auto dd = cc.recv();
             if (dd.size() < 2) return;
 //            std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
-            while (!cc.send(ipc::buff_t { 'a' })) {
+            while (!cc.send(ipc::buff_t('a'))) {
                 cc.wait_for_recv(1);
             }
         }
@@ -500,7 +509,7 @@ void Unit::test_channel_rtt() {
 //                QVERIFY(false);
 //            }
         }
-        cc.send(ipc::buff_t { '\0' });
+        cc.send(ipc::buff_t('\0'));
         t1.join();
         sw.print_elapsed(1, 1, LoopCount);
     }};
