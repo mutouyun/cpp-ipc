@@ -2,6 +2,7 @@ project(test)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_PREFIX_PATH /usr/include/qt5)
 
 find_package(Qt5 COMPONENTS Core Test REQUIRED)
 

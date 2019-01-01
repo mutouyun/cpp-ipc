@@ -23,7 +23,7 @@ matrix:
 
 before_install:
   - eval "${MATRIX_EVAL}"
-  - ls -l /usr/include/x86_64-linux-gnu/qt5
+  - ls -l /usr/include/qt5
   - qmake -v
 
 script:
