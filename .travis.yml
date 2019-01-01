@@ -29,7 +29,7 @@ script:
   - cd ./build
   - if [ $USING_CMAKE -eq 1 ]; then
       cmake -DCMAKE_BUILD_TYPE=Release CMakeLists.txt;
-      make
+      make;
     else
       qmake -o Makefile ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX;
       qmake -o MakefileTest test.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX;
