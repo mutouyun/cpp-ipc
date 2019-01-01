@@ -1,6 +1,6 @@
 project(ipc)
 
-add_compile_definitions(__IPC_LIBRARY__)
+add_compile_options(-D__IPC_LIBRARY__)
 
 include_directories(../../include ../../src)
 
@@ -11,5 +11,5 @@ else()
 endif()
 aux_source_directory(../../src DIR_SRCS)
 
-add_library(ipc SHARED ${DIR_SRCS})
+add_library(${PROJECT_NAME} SHARED ${DIR_SRCS})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/../output)

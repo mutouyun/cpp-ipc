@@ -8,8 +8,7 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - g++-7
-      - qt5-qmake
-      - libqt5test5
+      - qtbase5-dev
 
 matrix:
   include:
@@ -23,7 +22,6 @@ matrix:
 
 before_install:
   - eval "${MATRIX_EVAL}"
-  - find /usr/ -name "Qt5CoreConfig.cmake"
   - qmake -v
 
 script:

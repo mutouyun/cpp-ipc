@@ -1,8 +1,7 @@
-project(test)
+project(test-ipc)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_PREFIX_PATH /usr/include/qt5)
 
 find_package(Qt5 COMPONENTS Core Test REQUIRED)
 
@@ -20,3 +19,6 @@ add_subdirectory(../ipc ipc.out)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Test ipc)
+if(NOT MSVC)
+  target_link_libraries(${PROJECT_NAME} pthread rt)
+endif()
