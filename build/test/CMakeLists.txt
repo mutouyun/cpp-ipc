@@ -1,15 +1,12 @@
-cmake_minimum_required(VERSION 3.10)
 project(test)
 
 set(CMAKE_AUTOMOC ON)
-find_package(Qt5Core)
-find_package(Qt5Test)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-if(MSVC)
-  add_compile_options(/std:c++17)
-else()
-  add_compile_options(-std=gnu++1z -Wno-unused-function -Wno-attributes)
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+find_package(Qt5 COMPONENTS Core Test REQUIRED)
+
+if(NOT MSVC)
+  add_compile_options(-Wno-unused-function -Wno-attributes)
 endif()
 
 include_directories(../../include ../../src ../../test ../../test/capo)
