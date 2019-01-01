@@ -30,13 +30,15 @@ script:
       find /usr -name "Qt5*.cmake";
       cmake -DCMAKE_BUILD_TYPE=Release CMakeLists.txt;
       make;
+      export IPC_TARGET=test-ipc;
     else
       qmake -o Makefile ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX;
       qmake -o MakefileTest test.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX;
       make;
       make -f MakefileTest;
+      export IPC_TARGET=test;
     fi
-  - export LD_LIBRARY_PATH=../output:$LD_LIBRARY_PATH && ../output/test
+  - export LD_LIBRARY_PATH=../output:$LD_LIBRARY_PATH && ../output/$IPC_TARGET
 
 notifications:
   slack:
