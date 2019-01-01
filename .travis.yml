@@ -23,12 +23,12 @@ matrix:
 
 before_install:
   - eval "${MATRIX_EVAL}"
-  - find /usr/ -name "Qt5CoreConfig.cmake"
   - qmake -v
 
 script:
   - cd ./build
   - if [ $USING_CMAKE -eq 1 ]; then
+      find /usr -name "Qt5*.cmake";
       cmake -DCMAKE_BUILD_TYPE=Release CMakeLists.txt;
       make;
     else
