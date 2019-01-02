@@ -35,12 +35,6 @@ inline bool wait_for_recv(route const & rt, std::size_t r_count, std::size_t unt
     return true;
 }
 
-template <typename... P>
-inline bool channel_send(route& rt, std::size_t r_count, P&&... params) {
-    if (!wait_for_recv(rt, r_count, 1024)) return false;
-    return rt.send(params...); // no need std::forward
-}
-
 } // internal-linkage
 
 ////////////////////////////////////////////////////////////////
@@ -178,18 +172,6 @@ bool channel::send(buff_t const & buff) {
 
 bool channel::send(std::string const & str) {
     return impl(p_)->sender().send(str);
-}
-
-bool channel::send_for(std::size_t r_count, void const * data, std::size_t size) {
-    return ::channel_send(impl(p_)->sender(), r_count, data, size);
-}
-
-bool channel::send_for(std::size_t r_count, buff_t const & buff) {
-    return ::channel_send(impl(p_)->sender(), r_count, buff);
-}
-
-bool channel::send_for(std::size_t r_count, std::string const & str) {
-    return ::channel_send(impl(p_)->sender(), r_count, str);
 }
 
 buff_t channel::recv() {

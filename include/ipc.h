@@ -103,16 +103,12 @@ public:
 
     std::size_t recv_count() const;
 
-    bool send(void const * data, std::size_t size);
-    bool send(buff_t const & buff);
-    bool send(std::string const & str);
-
     bool wait_for_recv(std::size_t r_count, std::size_t until) const;
     bool wait_for_recv(std::size_t r_count) const;
 
-    bool send_for(std::size_t r_count, void const * data, std::size_t size);
-    bool send_for(std::size_t r_count, buff_t const & buff);
-    bool send_for(std::size_t r_count, std::string const & str);
+    bool send(void const * data, std::size_t size);
+    bool send(buff_t const & buff);
+    bool send(std::string const & str);
 
     buff_t recv();
 
