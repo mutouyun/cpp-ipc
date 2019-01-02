@@ -11,6 +11,10 @@ A high-performance inter-process communication using shared memory on Linux/Wind
  * 底层数据结构为循环数组（circular array）
  * `ipc::route`支持单生产多消费，`ipc::channel`支持多生产多消费
  
+## Usage
+
+See: [Wiki](/mutouyun/cpp-ipc/wiki)
+
 ## Performance
 
  Environment | Value
