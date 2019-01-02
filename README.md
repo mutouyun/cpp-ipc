@@ -13,7 +13,7 @@ A high-performance inter-process communication using shared memory on Linux/Wind
  
 ## Usage
 
-See: [Wiki](/mutouyun/cpp-ipc/wiki)
+See: [Wiki](https://github.com/mutouyun/cpp-ipc/wiki)
 
 ## Performance
 
