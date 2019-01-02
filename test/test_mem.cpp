@@ -87,8 +87,6 @@ void Unit::initTestCase() {
     for (int i = 0; i < LoopCount; ++i) {
         sizes__.emplace_back(static_cast<std::size_t>(rdm()));
     }
-
-    ipc::mem::pool_alloc::clear();
 }
 
 void Unit::cleanupTestCase() {

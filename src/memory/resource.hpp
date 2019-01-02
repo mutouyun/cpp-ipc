@@ -41,6 +41,11 @@ enum : std::size_t {
     base_size = sizeof(void*)
 };
 
+template <std::size_t Radix>
+constexpr std::size_t roundup(std::size_t n) {
+    return ((n - 1) & (~(Radix - 1))) + Radix;
+}
+
 using fixed_sequence_t = std::index_sequence<
     base_size     , base_size * 2 ,
     base_size * 3 , base_size * 4 ,
@@ -54,8 +59,7 @@ using fixed_sequence_t = std::index_sequence<
 
 template <typename F>
 decltype(auto) choose(std::size_t size, F&& f) {
-    size = ((size - 1) & (~(base_size - 1))) + base_size;
-    return detail::static_switch(size, fixed_sequence_t {
+    return detail::static_switch(roundup<base_size>(size), fixed_sequence_t {
     }, [&f](auto index) {
         return f(fixed<decltype(index)::value>());
     }, [&f] {
