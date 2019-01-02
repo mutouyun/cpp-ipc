@@ -6,6 +6,7 @@
 #include <shared_mutex>
 #include <tuple>
 #include <map>
+#include <vector>
 #include <functional>
 #include <utility>
 #include <cstddef>
@@ -80,6 +81,18 @@ public:
         }
     }
 
+    void clear() {
+        auto guard = std::unique_lock { lc_ };
+        std::vector<alloc_policy*> vec(allocs_.size());
+        std::size_t i = 0;
+        for (auto& pair : allocs_) {
+            vec[i++] = pair.second;
+        }
+        allocs_.clear();
+        guard.unlock();
+        for (auto alc : vec) delete alc;
+    }
+
     void* alloc(std::size_t size) {
         return alc_info().alloc(size);
     }
@@ -88,7 +101,7 @@ public:
         alc_info().free(p);
     }
 
-    static void free(void* p, std::size_t /*size*/) {
+    void free(void* p, std::size_t /*size*/) {
         free(p);
     }
 };

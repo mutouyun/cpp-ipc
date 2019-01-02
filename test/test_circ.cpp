@@ -8,6 +8,7 @@
 
 #include "circ_elem_array.h"
 #include "circ_queue.h"
+#include "memory/resource.hpp"
 #include "test.h"
 
 namespace {
@@ -223,40 +224,11 @@ void Unit::test_prod_cons_1v3() {
     test_prod_cons<1, 3>();
 }
 
-template <int P, int C>
-struct test_performance {
-    static void start() {
-        test_performance<P - 1, C - 1>::start();
-        test_prod_cons<P, C, false>();
-    }
-};
-
-template <int C>
-struct test_performance<1, C> {
-    static void start() {
-        test_performance<1, C - 1>::start();
-        test_prod_cons<1, C, false>();
-    }
-};
-
-template <int P>
-struct test_performance<P, 1> {
-    static void start() {
-        test_performance<P - 1, 1>::start();
-        test_prod_cons<P, 1, false>();
-    }
-};
-
-template <>
-struct test_performance<1, 1> {
-    static void start() {
-        test_prod_cons<1, 1, false>();
-    }
-};
-
 void Unit::test_prod_cons_performance() {
-    test_performance<1, 10>::start();
-    test_prod_cons  <1, 10>(); // test & verify
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+        test_prod_cons<1, decltype(index)::value + 1, false>();
+    });
+    test_prod_cons<1, 10>(); // test & verify
 }
 
 void Unit::test_queue() {
@@ -269,10 +241,9 @@ void Unit::test_queue() {
     queue.attach(cq);
     QVERIFY(queue.detach() != nullptr);
 
-    benchmark_prod_cons<1, 1, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
-    benchmark_prod_cons<1, 2, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
-    benchmark_prod_cons<1, 4, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
-    benchmark_prod_cons<1, 8, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+        benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+    });
 }
 
 } // internal-linkage

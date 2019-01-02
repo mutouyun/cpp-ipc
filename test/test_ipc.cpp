@@ -19,6 +19,7 @@
 
 #include "ipc.h"
 #include "rw_lock.h"
+#include "memory/resource.hpp"
 
 #include "test.h"
 
@@ -419,43 +420,11 @@ void Unit::test_route_rtt() {
     t2.join();
 }
 
-template <int P, int C, bool V = false>
-struct test_performance {
-    template <typename T = ipc::route>
-    static void start() {
-        test_performance<P - 1, C - 1, V>::template start<T>();
-        test_prod_cons<T, P, C, V>();
-    }
-};
-
-template <int C, bool V>
-struct test_performance<1, C, V> {
-    template <typename T = ipc::route>
-    static void start() {
-        test_performance<1, C - 1, V>::template start<T>();
-        test_prod_cons<T, 1, C, V>();
-    }
-};
-
-template <int P, bool V>
-struct test_performance<P, 1, V> {
-    template <typename T = ipc::route>
-    static void start() {
-        test_performance<P - 1, 1, V>::template start<T>();
-        test_prod_cons<T, P, 1, V>();
-    }
-};
-
-template <bool V>
-struct test_performance<1, 1, V> {
-    template <typename T = ipc::route>
-    static void start() {
-        test_prod_cons<T, 1, 1, V>();
-    }
-};
-
 void Unit::test_route_performance() {
-    test_performance<1, 10, true>::start();
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+        test_prod_cons<ipc::route, 1, decltype(index)::value + 1, false>();
+    });
+    test_prod_cons<ipc::route, 1, 10>(); // test & verify
 }
 
 void Unit::test_channel() {
@@ -518,9 +487,16 @@ void Unit::test_channel_rtt() {
 }
 
 void Unit::test_channel_performance() {
-    test_performance<1 , 10>::start<ipc::channel>();
-    test_performance<10, 1 >::start<ipc::channel>();
-    test_performance<10, 10>::start<ipc::channel>();
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+        test_prod_cons<ipc::channel, 1, decltype(index)::value + 1, false>();
+    });
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+        test_prod_cons<ipc::channel, decltype(index)::value + 1, 1, false>();
+    });
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+        test_prod_cons<ipc::channel, decltype(index)::value + 1,
+                                     decltype(index)::value + 1, false>();
+    });
 }
 
 } // internal-linkage

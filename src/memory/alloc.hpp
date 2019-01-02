@@ -153,8 +153,6 @@ public:
     fixed_pool(fixed_pool&& rhs)            { this->swap(rhs); }
     fixed_pool& operator=(fixed_pool&& rhs) { this->swap(rhs); return (*this); }
 
-    ~fixed_pool() { clear(); }
-
 public:
     void swap(fixed_pool& rhs) {
         std::swap(this->alloc_      , rhs.alloc_);
