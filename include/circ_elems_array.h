@@ -28,6 +28,11 @@ struct elem_t {
     byte_t    data_[DataSize] {};
 };
 
+template <>
+struct elem_t<0> {
+    elem_head head_;
+};
+
 template <std::size_t S>
 elem_t<S>* elem_of(void* ptr) noexcept {
     return reinterpret_cast<elem_t<S>*>(static_cast<byte_t*>(ptr) - sizeof(elem_head));
@@ -42,7 +47,7 @@ enum class relat { // multiplicity of the relationship
 
 enum class trans { // transmission
     unicast,
-    multicast
+    broadcast
 };
 
 ////////////////////////////////////////////////////////////////
@@ -58,7 +63,7 @@ struct prod_cons<relat::single, relat::single, trans::unicast> {
     std::atomic<detail::u2_t> wt_ { 0 }; // write index
 
     template <std::size_t DataSize>
-    constexpr static std::size_t elem_param = DataSize - sizeof(elem_head);
+    constexpr static std::size_t elem_param = DataSize - sizeof(detail::elem_head);
 
     constexpr detail::u2_t cursor() const noexcept {
         return 0;
@@ -111,7 +116,7 @@ struct prod_cons<relat::single, relat::multi, trans::unicast>
 };
 
 template <>
-struct prod_cons<relat::single, relat::multi, trans::multicast> {
+struct prod_cons<relat::single, relat::multi, trans::broadcast> {
     std::atomic<detail::u2_t> wt_ { 0 }; // write index
 
     template <std::size_t DataSize>

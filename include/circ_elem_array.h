@@ -90,7 +90,7 @@ protected:
 
     template <typename Acq, typename... P>
     void* acquire(std::memory_order order, Acq&& acq, P&&... params) noexcept {
-        uint_t<32> conn_cnt = cc_.load(order);
+        uint_t<32> conn_cnt = this->cc_.load(order);
         if (conn_cnt == 0) return nullptr;
         elem_t* el = elem(std::forward<Acq>(acq)(std::memory_order_relaxed,
                                                  std::forward<P>(params)...));
@@ -102,7 +102,7 @@ protected:
                 break;
             }
             std::this_thread::yield();
-            conn_cnt = cc_.load(std::memory_order_acquire);
+            conn_cnt = this->cc_.load(std::memory_order_acquire);
         }
         return el->data_;
     }

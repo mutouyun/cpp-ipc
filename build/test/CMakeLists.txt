@@ -10,8 +10,8 @@ if(NOT MSVC)
 endif()
 
 include_directories(../../include ../../src ../../test ../../test/capo)
-file(GLOB SRC_FILES "../../test/*.cpp")
-file(GLOB HEAD_FILES "../../test/*.h")
+file(GLOB SRC_FILES ../../test/*.cpp)
+file(GLOB HEAD_FILES ../../test/*.h)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/../output)
 
 link_directories(${EXECUTABLE_OUTPUT_PATH})

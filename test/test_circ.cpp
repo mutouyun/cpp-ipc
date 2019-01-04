@@ -49,6 +49,10 @@ struct test_verify<cq_t> {
         for (auto& c_dats : list_) {
             for (int n = 0; n < N; ++n) {
                 auto& vec = c_dats[n];
+                //for (int d : vec) {
+                //    std::cout << d << " ";
+                //}
+                //std::cout << std::endl;
                 QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
                 int i = 0;
                 for (int d : vec) {
@@ -85,22 +89,39 @@ struct test_verify<ipc::circ::prod_cons<
     }
 };
 
+template <typename P>
+struct quit_mode;
+
+template <ipc::circ::relat Rp, ipc::circ::relat Rc>
+struct quit_mode<ipc::circ::prod_cons<Rp, Rc, ipc::circ::trans::unicast>> {
+    using type = volatile bool;
+};
+
+template <ipc::circ::relat Rp, ipc::circ::relat Rc>
+struct quit_mode<ipc::circ::prod_cons<Rp, Rc, ipc::circ::trans::broadcast>> {
+    struct type {
+        type(bool) {}
+        constexpr operator bool() const { return false; }
+    };
+};
+
 template <std::size_t D, typename P>
 struct test_cq<ipc::circ::elems_array<D, P>> {
     using ca_t = ipc::circ::elems_array<D, P>;
+    using cn_t = decltype(std::declval<ca_t>().cursor());
 
-    volatile bool quit_ = false;
+    typename quit_mode<P>::type quit_ = false;
     ca_t* ca_;
 
     test_cq(ca_t* ca) : ca_(ca) {}
 
-    auto connect() {
+    cn_t connect() {
         auto cur = ca_->cursor();
         ca_->connect();
         return cur;
     }
 
-    void disconnect(int) {
+    void disconnect(cn_t) {
         ca_->disconnect();
     }
 
@@ -111,17 +132,17 @@ struct test_cq<ipc::circ::elems_array<D, P>> {
     }
 
     template <typename F>
-    void recv(decltype(std::declval<ca_t>().cursor()) cur, F&& proc) {
+    void recv(cn_t cur, F&& proc) {
         while(1) {
-            msg_t* pmsg;
-            while (ca_->pop(cur, [&pmsg](void* p) {
-                pmsg = static_cast<msg_t*>(p);
+            msg_t msg;
+            while (ca_->pop(cur, [&msg](void* p) {
+                msg = *static_cast<msg_t*>(p);
             })) {
-                if (pmsg->pid_ < 0) {
+                if (msg.pid_ < 0) {
                     quit_ = true;
                     return;
                 }
-                proc(*pmsg);
+                proc(msg);
             }
             if (quit_) return;
             std::this_thread::yield();
@@ -264,6 +285,7 @@ private slots:
 #include "test_circ.moc"
 
 constexpr int LoopCount = 10000000;
+//constexpr int LoopCount = 1000/*0000*/;
 
 void Unit::initTestCase() {
     TestSuite::initTestCase();
@@ -322,13 +344,14 @@ void Unit::test_prod_cons_1v3() {
     benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_smn)::policy_t>(&el_arr_smn);
     benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_smn);
 
-//    ipc::circ::elems_array<
-//        sizeof(msg_t),
-//        ipc::circ::prod_cons<ipc::circ::relat::single,
-//                             ipc::circ::relat::multi,
-//                             ipc::circ::trans::multicast>
-//    > el_arr_smm;
-//    benchmark_prod_cons<1, 3, LoopCount, cq_t>(&el_arr_smm);
+    ipc::circ::elems_array<
+        sizeof(msg_t),
+        ipc::circ::prod_cons<ipc::circ::relat::single,
+                             ipc::circ::relat::multi,
+                             ipc::circ::trans::broadcast>
+    > el_arr_smm;
+    benchmark_prod_cons<1, 3, LoopCount, cq_t>(&el_arr_smm);
+    benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_smm);
 }
 
 void Unit::test_prod_cons_performance() {
