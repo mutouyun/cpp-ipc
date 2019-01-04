@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "circ_elems_array.h"
 #include "circ_elem_array.h"
 #include "circ_queue.h"
 #include "memory/resource.hpp"
@@ -13,13 +14,13 @@
 
 namespace {
 
-using cq_t = ipc::circ::elem_array<12>;
-cq_t* cq__;
-
 struct msg_t {
     int pid_;
     int dat_;
 };
+
+using cq_t = ipc::circ::elem_array<sizeof(msg_t)>;
+cq_t* cq__;
 
 bool operator==(msg_t const & m1, msg_t const & m2) {
     return (m1.pid_ == m2.pid_) && (m1.dat_ == m2.dat_);
@@ -46,9 +47,8 @@ struct test_verify<cq_t> {
     void verify(int N, int Loops) {
         std::cout << "verifying..." << std::endl;
         for (auto& c_dats : list_) {
-            auto& cons_vec = c_dats;
             for (int n = 0; n < N; ++n) {
-                auto& vec = cons_vec[n];
+                auto& vec = c_dats[n];
                 QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
                 int i = 0;
                 for (int d : vec) {
@@ -56,6 +56,87 @@ struct test_verify<cq_t> {
                     ++i;
                 }
             }
+        }
+    }
+};
+
+template <>
+struct test_verify<ipc::circ::prod_cons<
+        ipc::circ::relat::single,
+        ipc::circ::relat::multi,
+        ipc::circ::trans::unicast>
+    > : test_verify<cq_t> {
+    using test_verify<cq_t>::test_verify;
+
+    void verify(int N, int Loops) {
+        std::cout << "verifying..." << std::endl;
+        for (int n = 0; n < N; ++n) {
+            std::vector<int> datas;
+            std::uint64_t sum = 0;
+            for (auto& c_dats : list_) {
+                for (int d : c_dats[n]) {
+                    datas.push_back(d);
+                    sum += d;
+                }
+            }
+            QCOMPARE(datas.size(), static_cast<std::size_t>(Loops));
+            QCOMPARE(sum, (Loops * std::uint64_t(Loops - 1)) / 2);
+        }
+    }
+};
+
+template <std::size_t D, typename P>
+struct test_cq<ipc::circ::elems_array<D, P>> {
+    using ca_t = ipc::circ::elems_array<D, P>;
+
+    volatile bool quit_ = false;
+    ca_t* ca_;
+
+    test_cq(ca_t* ca) : ca_(ca) {}
+
+    auto connect() {
+        auto cur = ca_->cursor();
+        ca_->connect();
+        return cur;
+    }
+
+    void disconnect(int) {
+        ca_->disconnect();
+    }
+
+    void wait_start(int M) {
+        while (ca_->conn_count() != static_cast<std::size_t>(M)) {
+            std::this_thread::yield();
+        }
+    }
+
+    template <typename F>
+    void recv(decltype(std::declval<ca_t>().cursor()) cur, F&& proc) {
+        while(1) {
+            msg_t* pmsg;
+            while (ca_->pop(cur, [&pmsg](void* p) {
+                pmsg = static_cast<msg_t*>(p);
+            })) {
+                if (pmsg->pid_ < 0) {
+                    quit_ = true;
+                    return;
+                }
+                proc(*pmsg);
+            }
+            if (quit_) return;
+            std::this_thread::yield();
+        }
+    }
+
+    ca_t* connect_send() {
+        return ca_;
+    }
+
+    void send(ca_t* ca, msg_t const & msg) {
+        while (!ca->push([&msg](void* p) {
+            (*static_cast<msg_t*>(p)) = msg;
+        })) {
+            std::this_thread::yield();
         }
     }
 };
@@ -89,7 +170,7 @@ struct test_cq<ipc::circ::elem_array<D>> {
 
     template <typename F>
     void recv(cn_t cur, F&& proc) {
-        do {
+        while(1) {
             while (cur != ca_->cursor()) {
                 msg_t* pmsg = static_cast<msg_t*>(ca_->take(cur)),
                         msg = *pmsg;
@@ -99,7 +180,7 @@ struct test_cq<ipc::circ::elem_array<D>> {
                 proc(msg);
             }
             std::this_thread::yield();
-        } while(1);
+        }
     }
 
     ca_t* connect_send() {
@@ -144,11 +225,11 @@ struct test_cq<ipc::circ::queue<T>> {
 
     template <typename F>
     void recv(cn_t* queue, F&& proc) {
-        do {
+        while(1) {
             auto msg = queue->pop();
             if (msg.pid_ < 0) return;
             proc(msg);
-        } while(1);
+        }
     }
 
     cn_t connect_send() {
@@ -182,7 +263,7 @@ private slots:
 
 #include "test_circ.moc"
 
-constexpr int LoopCount = 1000000;
+constexpr int LoopCount = 10000000;
 
 void Unit::initTestCase() {
     TestSuite::initTestCase();
@@ -199,7 +280,7 @@ void Unit::test_inst() {
     std::cout << "cq_t::elem_size  = " << cq_t::elem_size  << std::endl;
     std::cout << "cq_t::block_size = " << cq_t::block_size << std::endl;
 
-    QCOMPARE(static_cast<std::size_t>(cq_t::data_size) , static_cast<std::size_t>(12));
+    QCOMPARE(static_cast<std::size_t>(cq_t::data_size), sizeof(msg_t));
     QCOMPARE(sizeof(cq_t), static_cast<std::size_t>(cq_t::block_size + cq_t::head_size));
 
     std::cout << "sizeof(ipc::circ::elem_array<4096>) = " << sizeof(*cq__) << std::endl;
@@ -218,10 +299,36 @@ void test_prod_cons() {
 
 void Unit::test_prod_cons_1v1() {
     test_prod_cons<1, 1>();
+
+    ipc::circ::elems_array<
+        sizeof(msg_t),
+        ipc::circ::prod_cons<ipc::circ::relat::single,
+                             ipc::circ::relat::single,
+                             ipc::circ::trans::unicast>
+    > el_arr_ss;
+    benchmark_prod_cons<1, 1, LoopCount, cq_t>(&el_arr_ss);
+    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_ss);
 }
 
 void Unit::test_prod_cons_1v3() {
     test_prod_cons<1, 3>();
+
+    ipc::circ::elems_array<
+        sizeof(msg_t),
+        ipc::circ::prod_cons<ipc::circ::relat::single,
+                             ipc::circ::relat::multi,
+                             ipc::circ::trans::unicast>
+    > el_arr_smn;
+    benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_smn)::policy_t>(&el_arr_smn);
+    benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_smn);
+
+//    ipc::circ::elems_array<
+//        sizeof(msg_t),
+//        ipc::circ::prod_cons<ipc::circ::relat::single,
+//                             ipc::circ::relat::multi,
+//                             ipc::circ::trans::multicast>
+//    > el_arr_smm;
+//    benchmark_prod_cons<1, 3, LoopCount, cq_t>(&el_arr_smm);
 }
 
 void Unit::test_prod_cons_performance() {

@@ -14,10 +14,10 @@
 namespace ipc {
 namespace circ {
 
-template <typename T>
+template <typename T, template <std::size_t...> class ElemArray = elem_array>
 class queue {
 public:
-    using array_t = elem_array<sizeof(T)>;
+    using array_t = ElemArray<sizeof(T)>;
 
 private:
     array_t* elems_ = nullptr;
@@ -88,11 +88,9 @@ public:
     template <typename... P>
     auto push(P&&... params) noexcept {
         if (elems_ == nullptr) return false;
-        auto ptr = elems_->acquire();
-        if (ptr == nullptr) return false;
-        ::new (ptr) T(std::forward<P>(params)...);
-        elems_->commit(ptr);
-        return true;
+        return elems_->fetch([&](void* p) {
+            ::new (p) T(std::forward<P>(params)...);
+        });
     }
 
     template <typename F>
