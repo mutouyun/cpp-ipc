@@ -122,7 +122,7 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
     template <std::size_t DataSize>
     constexpr static std::size_t elem_param = DataSize;
 
-    using rc_t = decltype(detail::elem_head::rc_)::value_type;
+    using rc_t = typename decltype(detail::elem_head::rc_)::value_type;
 
     detail::u2_t cursor() const noexcept {
         return wt_.load(std::memory_order_acquire);
