@@ -73,7 +73,7 @@ struct prod_cons<relat::single, relat::single, trans::unicast> {
     bool push(E* /*elems*/, F&& f, detail::elem_t<S>* elem_start) {
         auto cur_wt = detail::index_of(wt_.load(std::memory_order_acquire));
         if (cur_wt == detail::index_of(rd_.load(std::memory_order_relaxed) - 1)) {
-            return false;
+            return false; // full
         }
         std::forward<F>(f)(elem_start + cur_wt);
         wt_.fetch_add(1, std::memory_order_release);
@@ -84,7 +84,7 @@ struct prod_cons<relat::single, relat::single, trans::unicast> {
     bool pop(E* /*elems*/, detail::u2_t& /*cur*/, F&& f, detail::elem_t<S>* elem_start) noexcept {
         auto cur_rd = detail::index_of(rd_.load(std::memory_order_acquire));
         if (cur_rd == detail::index_of(wt_.load(std::memory_order_relaxed))) {
-            return false;
+            return false; // empty
         }
         std::forward<F>(f)(elem_start + cur_rd);
         rd_.fetch_add(1, std::memory_order_release);
@@ -103,7 +103,7 @@ struct prod_cons<relat::single, relat::multi, trans::unicast>
             auto cur_rd = rd_.load(std::memory_order_acquire);
             if (detail::index_of(cur_rd) ==
                 detail::index_of(wt_.load(std::memory_order_relaxed))) {
-                return false;
+                return false; // empty
             }
             std::memcpy(buff, elem_start + detail::index_of(cur_rd), sizeof(buff));
             if (rd_.compare_exchange_weak(cur_rd, cur_rd + 1, std::memory_order_release)) {
@@ -112,6 +112,38 @@ struct prod_cons<relat::single, relat::multi, trans::unicast>
             }
             std::this_thread::yield();
         }
+    }
+};
+
+template <>
+struct prod_cons<relat::multi, relat::multi, trans::unicast>
+     : prod_cons<relat::single, relat::multi, trans::unicast> {
+
+    std::atomic<detail::u2_t> ct_ { 0 }; // commit index
+
+    template <typename E, typename F, std::size_t S>
+    bool push(E* /*elems*/, F&& f, detail::elem_t<S>* elem_start) {
+        detail::u2_t cur_ct, nxt_ct;
+        while (1) {
+            cur_ct = ct_.load(std::memory_order_acquire);
+            if (detail::index_of(nxt_ct = cur_ct + 1) ==
+                detail::index_of(rd_.load(std::memory_order_relaxed))) {
+                return false; // full
+            }
+            if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_relaxed)) {
+                break;
+            }
+            std::this_thread::yield();
+        }
+        std::forward<F>(f)(elem_start + detail::index_of(cur_ct));
+        while (1) {
+            auto exp_wt = cur_ct;
+            if (wt_.compare_exchange_weak(exp_wt, nxt_ct, std::memory_order_release)) {
+                break;
+            }
+            std::this_thread::yield();
+        }
+        return true;
     }
 };
 

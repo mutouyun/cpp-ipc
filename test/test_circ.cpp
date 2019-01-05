@@ -64,9 +64,8 @@ struct test_verify<cq_t> {
     }
 };
 
-template <>
-struct test_verify<ipc::circ::prod_cons<
-        ipc::circ::relat::single,
+template <ipc::circ::relat Rp>
+struct test_verify<ipc::circ::prod_cons<Rp,
         ipc::circ::relat::multi,
         ipc::circ::trans::unicast>
     > : test_verify<cq_t> {
@@ -343,6 +342,17 @@ void Unit::test_prod_cons_1v3() {
     > el_arr_smn;
     benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_smn)::policy_t>(&el_arr_smn);
     benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_smn);
+
+    ipc::circ::elems_array<
+        sizeof(msg_t),
+        ipc::circ::prod_cons<ipc::circ::relat::multi,
+                             ipc::circ::relat::multi,
+                             ipc::circ::trans::unicast>
+    > el_arr_mmn;
+    benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_mmn)::policy_t>(&el_arr_mmn);
+    benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_mmn);
+    benchmark_prod_cons<3, 3, LoopCount, decltype(el_arr_mmn)::policy_t>(&el_arr_mmn);
+    benchmark_prod_cons<3, 3, LoopCount, void>(&el_arr_mmn);
 
     ipc::circ::elems_array<
         sizeof(msg_t),
