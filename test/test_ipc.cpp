@@ -314,10 +314,10 @@ void test_lock_performance() {
 }
 
 void Unit::test_rw_lock() {
-//    test_lock_performance<1, 1>();
-//    test_lock_performance<4, 4>();
-//    test_lock_performance<1, 8>();
-//    test_lock_performance<8, 1>();
+    test_lock_performance<1, 1>();
+    test_lock_performance<4, 4>();
+    test_lock_performance<1, 8>();
+    test_lock_performance<8, 1>();
 }
 
 void Unit::test_send_recv() {

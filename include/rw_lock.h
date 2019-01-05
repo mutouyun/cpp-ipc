@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <thread>
+#include <chrono>
 #include <limits>
 #include <type_traits>
 
@@ -56,12 +57,17 @@
 
 namespace ipc {
 
-inline void yield(unsigned k) noexcept {
+inline void yield(unsigned& k) noexcept {
     if (k < 4)  { /* Do nothing */ }
     else
     if (k < 16) { IPC_LOCK_PAUSE_(); }
     else
-    { std::this_thread::yield(); }
+    if (k < 32) { std::this_thread::yield(); }
+    else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        return;
+    }
+    ++k;
 }
 
 } // namespace ipc
@@ -88,14 +94,14 @@ public:
     rw_lock& operator=(rw_lock&&) = delete;
 
     void lock() noexcept {
-        for (unsigned k = 0;; ++k) {
+        for (unsigned k = 0;;) {
             auto old = lc_.fetch_or(w_flag, std::memory_order_acquire);
             if (!old) return;           // got w-lock
             if (!(old & w_flag)) break; // other thread having r-lock
             yield(k);                   // other thread having w-lock
         }
         // wait for reading finished
-        for (unsigned k = 0; lc_.load(std::memory_order_acquire) & w_mask; ++k) {
+        for (unsigned k = 0; lc_.load(std::memory_order_acquire) & w_mask;) {
             yield(k);
         }
     }
@@ -106,7 +112,7 @@ public:
 
     void lock_shared() noexcept {
         auto old = lc_.load(std::memory_order_relaxed);
-        for (unsigned k = 0;; ++k) {
+        for (unsigned k = 0;;) {
             // if w_flag set, just continue
             if (old & w_flag) {
                 yield(k);
