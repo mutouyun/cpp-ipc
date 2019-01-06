@@ -42,7 +42,7 @@ enum : std::size_t {
 };
 
 constexpr std::size_t classify(std::size_t size) {
-    constexpr static std::size_t mapping[] = {
+    constexpr std::size_t mapping[] = {
         /* 1 */
         0 , 1 , 2 , 3 ,
         /* 2 */
