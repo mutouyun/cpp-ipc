@@ -177,7 +177,7 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
                         expected, static_cast<rc_t>(conn_cnt), std::memory_order_relaxed)) {
                 break;
             }
-            ipc::sleep(k);
+            ipc::sleep<8192>(k);
             conn_cnt = elems->conn_count(); // acquire
             if (conn_cnt == 0) return false;
         }
