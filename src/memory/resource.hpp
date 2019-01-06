@@ -41,27 +41,29 @@ enum : std::size_t {
     base_size = sizeof(void*)
 };
 
-template <std::size_t Radix>
-constexpr std::size_t roundup(std::size_t n) {
-    return ((n - 1) & (~(Radix - 1))) + Radix;
+constexpr std::size_t classify(std::size_t size) {
+    constexpr static std::size_t mapping[] = {
+        /* 1 */
+        0 , 1 , 2 , 3 ,
+        /* 2 */
+        5 , 5 , 7 , 7 ,
+        9 , 9 , 11, 11,
+        13, 13, 15, 15,
+        /* 4 */
+        19, 19, 19, 19,
+        23, 23, 23, 23,
+        27, 27, 27, 27,
+        31, 31, 31, 31
+    };
+    size = (size - 1) / base_size;
+    return (size < std::size(mapping)) ? mapping[size] : 32;
 }
-
-using fixed_sequence_t = std::index_sequence<
-    base_size     , base_size * 2 ,
-    base_size * 3 , base_size * 4 ,
-    base_size * 5 , base_size * 6 ,
-    base_size * 7 , base_size * 8 ,
-    base_size * 9 , base_size * 10,
-    base_size * 11, base_size * 12,
-    base_size * 13, base_size * 14,
-    base_size * 15, base_size * 16
->;
 
 template <typename F>
 decltype(auto) choose(std::size_t size, F&& f) {
-    return detail::static_switch(roundup<base_size>(size), fixed_sequence_t {
+    return detail::static_switch(classify(size), std::make_index_sequence<32> {
     }, [&f](auto index) {
-        return f(fixed<decltype(index)::value>());
+        return f(fixed<(decltype(index)::value + 1) * base_size>());
     }, [&f] {
         return f(static_alloc{});
     });
@@ -70,8 +72,8 @@ decltype(auto) choose(std::size_t size, F&& f) {
 class pool_alloc {
 public:
     static void clear() {
-        static_for(fixed_sequence_t {}, [](auto index) {
-            fixed<decltype(index)::value>().clear();
+        static_for(std::make_index_sequence<32> {}, [](auto index) {
+            fixed<(decltype(index)::value + 1) * base_size>().clear();
         });
     }
 

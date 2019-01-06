@@ -15,14 +15,15 @@
 namespace ipc {
 namespace circ {
 
-template <typename T, template <std::size_t...> class ElemArray = elem_array>
+template <typename T, typename Policy = prod_cons<relat::single, relat::multi, trans::broadcast>>
 class queue {
 public:
-    using array_t = ElemArray<sizeof(T)>;
+    using array_t  = elem_array<sizeof(T), Policy>;
+    using policy_t = typename array_t::policy_t;
 
 private:
     array_t* elems_ = nullptr;
-    typename array_t::u2_t cursor_ = 0;
+    decltype(std::declval<array_t>().cursor()) cursor_ = 0;
     std::atomic_bool connected_ { false };
 
 public:
@@ -89,7 +90,7 @@ public:
     template <typename... P>
     auto push(P&&... params) noexcept {
         if (elems_ == nullptr) return false;
-        return elems_->fetch([&](void* p) {
+        return elems_->push([&](void* p) {
             ::new (p) T(std::forward<P>(params)...);
         });
     }
@@ -121,9 +122,12 @@ public:
         if (que->elems_ == nullptr) {
             return {};
         }
-        auto item_ptr = static_cast<T*>(que->elems_->take(que->cursor_++));
-        T item = std::move(*item_ptr);
-        que->elems_->put(item_ptr);
+        T item;
+        if (!que->elems_->pop(que->cursor_, [&item](void* p) {
+            ::new (&item) T(std::move(*static_cast<T*>(p)));
+        })) {
+            return {};
+        }
         return item;
     }
 
