@@ -102,9 +102,7 @@ public:
     void disconnect();
 
     std::size_t recv_count() const;
-
-    bool wait_for_recv(std::size_t r_count, std::size_t until) const;
-    bool wait_for_recv(std::size_t r_count) const;
+    void wait_for_recv(std::size_t r_count) const;
 
     bool send(void const * data, std::size_t size);
     bool send(buff_t const & buff);

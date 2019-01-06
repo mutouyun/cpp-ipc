@@ -27,14 +27,6 @@ struct ch_info_t {
 };
 #pragma pack()
 
-inline bool wait_for_recv(route const & rt, std::size_t r_count, std::size_t until) {
-    for (unsigned k = 0; rt.recv_count() < r_count; ++k) {
-        if (k > until) return false;
-        std::this_thread::yield();
-    }
-    return true;
-}
-
 } // internal-linkage
 
 ////////////////////////////////////////////////////////////////
@@ -154,12 +146,10 @@ std::size_t channel::recv_count() const {
     return impl(p_)->r_.recv_count();
 }
 
-bool channel::wait_for_recv(std::size_t r_count, std::size_t until) const {
-    return ::wait_for_recv(impl(p_)->sender(), r_count, until);
-}
-
-bool channel::wait_for_recv(std::size_t r_count) const {
-    return wait_for_recv(r_count, (std::numeric_limits<std::size_t>::max)());
+void channel::wait_for_recv(std::size_t r_count) const {
+    for (unsigned k = 0; impl(p_)->sender().recv_count() < r_count;) {
+        ipc::sleep(k);
+    }
 }
 
 bool channel::send(void const * data, std::size_t size) {

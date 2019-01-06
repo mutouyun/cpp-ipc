@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "def.h"
+#include "rw_lock.h"
 
 namespace ipc {
 namespace circ {
@@ -99,7 +100,7 @@ struct prod_cons<relat::single, relat::multi, trans::unicast>
     template <typename E, typename F, std::size_t S>
     bool pop(E* /*elems*/, detail::u2_t& /*cur*/, F&& f, detail::elem_t<S>* elem_start) noexcept {
         byte_t buff[sizeof(detail::elem_t<S>)];
-        while (1) {
+        for (unsigned k = 0;;) {
             auto cur_rd = rd_.load(std::memory_order_acquire);
             if (detail::index_of(cur_rd) ==
                 detail::index_of(wt_.load(std::memory_order_relaxed))) {
@@ -110,7 +111,7 @@ struct prod_cons<relat::single, relat::multi, trans::unicast>
                 std::forward<F>(f)(buff);
                 return true;
             }
-            std::this_thread::yield();
+            ipc::yield(k);
         }
     }
 };
@@ -124,7 +125,7 @@ struct prod_cons<relat::multi, relat::multi, trans::unicast>
     template <typename E, typename F, std::size_t S>
     bool push(E* /*elems*/, F&& f, detail::elem_t<S>* elem_start) {
         detail::u2_t cur_ct, nxt_ct;
-        while (1) {
+        for (unsigned k = 0;;) {
             cur_ct = ct_.load(std::memory_order_acquire);
             if (detail::index_of(nxt_ct = cur_ct + 1) ==
                 detail::index_of(rd_.load(std::memory_order_relaxed))) {
@@ -133,15 +134,15 @@ struct prod_cons<relat::multi, relat::multi, trans::unicast>
             if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_relaxed)) {
                 break;
             }
-            std::this_thread::yield();
+            ipc::yield(k);
         }
         std::forward<F>(f)(elem_start + detail::index_of(cur_ct));
-        while (1) {
+        for (unsigned k = 0;;) {
             auto exp_wt = cur_ct;
             if (wt_.compare_exchange_weak(exp_wt, nxt_ct, std::memory_order_release)) {
                 break;
             }
-            std::this_thread::yield();
+            ipc::sleep(k);
         }
         return true;
     }
@@ -170,13 +171,13 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
         if (conn_cnt == 0) return false;
         auto el = elem_start + detail::index_of(wt_.load(std::memory_order_relaxed));
         // check all consumers have finished reading this element
-        while (1) {
+        for (unsigned k = 0;;) {
             rc_t expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
                         expected, static_cast<rc_t>(conn_cnt), std::memory_order_relaxed)) {
                 break;
             }
-            std::this_thread::yield();
+            ipc::sleep(k);
             conn_cnt = elems->conn_count(); // acquire
             if (conn_cnt == 0) return false;
         }
@@ -190,7 +191,7 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
         if (cur == cursor()) return false; // acquire
         auto el = elem_start + detail::index_of(cur++);
         std::forward<F>(f)(el->data_);
-        while (1) {
+        for (unsigned k = 0;;) {
             rc_t cur_rc = el->head_.rc_.load(std::memory_order_acquire);
             if (cur_rc == 0) {
                 return true;
@@ -199,7 +200,7 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
                         cur_rc, cur_rc - 1, std::memory_order_release)) {
                 return true;
             }
-            std::this_thread::yield();
+            ipc::yield(k);
         }
     }
 };

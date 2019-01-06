@@ -10,6 +10,7 @@
 #include <chrono>
 
 #include "def.h"
+#include "rw_lock.h"
 #include "circ_elem_array.h"
 
 namespace ipc {
@@ -97,7 +98,7 @@ public:
 
     template <typename F>
     static queue* multi_wait_for(F&& upd) noexcept {
-        for (uint_t<32> k = 0;;) {
+        for (unsigned k = 0;;) {
             auto [ques, size] = upd();
             for (std::size_t i = 0; i < static_cast<std::size_t>(size); ++i) {
                 queue* que = ques[i];
@@ -107,11 +108,7 @@ public:
                     return que;
                 }
             }
-            if (k < 4096) {
-                std::this_thread::yield();
-                ++k;
-            }
-            else std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            ipc::sleep(k);
         }
     }
 
