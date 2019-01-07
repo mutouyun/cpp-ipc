@@ -57,7 +57,7 @@
 
 namespace ipc {
 
-template <std::size_t N = 4096, typename K>
+template <std::size_t N = 8192, typename K>
 inline void sleep(K& k) noexcept {
     if (k < static_cast<K>(N)) {
         std::this_thread::yield();
