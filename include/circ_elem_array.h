@@ -125,7 +125,7 @@ struct prod_cons<relat::multi, relat::multi, trans::unicast>
     template <typename E, typename F, std::size_t S>
     bool push(E* /*elems*/, F&& f, detail::elem_t<S>* elem_start) {
         detail::u2_t cur_ct, nxt_ct;
-        for (unsigned k = 0;;) {
+        while(1) {
             cur_ct = ct_.load(std::memory_order_acquire);
             if (detail::index_of(nxt_ct = cur_ct + 1) ==
                 detail::index_of(rd_.load(std::memory_order_relaxed))) {
@@ -134,15 +134,15 @@ struct prod_cons<relat::multi, relat::multi, trans::unicast>
             if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_relaxed)) {
                 break;
             }
-            ipc::sleep(k);
+            std::this_thread::yield();
         }
         std::forward<F>(f)(elem_start + detail::index_of(cur_ct));
-        for (unsigned k = 0;;) {
+        while(1) {
             auto exp_wt = cur_ct;
             if (wt_.compare_exchange_weak(exp_wt, nxt_ct, std::memory_order_release)) {
                 break;
             }
-            ipc::sleep(k);
+            std::this_thread::yield();
         }
         return true;
     }
@@ -171,13 +171,13 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
         if (conn_cnt == 0) return false;
         auto el = elem_start + detail::index_of(wt_.load(std::memory_order_relaxed));
         // check all consumers have finished reading this element
-        for (unsigned k = 0;;) {
+        while(1) {
             rc_t expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
                         expected, static_cast<rc_t>(conn_cnt), std::memory_order_relaxed)) {
                 break;
             }
-            ipc::sleep(k);
+            std::this_thread::yield();
             conn_cnt = elems->conn_count(); // acquire
             if (conn_cnt == 0) return false;
         }
@@ -202,6 +202,42 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
             }
             ipc::yield(k);
         }
+    }
+};
+
+template <>
+struct prod_cons<relat::multi, relat::multi, trans::broadcast>
+     : prod_cons<relat::single, relat::multi, trans::broadcast> {
+
+    std::atomic<detail::u2_t> ct_ { 0 }; // commit index
+
+    template <typename E, typename F, std::size_t S>
+    bool push(E* elems, F&& f, detail::elem_t<S>* elem_start) {
+        auto conn_cnt = elems->conn_count(); // acquire
+        if (conn_cnt == 0) return false;
+        detail::u2_t cur_ct = ct_.fetch_add(1, std::memory_order_relaxed),
+                     nxt_ct = cur_ct + 1;
+        auto el = elem_start + detail::index_of(cur_ct);
+        // check all consumers have finished reading this element
+        while(1) {
+            rc_t expected = 0;
+            if (el->head_.rc_.compare_exchange_weak(
+                        expected, static_cast<rc_t>(conn_cnt), std::memory_order_relaxed)) {
+                break;
+            }
+            std::this_thread::yield();
+            conn_cnt = elems->conn_count(); // acquire
+            if (conn_cnt == 0) return false;
+        }
+        std::forward<F>(f)(el->data_);
+        while(1) {
+            auto exp_wt = cur_ct;
+            if (wt_.compare_exchange_weak(exp_wt, nxt_ct, std::memory_order_release)) {
+                break;
+            }
+            std::this_thread::yield();
+        }
+        return true;
     }
 };
 

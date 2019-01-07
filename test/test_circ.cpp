@@ -266,29 +266,39 @@ void Unit::test_prod_cons_1v1() {
         ipc::circ::prod_cons<ipc::circ::relat::single,
                              ipc::circ::relat::single,
                              ipc::circ::trans::unicast>
-    > el_arr_ss;
-    benchmark_prod_cons<1, 1, LoopCount, cq_t>(&el_arr_ss);
-    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_ss);
+    > el_arr_ssu;
+    benchmark_prod_cons<1, 1, LoopCount, cq_t>(&el_arr_ssu);
+    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_ssu);
 
     ipc::circ::elem_array<
         sizeof(msg_t),
         ipc::circ::prod_cons<ipc::circ::relat::single,
                              ipc::circ::relat::multi,
                              ipc::circ::trans::unicast>
-    > el_arr_smn;
-    benchmark_prod_cons<1, 1, LoopCount, decltype(el_arr_smn)::policy_t>(&el_arr_smn);
-    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_smn);
+    > el_arr_smu;
+    benchmark_prod_cons<1, 1, LoopCount, decltype(el_arr_smu)::policy_t>(&el_arr_smu);
+    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_smu);
 
     ipc::circ::elem_array<
         sizeof(msg_t),
         ipc::circ::prod_cons<ipc::circ::relat::multi,
                              ipc::circ::relat::multi,
                              ipc::circ::trans::unicast>
-    > el_arr_mmn;
-    benchmark_prod_cons<1, 1, LoopCount, decltype(el_arr_mmn)::policy_t>(&el_arr_mmn);
-    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_mmn);
+    > el_arr_mmu;
+    benchmark_prod_cons<1, 1, LoopCount, decltype(el_arr_mmu)::policy_t>(&el_arr_mmu);
+    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_mmu);
 
     test_prod_cons<1, 1>();
+    test_prod_cons<1, 1, false>();
+
+    ipc::circ::elem_array<
+        sizeof(msg_t),
+        ipc::circ::prod_cons<ipc::circ::relat::multi,
+                             ipc::circ::relat::multi,
+                             ipc::circ::trans::broadcast>
+    > el_arr_mmb;
+    benchmark_prod_cons<1, 1, LoopCount, cq_t>(&el_arr_mmb);
+    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_mmb);
 }
 
 void Unit::test_prod_cons_1v3() {
@@ -297,20 +307,30 @@ void Unit::test_prod_cons_1v3() {
         ipc::circ::prod_cons<ipc::circ::relat::single,
                              ipc::circ::relat::multi,
                              ipc::circ::trans::unicast>
-    > el_arr_smn;
-    benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_smn)::policy_t>(&el_arr_smn);
-    benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_smn);
+    > el_arr_smu;
+    benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_smu)::policy_t>(&el_arr_smu);
+    benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_smu);
 
     ipc::circ::elem_array<
         sizeof(msg_t),
         ipc::circ::prod_cons<ipc::circ::relat::multi,
                              ipc::circ::relat::multi,
                              ipc::circ::trans::unicast>
-    > el_arr_mmn;
-    benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_mmn)::policy_t>(&el_arr_mmn);
-    benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_mmn);
+    > el_arr_mmu;
+    benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_mmu)::policy_t>(&el_arr_mmu);
+    benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_mmu);
 
     test_prod_cons<1, 3>();
+    test_prod_cons<1, 3, false>();
+
+    ipc::circ::elem_array<
+        sizeof(msg_t),
+        ipc::circ::prod_cons<ipc::circ::relat::multi,
+                             ipc::circ::relat::multi,
+                             ipc::circ::trans::broadcast>
+    > el_arr_mmb;
+    benchmark_prod_cons<1, 3, LoopCount, cq_t>(&el_arr_mmb);
+    benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_mmb);
 }
 
 void Unit::test_prod_cons_performance() {
@@ -319,31 +339,47 @@ void Unit::test_prod_cons_performance() {
         ipc::circ::prod_cons<ipc::circ::relat::single,
                              ipc::circ::relat::multi,
                              ipc::circ::trans::unicast>
-    > el_arr_smn;
-    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_smn](auto index) {
-        benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_smn);
-    });
-
-    ipc::circ::elem_array<
-        sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::circ::relat::multi,
-                             ipc::circ::relat::multi,
-                             ipc::circ::trans::unicast>
-    > el_arr_mmn;
-    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmn](auto index) {
-        benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmn);
-    });
-    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmn](auto index) {
-        benchmark_prod_cons<decltype(index)::value + 1, 1, LoopCount, void>(&el_arr_mmn);
-    });
-    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmn](auto index) {
-        benchmark_prod_cons<decltype(index)::value + 1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmn);
+    > el_arr_smu;
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_smu](auto index) {
+        benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_smu);
     });
 
     ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
         test_prod_cons<1, decltype(index)::value + 1, false>();
     });
     test_prod_cons<1, 10>(); // test & verify
+
+    ipc::circ::elem_array<
+        sizeof(msg_t),
+        ipc::circ::prod_cons<ipc::circ::relat::multi,
+                             ipc::circ::relat::multi,
+                             ipc::circ::trans::unicast>
+    > el_arr_mmu;
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmu](auto index) {
+        benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmu);
+    });
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmu](auto index) {
+        benchmark_prod_cons<decltype(index)::value + 1, 1, LoopCount, void>(&el_arr_mmu);
+    });
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmu](auto index) {
+        benchmark_prod_cons<decltype(index)::value + 1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmu);
+    });
+
+    ipc::circ::elem_array<
+        sizeof(msg_t),
+        ipc::circ::prod_cons<ipc::circ::relat::multi,
+                             ipc::circ::relat::multi,
+                             ipc::circ::trans::broadcast>
+    > el_arr_mmb;
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmb](auto index) {
+        benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmb);
+    });
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmb](auto index) {
+        benchmark_prod_cons<decltype(index)::value + 1, 1, LoopCount, void>(&el_arr_mmb);
+    });
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmb](auto index) {
+        benchmark_prod_cons<decltype(index)::value + 1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmb);
+    });
 }
 
 void Unit::test_queue() {
