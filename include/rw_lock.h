@@ -57,13 +57,9 @@
 
 namespace ipc {
 
-template <std::size_t N = 32, typename K>
-inline void yield(K& k) noexcept {
-    if (k < 4)  { /* Do nothing */ }
-    else
-    if (k < 16) { IPC_LOCK_PAUSE_(); }
-    else
-    if (k < static_cast<K>(N)) { 
+template <std::size_t N = 4096, typename K>
+inline void sleep(K& k) noexcept {
+    if (k < static_cast<K>(N)) {
         std::this_thread::yield();
     }
     else {
@@ -73,9 +69,16 @@ inline void yield(K& k) noexcept {
     ++k;
 }
 
-template <std::size_t N = 4096, typename K>
-inline void sleep(K& k) noexcept {
-    ipc::yield<N>(k);
+template <std::size_t N = 32, typename K>
+inline void yield(K& k) noexcept {
+    if (k < 4)  { /* Do nothing */ }
+    else
+    if (k < 16) { IPC_LOCK_PAUSE_(); }
+    else {
+        ipc::sleep<N>(k);
+        return;
+    }
+    ++k;
 }
 
 } // namespace ipc

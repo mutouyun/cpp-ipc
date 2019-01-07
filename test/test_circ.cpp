@@ -334,6 +334,9 @@ void Unit::test_prod_cons_performance() {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmn);
     });
     ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmn](auto index) {
+        benchmark_prod_cons<decltype(index)::value + 1, 1, LoopCount, void>(&el_arr_mmn);
+    });
+    ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmn](auto index) {
         benchmark_prod_cons<decltype(index)::value + 1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmn);
     });
 

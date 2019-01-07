@@ -134,7 +134,7 @@ struct prod_cons<relat::multi, relat::multi, trans::unicast>
             if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_relaxed)) {
                 break;
             }
-            ipc::yield(k);
+            ipc::sleep<8192>(k);
         }
         std::forward<F>(f)(elem_start + detail::index_of(cur_ct));
         for (unsigned k = 0;;) {
@@ -142,7 +142,7 @@ struct prod_cons<relat::multi, relat::multi, trans::unicast>
             if (wt_.compare_exchange_weak(exp_wt, nxt_ct, std::memory_order_release)) {
                 break;
             }
-            ipc::sleep(k);
+            ipc::sleep<8192>(k);
         }
         return true;
     }
