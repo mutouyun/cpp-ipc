@@ -99,27 +99,19 @@ public:
         });
     }
 
-    static auto pop(queue* que) noexcept {
-        std::tuple<queue*, T> ret;
-        if (que == nullptr) {
-            return ret;
+    T pop() noexcept {
+        if (elems_ == nullptr) {
+            return {};
         }
-        if (que->elems_ == nullptr) {
-            return ret;
-        }
-        for (unsigned k = 0; que->elems_->cursor() == que->cursor_;) {
+        T item;
+        for (unsigned k = 0;;) {
+            if (elems_->pop(cursor_, [&item](void* p) {
+                ::new (&item) T(std::move(*static_cast<T*>(p)));
+            })) {
+                return item;
+            }
             ipc::sleep(k);
         }
-        if (!que->elems_->pop(que->cursor_, [&ret](void* p) {
-            ::new (&std::get<1>(ret)) T(std::move(*static_cast<T*>(p)));
-        })) {
-            return ret;
-        }
-        return ret;
-    }
-
-    T pop() noexcept {
-        return std::get<1>(pop(this));
     }
 };
 

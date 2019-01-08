@@ -183,10 +183,9 @@ static buff_t recv(handle_t h) {
     auto& rc = recv_cache();
     while (1) {
         // pop a new message
-        auto tp = que->pop(que);
-        auto& msg = std::get<1>(tp);
-        if (msg.que_ == std::get<0>(tp)) return {};
+        auto msg = que->pop();
         if (msg.id_ == 0) return {};
+        if (msg.que_ == que) continue; // pop next
         // msg.remain_ may minus & abs(msg.remain_) < data_length
         std::size_t remain = static_cast<std::size_t>(
                              static_cast<int>(data_length) + msg.remain_);

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <tuple>
 #include <vector>
+#include <type_traits>
 
 #include "export.h"
 #include "def.h"
@@ -34,6 +35,16 @@ public:
 
     void *       data()       noexcept;
     void const * data() const noexcept;
+
+    template <typename T>
+    auto data() noexcept -> std::enable_if_t<!std::is_const_v<T>, T*> {
+        return static_cast<T*>(data());
+    }
+
+    template <typename T>
+    auto data() const noexcept -> std::enable_if_t<std::is_const_v<T>, T*> {
+        return static_cast<T*>(data());
+    }
 
     std::size_t size() const noexcept;
 

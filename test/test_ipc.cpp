@@ -30,6 +30,7 @@ std::vector<ipc::buff_t> datas__;
 constexpr int DataMin   = 2;
 constexpr int DataMax   = 256;
 constexpr int LoopCount = 100000;
+//constexpr int LoopCount = 10000;
 
 } // internal-linkage
 
@@ -439,10 +440,11 @@ void Unit::test_channel_rtt() {
         for (std::size_t i = 0;; ++i) {
             auto dd = cc.recv();
             if (dd.size() < 2) return;
-//            std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
+            //std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
             while (!cc.send(ipc::buff_t('a'))) {
                 cc.wait_for_recv(1);
             }
+            //std::cout << "sent ack." << std::endl;
         }
     }};
 
@@ -451,12 +453,13 @@ void Unit::test_channel_rtt() {
         cc.wait_for_recv(1);
         sw.start();
         for (std::size_t i = 0; i < LoopCount; ++i) {
-//            std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
+            //std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
             cc.send(datas__[i]);
             /*auto dd = */cc.recv();
-//            if (dd.size() != 1 || dd[0] != 'a') {
-//                QVERIFY(false);
-//            }
+            //if (dd.size() != 1 || dd.data<char>()[0] != 'a') {
+            //    std::cout << "recv ack fail: " << i << "-[" << dd.size() << "]" << std::endl;
+            //    QVERIFY(false);
+            //}
         }
         cc.send(ipc::buff_t('\0'));
         t1.join();
