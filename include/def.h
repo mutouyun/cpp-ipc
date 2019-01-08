@@ -84,7 +84,7 @@ struct pimpl {
     }
 
     constexpr void clear() {
-        clear_impl(static_cast<T*>(this));
+        clear_impl(static_cast<T*>(const_cast<pimpl*>(this)));
     }
 };
 
