@@ -17,9 +17,7 @@ namespace ipc {
 namespace circ {
 
 template <typename T,
-          typename Policy = circ::prod_cons<circ::relat::single,
-                                            circ::relat::multi,
-                                            circ::trans::broadcast>>
+          typename Policy = circ::prod_cons<relat::single, relat::multi, trans::broadcast>>
 class queue {
 public:
     using array_t  = elem_array<sizeof(T), Policy>;

@@ -31,6 +31,16 @@ enum : std::size_t {
     data_length   = 16
 };
 
+enum class relat { // multiplicity of the relationship
+    single,
+    multi
+};
+
+enum class trans { // transmission
+    unicast,
+    broadcast
+};
+
 // concept helpers
 
 template <bool Cond, typename R>

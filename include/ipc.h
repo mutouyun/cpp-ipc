@@ -139,7 +139,7 @@ public:
 */
 using route = channel_ipml<channel_detail<
     circ::queue,
-    circ::prod_cons<circ::relat::single, circ::relat::multi, circ::trans::broadcast>
+    circ::prod_cons<relat::single, relat::multi, trans::broadcast>
 >>;
 
 /*
@@ -152,7 +152,7 @@ using route = channel_ipml<channel_detail<
 
 using channel = channel_ipml<channel_detail<
     circ::queue,
-    circ::prod_cons<circ::relat::multi, circ::relat::multi, circ::trans::broadcast>
+    circ::prod_cons<relat::multi, relat::multi, trans::broadcast>
 >>;
 
 } // namespace ipc

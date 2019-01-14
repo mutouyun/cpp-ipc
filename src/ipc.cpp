@@ -261,10 +261,10 @@ buff_t channel_detail<Queue, Policy>::recv(handle_t h) {
     return detail<Queue, Policy>::recv(h);
 }
 
-template struct channel_detail<circ::queue, circ::prod_cons<circ::relat::single, circ::relat::single, circ::trans::unicast  >>;
-template struct channel_detail<circ::queue, circ::prod_cons<circ::relat::single, circ::relat::multi , circ::trans::unicast  >>;
-template struct channel_detail<circ::queue, circ::prod_cons<circ::relat::multi , circ::relat::multi , circ::trans::unicast  >>;
-template struct channel_detail<circ::queue, circ::prod_cons<circ::relat::single, circ::relat::multi , circ::trans::broadcast>>;
-template struct channel_detail<circ::queue, circ::prod_cons<circ::relat::multi , circ::relat::multi , circ::trans::broadcast>>;
+template struct channel_detail<circ::queue, circ::prod_cons<relat::single, relat::single, trans::unicast  >>;
+template struct channel_detail<circ::queue, circ::prod_cons<relat::single, relat::multi , trans::unicast  >>;
+template struct channel_detail<circ::queue, circ::prod_cons<relat::multi , relat::multi , trans::unicast  >>;
+template struct channel_detail<circ::queue, circ::prod_cons<relat::single, relat::multi , trans::broadcast>>;
+template struct channel_detail<circ::queue, circ::prod_cons<relat::multi , relat::multi , trans::broadcast>>;
 
 } // namespace ipc

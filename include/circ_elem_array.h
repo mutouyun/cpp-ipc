@@ -41,16 +41,6 @@ elem_t<S>* elem_of(void* ptr) noexcept {
 
 } // namespace detail
 
-enum class relat { // multiplicity of the relationship
-    single,
-    multi
-};
-
-enum class trans { // transmission
-    unicast,
-    broadcast
-};
-
 ////////////////////////////////////////////////////////////////
 /// producer-consumer policies
 ////////////////////////////////////////////////////////////////
