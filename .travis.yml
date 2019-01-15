@@ -33,7 +33,6 @@ script:
     else
       qmake -o Makefile ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX;
       qmake -o MakefileTest test.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX;
-      cat MakefileTest;
       make;
       make -f MakefileTest;
       export IPC_TARGET=test;

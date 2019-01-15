@@ -1,6 +1,7 @@
 #pragma once
 
-namespace ipc::detail {
+namespace ipc {
+namespace detail {
 
 class waiter {
 public:
@@ -29,4 +30,5 @@ public:
     }
 };
 
-} // namespace ipc::detail
+} // namespace detail
+} // namespace ipc

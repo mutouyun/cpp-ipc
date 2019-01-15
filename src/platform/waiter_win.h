@@ -9,7 +9,8 @@
 #include "rw_lock.h"
 #include "platform/to_tchar.h"
 
-namespace ipc::detail {
+namespace ipc {
+namespace detail {
 
 class waiter {
     std::atomic<long> counter_ { 0 };
@@ -52,4 +53,5 @@ public:
     }
 };
 
-} // namespace ipc::detail
+} // namespace detail
+} // namespace ipc
