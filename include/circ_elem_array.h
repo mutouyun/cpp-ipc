@@ -8,8 +8,8 @@
 #include "rw_lock.h"
 
 namespace ipc {
-namespace circ {
 
+namespace circ {
 namespace detail {
 
 using u1_t = uint_t<8>;
@@ -40,30 +40,28 @@ elem_t<S>* elem_of(void* ptr) noexcept {
 }
 
 } // namespace detail
+} // namespace circ
 
 ////////////////////////////////////////////////////////////////
 /// producer-consumer policies
 ////////////////////////////////////////////////////////////////
 
-template <relat Rp, relat Rc, trans Ts>
-struct prod_cons;
-
 template <>
-struct prod_cons<relat::single, relat::single, trans::unicast> {
-    std::atomic<detail::u2_t> rd_ { 0 }; // read index
-    std::atomic<detail::u2_t> wt_ { 0 }; // write index
+struct prod_cons<organ::cyclic, relat::single, relat::single, trans::unicast> {
+    std::atomic<circ::detail::u2_t> rd_ { 0 }; // read index
+    std::atomic<circ::detail::u2_t> wt_ { 0 }; // write index
 
     template <std::size_t DataSize>
-    constexpr static std::size_t elem_param = DataSize - sizeof(detail::elem_head);
+    constexpr static std::size_t elem_param = DataSize - sizeof(circ::detail::elem_head);
 
-    constexpr detail::u2_t cursor() const noexcept {
+    constexpr circ::detail::u2_t cursor() const noexcept {
         return 0;
     }
 
     template <typename E, typename F, std::size_t S>
-    bool push(E* /*elems*/, F&& f, detail::elem_t<S>* elem_start) {
-        auto cur_wt = detail::index_of(wt_.load(std::memory_order_acquire));
-        if (cur_wt == detail::index_of(rd_.load(std::memory_order_relaxed) - 1)) {
+    bool push(E* /*elems*/, F&& f, circ::detail::elem_t<S>* elem_start) {
+        auto cur_wt = circ::detail::index_of(wt_.load(std::memory_order_acquire));
+        if (cur_wt == circ::detail::index_of(rd_.load(std::memory_order_relaxed) - 1)) {
             return false; // full
         }
         std::forward<F>(f)(elem_start + cur_wt);
@@ -72,9 +70,9 @@ struct prod_cons<relat::single, relat::single, trans::unicast> {
     }
 
     template <typename E, typename F, std::size_t S>
-    bool pop(E* /*elems*/, detail::u2_t& /*cur*/, F&& f, detail::elem_t<S>* elem_start) noexcept {
-        auto cur_rd = detail::index_of(rd_.load(std::memory_order_acquire));
-        if (cur_rd == detail::index_of(wt_.load(std::memory_order_relaxed))) {
+    bool pop(E* /*elems*/, circ::detail::u2_t& /*cur*/, F&& f, circ::detail::elem_t<S>* elem_start) noexcept {
+        auto cur_rd = circ::detail::index_of(rd_.load(std::memory_order_acquire));
+        if (cur_rd == circ::detail::index_of(wt_.load(std::memory_order_relaxed))) {
             return false; // empty
         }
         std::forward<F>(f)(elem_start + cur_rd);
@@ -84,19 +82,19 @@ struct prod_cons<relat::single, relat::single, trans::unicast> {
 };
 
 template <>
-struct prod_cons<relat::single, relat::multi, trans::unicast>
-     : prod_cons<relat::single, relat::single, trans::unicast> {
+struct prod_cons<organ::cyclic, relat::single, relat::multi , trans::unicast>
+     : prod_cons<organ::cyclic, relat::single, relat::single, trans::unicast> {
 
     template <typename E, typename F, std::size_t S>
-    bool pop(E* /*elems*/, detail::u2_t& /*cur*/, F&& f, detail::elem_t<S>* elem_start) noexcept {
-        byte_t buff[sizeof(detail::elem_t<S>)];
+    bool pop(E* /*elems*/, circ::detail::u2_t& /*cur*/, F&& f, circ::detail::elem_t<S>* elem_start) noexcept {
+        byte_t buff[sizeof(circ::detail::elem_t<S>)];
         for (unsigned k = 0;;) {
             auto cur_rd = rd_.load(std::memory_order_acquire);
-            if (detail::index_of(cur_rd) ==
-                detail::index_of(wt_.load(std::memory_order_relaxed))) {
+            if (circ::detail::index_of(cur_rd) ==
+                circ::detail::index_of(wt_.load(std::memory_order_relaxed))) {
                 return false; // empty
             }
-            std::memcpy(buff, elem_start + detail::index_of(cur_rd), sizeof(buff));
+            std::memcpy(buff, elem_start + circ::detail::index_of(cur_rd), sizeof(buff));
             if (rd_.compare_exchange_weak(cur_rd, cur_rd + 1, std::memory_order_release)) {
                 std::forward<F>(f)(buff);
                 return true;
@@ -107,18 +105,18 @@ struct prod_cons<relat::single, relat::multi, trans::unicast>
 };
 
 template <>
-struct prod_cons<relat::multi, relat::multi, trans::unicast>
-     : prod_cons<relat::single, relat::multi, trans::unicast> {
+struct prod_cons<organ::cyclic, relat::multi , relat::multi, trans::unicast>
+     : prod_cons<organ::cyclic, relat::single, relat::multi, trans::unicast> {
 
-    std::atomic<detail::u2_t> ct_ { 0 }; // commit index
+    std::atomic<circ::detail::u2_t> ct_ { 0 }; // commit index
 
     template <typename E, typename F, std::size_t S>
-    bool push(E* /*elems*/, F&& f, detail::elem_t<S>* elem_start) {
-        detail::u2_t cur_ct, nxt_ct;
+    bool push(E* /*elems*/, F&& f, circ::detail::elem_t<S>* elem_start) {
+        circ::detail::u2_t cur_ct, nxt_ct;
         while(1) {
             cur_ct = ct_.load(std::memory_order_acquire);
-            if (detail::index_of(nxt_ct = cur_ct + 1) ==
-                detail::index_of(rd_.load(std::memory_order_relaxed))) {
+            if (circ::detail::index_of(nxt_ct = cur_ct + 1) ==
+                circ::detail::index_of(rd_.load(std::memory_order_relaxed))) {
                 return false; // full
             }
             if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_relaxed)) {
@@ -126,7 +124,7 @@ struct prod_cons<relat::multi, relat::multi, trans::unicast>
             }
             std::this_thread::yield();
         }
-        std::forward<F>(f)(elem_start + detail::index_of(cur_ct));
+        std::forward<F>(f)(elem_start + circ::detail::index_of(cur_ct));
         while(1) {
             auto exp_wt = cur_ct;
             if (wt_.compare_exchange_weak(exp_wt, nxt_ct, std::memory_order_release)) {
@@ -139,8 +137,8 @@ struct prod_cons<relat::multi, relat::multi, trans::unicast>
 };
 
 template <>
-struct prod_cons<relat::single, relat::multi, trans::broadcast> {
-    std::atomic<detail::u2_t> wt_ { 0 }; // write index
+struct prod_cons<organ::cyclic, relat::single, relat::multi, trans::broadcast> {
+    std::atomic<circ::detail::u2_t> wt_ { 0 }; // write index
 
     template <std::size_t DataSize>
     constexpr static std::size_t elem_param = DataSize;
@@ -149,17 +147,17 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
         <Remarks> std::atomic<T> may not have value_type.
         See: https://stackoverflow.com/questions/53648614/what-happened-to-stdatomicxvalue-type
     */
-    using rc_t = decltype(detail::elem_head::rc_.load());
+    using rc_t = decltype(circ::detail::elem_head::rc_.load());
 
-    detail::u2_t cursor() const noexcept {
+    circ::detail::u2_t cursor() const noexcept {
         return wt_.load(std::memory_order_acquire);
     }
 
     template <typename E, typename F, std::size_t S>
-    bool push(E* elems, F&& f, detail::elem_t<S>* elem_start) {
+    bool push(E* elems, F&& f, circ::detail::elem_t<S>* elem_start) {
         auto conn_cnt = elems->conn_count(); // acquire
         if (conn_cnt == 0) return false;
-        auto el = elem_start + detail::index_of(wt_.load(std::memory_order_relaxed));
+        auto el = elem_start + circ::detail::index_of(wt_.load(std::memory_order_relaxed));
         // check all consumers have finished reading this element
         while(1) {
             rc_t expected = 0;
@@ -177,9 +175,9 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
     }
 
     template <typename E, typename F, std::size_t S>
-    bool pop(E* /*elems*/, detail::u2_t& cur, F&& f, detail::elem_t<S>* elem_start) noexcept {
+    bool pop(E* /*elems*/, circ::detail::u2_t& cur, F&& f, circ::detail::elem_t<S>* elem_start) noexcept {
         if (cur == cursor()) return false; // acquire
-        auto el = elem_start + detail::index_of(cur++);
+        auto el = elem_start + circ::detail::index_of(cur++);
         std::forward<F>(f)(el->data_);
         for (unsigned k = 0;;) {
             rc_t cur_rc = el->head_.rc_.load(std::memory_order_acquire);
@@ -196,18 +194,18 @@ struct prod_cons<relat::single, relat::multi, trans::broadcast> {
 };
 
 template <>
-struct prod_cons<relat::multi, relat::multi, trans::broadcast>
-     : prod_cons<relat::single, relat::multi, trans::broadcast> {
+struct prod_cons<organ::cyclic, relat::multi , relat::multi, trans::broadcast>
+     : prod_cons<organ::cyclic, relat::single, relat::multi, trans::broadcast> {
 
-    std::atomic<detail::u2_t> ct_ { 0 }; // commit index
+    std::atomic<circ::detail::u2_t> ct_ { 0 }; // commit index
 
     template <typename E, typename F, std::size_t S>
-    bool push(E* elems, F&& f, detail::elem_t<S>* elem_start) {
+    bool push(E* elems, F&& f, circ::detail::elem_t<S>* elem_start) {
         auto conn_cnt = elems->conn_count(); // acquire
         if (conn_cnt == 0) return false;
-        detail::u2_t cur_ct = ct_.fetch_add(1, std::memory_order_relaxed),
-                     nxt_ct = cur_ct + 1;
-        auto el = elem_start + detail::index_of(cur_ct);
+        circ::detail::u2_t cur_ct = ct_.fetch_add(1, std::memory_order_relaxed),
+                           nxt_ct = cur_ct + 1;
+        auto el = elem_start + circ::detail::index_of(cur_ct);
         // check all consumers have finished reading this element
         while(1) {
             rc_t expected = 0;
@@ -230,6 +228,11 @@ struct prod_cons<relat::multi, relat::multi, trans::broadcast>
         return true;
     }
 };
+
+template <relat Rp, relat Rc, trans Ts>
+using prod_cons_circ = prod_cons<organ::cyclic, Rp, Rc, Ts>;
+
+namespace circ {
 
 ////////////////////////////////////////////////////////////////
 /// element-array implementation

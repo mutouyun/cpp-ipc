@@ -7,7 +7,7 @@
 #include "def.h"
 #include "buffer.h"
 #include "shm.h"
-#include "circ_queue.h"
+#include "queue.h"
 
 namespace ipc {
 
@@ -138,8 +138,7 @@ public:
  * (one producer/server/sender to multi consumers/clients/receivers)
 */
 using route = channel_ipml<channel_detail<
-    circ::queue,
-    circ::prod_cons<relat::single, relat::multi, trans::broadcast>
+    ipc::queue, ipc::prod_cons_circ<relat::single, relat::multi, trans::broadcast>
 >>;
 
 /*
@@ -151,8 +150,7 @@ using route = channel_ipml<channel_detail<
 */
 
 using channel = channel_ipml<channel_detail<
-    circ::queue,
-    circ::prod_cons<relat::multi, relat::multi, trans::broadcast>
+    ipc::queue, ipc::prod_cons_circ<relat::multi, relat::multi, trans::broadcast>
 >>;
 
 } // namespace ipc

@@ -27,7 +27,7 @@ template <template <typename...> class Queue, typename Policy>
 struct detail;
 
 template <typename Policy>
-struct detail<circ::queue, Policy> {
+struct detail<ipc::queue, Policy> {
 
 #pragma pack(1)
 struct msg_t {
@@ -38,7 +38,7 @@ struct msg_t {
 };
 #pragma pack()
 
-using queue_t = circ::queue<msg_t, Policy>;
+using queue_t = ipc::queue<msg_t, Policy>;
 
 struct shm_info_t {
     typename queue_t::array_t elems_;  // the circ_elem_array in shm
@@ -215,7 +215,7 @@ static buff_t recv(handle_t h) {
     }
 }
 
-}; // detail<circ::queue>
+}; // detail<ipc::queue>
 
 } // internal-linkage
 
@@ -261,10 +261,10 @@ buff_t channel_detail<Queue, Policy>::recv(handle_t h) {
     return detail<Queue, Policy>::recv(h);
 }
 
-template struct channel_detail<circ::queue, circ::prod_cons<relat::single, relat::single, trans::unicast  >>;
-template struct channel_detail<circ::queue, circ::prod_cons<relat::single, relat::multi , trans::unicast  >>;
-template struct channel_detail<circ::queue, circ::prod_cons<relat::multi , relat::multi , trans::unicast  >>;
-template struct channel_detail<circ::queue, circ::prod_cons<relat::single, relat::multi , trans::broadcast>>;
-template struct channel_detail<circ::queue, circ::prod_cons<relat::multi , relat::multi , trans::broadcast>>;
+template struct channel_detail<ipc::queue, ipc::prod_cons_circ<relat::single, relat::single, trans::unicast  >>;
+template struct channel_detail<ipc::queue, ipc::prod_cons_circ<relat::single, relat::multi , trans::unicast  >>;
+template struct channel_detail<ipc::queue, ipc::prod_cons_circ<relat::multi , relat::multi , trans::unicast  >>;
+template struct channel_detail<ipc::queue, ipc::prod_cons_circ<relat::single, relat::multi , trans::broadcast>>;
+template struct channel_detail<ipc::queue, ipc::prod_cons_circ<relat::multi , relat::multi , trans::broadcast>>;
 
 } // namespace ipc

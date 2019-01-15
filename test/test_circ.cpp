@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "circ_elem_array.h"
-#include "circ_queue.h"
+#include "queue.h"
 #include "memory/resource.hpp"
 #include "test.h"
 
@@ -19,9 +19,9 @@ struct msg_t {
 };
 
 using cq_t = ipc::circ::elem_array<sizeof(msg_t), 
-                                   ipc::circ::prod_cons<ipc::relat::single, 
-                                                        ipc::relat::multi, 
-                                                        ipc::trans::broadcast>>;
+                                   ipc::prod_cons_circ<ipc::relat::single,
+                                                       ipc::relat::multi, 
+                                                       ipc::trans::broadcast>>;
 cq_t* cq__;
 
 bool operator==(msg_t const & m1, msg_t const & m2) {
@@ -67,7 +67,7 @@ struct test_verify<ipc::circ::elem_array<D, P>> {
 };
 
 template <ipc::relat Rp>
-struct test_verify<ipc::circ::prod_cons<Rp,
+struct test_verify<ipc::prod_cons_circ<Rp,
         ipc::relat::multi,
         ipc::trans::unicast>
     > : test_verify<cq_t> {
@@ -94,12 +94,12 @@ template <typename P>
 struct quit_mode;
 
 template <ipc::relat Rp, ipc::relat Rc>
-struct quit_mode<ipc::circ::prod_cons<Rp, Rc, ipc::trans::unicast>> {
+struct quit_mode<ipc::prod_cons_circ<Rp, Rc, ipc::trans::unicast>> {
     using type = volatile bool;
 };
 
 template <ipc::relat Rp, ipc::relat Rc>
-struct quit_mode<ipc::circ::prod_cons<Rp, Rc, ipc::trans::broadcast>> {
+struct quit_mode<ipc::prod_cons_circ<Rp, Rc, ipc::trans::broadcast>> {
     struct type {
         constexpr type(bool) {}
         constexpr operator bool() const { return false; }
@@ -164,8 +164,8 @@ struct test_cq<ipc::circ::elem_array<D, P>> {
 };
 
 template <typename... T>
-struct test_cq<ipc::circ::queue<T...>> {
-    using cn_t = ipc::circ::queue<T...>;
+struct test_cq<ipc::queue<T...>> {
+    using cn_t = ipc::queue<T...>;
     using ca_t = typename cn_t::array_t;
 
     ca_t* ca_;
@@ -263,27 +263,27 @@ void test_prod_cons() {
 void Unit::test_prod_cons_1v1() {
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::single,
-                             ipc::relat::single,
-                             ipc::trans::unicast>
+        ipc::prod_cons_circ<ipc::relat::single,
+                            ipc::relat::single,
+                            ipc::trans::unicast>
     > el_arr_ssu;
     benchmark_prod_cons<1, 1, LoopCount, cq_t>(&el_arr_ssu);
     benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_ssu);
 
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::single,
-                             ipc::relat::multi,
-                             ipc::trans::unicast>
+        ipc::prod_cons_circ<ipc::relat::single,
+                            ipc::relat::multi,
+                            ipc::trans::unicast>
     > el_arr_smu;
     benchmark_prod_cons<1, 1, LoopCount, decltype(el_arr_smu)::policy_t>(&el_arr_smu);
     benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_smu);
 
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::multi,
-                             ipc::relat::multi,
-                             ipc::trans::unicast>
+        ipc::prod_cons_circ<ipc::relat::multi,
+                            ipc::relat::multi,
+                            ipc::trans::unicast>
     > el_arr_mmu;
     benchmark_prod_cons<1, 1, LoopCount, decltype(el_arr_mmu)::policy_t>(&el_arr_mmu);
     benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_mmu);
@@ -293,9 +293,9 @@ void Unit::test_prod_cons_1v1() {
 
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::multi,
-                             ipc::relat::multi,
-                             ipc::trans::broadcast>
+        ipc::prod_cons_circ<ipc::relat::multi,
+                            ipc::relat::multi,
+                            ipc::trans::broadcast>
     > el_arr_mmb;
     benchmark_prod_cons<1, 1, LoopCount, cq_t>(&el_arr_mmb);
     benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_mmb);
@@ -304,18 +304,18 @@ void Unit::test_prod_cons_1v1() {
 void Unit::test_prod_cons_1v3() {
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::single,
-                             ipc::relat::multi,
-                             ipc::trans::unicast>
+        ipc::prod_cons_circ<ipc::relat::single,
+                            ipc::relat::multi,
+                            ipc::trans::unicast>
     > el_arr_smu;
     benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_smu)::policy_t>(&el_arr_smu);
     benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_smu);
 
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::multi,
-                             ipc::relat::multi,
-                             ipc::trans::unicast>
+        ipc::prod_cons_circ<ipc::relat::multi,
+                            ipc::relat::multi,
+                            ipc::trans::unicast>
     > el_arr_mmu;
     benchmark_prod_cons<1, 3, LoopCount, decltype(el_arr_mmu)::policy_t>(&el_arr_mmu);
     benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_mmu);
@@ -325,9 +325,9 @@ void Unit::test_prod_cons_1v3() {
 
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::multi,
-                             ipc::relat::multi,
-                             ipc::trans::broadcast>
+        ipc::prod_cons_circ<ipc::relat::multi,
+                            ipc::relat::multi,
+                            ipc::trans::broadcast>
     > el_arr_mmb;
     benchmark_prod_cons<1, 3, LoopCount, cq_t>(&el_arr_mmb);
     benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_mmb);
@@ -336,9 +336,9 @@ void Unit::test_prod_cons_1v3() {
 void Unit::test_prod_cons_performance() {
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::single,
-                             ipc::relat::multi,
-                             ipc::trans::unicast>
+        ipc::prod_cons_circ<ipc::relat::single,
+                            ipc::relat::multi,
+                            ipc::trans::unicast>
     > el_arr_smu;
     ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_smu](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_smu);
@@ -351,9 +351,9 @@ void Unit::test_prod_cons_performance() {
 
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::multi,
-                             ipc::relat::multi,
-                             ipc::trans::unicast>
+        ipc::prod_cons_circ<ipc::relat::multi,
+                            ipc::relat::multi,
+                            ipc::trans::unicast>
     > el_arr_mmu;
     ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmu](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmu);
@@ -367,9 +367,9 @@ void Unit::test_prod_cons_performance() {
 
     ipc::circ::elem_array<
         sizeof(msg_t),
-        ipc::circ::prod_cons<ipc::relat::multi,
-                             ipc::relat::multi,
-                             ipc::trans::broadcast>
+        ipc::prod_cons_circ<ipc::relat::multi,
+                            ipc::relat::multi,
+                            ipc::trans::broadcast>
     > el_arr_mmb;
     ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmb](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmb);
@@ -383,7 +383,7 @@ void Unit::test_prod_cons_performance() {
 }
 
 void Unit::test_queue() {
-    ipc::circ::queue<msg_t> queue;
+    ipc::queue<msg_t> queue;
     queue.push(msg_t { 1, 2 });
     QCOMPARE(queue.pop(), msg_t{});
     QVERIFY(sizeof(decltype(queue)::array_t) <= sizeof(*cq__));
@@ -393,7 +393,7 @@ void Unit::test_queue() {
     QVERIFY(queue.detach() != nullptr);
 
     ipc::mem::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
-        benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount>((ipc::circ::queue<msg_t>*)nullptr);
+        benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount>((ipc::queue<msg_t>*)nullptr);
     });
 }
 

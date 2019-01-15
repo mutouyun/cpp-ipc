@@ -14,13 +14,12 @@
 #include "circ_elem_array.h"
 
 namespace ipc {
-namespace circ {
 
 template <typename T,
-          typename Policy = circ::prod_cons<relat::single, relat::multi, trans::broadcast>>
+          typename Policy = ipc::prod_cons_circ<relat::single, relat::multi, trans::broadcast>>
 class queue {
 public:
-    using array_t  = elem_array<sizeof(T), Policy>;
+    using array_t  = circ::elem_array<sizeof(T), Policy>;
     using policy_t = typename array_t::policy_t;
 
 private:
@@ -113,5 +112,4 @@ public:
     }
 };
 
-} // namespace circ
 } // namespace ipc

@@ -31,6 +31,11 @@ enum : std::size_t {
     data_length   = 16
 };
 
+enum class organ { // data structure organization
+    linked,
+    cyclic
+};
+
 enum class relat { // multiplicity of the relationship
     single,
     multi
@@ -40,6 +45,11 @@ enum class trans { // transmission
     unicast,
     broadcast
 };
+
+// producer-consumer policy declaration
+
+template <organ Oz, relat Rp, relat Rc, trans Ts>
+struct prod_cons;
 
 // concept helpers
 
