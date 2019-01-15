@@ -8,7 +8,8 @@
 #include "platform/waiter_linux.h"
 #endif
 
-namespace ipc::detail {
+namespace ipc {
+namespace detail {
 
 class waiter_impl {
 public:
@@ -68,4 +69,5 @@ public:
     }
 };
 
-} // namespace ipc::detail
+} // namespace detail
+} // namespace ipc
