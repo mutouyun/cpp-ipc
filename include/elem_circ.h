@@ -6,6 +6,7 @@
 
 #include "def.h"
 #include "rw_lock.h"
+#include "elem_def.h"
 
 namespace ipc {
 
@@ -47,7 +48,7 @@ elem_t<S>* elem_of(void* ptr) noexcept {
 ////////////////////////////////////////////////////////////////
 
 template <>
-struct prod_cons<organ::cyclic, relat::single, relat::single, trans::unicast> {
+struct prod_cons<orgnz::cyclic, relat::single, relat::single, trans::unicast> {
     std::atomic<circ::detail::u2_t> rd_ { 0 }; // read index
     std::atomic<circ::detail::u2_t> wt_ { 0 }; // write index
 
@@ -82,8 +83,8 @@ struct prod_cons<organ::cyclic, relat::single, relat::single, trans::unicast> {
 };
 
 template <>
-struct prod_cons<organ::cyclic, relat::single, relat::multi , trans::unicast>
-     : prod_cons<organ::cyclic, relat::single, relat::single, trans::unicast> {
+struct prod_cons<orgnz::cyclic, relat::single, relat::multi , trans::unicast>
+     : prod_cons<orgnz::cyclic, relat::single, relat::single, trans::unicast> {
 
     template <typename E, typename F, std::size_t S>
     bool pop(E* /*elems*/, circ::detail::u2_t& /*cur*/, F&& f, circ::detail::elem_t<S>* elem_start) noexcept {
@@ -105,8 +106,8 @@ struct prod_cons<organ::cyclic, relat::single, relat::multi , trans::unicast>
 };
 
 template <>
-struct prod_cons<organ::cyclic, relat::multi , relat::multi, trans::unicast>
-     : prod_cons<organ::cyclic, relat::single, relat::multi, trans::unicast> {
+struct prod_cons<orgnz::cyclic, relat::multi , relat::multi, trans::unicast>
+     : prod_cons<orgnz::cyclic, relat::single, relat::multi, trans::unicast> {
 
     std::atomic<circ::detail::u2_t> ct_ { 0 }; // commit index
 
@@ -137,7 +138,7 @@ struct prod_cons<organ::cyclic, relat::multi , relat::multi, trans::unicast>
 };
 
 template <>
-struct prod_cons<organ::cyclic, relat::single, relat::multi, trans::broadcast> {
+struct prod_cons<orgnz::cyclic, relat::single, relat::multi, trans::broadcast> {
     std::atomic<circ::detail::u2_t> wt_ { 0 }; // write index
 
     template <std::size_t DataSize>
@@ -194,8 +195,8 @@ struct prod_cons<organ::cyclic, relat::single, relat::multi, trans::broadcast> {
 };
 
 template <>
-struct prod_cons<organ::cyclic, relat::multi , relat::multi, trans::broadcast>
-     : prod_cons<organ::cyclic, relat::single, relat::multi, trans::broadcast> {
+struct prod_cons<orgnz::cyclic, relat::multi , relat::multi, trans::broadcast>
+     : prod_cons<orgnz::cyclic, relat::single, relat::multi, trans::broadcast> {
 
     std::atomic<circ::detail::u2_t> ct_ { 0 }; // commit index
 
@@ -230,7 +231,7 @@ struct prod_cons<organ::cyclic, relat::multi , relat::multi, trans::broadcast>
 };
 
 template <relat Rp, relat Rc, trans Ts>
-using prod_cons_circ = prod_cons<organ::cyclic, Rp, Rc, Ts>;
+using prod_cons_circ = prod_cons<orgnz::cyclic, Rp, Rc, Ts>;
 
 namespace circ {
 
@@ -238,28 +239,12 @@ namespace circ {
 /// element-array implementation
 ////////////////////////////////////////////////////////////////
 
-struct elem_head {
-    std::atomic<detail::u2_t> cc_ { 0 }; // connection counter
-
-    std::size_t connect() noexcept {
-        return cc_.fetch_add(1, std::memory_order_release);
-    }
-
-    std::size_t disconnect() noexcept {
-        return cc_.fetch_sub(1, std::memory_order_release);
-    }
-
-    std::size_t conn_count(std::memory_order order = std::memory_order_acquire) const noexcept {
-        return cc_.load(order);
-    }
-};
-
 template <std::size_t DataSize, typename Policy>
 class elem_array : private Policy {
 public:
     using policy_t = Policy;
     using base_t   = Policy;
-    using head_t   = elem_head;
+    using head_t   = ipc::conn_head<detail::u2_t>;
     using elem_t   = detail::elem_t<policy_t::template elem_param<DataSize>>;
 
     enum : std::size_t {

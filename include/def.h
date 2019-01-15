@@ -31,7 +31,7 @@ enum : std::size_t {
     data_length   = 16
 };
 
-enum class organ { // data structure organization
+enum class orgnz { // data structure organization
     linked,
     cyclic
 };
@@ -48,7 +48,7 @@ enum class trans { // transmission
 
 // producer-consumer policy declaration
 
-template <organ Oz, relat Rp, relat Rc, trans Ts>
+template <orgnz Oz, relat Rp, relat Rc, trans Ts>
 struct prod_cons;
 
 // concept helpers
