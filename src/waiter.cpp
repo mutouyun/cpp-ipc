@@ -9,6 +9,8 @@ namespace ipc {
 
 class waiter::waiter_ : public pimpl<waiter_> {
 public:
+    std::string n_;
+
     detail::waiter_impl w_ { new detail::waiter };
     ~waiter_() { delete w_.waiter(); }
 };
@@ -45,15 +47,20 @@ bool waiter::valid() const {
 }
 
 char const * waiter::name() const {
-    return impl(p_)->w_.name();
+    return impl(p_)->n_.c_str();
 }
 
 bool waiter::open(char const * name) {
-    return impl(p_)->w_.open(name);
+    if (impl(p_)->w_.open(name)) {
+        impl(p_)->n_ = name;
+        return true;
+    }
+    return false;
 }
 
 void waiter::close() {
     impl(p_)->w_.close();
+    impl(p_)->n_.clear();
 }
 
 bool waiter::wait() {
