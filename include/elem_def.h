@@ -4,11 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "platform/waiter.h"
+
 namespace ipc {
 
 template <typename U2>
 struct conn_head {
-    std::atomic<U2> cc_ { 0 }; // connection counter
+    ipc::detail::waiter waiter_;
+    std::atomic<U2>     cc_ { 0 }; // connection counter
 
     std::size_t connect() noexcept {
         return cc_.fetch_add(1, std::memory_order_release);

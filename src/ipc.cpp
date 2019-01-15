@@ -24,10 +24,10 @@ inline auto acc_of_msg() {
 }
 
 template <template <typename...> class Queue, typename Policy>
-struct detail;
+struct detail_impl;
 
 template <typename Policy>
-struct detail<ipc::queue, Policy> {
+struct detail_impl<ipc::queue, Policy> {
 
 #pragma pack(1)
 struct msg_t {
@@ -98,7 +98,7 @@ static handle_t connect(char const * name) {
     if (mem == nullptr) {
         return nullptr;
     }
-    return new queue_t { &(static_cast<shm_info_t*>(mem)->elems_) };
+    return new queue_t { &(static_cast<shm_info_t*>(mem)->elems_), name };
 }
 
 static void disconnect(handle_t h) {
@@ -215,7 +215,7 @@ static buff_t recv(handle_t h) {
     }
 }
 
-}; // detail<ipc::queue>
+}; // detail_impl<ipc::queue>
 
 } // internal-linkage
 
@@ -223,42 +223,42 @@ namespace ipc {
 
 template <template <typename...> class Queue, typename Policy>
 handle_t channel_detail<Queue, Policy>::connect(char const * name) {
-    return detail<Queue, Policy>::connect(name);
+    return detail_impl<Queue, Policy>::connect(name);
 }
 
 template <template <typename...> class Queue, typename Policy>
 void channel_detail<Queue, Policy>::disconnect(handle_t h) {
-    detail<Queue, Policy>::disconnect(h);
+    detail_impl<Queue, Policy>::disconnect(h);
 }
 
 template <template <typename...> class Queue, typename Policy>
 std::size_t channel_detail<Queue, Policy>::recv_count(handle_t h) {
-    return detail<Queue, Policy>::recv_count(h);
+    return detail_impl<Queue, Policy>::recv_count(h);
 }
 
 template <template <typename...> class Queue, typename Policy>
 void channel_detail<Queue, Policy>::wait_for_recv(handle_t h, std::size_t r_count) {
-    return detail<Queue, Policy>::wait_for_recv(h, r_count);
+    return detail_impl<Queue, Policy>::wait_for_recv(h, r_count);
 }
 
 template <template <typename...> class Queue, typename Policy>
 void channel_detail<Queue, Policy>::clear_recv(handle_t h) {
-    detail<Queue, Policy>::clear_recv(h);
+    detail_impl<Queue, Policy>::clear_recv(h);
 }
 
 template <template <typename...> class Queue, typename Policy>
 void channel_detail<Queue, Policy>::clear_recv(char const * name) {
-    detail<Queue, Policy>::clear_recv(name);
+    detail_impl<Queue, Policy>::clear_recv(name);
 }
 
 template <template <typename...> class Queue, typename Policy>
 bool channel_detail<Queue, Policy>::send(handle_t h, void const * data, std::size_t size) {
-    return detail<Queue, Policy>::send(h, data, size);
+    return detail_impl<Queue, Policy>::send(h, data, size);
 }
 
 template <template <typename...> class Queue, typename Policy>
 buff_t channel_detail<Queue, Policy>::recv(handle_t h) {
-    return detail<Queue, Policy>::recv(h);
+    return detail_impl<Queue, Policy>::recv(h);
 }
 
 template struct channel_detail<ipc::queue, ipc::prod_cons_circ<relat::single, relat::single, trans::unicast  >>;

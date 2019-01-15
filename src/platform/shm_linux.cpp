@@ -38,10 +38,11 @@ void* acquire(char const * name, std::size_t size) {
     if (name == nullptr || name[0] == '\0' || size == 0) {
         return nullptr;
     }
-    int fd = ::shm_open(name, O_CREAT | O_RDWR,
-                              S_IRUSR | S_IWUSR |
-                              S_IRGRP | S_IWGRP |
-                              S_IROTH | S_IWOTH);
+    int fd = ::shm_open((std::string{"__IPC_SHM__"} + name).c_str(),
+                        O_CREAT | O_RDWR,
+                        S_IRUSR | S_IWUSR |
+                        S_IRGRP | S_IWGRP |
+                        S_IROTH | S_IWOTH);
     if (fd == -1) {
         return nullptr;
     }

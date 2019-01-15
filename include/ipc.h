@@ -30,32 +30,32 @@ struct IPC_EXPORT channel_detail {
 };
 
 template <typename Detail>
-class channel_ipml {
+class channel_impl {
 private:
     handle_t    h_ = nullptr;
     std::string n_;
 
 public:
-    channel_ipml() = default;
+    channel_impl() = default;
 
-    explicit channel_ipml(char const * name) {
+    explicit channel_impl(char const * name) {
         this->connect(name);
     }
 
-    channel_ipml(channel_ipml&& rhs) {
+    channel_impl(channel_impl&& rhs) {
         swap(rhs);
     }
 
-    ~channel_ipml() {
+    ~channel_impl() {
         disconnect();
     }
 
-    void swap(channel_ipml& rhs) {
+    void swap(channel_impl& rhs) {
         std::swap(h_, rhs.h_);
         n_.swap(rhs.n_);
     }
 
-    channel_ipml& operator=(channel_ipml rhs) {
+    channel_impl& operator=(channel_impl rhs) {
         swap(rhs);
         return *this;
     }
@@ -72,8 +72,8 @@ public:
         return (handle() != nullptr);
     }
 
-    channel_ipml clone() const {
-        return channel_ipml { name() };
+    channel_impl clone() const {
+        return channel_impl { name() };
     }
 
     bool connect(char const * name) {
@@ -99,7 +99,7 @@ public:
     }
 
     static void wait_for_recv(char const * name, std::size_t r_count) {
-        return channel_ipml(name).wait_for_recv(r_count);
+        return channel_impl(name).wait_for_recv(r_count);
     }
 
     void clear_recv() {
@@ -137,7 +137,7 @@ public:
  * A route could only be used in 1 to N
  * (one producer/server/sender to multi consumers/clients/receivers)
 */
-using route = channel_ipml<channel_detail<
+using route = channel_impl<channel_detail<
     ipc::queue, ipc::prod_cons_circ<relat::single, relat::multi, trans::broadcast>
 >>;
 
@@ -149,7 +149,7 @@ using route = channel_ipml<channel_detail<
  * would receive your sent messages.
 */
 
-using channel = channel_ipml<channel_detail<
+using channel = channel_impl<channel_detail<
     ipc::queue, ipc::prod_cons_circ<relat::multi, relat::multi, trans::broadcast>
 >>;
 

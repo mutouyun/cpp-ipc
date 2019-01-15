@@ -264,6 +264,9 @@ public:
     elem_array(const elem_array&) = delete;
     elem_array& operator=(const elem_array&) = delete;
 
+    auto       & waiter()       { return head_.waiter_; }
+    auto const & waiter() const { return head_.waiter_; }
+
     std::size_t connect   ()       noexcept { return head_.connect   (); }
     std::size_t disconnect()       noexcept { return head_.disconnect(); }
     std::size_t conn_count() const noexcept { return head_.conn_count(); }

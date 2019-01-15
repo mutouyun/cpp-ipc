@@ -2,30 +2,15 @@
 
 #include <Windows.h>
 
-#include <type_traits>
 #include <string>
-#include <locale>
-#include <codecvt>
 #include <utility>
 
 #include "def.h"
 #include "tls_pointer.h"
+#include "platform/to_tchar.h"
 #include "memory/resource.hpp"
 
 namespace {
-
-template <typename T, typename S, typename R = S>
-using IsSame = ipc::Requires<std::is_same<T, typename S::value_type>::value, R>;
-
-template <typename T = TCHAR>
-constexpr auto to_tchar(std::string && str) -> IsSame<T, std::string, std::string &&> {
-    return std::move(str);
-}
-
-template <typename T = TCHAR>
-constexpr auto to_tchar(std::string && str) -> IsSame<T, std::wstring> {
-    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(std::move(str));
-}
 
 inline auto& m2h() {
     static ipc::tls::pointer<ipc::mem::unordered_map<void*, HANDLE>> cache;
@@ -44,7 +29,7 @@ void* acquire(char const * name, std::size_t size) {
     HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL,
                                    PAGE_READWRITE | SEC_COMMIT,
                                    0, static_cast<DWORD>(size),
-                                   to_tchar(std::string{"__SHM__"} + name).c_str());
+                                   ipc::detail::to_tchar(std::string{"__IPC_SHM__"} + name).c_str());
     if (h == NULL) {
         return nullptr;
     }

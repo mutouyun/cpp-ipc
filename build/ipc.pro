@@ -12,32 +12,38 @@ DESTDIR = ../output
 
 INCLUDEPATH += \
     ../include \
-    ../src \
-    ../src/platform
+    ../src
 
 HEADERS += \
     ../include/export.h \
-    ../include/shm.h \
-    ../include/circ_elems_array.h \
-    ../include/circ_elem_array.h \
-    ../include/circ_queue.h \
-    ../include/ipc.h \
     ../include/def.h \
+    ../include/shm.h \
+    ../include/elem_def.h \
+    ../include/elem_circ.h \
+    ../include/elem_link.h \
+    ../include/waiter.h \
+    ../include/queue.h \
+    ../include/ipc.h \
     ../include/rw_lock.h \
     ../include/tls_pointer.h \
     ../include/pool_alloc.h \
     ../include/buffer.h \
     ../src/memory/alloc.hpp \
     ../src/memory/wrapper.hpp \
-    ../src/memory/resource.hpp
+    ../src/memory/resource.hpp \
+    ../src/platform/waiter.h
 
 SOURCES += \
     ../src/shm.cpp \
     ../src/ipc.cpp \
     ../src/pool_alloc.cpp \
-    ../src/buffer.cpp
+    ../src/buffer.cpp \
+    ../src/waiter.cpp
 
 unix {
+
+HEADERS += \
+    ../src/platform/waiter_linux.h
 
 SOURCES += \
     ../src/platform/shm_linux.cpp \
@@ -51,6 +57,10 @@ INSTALLS += target
 } # unix
 
 else:win32 {
+
+HEADERS += \
+    ../src/platform/to_tchar.h \
+    ../src/platform/waiter_win.h
 
 SOURCES += \
     ../src/platform/shm_win.cpp \

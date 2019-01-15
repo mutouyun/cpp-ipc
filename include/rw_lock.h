@@ -5,6 +5,7 @@
 #include <chrono>
 #include <limits>
 #include <type_traits>
+#include <utility>
 
 ////////////////////////////////////////////////////////////////
 /// Gives hint to processor that improves performance of spin-wait loops.
@@ -69,16 +70,24 @@ inline void yield(K& k) noexcept {
     ++k;
 }
 
-template <std::size_t N = 4096, typename K>
-inline void sleep(K& k) noexcept {
+template <std::size_t N = 4096, typename K, typename F>
+inline void sleep(K& k, F&& f) noexcept {
     if (k < static_cast<K>(N)) {
         std::this_thread::yield();
+    }
+    else if (std::forward<F>(f)()) {
+        return;
     }
     else {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         return;
     }
     ++k;
+}
+
+template <std::size_t N = 4096, typename K>
+inline void sleep(K& k) noexcept {
+    sleep<N>(k, []() constexpr { return false; });
 }
 
 } // namespace ipc

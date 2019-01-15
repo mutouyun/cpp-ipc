@@ -8,10 +8,13 @@
 #include <tuple>
 #include <thread>
 #include <chrono>
+#include <string>
 
 #include "def.h"
 #include "rw_lock.h"
 #include "elem_circ.h"
+
+#include "platform/waiter.h"
 
 namespace ipc {
 
@@ -24,14 +27,15 @@ public:
 
 private:
     elems_t* elems_ = nullptr;
+    ipc::detail::waiter_impl wi_;
     decltype(std::declval<elems_t>().cursor()) cursor_ = 0;
     std::atomic_bool connected_ { false };
 
 public:
     queue() = default;
 
-    explicit queue(elems_t* els) : queue() {
-        attach(els);
+    explicit queue(elems_t* els, char const * name = nullptr) : queue() {
+        attach(els, name);
     }
 
     queue(const queue&) = delete;
@@ -73,10 +77,18 @@ public:
         return connected_.load(std::memory_order_acquire);
     }
 
-    elems_t* attach(elems_t* els) noexcept {
+    elems_t* attach(elems_t* els, char const * name = nullptr) noexcept {
         if (els == nullptr) return nullptr;
         auto old = elems_;
         elems_  = els;
+        if (name == nullptr) {
+            wi_.close();
+            wi_.attach(nullptr);
+        }
+        else {
+            wi_.attach(&(elems_->waiter()));
+            wi_.open((std::string{ "__IPC_WAITER__" } +name).c_str());
+        }
         cursor_ = elems_->cursor();
         return old;
     }
@@ -91,9 +103,13 @@ public:
     template <typename... P>
     auto push(P&&... params) noexcept {
         if (elems_ == nullptr) return false;
-        return elems_->push([&](void* p) {
+        if (elems_->push([&](void* p) {
             ::new (p) T(std::forward<P>(params)...);
-        });
+        })) {
+            wi_.notify();
+            return true;
+        }
+        return false;
     }
 
     T pop() noexcept {
@@ -107,7 +123,7 @@ public:
             })) {
                 return item;
             }
-            ipc::sleep(k);
+            ipc::sleep(k, [this] { return wi_.wait(); });
         }
     }
 };
