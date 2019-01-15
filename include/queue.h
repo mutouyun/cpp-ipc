@@ -19,19 +19,19 @@ template <typename T,
           typename Policy = ipc::prod_cons_circ<relat::single, relat::multi, trans::broadcast>>
 class queue {
 public:
-    using array_t  = circ::elem_array<sizeof(T), Policy>;
-    using policy_t = typename array_t::policy_t;
+    using elems_t  = circ::elem_array<sizeof(T), Policy>;
+    using policy_t = typename elems_t::policy_t;
 
 private:
-    array_t* elems_ = nullptr;
-    decltype(std::declval<array_t>().cursor()) cursor_ = 0;
+    elems_t* elems_ = nullptr;
+    decltype(std::declval<elems_t>().cursor()) cursor_ = 0;
     std::atomic_bool connected_ { false };
 
 public:
     queue() = default;
 
-    explicit queue(array_t* arr) : queue() {
-        attach(arr);
+    explicit queue(elems_t* els) : queue() {
+        attach(els);
     }
 
     queue(const queue&) = delete;
@@ -39,7 +39,7 @@ public:
     queue(queue&&) = delete;
     queue& operator=(queue&&) = delete;
 
-    constexpr array_t * elems() const noexcept {
+    constexpr elems_t * elems() const noexcept {
         return elems_;
     }
 
@@ -73,15 +73,15 @@ public:
         return connected_.load(std::memory_order_acquire);
     }
 
-    array_t* attach(array_t* arr) noexcept {
-        if (arr == nullptr) return nullptr;
+    elems_t* attach(elems_t* els) noexcept {
+        if (els == nullptr) return nullptr;
         auto old = elems_;
-        elems_  = arr;
+        elems_  = els;
         cursor_ = elems_->cursor();
         return old;
     }
 
-    array_t* detach() noexcept {
+    elems_t* detach() noexcept {
         if (elems_ == nullptr) return nullptr;
         auto old = elems_;
         elems_ = nullptr;

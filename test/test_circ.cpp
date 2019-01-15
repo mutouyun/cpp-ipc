@@ -166,7 +166,7 @@ struct test_cq<ipc::circ::elem_array<D, P>> {
 template <typename... T>
 struct test_cq<ipc::queue<T...>> {
     using cn_t = ipc::queue<T...>;
-    using ca_t = typename cn_t::array_t;
+    using ca_t = typename cn_t::elems_t;
 
     ca_t* ca_;
 
@@ -386,9 +386,9 @@ void Unit::test_queue() {
     ipc::queue<msg_t> queue;
     queue.push(msg_t { 1, 2 });
     QCOMPARE(queue.pop(), msg_t{});
-    QVERIFY(sizeof(decltype(queue)::array_t) <= sizeof(*cq__));
+    QVERIFY(sizeof(decltype(queue)::elems_t) <= sizeof(*cq__));
 
-    auto cq = ::new (cq__) decltype(queue)::array_t;
+    auto cq = ::new (cq__) decltype(queue)::elems_t;
     queue.attach(cq);
     QVERIFY(queue.detach() != nullptr);
 
