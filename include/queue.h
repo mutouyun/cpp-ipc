@@ -11,7 +11,7 @@
 
 #include "def.h"
 #include "rw_lock.h"
-#include "circ_elem_array.h"
+#include "circ_elem.h"
 
 namespace ipc {
 

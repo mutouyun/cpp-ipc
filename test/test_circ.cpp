@@ -6,7 +6,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "circ_elem_array.h"
+#include "circ_elem.h"
 #include "queue.h"
 #include "memory/resource.hpp"
 #include "test.h"

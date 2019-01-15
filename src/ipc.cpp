@@ -41,7 +41,7 @@ struct msg_t {
 using queue_t = ipc::queue<msg_t, Policy>;
 
 struct shm_info_t {
-    typename queue_t::elems_t elems_;  // the circ_elem_array in shm
+    typename queue_t::elems_t elems_;  // the elements in shm
 };
 
 constexpr static void* head_of(queue_t* que) {
