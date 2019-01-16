@@ -1,6 +1,6 @@
 # cpp-ipc - C++ IPC Library
 
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/mutouyun/cpp-ipc/blob/master/LICENSE) [![Build Status](https://travis-ci.org/mutouyun/cpp-ipc.svg?branch=master)](https://travis-ci.org/mutouyun/cpp-ipc)
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/mutouyun/cpp-ipc/blob/master/LICENSE) [![Build Status](https://travis-ci.org/mutouyun/cpp-ipc.svg?branch=master)](https://travis-ci.org/mutouyun/cpp-ipc) [![Build status](https://ci.appveyor.com/api/projects/status/github/mutouyun/cpp-ipc?branch=master&svg=true)](https://ci.appveyor.com/project/mutouyun/cpp-ipc)
  
 A high-performance inter-process communication using shared memory on Linux/Windows.  
 使用共享内存的跨平台（Linux/Windows，x86/x64/ARM）高性能IPC通讯库。
