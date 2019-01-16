@@ -27,7 +27,7 @@ public:
         return ::CreateSemaphore(NULL, 0, LONG_MAX, ipc::detail::to_tchar(name).c_str());
     }
 
-    static void close(handle_t h) {
+    void close(handle_t h) {
         ::CloseHandle(h);
     }
 
