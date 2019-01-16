@@ -119,10 +119,12 @@ static std::size_t recv_count(handle_t h) {
     return que->conn_count();
 }
 
-static void wait_for_recv(handle_t h, std::size_t r_count) {
-    for (unsigned k = 0; recv_count(h) < r_count;) {
-        ipc::sleep(k);
+static bool wait_for_recv(handle_t h, std::size_t r_count) {
+    auto que = queue_of(h);
+    if (que == nullptr) {
+        return false;
     }
+    return que->wait_for_connect(r_count);
 }
 
 static void clear_recv(handle_t h) {
@@ -237,7 +239,7 @@ std::size_t channel_detail<Queue, Policy>::recv_count(handle_t h) {
 }
 
 template <template <typename...> class Queue, typename Policy>
-void channel_detail<Queue, Policy>::wait_for_recv(handle_t h, std::size_t r_count) {
+bool channel_detail<Queue, Policy>::wait_for_recv(handle_t h, std::size_t r_count) {
     return detail_impl<Queue, Policy>::wait_for_recv(h, r_count);
 }
 

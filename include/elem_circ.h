@@ -8,6 +8,8 @@
 #include "rw_lock.h"
 #include "elem_def.h"
 
+#include "platform/waiter.h"
+
 namespace ipc {
 
 namespace circ {
@@ -257,6 +259,7 @@ public:
 
 private:
     head_t head_;
+    ipc::detail::waiter waiter_;
     elem_t block_[elem_max];
 
 public:
@@ -264,8 +267,11 @@ public:
     elem_array(const elem_array&) = delete;
     elem_array& operator=(const elem_array&) = delete;
 
-    auto       & waiter()       { return head_.waiter_; }
-    auto const & waiter() const { return head_.waiter_; }
+    auto       & waiter()       { return this->waiter_; }
+    auto const & waiter() const { return this->waiter_; }
+
+    auto       & conn_waiter()       { return head_.conn_waiter(); }
+    auto const & conn_waiter() const { return head_.conn_waiter(); }
 
     std::size_t connect   ()       noexcept { return head_.connect   (); }
     std::size_t disconnect()       noexcept { return head_.disconnect(); }

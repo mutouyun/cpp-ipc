@@ -27,7 +27,7 @@ public:
 
 private:
     elems_t* elems_ = nullptr;
-    ipc::detail::waiter_impl wi_;
+    ipc::detail::waiter_impl waiter_, cc_waiter_;
     decltype(std::declval<elems_t>().cursor()) cursor_ = 0;
     std::atomic_bool connected_ { false };
 
@@ -53,7 +53,9 @@ public:
             // if it's already connected, just return an error count
             return invalid_value;
         }
-        return elems_->connect();
+        auto ret = elems_->connect();
+        cc_waiter_.broadcast();
+        return ret;
     }
 
     std::size_t disconnect() noexcept {
@@ -62,11 +64,21 @@ public:
             // if it's already disconnected, just return an error count
             return invalid_value;
         }
-        return elems_->disconnect();
+        auto ret = elems_->disconnect();
+        cc_waiter_.broadcast();
+        return ret;
     }
 
     std::size_t conn_count() const noexcept {
         return (elems_ == nullptr) ? invalid_value : elems_->conn_count();
+    }
+
+    bool wait_for_connect(std::size_t count) {
+        if (elems_ == nullptr) return false;
+        for (unsigned k = 0; elems_->conn_count() < count;) {
+            ipc::sleep(k, [this] { return cc_waiter_.wait(); });
+        }
+        return true;
     }
 
     bool empty() const noexcept {
@@ -82,12 +94,16 @@ public:
         auto old = elems_;
         elems_  = els;
         if (name == nullptr) {
-            wi_.close();
-            wi_.attach(nullptr);
+            waiter_.close();
+            waiter_.attach(nullptr);
+            cc_waiter_.close();
+            cc_waiter_.attach(nullptr);
         }
         else {
-            wi_.attach(&(elems_->waiter()));
-            wi_.open((std::string{ "__IPC_WAITER__" } +name).c_str());
+            waiter_.attach(&(elems_->waiter()));
+            waiter_.open((std::string{ "__IPC_WAITER__" } + name).c_str());
+            cc_waiter_.attach(&(elems_->conn_waiter()));
+            cc_waiter_.open((std::string{ "__IPC_CC_WAITER__" } + name).c_str());
         }
         cursor_ = elems_->cursor();
         return old;
@@ -106,7 +122,7 @@ public:
         if (elems_->push([&](void* p) {
             ::new (p) T(std::forward<P>(params)...);
         })) {
-            wi_.notify();
+            waiter_.broadcast();
             return true;
         }
         return false;
@@ -123,7 +139,7 @@ public:
             })) {
                 return item;
             }
-            ipc::sleep(k, [this] { return wi_.wait(); });
+            ipc::sleep(k, [this] { return waiter_.wait(); });
         }
     }
 };

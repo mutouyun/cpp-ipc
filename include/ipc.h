@@ -20,7 +20,7 @@ struct IPC_EXPORT channel_detail {
     static void     disconnect(handle_t h);
 
     static std::size_t recv_count(handle_t h);
-    static void wait_for_recv(handle_t h, std::size_t r_count);
+    static bool wait_for_recv(handle_t h, std::size_t r_count);
 
     static void clear_recv(handle_t h);
     static void clear_recv(char const * name);
@@ -94,11 +94,11 @@ public:
         return Detail::recv_count(h_);
     }
 
-    void wait_for_recv(std::size_t r_count) const {
+    bool wait_for_recv(std::size_t r_count) const {
         return Detail::wait_for_recv(h_, r_count);
     }
 
-    static void wait_for_recv(char const * name, std::size_t r_count) {
+    static bool wait_for_recv(char const * name, std::size_t r_count) {
         return channel_impl(name).wait_for_recv(r_count);
     }
 
