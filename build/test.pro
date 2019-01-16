@@ -14,8 +14,7 @@ INCLUDEPATH += \
     ../test \
     ../test/capo \
     ../include \
-    ../src \
-    ../src/platform
+    ../src
 
 HEADERS += \
     ../test/test.h

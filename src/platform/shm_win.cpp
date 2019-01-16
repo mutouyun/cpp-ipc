@@ -4,17 +4,21 @@
 
 #include <string>
 #include <utility>
+#include <mutex>
 
 #include "def.h"
-#include "tls_pointer.h"
-#include "platform/to_tchar.h"
+
 #include "memory/resource.hpp"
+#include "platform/to_tchar.h"
 
 namespace {
 
-inline auto& m2h() {
-    static ipc::tls::pointer<ipc::mem::unordered_map<void*, HANDLE>> cache;
-    return *cache.create();
+inline auto* m2h() {
+    static struct {
+        std::mutex lc_;
+        ipc::mem::unordered_map<void*, HANDLE> cache_;
+    } m2h_;
+    return &m2h_;
 }
 
 } // internal-linkage
@@ -38,7 +42,10 @@ void* acquire(char const * name, std::size_t size) {
         ::CloseHandle(h);
         return nullptr;
     }
-    m2h().emplace(mem, h);
+    {
+        [[maybe_unused]] auto guard = std::unique_lock { m2h()->lc_ };
+        m2h()->cache_.emplace(mem, h);
+    }
     return mem;
 }
 
@@ -46,7 +53,8 @@ void release(void* mem, std::size_t /*size*/) {
     if (mem == nullptr) {
         return;
     }
-    auto& cc = m2h();
+    [[maybe_unused]] auto guard = std::unique_lock { m2h()->lc_ };
+    auto& cc = m2h()->cache_;
     auto it = cc.find(mem);
     if (it == cc.end()) {
         return;
