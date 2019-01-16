@@ -17,6 +17,8 @@ class Unit : public TestSuite {
     }
 
 private slots:
+    void cleanupTestCase();
+
     void test_acquire();
     void test_release();
     void test_get();
@@ -27,6 +29,10 @@ private slots:
 #include "test_shm.moc"
 
 handle shm_hd__;
+
+void Unit::cleanupTestCase() {
+    shm_hd__.release();
+}
 
 void Unit::test_acquire() {
     QVERIFY(!shm_hd__.valid());
@@ -97,6 +103,10 @@ void Unit::test_mt() {
     }.join();
     QVERIFY(shm_hd__.get() == nullptr);
     QVERIFY(!shm_hd__.valid());
+
+    QVERIFY(shm_hd__.acquire("my-test", 1024));
+    std::uint8_t buf[1024] = {};
+    QVERIFY(memcmp(shm_hd__.get(), buf, sizeof(buf)) == 0);
 }
 
 } // internal-linkage
