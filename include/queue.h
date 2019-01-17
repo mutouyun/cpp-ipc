@@ -40,8 +40,6 @@ public:
 
     queue(const queue&) = delete;
     queue& operator=(const queue&) = delete;
-    queue(queue&&) = delete;
-    queue& operator=(queue&&) = delete;
 
     constexpr elems_t * elems() const noexcept {
         return elems_;

@@ -198,7 +198,7 @@ static buff_t recv(handle_t h) {
                 return make_cache(msg.data_, remain);
             }
             // cache the first message fragment
-            else rc.try_emplace(msg.id_, data_length, make_cache(msg.data_, remain));
+            else rc.emplace(msg.id_, cache_t { data_length, make_cache(msg.data_, remain) });
         }
         // has cached before this message
         else {
