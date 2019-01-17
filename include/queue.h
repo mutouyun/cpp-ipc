@@ -45,7 +45,7 @@ public:
         return elems_;
     }
 
-    std::size_t connect() noexcept {
+    std::size_t connect() {
         if (elems_ == nullptr) return invalid_value;
         if (connected_.exchange(true, std::memory_order_acq_rel)) {
             // if it's already connected, just return an error count
@@ -56,7 +56,7 @@ public:
         return ret;
     }
 
-    std::size_t disconnect() noexcept {
+    std::size_t disconnect() {
         if (elems_ == nullptr) return invalid_value;
         if (!connected_.exchange(false, std::memory_order_acq_rel)) {
             // if it's already disconnected, just return an error count
@@ -115,7 +115,7 @@ public:
     }
 
     template <typename... P>
-    auto push(P&&... params) noexcept {
+    auto push(P&&... params) {
         if (elems_ == nullptr) return false;
         if (elems_->push([&](void* p) {
             ::new (p) T(std::forward<P>(params)...);
@@ -126,13 +126,13 @@ public:
         return false;
     }
 
-    T pop() noexcept {
+    T pop() {
         if (elems_ == nullptr) {
             return {};
         }
         T item;
         for (unsigned k = 0;;) {
-            if (elems_->pop(cursor_, [&item](void* p) {
+            if (elems_->pop(&cursor_, [&item](void* p) {
                 ::new (&item) T(std::move(*static_cast<T*>(p)));
             })) {
                 return item;

@@ -136,7 +136,7 @@ struct test_cq<ipc::circ::elem_array<D, P>> {
     void recv(cn_t cur, F&& proc) {
         while (1) {
             msg_t msg;
-            while (ca_->pop(cur, [&msg](void* p) {
+            while (ca_->pop(&cur, [&msg](void* p) {
                 msg = *static_cast<msg_t*>(p);
             })) {
                 if (msg.pid_ < 0) {

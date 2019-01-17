@@ -286,8 +286,9 @@ public:
     }
 
     template <typename F>
-    bool pop(detail::u2_t& cur, F&& f) noexcept {
-        return base_t::pop(this, cur, std::forward<F>(f), block_);
+    bool pop(detail::u2_t* cur, F&& f) noexcept {
+        if (cur == nullptr) return false;
+        return base_t::pop(this, *cur, std::forward<F>(f), block_);
     }
 };
 
