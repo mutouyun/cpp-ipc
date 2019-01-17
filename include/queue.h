@@ -19,10 +19,10 @@
 namespace ipc {
 
 template <typename T,
-          typename Policy = ipc::prod_cons_circ<relat::single, relat::multi, trans::broadcast>>
+          typename Policy = ipc::circ::prod_cons<relat::single, relat::multi, trans::broadcast>>
 class queue {
 public:
-    using elems_t  = circ::elem_array<sizeof(T), Policy>;
+    using elems_t  = typename Policy::template elems_t<sizeof(T)>;
     using policy_t = typename elems_t::policy_t;
 
 private:

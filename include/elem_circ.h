@@ -291,5 +291,11 @@ public:
     }
 };
 
+template <relat Rp, relat Rc, trans Ts>
+struct prod_cons {
+    template <std::size_t DataSize>
+    using elems_t = elem_array<DataSize, prod_cons_circ<Rp, Rc, Ts>>;
+};
+
 } // namespace circ
 } // namespace ipc

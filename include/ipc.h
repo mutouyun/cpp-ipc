@@ -138,7 +138,7 @@ public:
  * (one producer/server/sender to multi consumers/clients/receivers)
 */
 using route = channel_impl<channel_detail<
-    ipc::queue, ipc::prod_cons_circ<relat::single, relat::multi, trans::broadcast>
+    ipc::queue, ipc::circ::prod_cons<relat::single, relat::multi, trans::broadcast>
 >>;
 
 /*
@@ -150,7 +150,7 @@ using route = channel_impl<channel_detail<
 */
 
 using channel = channel_impl<channel_detail<
-    ipc::queue, ipc::prod_cons_circ<relat::multi, relat::multi, trans::broadcast>
+    ipc::queue, ipc::circ::prod_cons<relat::multi, relat::multi, trans::broadcast>
 >>;
 
 } // namespace ipc
