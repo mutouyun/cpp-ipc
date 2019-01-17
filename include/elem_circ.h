@@ -280,8 +280,8 @@ public:
 
     using base_t::cursor;
 
-    template <typename F>
-    bool push(F&& f) noexcept {
+    template <typename F, typename... P>
+    bool push(F&& f, P&&...) noexcept {
         return base_t::push(this, std::forward<F>(f), block_);
     }
 

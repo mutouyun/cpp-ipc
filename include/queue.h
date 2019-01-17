@@ -119,7 +119,7 @@ public:
         if (elems_ == nullptr) return false;
         if (elems_->push([&](void* p) {
             ::new (p) T(std::forward<P>(params)...);
-        })) {
+        }, std::forward<P>(params)...)) {
             waiter_.broadcast();
             return true;
         }
