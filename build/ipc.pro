@@ -2,7 +2,7 @@ TEMPLATE = lib
 TARGET = ipc
 
 CONFIG -= qt
-CONFIG += c++14 c++1z
+CONFIG += c++14 c++17 c++1z
 
 !msvc:QMAKE_CXXFLAGS += -Wno-attributes -Wno-missing-field-initializers -Wno-unused-variable
 

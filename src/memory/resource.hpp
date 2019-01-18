@@ -27,7 +27,11 @@ constexpr decltype(auto) static_switch(std::size_t i, std::index_sequence<N, I..
 }
 
 template <typename F, std::size_t...I>
+#if __cplusplus >= 201703L
 constexpr void static_for(std::index_sequence<I...>, F&& f) {
+#else /*__cplusplus < 201703L*/
+inline void static_for(std::index_sequence<I...>, F&& f) {
+#endif/*__cplusplus < 201703L*/
     [[maybe_unused]] auto expand = { (f(std::integral_constant<size_t, I>{}), 0)... };
 }
 

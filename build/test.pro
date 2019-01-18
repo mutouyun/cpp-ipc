@@ -4,7 +4,7 @@ QT += core testlib
 QT -= gui
 
 CONFIG += console
-CONFIG += c++14 c++1z
+CONFIG += c++14 c++17 c++1z
 CONFIG -= app_bundle
 
 DESTDIR = ../output
