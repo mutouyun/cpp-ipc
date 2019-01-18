@@ -103,7 +103,11 @@ struct pimpl {
         return make_impl<T>(std::forward<P>(params)...);
     }
 
+#if __cplusplus >= 201703L
     constexpr void clear() {
+#else /*__cplusplus < 201703L*/
+    void clear() {
+#endif/*__cplusplus < 201703L*/
         clear_impl(static_cast<T*>(const_cast<pimpl*>(this)));
     }
 };

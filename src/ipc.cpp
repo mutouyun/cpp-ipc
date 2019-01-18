@@ -48,7 +48,7 @@ constexpr static void* head_of(queue_t* que) {
     return static_cast<void*>(que->elems());
 }
 
-constexpr static queue_t* queue_of(handle_t h) {
+constexpr static queue_t* queue_of(ipc::handle_t h) {
     return static_cast<queue_t*>(h);
 }
 
@@ -93,7 +93,7 @@ static auto& queues_cache() {
 
 /* API implementations */
 
-static handle_t connect(char const * name) {
+static ipc::handle_t connect(char const * name) {
     auto mem = shm::acquire(name, sizeof(shm_info_t));
     if (mem == nullptr) {
         return nullptr;
@@ -101,7 +101,7 @@ static handle_t connect(char const * name) {
     return new queue_t { &(static_cast<shm_info_t*>(mem)->elems_), name };
 }
 
-static void disconnect(handle_t h) {
+static void disconnect(ipc::handle_t h) {
     queue_t* que = queue_of(h);
     if (que == nullptr) {
         return;
@@ -111,7 +111,7 @@ static void disconnect(handle_t h) {
     delete que;
 }
 
-static std::size_t recv_count(handle_t h) {
+static std::size_t recv_count(ipc::handle_t h) {
     auto que = queue_of(h);
     if (que == nullptr) {
         return invalid_value;
@@ -119,7 +119,7 @@ static std::size_t recv_count(handle_t h) {
     return que->conn_count();
 }
 
-static bool wait_for_recv(handle_t h, std::size_t r_count) {
+static bool wait_for_recv(ipc::handle_t h, std::size_t r_count) {
     auto que = queue_of(h);
     if (que == nullptr) {
         return false;
@@ -127,7 +127,7 @@ static bool wait_for_recv(handle_t h, std::size_t r_count) {
     return que->wait_for_connect(r_count);
 }
 
-static void clear_recv(handle_t h) {
+static void clear_recv(ipc::handle_t h) {
     auto* head = head_of(queue_of(h));
     if (head == nullptr) {
         return;
@@ -141,7 +141,7 @@ static void clear_recv(char const * name) {
     disconnect(h);
 }
 
-static bool send(handle_t h, void const * data, std::size_t size) {
+static bool send(ipc::handle_t h, void const * data, std::size_t size) {
     if (data == nullptr) {
         return false;
     }
@@ -178,7 +178,7 @@ static bool send(handle_t h, void const * data, std::size_t size) {
     return true;
 }
 
-static buff_t recv(handle_t h) {
+static buff_t recv(ipc::handle_t h) {
     auto que = queue_of(h);
     if (que == nullptr) return {};
     que->connect(); // wouldn't connect twice
@@ -224,27 +224,27 @@ static buff_t recv(handle_t h) {
 namespace ipc {
 
 template <template <typename...> class Queue, typename Policy>
-handle_t channel_detail<Queue, Policy>::connect(char const * name) {
+ipc::handle_t channel_detail<Queue, Policy>::connect(char const * name) {
     return detail_impl<Queue, Policy>::connect(name);
 }
 
 template <template <typename...> class Queue, typename Policy>
-void channel_detail<Queue, Policy>::disconnect(handle_t h) {
+void channel_detail<Queue, Policy>::disconnect(ipc::handle_t h) {
     detail_impl<Queue, Policy>::disconnect(h);
 }
 
 template <template <typename...> class Queue, typename Policy>
-std::size_t channel_detail<Queue, Policy>::recv_count(handle_t h) {
+std::size_t channel_detail<Queue, Policy>::recv_count(ipc::handle_t h) {
     return detail_impl<Queue, Policy>::recv_count(h);
 }
 
 template <template <typename...> class Queue, typename Policy>
-bool channel_detail<Queue, Policy>::wait_for_recv(handle_t h, std::size_t r_count) {
+bool channel_detail<Queue, Policy>::wait_for_recv(ipc::handle_t h, std::size_t r_count) {
     return detail_impl<Queue, Policy>::wait_for_recv(h, r_count);
 }
 
 template <template <typename...> class Queue, typename Policy>
-void channel_detail<Queue, Policy>::clear_recv(handle_t h) {
+void channel_detail<Queue, Policy>::clear_recv(ipc::handle_t h) {
     detail_impl<Queue, Policy>::clear_recv(h);
 }
 
@@ -254,12 +254,12 @@ void channel_detail<Queue, Policy>::clear_recv(char const * name) {
 }
 
 template <template <typename...> class Queue, typename Policy>
-bool channel_detail<Queue, Policy>::send(handle_t h, void const * data, std::size_t size) {
+bool channel_detail<Queue, Policy>::send(ipc::handle_t h, void const * data, std::size_t size) {
     return detail_impl<Queue, Policy>::send(h, data, size);
 }
 
 template <template <typename...> class Queue, typename Policy>
-buff_t channel_detail<Queue, Policy>::recv(handle_t h) {
+buff_t channel_detail<Queue, Policy>::recv(ipc::handle_t h) {
     return detail_impl<Queue, Policy>::recv(h);
 }
 
