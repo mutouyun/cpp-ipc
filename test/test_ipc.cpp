@@ -265,12 +265,12 @@ void benchmark_lc() {
                 }
                 std::this_thread::yield();
             }
-            if ((fini.fetch_add(1, std::memory_order_relaxed) + 1) == std::extent<decltype(r_trd)>::value) {
+            if ((fini.fetch_add(1, std::memory_order_relaxed) + 1) == R) {
                 sw.print_elapsed(W, R, Loops);
             }
             std::uint64_t sum = 0;
             for (int i : seq) sum += static_cast<std::uint64_t>(i);
-            QCOMPARE(sum, acc<std::uint64_t>(1, Loops) * std::extent<decltype(w_trd)>::value);
+            QCOMPARE(sum, acc<std::uint64_t>(1, Loops) * W);
         });
     }
 

@@ -115,7 +115,7 @@ void benchmark_prod_cons(T* cq) {
 //                std::cout << cid << "-consumer-disconnect" << std::endl;
 //            }
             tcq.disconnect(cn);
-            if ((fini_c.fetch_add(1, std::memory_order_relaxed) + 1) != std::extent<decltype(consumers)>::value) {
+            if ((fini_c.fetch_add(1, std::memory_order_relaxed) + 1) != M) {
 //                std::unique_lock<capo::spin_lock> guard { lc };
 //                std::cout << cid << "-consumer-end" << std::endl;
                 return;
@@ -141,7 +141,7 @@ void benchmark_prod_cons(T* cq) {
 //                }
                 tcq.send(cn, { pid, i });
             }
-            if ((fini_p.fetch_add(1, std::memory_order_relaxed) + 1) != std::extent<decltype(producers)>::value) {
+            if ((fini_p.fetch_add(1, std::memory_order_relaxed) + 1) != N) {
                 return;
             }
             // quit
