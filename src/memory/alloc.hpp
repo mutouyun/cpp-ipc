@@ -25,6 +25,10 @@ public:
     static void free(void* p, std::size_t /*size*/) {
         free(p);
     }
+
+    static std::size_t size_of(void* /*p*/) {
+        return 0;
+    }
 };
 
 ////////////////////////////////////////////////////////////////
@@ -43,6 +47,10 @@ protected:
 public:
     void free(void* /*p*/) {}
     void free(void* /*p*/, std::size_t) {}
+
+    constexpr std::size_t size_of(void* /*p*/) const {
+        return 0;
+    }
 };
 
 } // namespace detail
@@ -92,14 +100,13 @@ public:
 
 namespace detail {
 
-class fixed_pool_base {
+class fixed_alloc_base {
 protected:
     std::size_t init_expand_;
-    std::size_t iter_;
     void*       cursor_;
 
     void init(std::size_t init_expand) {
-        iter_ = init_expand_ = init_expand;
+        init_expand_ = init_expand;
         cursor_ = nullptr;
     }
 
@@ -126,7 +133,7 @@ public:
 } // namespace detail
 
 template <std::size_t BlockSize, typename AllocP = scope_alloc<>>
-class fixed_pool : public detail::fixed_pool_base {
+class fixed_alloc : public detail::fixed_alloc_base {
 public:
     using alloc_policy = AllocP;
 
@@ -142,32 +149,35 @@ private:
     alloc_policy alloc_;
 
     void expand() {
-        auto p = node_p(cursor_ = alloc_.alloc(block_size * iter_));
-        for (std::size_t i = 0; i < iter_ - 1; ++i)
+        auto p = node_p(cursor_ = alloc_.alloc(block_size));
+        auto size = alloc_.size_of(p);
+        if (size > 0) for (std::size_t i = 0; i < (size / block_size) - 1; ++i)
             p = node_p((*p) = reinterpret_cast<byte_t*>(p) + block_size);
         (*p) = nullptr;
-        iter_ *= 2;
     }
 
 public:
-    explicit fixed_pool(std::size_t init_expand = 1) {
+    explicit fixed_alloc(std::size_t init_expand = 1) {
         init(init_expand);
     }
 
-    fixed_pool(fixed_pool&& rhs)            { this->swap(rhs); }
-    fixed_pool& operator=(fixed_pool&& rhs) { this->swap(rhs); return (*this); }
+    fixed_alloc(fixed_alloc&& rhs)            { this->swap(rhs); }
+    fixed_alloc& operator=(fixed_alloc&& rhs) { this->swap(rhs); return (*this); }
 
 public:
-    void swap(fixed_pool& rhs) {
+    void swap(fixed_alloc& rhs) {
         std::swap(this->alloc_      , rhs.alloc_);
         std::swap(this->init_expand_, rhs.init_expand_);
-        std::swap(this->iter_       , rhs.iter_);
         std::swap(this->cursor_     , rhs.cursor_);
     }
 
     void clear() {
         alloc_.clear();
         init(init_expand_);
+    }
+
+    constexpr std::size_t size_of(void* /*p*/) const {
+        return block_size;
     }
 
     void* alloc() {
@@ -181,6 +191,15 @@ public:
         return alloc();
     }
 };
+
+////////////////////////////////////////////////////////////////
+/// page memory allocation
+////////////////////////////////////////////////////////////////
+
+using page_alloc = fixed_alloc<4096>;
+
+template <std::size_t BlockSize>
+using page_fixed_alloc = fixed_alloc<BlockSize, page_alloc>;
 
 } // namespace mem
 } // namespace ipc

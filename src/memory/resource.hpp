@@ -39,7 +39,7 @@ inline void static_for(std::index_sequence<I...>, F&& f) {
 
 template <std::size_t Size>
 auto& fixed() {
-    static synchronized<fixed_pool<Size>> pool;
+    static synchronized<page_fixed_alloc<Size>> pool;
     return pool;
 }
 

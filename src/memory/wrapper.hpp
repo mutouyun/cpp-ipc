@@ -14,7 +14,6 @@
 
 #include "def.h"
 #include "rw_lock.h"
-#include "tls_pointer.h"
 
 namespace ipc {
 
@@ -85,8 +84,8 @@ private:
     };
 
     auto& alc_info() {
-        static tls::pointer<alloc_t> alc;
-        return *alc.create(this);
+        thread_local alloc_t alc { this };
+        return alc;
     }
 
 public:
