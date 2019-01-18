@@ -9,6 +9,24 @@
 
 namespace ipc {
 
+// pre-defined
+
+#ifdef IPC_UNUSED_
+#   error "IPC_UNUSED_ has been defined."
+#endif
+
+#if __cplusplus >= 201703L
+#   define IPC_UNUSED_ [[maybe_unused]]
+#else /*__cplusplus < 201703L*/
+#if defined(_MSC_VER)
+#   define IPC_UNUSED_ __pragma(warning(suppress: 4100 4101 4189))
+#elif defined(__GNUC__)
+#   define IPC_UNUSED_ __attribute__((__unused__))
+#else
+#   define IPC_UNUSED_
+#endif
+#endif/*__cplusplus < 201703L*/
+
 // types
 
 using byte_t = std::uint8_t;

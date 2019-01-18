@@ -43,7 +43,7 @@ void* acquire(char const * name, std::size_t size) {
         return nullptr;
     }
     {
-        [[maybe_unused]] auto guard = ipc::detail::unique_lock(m2h()->lc_);
+        auto IPC_UNUSED_ guard = ipc::detail::unique_lock(m2h()->lc_);
         m2h()->cache_.emplace(mem, h);
     }
     return mem;
@@ -53,7 +53,7 @@ void release(void* mem, std::size_t /*size*/) {
     if (mem == nullptr) {
         return;
     }
-    [[maybe_unused]] auto guard = ipc::detail::unique_lock(m2h()->lc_);
+    auto IPC_UNUSED_ guard = ipc::detail::unique_lock(m2h()->lc_);
     auto& cc = m2h()->cache_;
     auto it = cc.find(mem);
     if (it == cc.end()) {

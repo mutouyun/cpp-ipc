@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <type_traits>
 
+#include "def.h"
 #include "rw_lock.h"
 #include "tls_pointer.h"
 
@@ -52,7 +53,7 @@ private:
         alloc_t(synchronized* t)
             : t_ { t } {
             {
-                [[maybe_unused]] auto guard = ipc::detail::unique_lock(t_->lc_);
+                auto IPC_UNUSED_ guard = ipc::detail::unique_lock(t_->lc_);
                 auto it = t_->allocs_.begin();
                 if (it != t_->allocs_.end()) {
                     std::tie(s_, a_) = *it;
@@ -65,7 +66,7 @@ private:
         }
 
         ~alloc_t() {
-            [[maybe_unused]] auto guard = ipc::detail::unique_lock(t_->lc_);
+            auto IPC_UNUSED_ guard = ipc::detail::unique_lock(t_->lc_);
             t_->allocs_.emplace(s_, a_);
         }
 

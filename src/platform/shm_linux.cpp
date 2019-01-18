@@ -11,6 +11,7 @@
 #include <utility>
 #include <mutex>
 
+#include "def.h"
 #include "memory/resource.hpp"
 
 namespace {
@@ -65,7 +66,7 @@ void* acquire(char const * name, std::size_t size) {
     auto acc = acc_of(mem);
     acc->fetch_add(1, std::memory_order_release);
     {
-        [[maybe_unused]] auto guard = ipc::detail::unique_lock(m2h()->lc_);
+        auto IPC_UNUSED_ guard = ipc::detail::unique_lock(m2h()->lc_);
         m2h()->cache_.emplace(++acc, std::move(op_name));
     }
     return acc;
@@ -75,7 +76,7 @@ void release(void* mem, std::size_t size) {
     if (mem == nullptr) {
         return;
     }
-    [[maybe_unused]] auto guard = ipc::detail::unique_lock(m2h()->lc_);
+    auto IPC_UNUSED_ guard = ipc::detail::unique_lock(m2h()->lc_);
     auto& cc = m2h()->cache_;
     auto it = cc.find(mem);
     if (it == cc.end()) {

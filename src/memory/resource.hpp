@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "def.h"
+
 #include "memory/alloc.hpp"
 #include "memory/wrapper.hpp"
 
@@ -32,7 +34,7 @@ constexpr void static_for(std::index_sequence<I...>, F&& f) {
 #else /*__cplusplus < 201703L*/
 inline void static_for(std::index_sequence<I...>, F&& f) {
 #endif/*__cplusplus < 201703L*/
-    [[maybe_unused]] auto expand = { (f(std::integral_constant<size_t, I>{}), 0)... };
+    auto IPC_UNUSED_ expand = { (f(std::integral_constant<size_t, I>{}), 0)... };
 }
 
 template <std::size_t Size>
