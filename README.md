@@ -5,7 +5,7 @@
 A high-performance inter-process communication using shared memory on Linux/Windows.  
 使用共享内存的跨平台（Linux/Windows，x86/x64/ARM）高性能IPC通讯库。
  
- * 需要支持C++17的编译器（msvc-2017/gcc-7/clang-4）
+ * 推荐支持C++17的编译器（msvc-2017/gcc-7/clang-4）
  * 除STL外，无其他依赖
  * 无锁（lock-free）或轻量级shared-spin-lock（`ipc::channel::connect`/`disconnect`）
  * 底层数据结构为循环数组（circular array）
