@@ -14,7 +14,7 @@ matrix:
   include:
     - compiler: gcc
       env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7 -std=gnu++1z"
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
     - compiler: clang
     - compiler: clang
       env:
@@ -31,8 +31,8 @@ script:
       make;
       export IPC_TARGET=test-ipc;
     else
-      qmake -o Makefile ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX;
-      qmake -o MakefileTest test.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX;
+      qmake -o Makefile ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX QMAKE_CXXFLAGS+=-std=gnu++1z;
+      qmake -o MakefileTest test.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX QMAKE_CXXFLAGS+=-std=gnu++1z;
       make;
       make -f MakefileTest;
       export IPC_TARGET=test;
