@@ -53,7 +53,7 @@ private:
         alloc_t(synchronized* t)
             : t_ { t } {
             {
-                auto IPC_UNUSED_ guard = ipc::detail::unique_lock(t_->lc_);
+                IPC_UNUSED_ auto guard = ipc::detail::unique_lock(t_->lc_);
                 auto it = t_->allocs_.begin();
                 if (it != t_->allocs_.end()) {
                     std::tie(s_, a_) = *it;
@@ -66,7 +66,7 @@ private:
         }
 
         ~alloc_t() {
-            auto IPC_UNUSED_ guard = ipc::detail::unique_lock(t_->lc_);
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(t_->lc_);
             t_->allocs_.emplace(s_, a_);
         }
 

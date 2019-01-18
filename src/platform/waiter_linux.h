@@ -60,7 +60,7 @@ public:
             if (::pthread_mutexattr_init(&mutex_attr) != 0) {
                 return invalid();
             }
-            auto IPC_UNUSED_ guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
+            IPC_UNUSED_ auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
             if (::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED) != 0) {
                 return invalid();
             }
@@ -73,7 +73,7 @@ public:
             if (::pthread_condattr_init(&cond_attr) != 0) {
                 return invalid();
             }
-            auto IPC_UNUSED_ guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
+            IPC_UNUSED_ auto guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
             if (::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED) != 0) {
                 return invalid();
             }
@@ -102,7 +102,7 @@ public:
         if (::pthread_mutex_lock(&(w->mutex_)) != 0) {
             return false;
         }
-        auto IPC_UNUSED_ guard = unique_ptr(&(w->mutex_), ::pthread_mutex_unlock);
+        IPC_UNUSED_ auto guard = unique_ptr(&(w->mutex_), ::pthread_mutex_unlock);
         if (::pthread_cond_wait(&(w->cond_), &(w->mutex_)) != 0) {
             return false;
         }

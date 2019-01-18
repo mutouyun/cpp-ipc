@@ -14,7 +14,7 @@ matrix:
   include:
     - compiler: gcc
       env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+        - MATRIX_EVAL="USING_CMAKE=0 CC=gcc-7 && CXX=g++-7"
     - compiler: clang
     - compiler: clang
       env:
