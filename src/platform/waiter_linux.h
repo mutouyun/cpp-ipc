@@ -7,6 +7,7 @@
 #include <memory>
 #include <type_traits>
 
+#if __cplusplus >= 201703L
 namespace std {
 
 // deduction guides for std::unique_ptr
@@ -17,6 +18,19 @@ unique_ptr(T* p, D&& d) -> unique_ptr<T, std::decay_t<D>>;
 
 namespace ipc {
 namespace detail {
+
+using std::unique_ptr;
+
+#else /*__cplusplus < 201703L*/
+namespace ipc {
+namespace detail {
+
+// deduction guides for std::unique_ptr
+template <typename T, typename D>
+constexpr auto unique_ptr(T* p, D&& d) {
+    return std::unique_ptr<T, std::decay_t<D>> { p, std::forward<D>(d) };
+}
+#endif/*__cplusplus < 201703L*/
 
 class waiter {
     pthread_mutex_t       mutex_ = PTHREAD_MUTEX_INITIALIZER;
@@ -44,20 +58,20 @@ public:
             if (::pthread_mutexattr_init(&mutex_attr) != 0) {
                 return invalid();
             }
-            [[maybe_unused]] auto guard_mutex_attr = std::unique_ptr { &mutex_attr, ::pthread_mutexattr_destroy };
+            [[maybe_unused]] auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
             if (::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED) != 0) {
                 return invalid();
             }
             if (::pthread_mutex_init(&mutex_, &mutex_attr) != 0) {
                 return invalid();
             }
-            auto guard_mutex = std::unique_ptr { &mutex_, ::pthread_mutex_destroy };
+            auto guard_mutex = unique_ptr(&mutex_, ::pthread_mutex_destroy);
             // init condition
             pthread_condattr_t cond_attr;
             if (::pthread_condattr_init(&cond_attr) != 0) {
                 return invalid();
             }
-            [[maybe_unused]] auto guard_cond_attr = std::unique_ptr { &cond_attr, ::pthread_condattr_destroy };
+            [[maybe_unused]] auto guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
             if (::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED) != 0) {
                 return invalid();
             }
@@ -86,7 +100,7 @@ public:
         if (::pthread_mutex_lock(&(w->mutex_)) != 0) {
             return false;
         }
-        [[maybe_unused]] auto guard = std::unique_ptr { &(w->mutex_), ::pthread_mutex_unlock };
+        [[maybe_unused]] auto guard = unique_ptr(&(w->mutex_), ::pthread_mutex_unlock);
         if (::pthread_cond_wait(&(w->cond_), &(w->mutex_)) != 0) {
             return false;
         }

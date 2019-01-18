@@ -41,8 +41,13 @@ enum : std::size_t {
     base_size = sizeof(void*)
 };
 
+#if __cplusplus >= 201703L
 constexpr std::size_t classify(std::size_t size) {
     constexpr std::size_t mapping[] = {
+#else /*__cplusplus < 201703L*/
+inline std::size_t classify(std::size_t size) {
+    static const std::size_t mapping[] = {
+#endif/*__cplusplus < 201703L*/
         /* 1 */
         0 , 1 , 2 , 3 ,
         /* 2 */
@@ -56,7 +61,11 @@ constexpr std::size_t classify(std::size_t size) {
         31, 31, 31, 31
     };
     size = (size - 1) / base_size;
+#if __cplusplus >= 201703L
     return (size < std::size(mapping)) ? mapping[size] : 32;
+#else /*__cplusplus < 201703L*/
+    return (size < (sizeof(mapping) / sizeof(mapping[0]))) ? mapping[size] : 32;
+#endif/*__cplusplus < 201703L*/
 }
 
 template <typename F>

@@ -55,8 +55,17 @@ struct prod_cons<orgnz::cyclic, relat::single, relat::single, trans::unicast> {
     std::atomic<circ::detail::u2_t> rd_ { 0 }; // read index
     std::atomic<circ::detail::u2_t> wt_ { 0 }; // write index
 
+#if __cplusplus >= 201703L
     template <std::size_t DataSize>
     constexpr static std::size_t elem_param = DataSize - sizeof(circ::detail::elem_head);
+#else /*__cplusplus < 201703L*/
+    template <std::size_t DataSize>
+    struct elem_param {
+        enum : std::size_t {
+            value = DataSize - sizeof(circ::detail::elem_head)
+        };
+    };
+#endif/*__cplusplus < 201703L*/
 
     constexpr circ::detail::u2_t cursor() const noexcept {
         return 0;
@@ -144,8 +153,13 @@ template <>
 struct prod_cons<orgnz::cyclic, relat::single, relat::multi, trans::broadcast> {
     std::atomic<circ::detail::u2_t> wt_ { 0 }; // write index
 
+#if __cplusplus >= 201703L
     template <std::size_t DataSize>
     constexpr static std::size_t elem_param = DataSize;
+#else /*__cplusplus < 201703L*/
+    template <std::size_t DataSize>
+    struct elem_param { enum : std::size_t { value = DataSize }; };
+#endif/*__cplusplus < 201703L*/
 
     /*
         <Remarks> std::atomic<T> may not have value_type.
@@ -248,7 +262,11 @@ public:
     using policy_t = Policy;
     using base_t   = Policy;
     using head_t   = ipc::conn_head<detail::u2_t>;
+#if __cplusplus >= 201703L
     using elem_t   = detail::elem_t<policy_t::template elem_param<DataSize>>;
+#else /*__cplusplus < 201703L*/
+    using elem_t   = detail::elem_t<policy_t::template elem_param<DataSize>::value>;
+#endif/*__cplusplus < 201703L*/
 
     enum : std::size_t {
         head_size  = sizeof(policy_t) + sizeof(head_t),

@@ -36,6 +36,7 @@ public:
     void *       data()       noexcept;
     void const * data() const noexcept;
 
+#   if __cplusplus >= 201703L
     template <typename T>
     auto data() noexcept -> std::enable_if_t<!std::is_const_v<T>, T*> {
         return static_cast<T*>(data());
@@ -45,6 +46,17 @@ public:
     auto data() const noexcept -> std::enable_if_t<std::is_const_v<T>, T*> {
         return static_cast<T*>(data());
     }
+#   else /*__cplusplus < 201703L*/
+    template <typename T>
+    auto data() noexcept -> std::enable_if_t<!std::is_const<T>::value, T*> {
+        return static_cast<T*>(data());
+    }
+
+    template <typename T>
+    auto data() const noexcept -> std::enable_if_t<std::is_const<T>::value, T*> {
+        return static_cast<T*>(data());
+    }
+#   endif/*__cplusplus < 201703L*/
 
     std::size_t size() const noexcept;
 
@@ -57,7 +69,13 @@ public:
     }
 
     std::vector<byte_t> to_vector() const {
+#   if __cplusplus >= 201703L
         auto [d, s] = to_tuple();
+#   else /*__cplusplus < 201703L*/
+        auto tp = to_tuple();
+        auto d  = std::get<0>(tp);
+        auto s  = std::get<1>(tp);
+#   endif/*__cplusplus < 201703L*/
         return {
             static_cast<byte_t const *>(d),
             static_cast<byte_t const *>(d) + s

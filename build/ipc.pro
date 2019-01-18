@@ -2,10 +2,9 @@ TEMPLATE = lib
 TARGET = ipc
 
 CONFIG -= qt
-CONFIG += c++1z # may be useless
+CONFIG += c++14 c++1z
 
-msvc:QMAKE_CXXFLAGS += /std:c++17
-else:QMAKE_CXXFLAGS += -std=gnu++1z
+!msvc:QMAKE_CXXFLAGS += -Wno-attributes -Wno-missing-field-initializers -Wno-unused-variable
 
 DEFINES += __IPC_LIBRARY__
 DESTDIR = ../output

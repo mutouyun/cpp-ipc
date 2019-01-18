@@ -11,8 +11,8 @@ namespace mem {
 
 class static_alloc {
 public:
-    static constexpr void clear() {}
-    static constexpr void swap(static_alloc&) {}
+    static void clear() {}
+    static void swap(static_alloc&) {}
 
     static void* alloc(std::size_t size) {
         return size ? std::malloc(size) : nullptr;
@@ -131,7 +131,11 @@ public:
     using alloc_policy = AllocP;
 
     enum : std::size_t {
+#   if __cplusplus >= 201703L
         block_size = (std::max)(BlockSize, sizeof(void*))
+#   else /*__cplusplus < 201703L*/
+        block_size = (BlockSize < sizeof(void*)) ? sizeof(void*) : BlockSize
+#   endif/*__cplusplus < 201703L*/
     };
 
 private:

@@ -201,12 +201,12 @@ struct test_cq<ipc::queue<T...>> {
         }
     }
 
-    cn_t connect_send() {
-        return cn_t{ ca_ };
+    cn_t* connect_send() {
+        return nullptr;
     }
 
-    void send(cn_t& cn, msg_t const & msg) {
-        cn.push(msg);
+    void send(cn_t* /*cn*/, msg_t const & msg) {
+        cn_t{ ca_ }.push(msg);
     }
 };
 

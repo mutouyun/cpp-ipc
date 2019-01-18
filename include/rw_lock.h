@@ -87,7 +87,7 @@ inline void sleep(K& k, F&& f) noexcept {
 
 template <std::size_t N = 4096, typename K>
 inline void sleep(K& k) noexcept {
-    sleep<N>(k, []() constexpr { return false; });
+    sleep<N>(k, [] { return false; });
 }
 
 } // namespace ipc

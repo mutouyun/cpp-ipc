@@ -10,11 +10,25 @@
 #include <functional>
 #include <utility>
 #include <cstddef>
+#include <type_traits>
 
 #include "rw_lock.h"
 #include "tls_pointer.h"
 
 namespace ipc {
+
+namespace detail {
+#if __cplusplus >= 201703L
+using std::unique_lock;
+#else /*__cplusplus < 201703L*/
+// deduction guides for std::unique_lock
+template <typename T>
+constexpr auto unique_lock(T&& lc) {
+    return std::unique_lock<std::decay_t<T>> { std::forward<T>(lc) };
+}
+#endif/*__cplusplus < 201703L*/
+} // namespace detail
+
 namespace mem {
 
 ////////////////////////////////////////////////////////////////
@@ -38,7 +52,7 @@ private:
         alloc_t(synchronized* t)
             : t_ { t } {
             {
-                [[maybe_unused]] auto guard = std::unique_lock { t_->lc_ };
+                [[maybe_unused]] auto guard = ipc::detail::unique_lock(t_->lc_);
                 auto it = t_->allocs_.begin();
                 if (it != t_->allocs_.end()) {
                     std::tie(s_, a_) = *it;
@@ -51,7 +65,7 @@ private:
         }
 
         ~alloc_t() {
-            [[maybe_unused]] auto guard = std::unique_lock { t_->lc_ };
+            [[maybe_unused]] auto guard = ipc::detail::unique_lock(t_->lc_);
             t_->allocs_.emplace(s_, a_);
         }
 
@@ -82,7 +96,7 @@ public:
     }
 
     void clear() {
-        auto guard = std::unique_lock { lc_ };
+        auto guard = ipc::detail::unique_lock(lc_);
         std::vector<alloc_policy*> vec(allocs_.size());
         std::size_t i = 0;
         for (auto& pair : allocs_) {
