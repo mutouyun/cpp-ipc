@@ -30,6 +30,7 @@ HEADERS += \
     ../src/memory/alloc.hpp \
     ../src/memory/wrapper.hpp \
     ../src/memory/resource.hpp \
+    ../src/platform/detail.h \
     ../src/platform/waiter.h
 
 SOURCES += \

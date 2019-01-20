@@ -100,13 +100,13 @@ class spin_lock {
     std::atomic<std::size_t> lc_ { 0 };
 
 public:
-    void lock(void) {
+    void lock(void) noexcept {
         for (unsigned k = 0;
              lc_.exchange(1, std::memory_order_acquire);
              yield(k)) ;
     }
 
-    void unlock(void) {
+    void unlock(void) noexcept {
         lc_.store(0, std::memory_order_release);
     }
 };

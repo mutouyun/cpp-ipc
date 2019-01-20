@@ -3,7 +3,6 @@
 #include <limits>
 #include <new>
 #include <mutex>
-#include <shared_mutex>
 #include <tuple>
 #include <map>
 #include <vector>
@@ -16,20 +15,9 @@
 #include "rw_lock.h"
 #include "tls_pointer.h"
 
+#include "platform/detail.h"
+
 namespace ipc {
-
-namespace detail {
-#if __cplusplus >= 201703L
-using std::unique_lock;
-#else /*__cplusplus < 201703L*/
-// deduction guides for std::unique_lock
-template <typename T>
-constexpr auto unique_lock(T&& lc) {
-    return std::unique_lock<std::decay_t<T>> { std::forward<T>(lc) };
-}
-#endif/*__cplusplus < 201703L*/
-} // namespace detail
-
 namespace mem {
 
 ////////////////////////////////////////////////////////////////

@@ -2,9 +2,15 @@
 
 #include <algorithm>
 #include <utility>
+#include <atomic>
+#include <thread>
+#include <mutex>
 #include <cstdlib>
 
 #include "def.h"
+#include "rw_lock.h"
+
+#include "platform/detail.h"
 
 namespace ipc {
 namespace mem {
@@ -100,14 +106,41 @@ public:
 
 namespace detail {
 
+template <typename T>
+class non_atomic {
+    T val_;
+
+public:
+    void store(T val, std::memory_order) noexcept {
+        val_ = val;
+    }
+
+    T load(std::memory_order) const noexcept {
+        return val_;
+    }
+
+    bool compare_exchange_weak(T&, T val, std::memory_order) noexcept {
+        // always return true
+        val_ = val;
+        return true;
+    }
+};
+
+class non_lock {
+public:
+    void lock  (void) noexcept {}
+    void unlock(void) noexcept {}
+};
+
+template <template <typename> class Atomic>
 class fixed_alloc_base {
 protected:
     std::size_t init_expand_;
-    void*       cursor_;
+    Atomic<void*> cursor_;
 
     void init(std::size_t init_expand) {
         init_expand_ = init_expand;
-        cursor_ = nullptr;
+        cursor_.store(nullptr, std::memory_order_relaxed);
     }
 
     static void** node_p(void* node) {
@@ -119,10 +152,22 @@ protected:
     }
 
 public:
+    void swap(fixed_alloc_base& rhs) {
+        std::swap(this->init_expand_, rhs.init_expand_);
+        auto tmp = this->cursor_.load(std::memory_order_relaxed);
+        this->cursor_.store(rhs.cursor_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        rhs.cursor_.store(tmp, std::memory_order_relaxed);
+    }
+
     void free(void* p) {
         if (p == nullptr) return;
-        next(p) = cursor_;
-        cursor_ = p;
+        while (1) {
+            next(p) = cursor_.load(std::memory_order_acquire);
+            if (cursor_.compare_exchange_weak(next(p), p, std::memory_order_relaxed)) {
+                break;
+            }
+            std::this_thread::yield();
+        }
     }
 
     void free(void* p, std::size_t) {
@@ -132,9 +177,12 @@ public:
 
 } // namespace detail
 
-template <std::size_t BlockSize, typename AllocP = scope_alloc<>>
-class fixed_alloc : public detail::fixed_alloc_base {
+template <std::size_t BlockSize, typename AllocP = scope_alloc<>,
+          template <typename> class Atomic = detail::non_atomic,
+          typename Lock = detail::non_lock>
+class fixed_alloc : public detail::fixed_alloc_base<Atomic> {
 public:
+    using base_t = detail::fixed_alloc_base<Atomic>;
     using alloc_policy = AllocP;
 
     enum : std::size_t {
@@ -147,18 +195,27 @@ public:
 
 private:
     alloc_policy alloc_;
+    Lock lc_;
 
-    void expand() {
-        auto p = node_p(cursor_ = alloc_.alloc(block_size));
+    void* expand() {
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
+        auto c = this->cursor_.load(std::memory_order_relaxed);
+        if (c != nullptr) {
+            return c;
+        }
+        auto a = alloc_.alloc(block_size);
+        this->cursor_.store(a, std::memory_order_relaxed);
+        auto p = this->node_p(a);
         auto size = alloc_.size_of(p);
         if (size > 0) for (std::size_t i = 0; i < (size / block_size) - 1; ++i)
-            p = node_p((*p) = reinterpret_cast<byte_t*>(p) + block_size);
+            p = this->node_p((*p) = reinterpret_cast<byte_t*>(p) + block_size);
         (*p) = nullptr;
+        return a;
     }
 
 public:
     explicit fixed_alloc(std::size_t init_expand = 1) {
-        init(init_expand);
+        this->init(init_expand);
     }
 
     fixed_alloc(fixed_alloc&& rhs)            { this->swap(rhs); }
@@ -166,14 +223,15 @@ public:
 
 public:
     void swap(fixed_alloc& rhs) {
-        std::swap(this->alloc_      , rhs.alloc_);
-        std::swap(this->init_expand_, rhs.init_expand_);
-        std::swap(this->cursor_     , rhs.cursor_);
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
+        std::swap(this->alloc_, rhs.alloc_);
+        base_t::swap(rhs);
     }
 
     void clear() {
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
         alloc_.clear();
-        init(init_expand_);
+        this->init(this->init_expand_);
     }
 
     constexpr std::size_t size_of(void* /*p*/) const {
@@ -181,9 +239,14 @@ public:
     }
 
     void* alloc() {
-        if (cursor_ == nullptr) expand();
-        void* p = cursor_;
-        cursor_ = next(p);
+        void* p;
+        while (1) {
+            p = expand();
+            if (this->cursor_.compare_exchange_weak(p, this->next(p), std::memory_order_relaxed)) {
+                break;
+            }
+            std::this_thread::yield();
+        }
         return p;
     }
 
