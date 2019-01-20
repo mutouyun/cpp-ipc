@@ -14,6 +14,7 @@
 
 #include "def.h"
 #include "rw_lock.h"
+#include "tls_pointer.h"
 
 namespace ipc {
 
@@ -42,7 +43,7 @@ public:
 
 private:
     rw_lock lc_;
-    std::multimap<std::size_t, alloc_policy*, std::greater<std::size_t>> allocs_;
+    std::multimap<std::size_t, alloc_policy*> allocs_;
 
     struct alloc_t {
         synchronized* t_;
@@ -84,8 +85,8 @@ private:
     };
 
     auto& alc_info() {
-        thread_local alloc_t alc { this };
-        return alc;
+        static tls::pointer<alloc_t> alc;
+        return *alc.create(this);
     }
 
 public:

@@ -63,7 +63,7 @@ public:
     T* create(P&&... params) {
         auto ptr = static_cast<T*>(*this);
         if (ptr == nullptr) {
-            return (*this) = new T { std::forward<P>(params)... };
+            return (*this) = new T(std::forward<P>(params)...);
         }
         return ptr;
     }
