@@ -42,7 +42,7 @@ public:
     using alloc_policy = AllocP;
 
 private:
-    rw_lock lc_;
+    spin_lock lc_;
     std::multimap<std::size_t, alloc_policy*> allocs_;
 
     struct alloc_t {

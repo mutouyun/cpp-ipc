@@ -305,6 +305,7 @@ void test_lock_performance() {
               << std::endl;
 
     benchmark_lc<ipc::rw_lock               , W, R>();
+    benchmark_lc<lc_wrapper< ipc::spin_lock>, W, R>();
     benchmark_lc<lc_wrapper<capo::spin_lock>, W, R>();
     benchmark_lc<lc_wrapper<std::mutex>     , W, R>();
     benchmark_lc<std::shared_timed_mutex    , W, R>();

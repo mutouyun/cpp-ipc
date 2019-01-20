@@ -96,6 +96,21 @@ inline void sleep(K& k) noexcept {
 
 namespace ipc {
 
+class spin_lock {
+    std::atomic<std::size_t> lc_ { 0 };
+
+public:
+    void lock(void) {
+        for (unsigned k = 0;
+             lc_.exchange(1, std::memory_order_acquire);
+             yield(k)) ;
+    }
+
+    void unlock(void) {
+        lc_.store(0, std::memory_order_release);
+    }
+};
+
 class rw_lock {
     using lc_ui_t = std::size_t;
     std::atomic<lc_ui_t> lc_ { 0 };
@@ -121,9 +136,9 @@ public:
             yield(k);                   // other thread having w-lock
         }
         // wait for reading finished
-        for (unsigned k = 0; lc_.load(std::memory_order_acquire) & w_mask;) {
-            yield(k);
-        }
+        for (unsigned k = 0;
+             lc_.load(std::memory_order_acquire) & w_mask;
+             yield(k)) ;
     }
 
     void unlock() noexcept {
