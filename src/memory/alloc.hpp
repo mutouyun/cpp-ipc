@@ -264,5 +264,8 @@ using page_alloc = fixed_alloc<4096>;
 template <std::size_t BlockSize>
 using page_fixed_alloc = fixed_alloc<BlockSize, page_alloc>;
 
+template <std::size_t BlockSize>
+using locked_fixed_alloc = fixed_alloc<BlockSize, page_alloc, std::atomic, ipc::spin_lock>;
+
 } // namespace mem
 } // namespace ipc

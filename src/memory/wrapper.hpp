@@ -15,99 +15,12 @@
 #include "rw_lock.h"
 #include "tls_pointer.h"
 
+#include "memory/alloc.hpp"
+#include "memory/detail.h"
 #include "platform/detail.h"
 
 namespace ipc {
 namespace mem {
-
-////////////////////////////////////////////////////////////////
-/// Thread-safe allocation wrapper
-////////////////////////////////////////////////////////////////
-
-template <typename AllocP>
-class synchronized {
-public:
-    using alloc_policy = AllocP;
-
-private:
-    spin_lock lc_;
-    std::multimap<std::size_t, alloc_policy*> allocs_;
-
-    struct alloc_t {
-        synchronized* t_;
-        std::size_t   s_ = 0;
-        alloc_policy* a_ = nullptr;
-
-        alloc_t(synchronized* t)
-            : t_ { t } {
-            {
-                IPC_UNUSED_ auto guard = ipc::detail::unique_lock(t_->lc_);
-                auto it = t_->allocs_.begin();
-                if (it != t_->allocs_.end()) {
-                    std::tie(s_, a_) = *it;
-                    t_->allocs_.erase(it);
-                }
-            }
-            if (a_ == nullptr) {
-                a_ = new alloc_policy;
-            }
-        }
-
-        ~alloc_t() {
-            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(t_->lc_);
-            t_->allocs_.emplace(s_, a_);
-        }
-
-        void* alloc(std::size_t size) {
-            void* p = a_->alloc(size);
-            if ((p != nullptr) && (s_ > 0)) {
-                --s_;
-            }
-            return p;
-        }
-
-        void free(void* p) {
-            a_->free(p);
-            ++s_;
-        }
-    };
-
-    auto& alc_info() {
-        static tls::pointer<alloc_t> alc;
-        return *alc.create(this);
-    }
-
-public:
-    ~synchronized() {
-        for (auto& pair : allocs_) {
-            delete pair.second;
-        }
-    }
-
-    void clear() {
-        auto guard = ipc::detail::unique_lock(lc_);
-        std::vector<alloc_policy*> vec(allocs_.size());
-        std::size_t i = 0;
-        for (auto& pair : allocs_) {
-            vec[i++] = pair.second;
-        }
-        allocs_.clear();
-        guard.unlock();
-        for (auto alc : vec) delete alc;
-    }
-
-    void* alloc(std::size_t size) {
-        return alc_info().alloc(size);
-    }
-
-    void free(void* p) {
-        alc_info().free(p);
-    }
-
-    void free(void* p, std::size_t /*size*/) {
-        free(p);
-    }
-};
 
 ////////////////////////////////////////////////////////////////
 /// The allocator wrapper class for STL
@@ -207,6 +120,106 @@ template <typename T, typename U, class AllocP>
 constexpr bool operator!=(const allocator_wrapper<T, AllocP>&, const allocator_wrapper<U, AllocP>&) noexcept {
     return false;
 }
+
+////////////////////////////////////////////////////////////////
+/// Thread-safe allocation wrapper
+////////////////////////////////////////////////////////////////
+
+template <std::size_t BlockSize>
+using locked_fixed = ipc::mem::detail::fixed<BlockSize, locked_fixed_alloc>;
+
+using locked_pool_alloc = detail::pool_alloc<locked_fixed>;
+
+template <typename T>
+using locked_allocator = allocator_wrapper<T, locked_pool_alloc>;
+
+template <typename AllocP>
+class synchronized {
+public:
+    using alloc_policy = AllocP;
+
+private:
+    spin_lock lc_;
+    std::multimap<std::size_t, alloc_policy*, std::less<std::size_t>,
+                  locked_allocator<std::pair<const std::size_t, alloc_policy*>>> allocs_;
+
+    struct alloc_t {
+        synchronized* t_;
+        std::size_t   s_ = 0;
+        alloc_policy* a_ = nullptr;
+
+        alloc_t(synchronized* t)
+            : t_ { t } {
+            {
+                IPC_UNUSED_ auto guard = ipc::detail::unique_lock(t_->lc_);
+                auto it = t_->allocs_.begin();
+                if (it != t_->allocs_.end()) {
+                    std::tie(s_, a_) = *it;
+                    t_->allocs_.erase(it);
+                }
+            }
+            if (a_ == nullptr) {
+                a_ = static_cast<alloc_policy*>(locked_pool_alloc::alloc(sizeof(alloc_policy)));
+                ::new (a_) alloc_policy;
+            }
+        }
+
+        ~alloc_t() {
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(t_->lc_);
+            t_->allocs_.emplace(s_, a_);
+        }
+
+        void* alloc(std::size_t size) {
+            void* p = a_->alloc(size);
+            if ((p != nullptr) && (s_ > 0)) {
+                --s_;
+            }
+            return p;
+        }
+
+        void free(void* p) {
+            a_->free(p);
+            ++s_;
+        }
+    };
+
+    auto& alc_info() {
+        static tls::pointer<alloc_t> alc;
+        return *alc.create(this);
+    }
+
+public:
+    ~synchronized() {
+        for (auto& pair : allocs_) {
+            pair.second->~AllocP();
+            locked_pool_alloc::free(pair.second, sizeof(alloc_policy));
+        }
+    }
+
+    void clear() {
+        auto guard = ipc::detail::unique_lock(lc_);
+        std::vector<alloc_policy*> vec(allocs_.size());
+        std::size_t i = 0;
+        for (auto& pair : allocs_) {
+            vec[i++] = pair.second;
+        }
+        allocs_.clear();
+        guard.unlock();
+        for (auto alc : vec) delete alc;
+    }
+
+    void* alloc(std::size_t size) {
+        return alc_info().alloc(size);
+    }
+
+    void free(void* p) {
+        alc_info().free(p);
+    }
+
+    void free(void* p, std::size_t /*size*/) {
+        free(p);
+    }
+};
 
 } // namespace mem
 } // namespace ipc

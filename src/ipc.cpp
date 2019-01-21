@@ -53,9 +53,9 @@ constexpr static queue_t* queue_of(ipc::handle_t h) {
 }
 
 static buff_t make_cache(void const * data, std::size_t size) {
-    auto ptr = mem::detail::pool_alloc::alloc(size);
+    auto ptr = mem::sync_pool_alloc::alloc(size);
     std::memcpy(ptr, data, size);
-    return { ptr, size, mem::detail::pool_alloc::free };
+    return { ptr, size, mem::sync_pool_alloc::free };
 }
 
 struct cache_t {
