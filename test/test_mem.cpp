@@ -21,7 +21,6 @@ class Unit : public TestSuite {
 
 private slots:
     void initTestCase();
-    void cleanupTestCase();
 
     void test_alloc_free();
     void test_linear();
@@ -89,10 +88,6 @@ void Unit::initTestCase() {
     }
 }
 
-void Unit::cleanupTestCase() {
-    sizes__.clear();
-}
-
 template <typename AllocT>
 void benchmark_alloc() {
     std::cout << std::endl << type_name<AllocT>() << std::endl;
@@ -112,7 +107,6 @@ void benchmark_alloc() {
 void Unit::test_alloc_free() {
     benchmark_alloc<ipc::mem::static_alloc>();
     benchmark_alloc<ipc::mem::sync_pool_alloc>();
-    benchmark_alloc<ipc::mem::locked_pool_alloc>();
 }
 
 template <typename AllocT, typename ModeT, int ThreadsN>
@@ -177,17 +171,14 @@ struct test_performance<AllocT, ModeT, 1> {
 };
 
 void Unit::test_linear() {
-    test_performance<ipc::mem::static_alloc     , alloc_random, 8>::start();
-    test_performance<ipc::mem::pool_alloc       , alloc_random, 8>::start();
-    test_performance<ipc::mem::locked_pool_alloc, alloc_random, 8>::start();
+    test_performance<ipc::mem::static_alloc, alloc_random, 8>::start();
+    test_performance<ipc::mem::pool_alloc  , alloc_random, 8>::start();
 
-    test_performance<ipc::mem::static_alloc     , alloc_LIFO  , 8>::start();
-    test_performance<ipc::mem::pool_alloc       , alloc_LIFO  , 8>::start();
-    test_performance<ipc::mem::locked_pool_alloc, alloc_LIFO  , 8>::start();
+    test_performance<ipc::mem::static_alloc, alloc_LIFO  , 8>::start();
+    test_performance<ipc::mem::pool_alloc  , alloc_LIFO  , 8>::start();
 
-    test_performance<ipc::mem::static_alloc     , alloc_FIFO  , 8>::start();
-    test_performance<ipc::mem::pool_alloc       , alloc_FIFO  , 8>::start();
-    test_performance<ipc::mem::locked_pool_alloc, alloc_FIFO  , 8>::start();
+    test_performance<ipc::mem::static_alloc, alloc_FIFO  , 8>::start();
+    test_performance<ipc::mem::pool_alloc  , alloc_FIFO  , 8>::start();
 }
 
 } // internal-linkage
