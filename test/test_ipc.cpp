@@ -403,10 +403,10 @@ void Unit::test_route_rtt() {
 }
 
 void Unit::test_route_performance() {
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [](auto index) {
         test_prod_cons<ipc::route, 1, decltype(index)::value + 1, false>();
     });
-    test_prod_cons<ipc::route, 1, 10>(); // test & verify
+    test_prod_cons<ipc::route, 1, 8>(); // test & verify
 }
 
 void Unit::test_channel() {
@@ -471,13 +471,13 @@ void Unit::test_channel_rtt() {
 }
 
 void Unit::test_channel_performance() {
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [](auto index) {
         test_prod_cons<ipc::channel, 1, decltype(index)::value + 1, false>();
     });
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [](auto index) {
         test_prod_cons<ipc::channel, decltype(index)::value + 1, 1, false>();
     });
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [](auto index) {
         test_prod_cons<ipc::channel, decltype(index)::value + 1,
                                      decltype(index)::value + 1, false>();
     });

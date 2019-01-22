@@ -340,14 +340,14 @@ void Unit::test_prod_cons_performance() {
                             ipc::relat::multi,
                             ipc::trans::unicast>
     > el_arr_smu;
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_smu](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [&el_arr_smu](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_smu);
     });
 
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [](auto index) {
         test_prod_cons<1, decltype(index)::value + 1, false>();
     });
-    test_prod_cons<1, 10>(); // test & verify
+    test_prod_cons<1, 8>(); // test & verify
 
     ipc::circ::elem_array<
         sizeof(msg_t),
@@ -355,13 +355,13 @@ void Unit::test_prod_cons_performance() {
                             ipc::relat::multi,
                             ipc::trans::unicast>
     > el_arr_mmu;
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmu](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [&el_arr_mmu](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmu);
     });
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmu](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [&el_arr_mmu](auto index) {
         benchmark_prod_cons<decltype(index)::value + 1, 1, LoopCount, void>(&el_arr_mmu);
     });
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmu](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [&el_arr_mmu](auto index) {
         benchmark_prod_cons<decltype(index)::value + 1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmu);
     });
 
@@ -371,13 +371,13 @@ void Unit::test_prod_cons_performance() {
                             ipc::relat::multi,
                             ipc::trans::broadcast>
     > el_arr_mmb;
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmb](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [&el_arr_mmb](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmb);
     });
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmb](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [&el_arr_mmb](auto index) {
         benchmark_prod_cons<decltype(index)::value + 1, 1, LoopCount, void>(&el_arr_mmb);
     });
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [&el_arr_mmb](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [&el_arr_mmb](auto index) {
         benchmark_prod_cons<decltype(index)::value + 1, decltype(index)::value + 1, LoopCount, void>(&el_arr_mmb);
     });
 }
@@ -392,7 +392,7 @@ void Unit::test_queue() {
     queue.attach(cq);
     QVERIFY(queue.detach() != nullptr);
 
-    ipc::detail::static_for(std::make_index_sequence<10>{}, [](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<8>{}, [](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount>((ipc::queue<msg_t>*)nullptr);
     });
 }
