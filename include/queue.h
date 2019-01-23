@@ -196,11 +196,11 @@ public:
 
     template <typename... P>
     auto push(P&&... params) {
-        return base_t::push<T>(std::forward<P>(params)...);
+        return base_t::template push<T>(std::forward<P>(params)...);
     }
 
     T pop() {
-        return base_t::pop<T>();
+        return base_t::template pop<T>();
     }
 };
 
