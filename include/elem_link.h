@@ -10,4 +10,9 @@
 
 namespace ipc {
 
+namespace link {
+
+
+
+} // namespace link
 } // namespace ipc

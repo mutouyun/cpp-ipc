@@ -4,6 +4,7 @@
 #include <thread>
 #include <cstring>
 #include <utility>
+#include <type_traits>
 
 #include "def.h"
 #include "rw_lock.h"
@@ -299,7 +300,7 @@ public:
     using base_t::cursor;
 
     template <typename F, typename... P>
-    bool push(F&& f, P&&...) noexcept {
+    bool push(F&& f) noexcept {
         return base_t::push(this, std::forward<F>(f), block_);
     }
 
@@ -312,6 +313,8 @@ public:
 
 template <relat Rp, relat Rc, trans Ts>
 struct prod_cons {
+    using is_fixed = std::true_type;
+
     template <std::size_t DataSize>
     using elems_t = elem_array<DataSize, prod_cons_circ<Rp, Rc, Ts>>;
 };

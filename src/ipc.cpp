@@ -9,6 +9,7 @@
 #include "def.h"
 #include "shm.h"
 #include "tls_pointer.h"
+#include "queue.h"
 
 #include "memory/resource.hpp"
 
@@ -23,11 +24,8 @@ inline auto acc_of_msg() {
     return static_cast<std::atomic<msg_id_t>*>(g_shm.get());
 }
 
-template <template <typename...> class Queue, typename Policy>
-struct detail_impl;
-
-template <typename Policy>
-struct detail_impl<ipc::queue, Policy> {
+template <typename Policy, typename IsFixed = typename Policy::is_fixed>
+struct detail_impl {
 
 #pragma pack(1)
 struct msg_t {
@@ -217,56 +215,56 @@ static buff_t recv(ipc::handle_t h) {
     }
 }
 
-}; // detail_impl<ipc::queue>
+}; // detail_impl<Policy>
 
 } // internal-linkage
 
 namespace ipc {
 
-template <template <typename...> class Queue, typename Policy>
-ipc::handle_t channel_detail<Queue, Policy>::connect(char const * name) {
-    return detail_impl<Queue, Policy>::connect(name);
+template <typename Policy>
+ipc::handle_t channel_detail<Policy>::connect(char const * name) {
+    return detail_impl<Policy>::connect(name);
 }
 
-template <template <typename...> class Queue, typename Policy>
-void channel_detail<Queue, Policy>::disconnect(ipc::handle_t h) {
-    detail_impl<Queue, Policy>::disconnect(h);
+template <typename Policy>
+void channel_detail<Policy>::disconnect(ipc::handle_t h) {
+    detail_impl<Policy>::disconnect(h);
 }
 
-template <template <typename...> class Queue, typename Policy>
-std::size_t channel_detail<Queue, Policy>::recv_count(ipc::handle_t h) {
-    return detail_impl<Queue, Policy>::recv_count(h);
+template <typename Policy>
+std::size_t channel_detail<Policy>::recv_count(ipc::handle_t h) {
+    return detail_impl<Policy>::recv_count(h);
 }
 
-template <template <typename...> class Queue, typename Policy>
-bool channel_detail<Queue, Policy>::wait_for_recv(ipc::handle_t h, std::size_t r_count) {
-    return detail_impl<Queue, Policy>::wait_for_recv(h, r_count);
+template <typename Policy>
+bool channel_detail<Policy>::wait_for_recv(ipc::handle_t h, std::size_t r_count) {
+    return detail_impl<Policy>::wait_for_recv(h, r_count);
 }
 
-template <template <typename...> class Queue, typename Policy>
-void channel_detail<Queue, Policy>::clear_recv(ipc::handle_t h) {
-    detail_impl<Queue, Policy>::clear_recv(h);
+template <typename Policy>
+void channel_detail<Policy>::clear_recv(ipc::handle_t h) {
+    detail_impl<Policy>::clear_recv(h);
 }
 
-template <template <typename...> class Queue, typename Policy>
-void channel_detail<Queue, Policy>::clear_recv(char const * name) {
-    detail_impl<Queue, Policy>::clear_recv(name);
+template <typename Policy>
+void channel_detail<Policy>::clear_recv(char const * name) {
+    detail_impl<Policy>::clear_recv(name);
 }
 
-template <template <typename...> class Queue, typename Policy>
-bool channel_detail<Queue, Policy>::send(ipc::handle_t h, void const * data, std::size_t size) {
-    return detail_impl<Queue, Policy>::send(h, data, size);
+template <typename Policy>
+bool channel_detail<Policy>::send(ipc::handle_t h, void const * data, std::size_t size) {
+    return detail_impl<Policy>::send(h, data, size);
 }
 
-template <template <typename...> class Queue, typename Policy>
-buff_t channel_detail<Queue, Policy>::recv(ipc::handle_t h) {
-    return detail_impl<Queue, Policy>::recv(h);
+template <typename Policy>
+buff_t channel_detail<Policy>::recv(ipc::handle_t h) {
+    return detail_impl<Policy>::recv(h);
 }
 
-template struct channel_detail<ipc::queue, ipc::circ::prod_cons<relat::single, relat::single, trans::unicast  >>;
-template struct channel_detail<ipc::queue, ipc::circ::prod_cons<relat::single, relat::multi , trans::unicast  >>;
-template struct channel_detail<ipc::queue, ipc::circ::prod_cons<relat::multi , relat::multi , trans::unicast  >>;
-template struct channel_detail<ipc::queue, ipc::circ::prod_cons<relat::single, relat::multi , trans::broadcast>>;
-template struct channel_detail<ipc::queue, ipc::circ::prod_cons<relat::multi , relat::multi , trans::broadcast>>;
+template struct channel_detail<ipc::circ::prod_cons<relat::single, relat::single, trans::unicast  >>;
+template struct channel_detail<ipc::circ::prod_cons<relat::single, relat::multi , trans::unicast  >>;
+template struct channel_detail<ipc::circ::prod_cons<relat::multi , relat::multi , trans::unicast  >>;
+template struct channel_detail<ipc::circ::prod_cons<relat::single, relat::multi , trans::broadcast>>;
+template struct channel_detail<ipc::circ::prod_cons<relat::multi , relat::multi , trans::broadcast>>;
 
 } // namespace ipc

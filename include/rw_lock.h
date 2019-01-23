@@ -97,7 +97,7 @@ inline void sleep(K& k) noexcept {
 namespace ipc {
 
 class spin_lock {
-    std::atomic<std::size_t> lc_ { 0 };
+    std::atomic<unsigned> lc_ { 0 };
 
 public:
     void lock(void) noexcept {
@@ -112,7 +112,7 @@ public:
 };
 
 class rw_lock {
-    using lc_ui_t = std::size_t;
+    using lc_ui_t = unsigned;
     std::atomic<lc_ui_t> lc_ { 0 };
 
     enum : lc_ui_t {
