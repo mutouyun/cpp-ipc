@@ -97,6 +97,8 @@ protected:
 public:
     using base_t::base_t;
 
+    queue_base() = default;
+
     explicit queue_base(elems_t* els, char const * name = nullptr)
         : queue_base() {
         attach(els, name);
