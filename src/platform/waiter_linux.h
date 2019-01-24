@@ -68,8 +68,8 @@ public:
 
     void close(handle_t h) {
         if (h == invalid()) return;
+        ::printf("closing...\n");
         if (counter_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-            ::printf("destroy...\n");
             ::pthread_cond_destroy(&cond_);
             ::pthread_mutex_destroy(&mutex_);
             ::printf("destroy end...\n");
@@ -78,6 +78,7 @@ public:
 
     bool wait(handle_t h) {
         if (h == invalid()) return false;
+        ::printf("wait...\n");
         if (::pthread_mutex_lock(&mutex_) != 0) {
             return false;
         }
@@ -90,11 +91,13 @@ public:
 
     void notify(handle_t h) {
         if (h == invalid()) return;
+        ::printf("notify...\n");
         ::pthread_cond_signal(&cond_);
     }
 
     void broadcast(handle_t h) {
         if (h == invalid()) return;
+        ::printf("broadcast...\n");
         ::pthread_cond_broadcast(&cond_);
     }
 };

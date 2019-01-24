@@ -4,8 +4,6 @@ TARGET = ipc
 CONFIG -= qt
 CONFIG += c++14 c++1z # may be useless
 
-!msvc:QMAKE_CXXFLAGS += -Wno-attributes -Wno-missing-field-initializers
-
 DEFINES += __IPC_LIBRARY__
 DESTDIR = ../output
 
@@ -29,7 +27,7 @@ HEADERS += \
     ../src/memory/wrapper.h \
     ../src/memory/resource.h \
     ../src/platform/detail.h \
-    ../src/platform/waiter.h \
+    ../src/platform/waiter_wrapper.h \
     ../src/circ/elem_def.h \
     ../src/circ/elem_array.h \
     ../src/prod_cons.h \

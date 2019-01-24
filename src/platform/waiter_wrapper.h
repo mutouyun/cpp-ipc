@@ -11,7 +11,7 @@
 namespace ipc {
 namespace detail {
 
-class waiter_impl {
+class waiter_wrapper {
 public:
     using waiter_t = detail::waiter;
 
@@ -20,12 +20,12 @@ private:
     waiter_t::handle_t h_ = waiter_t::invalid();
 
 public:
-    waiter_impl() = default;
-    explicit waiter_impl(waiter_t* w) {
+    waiter_wrapper() = default;
+    explicit waiter_wrapper(waiter_t* w) {
         attach(w);
     }
-    waiter_impl(const waiter_impl&) = delete;
-    waiter_impl& operator=(const waiter_impl&) = delete;
+    waiter_wrapper(const waiter_wrapper&) = delete;
+    waiter_wrapper& operator=(const waiter_wrapper&) = delete;
 
     waiter_t       * waiter()       { return w_; }
     waiter_t const * waiter() const { return w_; }

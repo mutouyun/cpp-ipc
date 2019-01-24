@@ -3,7 +3,7 @@
 #include <string>
 
 #include "def.h"
-#include "platform/waiter.h"
+#include "platform/waiter_wrapper.h"
 
 namespace ipc {
 
@@ -11,7 +11,7 @@ class waiter::waiter_ : public pimpl<waiter_> {
 public:
     std::string n_;
 
-    detail::waiter_impl w_ { new detail::waiter };
+    detail::waiter_wrapper w_ { new detail::waiter };
     ~waiter_() { delete w_.waiter(); }
 };
 

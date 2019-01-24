@@ -15,15 +15,15 @@
 #include "shm.h"
 #include "rw_lock.h"
 
-#include "platform/waiter.h"
+#include "platform/waiter_wrapper.h"
 
 namespace ipc {
 namespace detail {
 
 class queue_waiter {
 protected:
-    ipc::detail::waiter_impl waiter_;
-    ipc::detail::waiter_impl cc_waiter_;
+    ipc::detail::waiter_wrapper waiter_;
+    ipc::detail::waiter_wrapper cc_waiter_;
 
     bool connected_ = false;
     bool dismiss_   = true;
