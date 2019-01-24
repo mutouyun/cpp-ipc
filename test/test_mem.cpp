@@ -24,7 +24,7 @@ private slots:
 
     void test_alloc_free();
     void test_linear();
-} unit__;
+} /*unit__*/;
 
 #include "test_mem.moc"
 

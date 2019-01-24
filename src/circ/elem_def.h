@@ -3,8 +3,12 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <new>
+
+#include "rw_lock.h"
 
 #include "platform/waiter.h"
+#include "platform/detail.h"
 
 namespace ipc {
 namespace circ {
@@ -38,9 +42,24 @@ constexpr u1_t index_of(u2_t c) noexcept {
 
 class conn_head {
     ipc::detail::waiter      cc_waiter_, waiter_;
-    std::atomic<std::size_t> cc_; // connection counter
+    std::atomic<std::size_t> cc_ { 0 }; // connection counter
+
+    ipc::spin_lock lc_;
+    std::atomic<bool> constructed_;
 
 public:
+    void init() {
+        /* DCLP */
+        if (!constructed_.load(std::memory_order_acquire)) {
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
+            if (!constructed_.load(std::memory_order_relaxed)) {
+                ::new (this) conn_head;
+                constructed_.store(true, std::memory_order_release);
+                ::printf("init...\n");
+            }
+        }
+    }
+
     conn_head() = default;
     conn_head(const conn_head&) = delete;
     conn_head& operator=(const conn_head&) = delete;

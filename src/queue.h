@@ -34,6 +34,7 @@ protected:
         if (elems == nullptr) {
             return nullptr;
         }
+        elems->init();
         dismiss_ = false;
         return elems;
     }
@@ -46,7 +47,9 @@ protected:
         }
         assert(elems != nullptr);
         waiter_.attach(&(elems->waiter()));
-        waiter_.open((std::string{ "__IPC_WAITER__" } + name).c_str());
+        if (!waiter_.open((std::string{ "__IPC_WAITER__" } + name).c_str())) {
+            return;
+        }
         cc_waiter_.attach(&(elems->conn_waiter()));
         cc_waiter_.open((std::string{ "__IPC_CC_WAITER__" } + name).c_str());
     }
@@ -140,11 +143,7 @@ public:
     }
 
     /* not virtual */ ~queue_base(void) {
-        if (!this->dismiss_ && (elems_ != nullptr)) {
-            shm::release(elems_, sizeof(Elems));
-        }
-        dismiss_ = true;
-//        base_t::close(elems_);
+        base_t::close(elems_);
     }
 
     constexpr elems_t * elems() const noexcept {

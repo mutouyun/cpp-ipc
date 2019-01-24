@@ -36,26 +36,32 @@ public:
             // init mutex
             pthread_mutexattr_t mutex_attr;
             if (::pthread_mutexattr_init(&mutex_attr) != 0) {
+                ::printf("fail pthread_mutexattr_init\n");
                 return invalid();
             }
             IPC_UNUSED_ auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
             if (::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED) != 0) {
+                ::printf("fail pthread_mutexattr_setpshared\n");
                 return invalid();
             }
             if (::pthread_mutex_init(&mutex_, &mutex_attr) != 0) {
+                ::printf("fail pthread_mutex_init\n");
                 return invalid();
             }
             auto guard_mutex = unique_ptr(&mutex_, ::pthread_mutex_destroy);
             // init condition
             pthread_condattr_t cond_attr;
             if (::pthread_condattr_init(&cond_attr) != 0) {
+                ::printf("fail pthread_condattr_init\n");
                 return invalid();
             }
             IPC_UNUSED_ auto guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
             if (::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED) != 0) {
+                ::printf("fail pthread_condattr_setpshared\n");
                 return invalid();
             }
             if (::pthread_cond_init(&cond_, &cond_attr) != 0) {
+                ::printf("fail pthread_cond_init\n");
                 return invalid();
             }
             // no need to guard condition

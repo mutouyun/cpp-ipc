@@ -42,12 +42,14 @@ public:
         if (w_ == nullptr) return false;
         close();
         h_ = w_->open(name);
+        ::printf("%s: %p\n", name, h_);
         return valid();
     }
 
     void close() {
         if (!valid()) return;
         w_->close(h_);
+        ::printf("close %p\n", h_);
         h_ = waiter_t::invalid();
     }
 
