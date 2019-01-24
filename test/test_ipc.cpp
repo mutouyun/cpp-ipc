@@ -68,7 +68,6 @@ struct test_cq<ipc::route> {
 
     test_cq(void*)
         : conn_name_("test-ipc-route") {
-        cn_t::clear_recv(conn_name_.c_str());
     }
 
     cn_t connect() {
@@ -324,8 +323,6 @@ void test_prod_cons() {
 }
 
 void Unit::test_route() {
-    ipc::route::clear_recv("my-ipc-route");
-
     std::vector<char const *> const datas = {
         "hello!",
         "foo",

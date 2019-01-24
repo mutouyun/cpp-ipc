@@ -21,9 +21,6 @@ struct IPC_EXPORT channel_detail {
     static std::size_t recv_count(handle_t h);
     static bool wait_for_recv(handle_t h, std::size_t r_count);
 
-    static void clear_recv(handle_t h);
-    static void clear_recv(char const * name);
-
     static bool   send(handle_t h, void const * data, std::size_t size);
     static buff_t recv(handle_t h);
 };
@@ -99,14 +96,6 @@ public:
 
     static bool wait_for_recv(char const * name, std::size_t r_count) {
         return channel_impl(name).wait_for_recv(r_count);
-    }
-
-    void clear_recv() {
-        Detail::clear_recv(h_);
-    }
-
-    static void clear_recv(char const * name) {
-        Detail::clear_recv(name);
     }
 
     bool send(void const * data, std::size_t size) {

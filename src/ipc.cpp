@@ -118,20 +118,6 @@ static bool wait_for_recv(ipc::handle_t h, std::size_t r_count) {
     return que->wait_for_connect(r_count);
 }
 
-static void clear_recv(ipc::handle_t h) {
-    auto* head = head_of(queue_of(h));
-    if (head == nullptr) {
-        return;
-    }
-    std::memset(head, 0, sizeof(typename queue_t::elems_t));
-}
-
-static void clear_recv(char const * name) {
-    auto h = connect(name);
-    clear_recv(h);
-    disconnect(h);
-}
-
 static bool send(ipc::handle_t h, void const * data, std::size_t size) {
     if (data == nullptr) {
         return false;
@@ -235,16 +221,6 @@ std::size_t channel_detail<Flag>::recv_count(ipc::handle_t h) {
 template <typename Flag>
 bool channel_detail<Flag>::wait_for_recv(ipc::handle_t h, std::size_t r_count) {
     return detail_impl<policy_t<Flag>>::wait_for_recv(h, r_count);
-}
-
-template <typename Flag>
-void channel_detail<Flag>::clear_recv(ipc::handle_t h) {
-    detail_impl<policy_t<Flag>>::clear_recv(h);
-}
-
-template <typename Flag>
-void channel_detail<Flag>::clear_recv(char const * name) {
-    detail_impl<policy_t<Flag>>::clear_recv(name);
 }
 
 template <typename Flag>
