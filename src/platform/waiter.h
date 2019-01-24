@@ -48,8 +48,8 @@ public:
 
     void close() {
         if (!valid()) return;
-        w_->close(h_);
         ::printf("close %p\n", h_);
+        w_->close(h_);
         h_ = waiter_t::invalid();
     }
 

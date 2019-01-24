@@ -75,8 +75,10 @@ public:
         if (h == invalid()) return;
         auto w = waiter_cast(h);
         if (w->counter_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+            ::printf("destroy...\n");
             ::pthread_cond_destroy (&(w->cond_ ));
             ::pthread_mutex_destroy(&(w->mutex_));
+            ::printf("destroy end...\n");
         }
     }
 
