@@ -18,12 +18,7 @@ class waiter {
     std::atomic<unsigned> counter_ { 0 };
 
 public:
-    using handle_t = void*;
-
-private:
-    constexpr static waiter* waiter_cast(handle_t h) {
-        return static_cast<waiter*>(h);
-    }
+    using handle_t = waiter*;
 
 public:
     constexpr static handle_t invalid() {
@@ -73,23 +68,21 @@ public:
 
     void close(handle_t h) {
         if (h == invalid()) return;
-        auto w = waiter_cast(h);
-        if (w->counter_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+        if (h->counter_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
             ::printf("destroy...\n");
-            ::pthread_cond_destroy (&(w->cond_ ));
-            ::pthread_mutex_destroy(&(w->mutex_));
+            ::pthread_cond_destroy (&(h->cond_ ));
+            ::pthread_mutex_destroy(&(h->mutex_));
             ::printf("destroy end...\n");
         }
     }
 
     bool wait(handle_t h) {
         if (h == invalid()) return false;
-        auto w = waiter_cast(h);
-        if (::pthread_mutex_lock(&(w->mutex_)) != 0) {
+        if (::pthread_mutex_lock(&(h->mutex_)) != 0) {
             return false;
         }
-        IPC_UNUSED_ auto guard = unique_ptr(&(w->mutex_), ::pthread_mutex_unlock);
-        if (::pthread_cond_wait(&(w->cond_), &(w->mutex_)) != 0) {
+        IPC_UNUSED_ auto guard = unique_ptr(&(h->mutex_), ::pthread_mutex_unlock);
+        if (::pthread_cond_wait(&(h->cond_), &(h->mutex_)) != 0) {
             return false;
         }
         return true;
@@ -97,12 +90,12 @@ public:
 
     void notify(handle_t h) {
         if (h == invalid()) return;
-        ::pthread_cond_signal(&(waiter_cast(h)->cond_));
+        ::pthread_cond_signal(&(h->cond_));
     }
 
     void broadcast(handle_t h) {
         if (h == invalid()) return;
-        ::pthread_cond_broadcast(&(waiter_cast(h)->cond_));
+        ::pthread_cond_broadcast(&(h->cond_));
     }
 };
 

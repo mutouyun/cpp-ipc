@@ -4,7 +4,7 @@ TARGET = ipc
 CONFIG -= qt
 CONFIG += c++14 c++1z # may be useless
 
-!msvc:QMAKE_CXXFLAGS += -Wno-attributes -Wno-missing-field-initializers -Wno-unused-variable
+!msvc:QMAKE_CXXFLAGS += -Wno-attributes -Wno-missing-field-initializers
 
 DEFINES += __IPC_LIBRARY__
 DESTDIR = ../output
