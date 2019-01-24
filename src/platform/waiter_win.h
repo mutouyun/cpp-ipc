@@ -27,16 +27,20 @@ public:
         return ::CreateSemaphore(NULL, 0, LONG_MAX, ipc::detail::to_tchar(name).c_str());
     }
 
-    void close(handle_t h) {
+    void close(handle_t h, char const * /*name*/) {
+        if (h == invalid()) return;
         ::CloseHandle(h);
     }
 
     bool wait(handle_t h) {
-        counter_.fetch_add(1, std::memory_order_release);
+        if (h == invalid()) return false;
+        counter_.fetch_add(1, std::memory_order_relaxed);
+        std::atomic_thread_fence(std::memory_order_release);
         return ::WaitForSingleObject(h, INFINITE) == WAIT_OBJECT_0;
     }
 
     void notify(handle_t h) {
+        if (h == invalid()) return;
         for (unsigned k = 0;;) {
             auto c = counter_.load(std::memory_order_acquire);
             if (c == 0) return;
@@ -49,6 +53,7 @@ public:
     }
 
     void broadcast(handle_t h) {
+        if (h == invalid()) return;
         ::ReleaseSemaphore(h, counter_.exchange(0, std::memory_order_acquire), NULL);
     }
 };

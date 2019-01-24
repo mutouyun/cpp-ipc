@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
     defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
     defined(WINCE) || defined(_WIN32_WCE)
@@ -18,6 +20,7 @@ public:
 private:
     waiter_t* w_ = nullptr;
     waiter_t::handle_t h_ = waiter_t::invalid();
+    std::string n_;
 
 public:
     waiter_wrapper() = default;
@@ -41,15 +44,15 @@ public:
     bool open(char const * name) {
         if (w_ == nullptr) return false;
         close();
-        h_ = w_->open(name);
+        h_ = w_->open((n_ = name).c_str());
         ::printf("%s: %p\n", name, h_);
         return valid();
     }
 
     void close() {
         if (!valid()) return;
-        ::printf("close %p\n", h_);
-        w_->close(h_);
+        ::printf("close %s: %p\n", n_.c_str(), h_);
+        w_->close(h_, n_.c_str());
         h_ = waiter_t::invalid();
     }
 

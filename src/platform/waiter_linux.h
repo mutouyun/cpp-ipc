@@ -1,11 +1,14 @@
 #pragma once
 
-#include <pthread.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <semaphore.h>
 
 #include <cstring>
 #include <atomic>
 
 #include "def.h"
+#include "rw_lock.h"
 
 #include "platform/detail.h"
 
@@ -13,92 +16,70 @@ namespace ipc {
 namespace detail {
 
 class waiter {
-    pthread_mutex_t       mutex_ = PTHREAD_MUTEX_INITIALIZER;
-    pthread_cond_t        cond_  = PTHREAD_COND_INITIALIZER;
+    std::atomic<unsigned> rc_      { 0 };
     std::atomic<unsigned> counter_ { 0 };
 
+    spin_lock lc_;
+
 public:
-    using handle_t = bool;
+    using handle_t = sem_t*;
+
+private:
+    bool post(handle_t h) {
+        for (unsigned k = 0;;) {
+            auto c = counter_.load(std::memory_order_acquire);
+            if (c == 0) return false;
+            if (counter_.compare_exchange_weak(c, c - 1, std::memory_order_relaxed)) {
+                break;
+            }
+            ipc::yield(k);
+        }
+        return ::sem_post(h) == 0;
+    }
 
 public:
     constexpr static handle_t invalid() {
-        return false;
+        return SEM_FAILED;
     }
 
     handle_t open(char const * name) {
         if (name == nullptr || name[0] == '\0') return invalid();
-        if (counter_.fetch_add(1, std::memory_order_acq_rel) == 0) {
-            // init mutex
-            pthread_mutexattr_t mutex_attr;
-            if (::pthread_mutexattr_init(&mutex_attr) != 0) {
-                ::printf("fail pthread_mutexattr_init\n");
-                return invalid();
-            }
-            IPC_UNUSED_ auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
-            if (::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED) != 0) {
-                ::printf("fail pthread_mutexattr_setpshared\n");
-                return invalid();
-            }
-            if (::pthread_mutex_init(&mutex_, &mutex_attr) != 0) {
-                ::printf("fail pthread_mutex_init\n");
-                return invalid();
-            }
-            auto guard_mutex = unique_ptr(&mutex_, ::pthread_mutex_destroy);
-            // init condition
-            pthread_condattr_t cond_attr;
-            if (::pthread_condattr_init(&cond_attr) != 0) {
-                ::printf("fail pthread_condattr_init\n");
-                return invalid();
-            }
-            IPC_UNUSED_ auto guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
-            if (::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED) != 0) {
-                ::printf("fail pthread_condattr_setpshared\n");
-                return invalid();
-            }
-            if (::pthread_cond_init(&cond_, &cond_attr) != 0) {
-                ::printf("fail pthread_cond_init\n");
-                return invalid();
-            }
-            // no need to guard condition
-            // release guards
-            guard_mutex.release();
-        }
-        return true;
+        rc_.fetch_add(1, std::memory_order_relaxed);
+        std::atomic_thread_fence(std::memory_order_release);
+        return ::sem_open(name, O_CREAT | O_RDWR,
+                                S_IRUSR | S_IWUSR |
+                                S_IRGRP | S_IWGRP |
+                                S_IROTH | S_IWOTH, 0);
     }
 
-    void close(handle_t h) {
+    void close(handle_t h, char const * name) {
         if (h == invalid()) return;
-        ::printf("closing...\n");
-        if (counter_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-            ::pthread_cond_destroy(&cond_);
-            ::pthread_mutex_destroy(&mutex_);
-            ::printf("destroy end...\n");
+        if (name == nullptr || name[0] == '\0') return;
+        ::sem_close(h);
+        if (rc_.fetch_sub(1, std::memory_order_acquire) == 1) {
+            ::sem_unlink(name);
         }
     }
 
     bool wait(handle_t h) {
         if (h == invalid()) return false;
-        ::printf("wait...\n");
-        if (::pthread_mutex_lock(&mutex_) != 0) {
-            return false;
+        {
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
+            counter_.fetch_add(1, std::memory_order_relaxed);
         }
-        IPC_UNUSED_ auto guard = unique_ptr(&mutex_, ::pthread_mutex_unlock);
-        if (::pthread_cond_wait(&cond_, &mutex_) != 0) {
-            return false;
-        }
-        return true;
+        bool ret = (::sem_wait(h) == 0);
+        return ret;
     }
 
     void notify(handle_t h) {
         if (h == invalid()) return;
-        ::printf("notify...\n");
-        ::pthread_cond_signal(&cond_);
+        post(h);
     }
 
     void broadcast(handle_t h) {
         if (h == invalid()) return;
-        ::printf("broadcast...\n");
-        ::pthread_cond_broadcast(&cond_);
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
+        while (post(h)) ;
     }
 };
 
