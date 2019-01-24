@@ -338,7 +338,6 @@ void Unit::test_route() {
         ipc::route cc { "my-ipc-route" };
         for (std::size_t i = 0; i < datas.size(); ++i) {
             ipc::buff_t dd = cc.recv();
-            std::cout << "recv: " << (char*)dd.data() << std::endl;
             QCOMPARE(dd.size(), std::strlen(datas[i]) + 1);
             QVERIFY(std::memcmp(dd.data(), datas[i], dd.size()) == 0);
         }
@@ -358,7 +357,7 @@ void Unit::test_route() {
     t1.join();
     t2.join();
 
-//    test_prod_cons<ipc::route, 1, 1>();
+    test_prod_cons<ipc::route, 1, 1>();
 }
 
 void Unit::test_route_rtt() {

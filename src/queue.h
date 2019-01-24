@@ -140,7 +140,11 @@ public:
     }
 
     /* not virtual */ ~queue_base(void) {
-        base_t::close(elems_);
+        if (!this->dismiss_ && (elems_ != nullptr)) {
+            shm::release(elems_, sizeof(Elems));
+        }
+        dismiss_ = true;
+//        base_t::close(elems_);
     }
 
     constexpr elems_t * elems() const noexcept {
