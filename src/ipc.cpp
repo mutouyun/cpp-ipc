@@ -123,7 +123,7 @@ static void clear_recv(ipc::handle_t h) {
     if (head == nullptr) {
         return;
     }
-    std::memset(head, 0, sizeof(queue_t::elems_t));
+    std::memset(head, 0, sizeof(typename queue_t::elems_t));
 }
 
 static void clear_recv(char const * name) {
