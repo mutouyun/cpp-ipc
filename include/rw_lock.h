@@ -113,6 +113,7 @@ public:
 
 class rw_lock {
     using lc_ui_t = unsigned;
+
     std::atomic<lc_ui_t> lc_ { 0 };
 
     enum : lc_ui_t {

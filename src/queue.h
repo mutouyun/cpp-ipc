@@ -9,8 +9,10 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <cassert>
 
 #include "def.h"
+#include "shm.h"
 #include "rw_lock.h"
 
 #include "platform/waiter.h"
@@ -20,11 +22,29 @@ namespace detail {
 
 class queue_waiter {
 protected:
-    ipc::detail::waiter_impl waiter_, cc_waiter_;
-    std::atomic_bool connected_ { false };
+    ipc::detail::waiter_impl waiter_;
+    ipc::detail::waiter_impl cc_waiter_;
+
+    bool connected_ = false;
+    bool dismiss_   = true;
 
     template <typename Elems>
-    void open(Elems* elems, char const * name) {
+    Elems* open(char const * name) {
+        auto elems = static_cast<Elems*>(shm::acquire(name, sizeof(Elems)));
+        if (elems == nullptr) {
+            return nullptr;
+        }
+        dismiss_ = false;
+        return elems;
+    }
+
+    template <typename Elems>
+    void open(Elems*(& elems), char const * name) {
+        assert(name != nullptr && name[0] != '\0');
+        if (elems == nullptr) {
+            elems = open<Elems>(name);
+        }
+        assert(elems != nullptr);
         waiter_.attach(&(elems->waiter()));
         waiter_.open((std::string{ "__IPC_WAITER__" } + name).c_str());
         cc_waiter_.attach(&(elems->conn_waiter()));
@@ -38,22 +58,32 @@ protected:
         cc_waiter_.attach(nullptr);
     }
 
+    template <typename Elems>
+    void close(Elems* elems) {
+        if (!dismiss_ && (elems != nullptr)) {
+            shm::release(elems, sizeof(Elems));
+        }
+        dismiss_ = true;
+        close();
+    }
+
 public:
     queue_waiter() = default;
     queue_waiter(const queue_waiter&) = delete;
     queue_waiter& operator=(const queue_waiter&) = delete;
 
     bool connected() const noexcept {
-        return connected_.load(std::memory_order_acquire);
+        return connected_;
     }
 
     template <typename Elems>
     std::size_t connect(Elems* elems) {
         if (elems == nullptr) return invalid_value;
-        if (connected_.exchange(true, std::memory_order_acq_rel)) {
+        if (connected_) {
             // if it's already connected, just return an error count
             return invalid_value;
         }
+        connected_ = true;
         auto ret = elems->connect();
         cc_waiter_.broadcast();
         return ret;
@@ -62,10 +92,11 @@ public:
     template <typename Elems>
     std::size_t disconnect(Elems* elems) {
         if (elems == nullptr) return invalid_value;
-        if (!connected_.exchange(false, std::memory_order_acq_rel)) {
+        if (!connected_) {
             // if it's already disconnected, just return an error count
             return invalid_value;
         }
+        connected_ = false;
         auto ret = elems->disconnect();
         cc_waiter_.broadcast();
         return ret;
@@ -98,9 +129,18 @@ public:
 
     queue_base() = default;
 
+    explicit queue_base(char const * name)
+        : queue_base() {
+        attach(nullptr, name);
+    }
+
     explicit queue_base(elems_t* els, char const * name = nullptr)
         : queue_base() {
         attach(els, name);
+    }
+
+    /* not virtual */ ~queue_base(void) {
+        base_t::close(elems_);
     }
 
     constexpr elems_t * elems() const noexcept {
@@ -123,33 +163,39 @@ public:
         return base_t::wait_for_connect(elems_, count);
     }
 
+    bool valid() const noexcept {
+        return elems_ != nullptr;
+    }
+
     bool empty() const noexcept {
         return (elems_ == nullptr) ? true : (cursor_ == elems_->cursor());
     }
 
     elems_t* attach(elems_t* els, char const * name = nullptr) noexcept {
-        if (els == nullptr) return nullptr;
         auto old = elems_;
         elems_ = els;
-        if (name == nullptr) {
-            base_t::close();
+        if (name == nullptr || name[0] == '\0') {
+            base_t::close(old);
         }
         else base_t::open(elems_, name);
-        cursor_ = elems_->cursor();
+        if (elems_ != nullptr) {
+            cursor_ = elems_->cursor();
+        }
         return old;
     }
 
     elems_t* detach() noexcept {
         if (elems_ == nullptr) return nullptr;
+        base_t::close<elems_t>(nullptr); // not release shm
         auto old = elems_;
         elems_ = nullptr;
         return old;
     }
 
-    template <typename T, typename F, typename... P>
-    auto push(F&& f, P&&... params) {
+    template <typename T, typename... P>
+    auto push(P&&... params) {
         if (elems_ == nullptr) return false;
-        if (std::forward<F>(f)([&](void* p) {
+        if (elems_->push([&](void* p) {
             ::new (p) T(std::forward<P>(params)...);
         })) {
             this->waiter_.broadcast();
@@ -175,45 +221,11 @@ public:
     }
 };
 
-template <typename Elems, typename IsFixed>
-class queue : public queue_base<Elems> {
-    using base_t = queue_base<Elems>;
-
-public:
-    using is_fixed = IsFixed;
-
-    using base_t::base_t;
-
-    template <typename T, typename... P>
-    auto push(P&&... params) {
-        return base_t::template push<T>([this](auto&& f) {
-            return this->elems_->push(std::forward<decltype(f)>(f));
-        }, std::forward<P>(params)...);
-    }
-};
-
-template <typename Elems>
-class queue<Elems, std::false_type> : public queue_base<Elems> {
-    using base_t = queue_base<Elems>;
-
-public:
-    using is_fixed = std::false_type;
-
-    using base_t::base_t;
-
-    template <typename T, typename... P>
-    auto push(P&&... params) {
-        return base_t::template push<T>([this](auto&& f) {
-            return this->elems_->template push<sizeof(T), alignof(T)>(std::forward<decltype(f)>(f));
-        }, std::forward<P>(params)...);
-    }
-};
-
 } // namespace detail
 
 template <typename T, typename Policy>
-class queue : public detail::queue<typename Policy::template elems_t<sizeof(T)>, typename Policy::is_fixed> {
-    using base_t = detail::queue<typename Policy::template elems_t<sizeof(T)>, typename Policy::is_fixed>;
+class queue : public detail::queue_base<typename Policy::template elems_t<sizeof(T)>> {
+    using base_t = detail::queue_base<typename Policy::template elems_t<sizeof(T)>>;
 
 public:
     using base_t::base_t;

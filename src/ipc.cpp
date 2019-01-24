@@ -9,9 +9,10 @@
 #include "def.h"
 #include "shm.h"
 #include "tls_pointer.h"
+#include "pool_alloc.h"
 #include "queue.h"
-
 #include "policy.h"
+
 #include "memory/resource.h"
 
 namespace {
@@ -25,7 +26,7 @@ inline auto acc_of_msg() {
     return static_cast<std::atomic<msg_id_t>*>(g_shm.get());
 }
 
-template <typename Policy, typename IsFixed = typename Policy::is_fixed>
+template <typename Policy>
 struct detail_impl {
 
 #pragma pack(1)
@@ -39,10 +40,6 @@ struct msg_t {
 
 using queue_t = ipc::queue<msg_t, Policy>;
 
-struct shm_info_t {
-    typename queue_t::elems_t elems_;  // the elements in shm
-};
-
 constexpr static void* head_of(queue_t* que) {
     return static_cast<void*>(que->elems());
 }
@@ -52,9 +49,9 @@ constexpr static queue_t* queue_of(ipc::handle_t h) {
 }
 
 static buff_t make_cache(void const * data, std::size_t size) {
-    auto ptr = mem::sync_pool_alloc::alloc(size);
+    auto ptr = mem::alloc(size);
     std::memcpy(ptr, data, size);
-    return { ptr, size, mem::sync_pool_alloc::free };
+    return { ptr, size, mem::free };
 }
 
 struct cache_t {
@@ -93,11 +90,7 @@ static auto& queues_cache() {
 /* API implementations */
 
 static ipc::handle_t connect(char const * name) {
-    auto mem = shm::acquire(name, sizeof(shm_info_t));
-    if (mem == nullptr) {
-        return nullptr;
-    }
-    return new queue_t { &(static_cast<shm_info_t*>(mem)->elems_), name };
+    return mem::alloc<queue_t>(name);
 }
 
 static void disconnect(ipc::handle_t h) {
@@ -106,8 +99,7 @@ static void disconnect(ipc::handle_t h) {
         return;
     }
     que->disconnect(); // needn't to detach, cause it will be deleted soon.
-    shm::release(head_of(que), sizeof(shm_info_t));
-    delete que;
+    mem::free(que);
 }
 
 static std::size_t recv_count(ipc::handle_t h) {
@@ -131,7 +123,7 @@ static void clear_recv(ipc::handle_t h) {
     if (head == nullptr) {
         return;
     }
-    std::memset(head, 0, sizeof(shm_info_t));
+    std::memset(head, 0, sizeof(queue_t::elems_t));
 }
 
 static void clear_recv(char const * name) {

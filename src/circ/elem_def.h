@@ -38,7 +38,7 @@ constexpr u1_t index_of(u2_t c) noexcept {
 
 class conn_head {
     ipc::detail::waiter      cc_waiter_, waiter_;
-    std::atomic<std::size_t> cc_ { 0 }; // connection counter
+    std::atomic<std::size_t> cc_; // connection counter
 
 public:
     conn_head() = default;

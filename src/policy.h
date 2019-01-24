@@ -16,8 +16,6 @@ struct choose;
 
 template <typename Flag>
 struct choose<circ::elem_array, Flag> {
-    using is_fixed = std::true_type;
-
     template <std::size_t DataSize>
     using elems_t = circ::elem_array<ipc::prod_cons_impl<Flag>, DataSize>;
 };

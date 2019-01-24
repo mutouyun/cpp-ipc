@@ -176,7 +176,7 @@ struct test_cq<ipc::queue<T...>> {
     ca_t* ca_;
 
     test_cq(void*) : ca_(reinterpret_cast<ca_t*>(cq__)) {
-        ::new (ca_) ca_t;
+        std::memset(ca_, 0, sizeof(ca_t));
     }
 
     cn_t* connect() {
@@ -243,6 +243,7 @@ constexpr int LoopCount = 1000000;
 void Unit::initTestCase() {
     TestSuite::initTestCase();
     cq__ = new cq_t;
+    std::memset(cq__, 0, sizeof(cq_t));
 }
 
 void Unit::cleanupTestCase() {
@@ -378,7 +379,8 @@ void Unit::test_queue() {
     QCOMPARE(queue.pop(), msg_t{});
     QVERIFY(sizeof(decltype(queue)::elems_t) <= sizeof(*cq__));
 
-    auto cq = ::new (cq__) decltype(queue)::elems_t;
+    std::memset(cq__, 0, sizeof(decltype(queue)::elems_t));
+    auto cq = reinterpret_cast<decltype(queue)::elems_t*>(cq__);
     queue.attach(cq);
     QVERIFY(queue.detach() != nullptr);
 

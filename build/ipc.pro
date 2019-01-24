@@ -32,9 +32,9 @@ HEADERS += \
     ../src/platform/waiter.h \
     ../src/circ/elem_def.h \
     ../src/circ/elem_array.h \
-    ../src/circ/elem_chan.h \
     ../src/prod_cons.h \
-    ../src/policy.h
+    ../src/policy.h \
+    ../src/queue.h
 
 SOURCES += \
     ../src/shm.cpp \

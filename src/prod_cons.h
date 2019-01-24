@@ -20,8 +20,8 @@ struct prod_cons_impl;
 
 template <>
 struct prod_cons_impl<prod_cons<relat::single, relat::single, trans::unicast>> {
-    std::atomic<circ::u2_t> rd_ { 0 }; // read index
-    std::atomic<circ::u2_t> wt_ { 0 }; // write index
+    std::atomic<circ::u2_t> rd_; // read index
+    std::atomic<circ::u2_t> wt_; // write index
 
 #if __cplusplus >= 201703L
     template <std::size_t DataSize>
@@ -89,7 +89,7 @@ template <>
 struct prod_cons_impl<prod_cons<relat::multi , relat::multi, trans::unicast>>
      : prod_cons_impl<prod_cons<relat::single, relat::multi, trans::unicast>> {
 
-    std::atomic<circ::u2_t> ct_ { 0 }; // commit index
+    std::atomic<circ::u2_t> ct_; // commit index
 
     template <typename E, typename F, typename EB>
     bool push(E* /*elems*/, F&& f, EB* elem_start) {
@@ -119,7 +119,7 @@ struct prod_cons_impl<prod_cons<relat::multi , relat::multi, trans::unicast>>
 
 template <>
 struct prod_cons_impl<prod_cons<relat::single, relat::multi, trans::broadcast>> {
-    std::atomic<circ::u2_t> wt_ { 0 }; // write index
+    std::atomic<circ::u2_t> wt_; // write index
 
 #if __cplusplus >= 201703L
     template <std::size_t DataSize>
@@ -183,7 +183,7 @@ template <>
 struct prod_cons_impl<prod_cons<relat::multi , relat::multi, trans::broadcast>>
      : prod_cons_impl<prod_cons<relat::single, relat::multi, trans::broadcast>> {
 
-    std::atomic<circ::u2_t> ct_ { 0 }; // commit index
+    std::atomic<circ::u2_t> ct_; // commit index
 
     template <typename E, typename F, typename EB>
     bool push(E* elems, F&& f, EB* elem_start) {

@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <type_traits>
 
 #include "def.h"
@@ -21,6 +22,7 @@ namespace detail {
 
 using std::unique_ptr;
 using std::unique_lock;
+using std::shared_lock;
 
 #else /*__cplusplus < 201703L*/
 
@@ -37,6 +39,12 @@ constexpr auto unique_ptr(T* p, D&& d) {
 template <typename T>
 constexpr auto unique_lock(T&& lc) {
     return std::unique_lock<std::decay_t<T>> { std::forward<T>(lc) };
+}
+
+// deduction guides for std::shared_lock
+template <typename T>
+constexpr auto shared_lock(T&& lc) {
+    return std::shared_lock<std::decay_t<T>> { std::forward<T>(lc) };
 }
 
 #endif/*__cplusplus < 201703L*/
