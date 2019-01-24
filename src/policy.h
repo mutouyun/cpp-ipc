@@ -10,7 +10,8 @@
 namespace ipc {
 namespace policy {
 
-template <template <std::size_t, typename> class Elems, typename Flag>
+template <template <typename, std::size_t...> class Elems,
+          typename Flag>
 struct choose;
 
 template <typename Flag>
@@ -18,7 +19,7 @@ struct choose<circ::elem_array, Flag> {
     using is_fixed = std::true_type;
 
     template <std::size_t DataSize>
-    using elems_t = circ::elem_array<DataSize, ipc::prod_cons_impl<Flag>>;
+    using elems_t = circ::elem_array<ipc::prod_cons_impl<Flag>, DataSize>;
 };
 
 } // namespace policy

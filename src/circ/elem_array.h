@@ -19,7 +19,7 @@ namespace circ {
 /// element-array implementation
 ////////////////////////////////////////////////////////////////
 
-template <std::size_t DataSize, typename Policy>
+template <typename Policy, std::size_t DataSize>
 class elem_array : public ipc::circ::conn_head {
 public:
     using base_t   = ipc::circ::conn_head;
