@@ -15,7 +15,7 @@
 #include "rw_lock.h"
 #include "tls_pointer.h"
 
-#include "memory/alloc.hpp"
+#include "memory/alloc.h"
 #include "memory/detail.h"
 #include "platform/detail.h"
 

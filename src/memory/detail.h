@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-#include "memory/alloc.hpp"
+#include "memory/alloc.h"
 #include "platform/detail.h"
 
 namespace ipc {

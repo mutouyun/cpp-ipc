@@ -19,7 +19,7 @@
 
 #include "ipc.h"
 #include "rw_lock.h"
-#include "memory/resource.hpp"
+#include "memory/resource.h"
 
 #include "test.h"
 

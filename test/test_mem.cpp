@@ -5,7 +5,7 @@
 
 #include "random.hpp"
 
-#include "memory/resource.hpp"
+#include "memory/resource.h"
 #include "pool_alloc.h"
 
 #include "test.h"

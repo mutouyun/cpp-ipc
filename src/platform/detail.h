@@ -4,6 +4,8 @@
 #include <mutex>
 #include <type_traits>
 
+#include "def.h"
+
 #if __cplusplus >= 201703L
 
 namespace std {

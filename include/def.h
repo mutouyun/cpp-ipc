@@ -49,11 +49,6 @@ enum : std::size_t {
     data_length   = 16
 };
 
-enum class orgnz { // data structure organization
-    linked,
-    cyclic
-};
-
 enum class relat { // multiplicity of the relationship
     single,
     multi
@@ -64,10 +59,10 @@ enum class trans { // transmission
     broadcast
 };
 
-// producer-consumer policy declaration
+// producer-consumer policy flag
 
-template <orgnz Oz, relat Rp, relat Rc, trans Ts>
-struct prod_cons;
+template <relat Rp, relat Rc, trans Ts>
+struct prod_cons {};
 
 // concept helpers
 

@@ -12,7 +12,7 @@
 #include <mutex>
 
 #include "def.h"
-#include "memory/resource.hpp"
+#include "memory/resource.h"
 
 namespace {
 

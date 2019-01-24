@@ -8,7 +8,7 @@
 
 #include "def.h"
 
-#include "memory/resource.hpp"
+#include "memory/resource.h"
 #include "platform/to_tchar.h"
 
 namespace {

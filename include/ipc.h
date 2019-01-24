@@ -7,14 +7,13 @@
 #include "def.h"
 #include "buffer.h"
 #include "shm.h"
-#include "elem_circ.h"
 
 namespace ipc {
 
 using handle_t = void*;
 using buff_t   = buffer;
 
-template <typename Policy>
+template <typename Flag>
 struct IPC_EXPORT channel_detail {
     static handle_t connect   (char const * name);
     static void     disconnect(handle_t h);
@@ -138,7 +137,7 @@ public:
  * (one producer/server/sender to multi consumers/clients/receivers)
 */
 using route = channel_impl<channel_detail<
-    ipc::circ::prod_cons<relat::single, relat::multi, trans::broadcast>
+    ipc::prod_cons<relat::single, relat::multi, trans::broadcast>
 >>;
 
 /*
@@ -150,7 +149,7 @@ using route = channel_impl<channel_detail<
 */
 
 using channel = channel_impl<channel_detail<
-    ipc::circ::prod_cons<relat::multi, relat::multi, trans::broadcast>
+    ipc::prod_cons<relat::multi, relat::multi, trans::broadcast>
 >>;
 
 } // namespace ipc

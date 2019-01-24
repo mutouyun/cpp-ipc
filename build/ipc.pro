@@ -17,9 +17,6 @@ HEADERS += \
     ../include/export.h \
     ../include/def.h \
     ../include/shm.h \
-    ../include/elem_def.h \
-    ../include/elem_circ.h \
-    ../include/elem_link.h \
     ../include/waiter.h \
     ../include/queue.h \
     ../include/ipc.h \
@@ -28,11 +25,15 @@ HEADERS += \
     ../include/pool_alloc.h \
     ../include/buffer.h \
     ../src/memory/detail.h \
-    ../src/memory/alloc.hpp \
-    ../src/memory/wrapper.hpp \
-    ../src/memory/resource.hpp \
+    ../src/memory/alloc.h \
+    ../src/memory/wrapper.h \
+    ../src/memory/resource.h \
     ../src/platform/detail.h \
-    ../src/platform/waiter.h
+    ../src/platform/waiter.h \
+    ../src/circ/elem_def.h \
+    ../src/circ/elem_array.h \
+    ../src/prod_cons.h \
+    ../src/policy.h
 
 SOURCES += \
     ../src/shm.cpp \

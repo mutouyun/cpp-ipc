@@ -9,8 +9,8 @@
 
 #include "def.h"
 
-#include "memory/alloc.hpp"
-#include "memory/wrapper.hpp"
+#include "memory/alloc.h"
+#include "memory/wrapper.h"
 #include "memory/detail.h"
 #include "platform/detail.h"
 

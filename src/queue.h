@@ -12,7 +12,6 @@
 
 #include "def.h"
 #include "rw_lock.h"
-#include "elem_circ.h"
 
 #include "platform/waiter.h"
 
@@ -146,6 +145,34 @@ public:
         elems_ = nullptr;
         return old;
     }
+
+    template <typename T, typename F, typename... P>
+    auto push(F&& f, P&&... params) {
+        if (elems_ == nullptr) return false;
+        if (std::forward<F>(f)([&](void* p) {
+            ::new (p) T(std::forward<P>(params)...);
+        })) {
+            this->waiter_.broadcast();
+            return true;
+        }
+        return false;
+    }
+
+    template <typename T>
+    T pop() {
+        if (elems_ == nullptr) {
+            return {};
+        }
+        T item;
+        for (unsigned k = 0;;) {
+            if (elems_->pop(&this->cursor_, [&item](void* p) {
+                ::new (&item) T(std::move(*static_cast<T*>(p)));
+            })) {
+                return item;
+            }
+            ipc::sleep(k, [this] { return this->waiter_.wait(); });
+        }
+    }
 };
 
 template <typename Elems, typename IsFixed>
@@ -159,51 +186,46 @@ public:
 
     template <typename T, typename... P>
     auto push(P&&... params) {
-        if (this->elems_ == nullptr) return false;
-        if (this->elems_->push([&](void* p) {
-            ::new (p) T(std::forward<P>(params)...);
-        })) {
-            this->waiter_.broadcast();
-            return true;
-        }
-        return false;
+        return base_t::template push<T>([this](auto&& f) {
+            return this->elems_->push(std::forward<decltype(f)>(f));
+        }, std::forward<P>(params)...);
     }
+};
 
-    template <typename T>
-    T pop() {
-        if (this->elems_ == nullptr) {
-            return {};
-        }
-        T item;
-        for (unsigned k = 0;;) {
-            if (this->elems_->pop(&this->cursor_, [&item](void* p) {
-                ::new (&item) T(std::move(*static_cast<T*>(p)));
-            })) {
-                return item;
-            }
-            ipc::sleep(k, [this] { return this->waiter_.wait(); });
-        }
+template <typename Elems>
+class queue<Elems, std::false_type> : public queue_base<Elems> {
+    using base_t = queue_base<Elems>;
+
+public:
+    using is_fixed = std::false_type;
+
+    using base_t::base_t;
+
+    template <typename T, typename... P>
+    auto push(P&&... params) {
+        return base_t::template push<T>([this](auto&& f) {
+            return this->elems_->template push<sizeof(T), alignof(T)>(std::forward<decltype(f)>(f));
+        }, std::forward<P>(params)...);
     }
 };
 
 } // namespace detail
 
-template <typename T,
-          typename Policy = ipc::circ::prod_cons<relat::single, relat::multi, trans::broadcast>>
+template <typename T, typename Policy>
 class queue : public detail::queue<typename Policy::template elems_t<sizeof(T)>, typename Policy::is_fixed> {
     using base_t = detail::queue<typename Policy::template elems_t<sizeof(T)>, typename Policy::is_fixed>;
 
 public:
     using base_t::base_t;
+    using base_t::push;
+    using base_t::pop;
 
     template <typename... P>
     auto push(P&&... params) {
         return base_t::template push<T>(std::forward<P>(params)...);
     }
 
-    T pop() {
-        return base_t::template pop<T>();
-    }
+    T pop() { return base_t::template pop<T>(); }
 };
 
 } // namespace ipc
