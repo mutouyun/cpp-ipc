@@ -63,11 +63,11 @@ protected:
 
     template <typename Elems>
     void close(Elems* elems) {
+        close();
         if (!dismiss_ && (elems != nullptr)) {
             shm::release(elems, sizeof(Elems));
         }
         dismiss_ = true;
-        close();
     }
 
 public:
