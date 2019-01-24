@@ -1,9 +1,5 @@
 #pragma once
 
-#if __has_include(<pthread.h>)
-#include "waiter_linux.h"
-#else /*!__has_include(<pthread.h>)*/
-
 #include <Windows.h>
 
 #include <algorithm>
@@ -59,5 +55,3 @@ public:
 
 } // namespace detail
 } // namespace ipc
-
-#endif/*!__has_include(<pthread.h>)*/

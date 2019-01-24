@@ -1,7 +1,3 @@
-#if __has_include(<pthread.h>)
-#include "tls_pointer_linux.cpp"
-#else /*!__has_include(<pthread.h>)*/
-
 #include "tls_pointer.h"
 
 #include <Windows.h>     // ::Tls...
@@ -183,5 +179,3 @@ extern "C" NX_CRTALLOC_(".tls") const IMAGE_TLS_DIRECTORY _tls_used = {
 #endif/*_MSC_VER, __GNUC__*/
 
 } // namespace ipc
-
-#endif/*!__has_include(<pthread.h>)*/
