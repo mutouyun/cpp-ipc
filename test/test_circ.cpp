@@ -24,7 +24,9 @@ template <ipc::relat Rp, ipc::relat Rc, ipc::trans Ts>
 using pc_t = ipc::prod_cons_impl<ipc::prod_cons<Rp, Rc, Ts>>;
 
 template <std::size_t DataSize, typename Policy>
-using ea_t = ipc::circ::elem_array<Policy, DataSize>;
+struct ea_t : public ipc::circ::elem_array<Policy, DataSize> {
+    ea_t() { std::memset(this, 0, sizeof(ipc::circ::elem_array<Policy, DataSize>)); }
+};
 
 using cq_t = ea_t<
     sizeof(msg_t),
@@ -176,7 +178,7 @@ struct test_cq<ipc::queue<T...>> {
     ca_t* ca_;
 
     test_cq(void*) : ca_(reinterpret_cast<ca_t*>(cq__)) {
-        std::memset(ca_, 0, sizeof(ca_t));
+        ::new (ca_) ca_t;
     }
 
     cn_t* connect() {
@@ -243,7 +245,6 @@ constexpr int LoopCount = 1000000;
 void Unit::initTestCase() {
     TestSuite::initTestCase();
     cq__ = new cq_t;
-    std::memset(cq__, 0, sizeof(cq_t));
 }
 
 void Unit::cleanupTestCase() {
