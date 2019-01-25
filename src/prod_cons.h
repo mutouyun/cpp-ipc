@@ -41,8 +41,8 @@ struct prod_cons_impl<prod_cons<relat::single, relat::single, trans::unicast>> {
 
     template <typename E, typename F, typename EB>
     bool push(E* /*elems*/, F&& f, EB* elem_start) {
-        auto cur_wt = circ::index_of(wt_.load(std::memory_order_acquire));
-        if (cur_wt == circ::index_of(rd_.load(std::memory_order_relaxed) - 1)) {
+        auto cur_wt = circ::index_of(wt_.load(std::memory_order_relaxed));
+        if (cur_wt == circ::index_of(rd_.load(std::memory_order_acquire) - 1)) {
             return false; // full
         }
         std::forward<F>(f)(elem_start + cur_wt);
@@ -52,8 +52,8 @@ struct prod_cons_impl<prod_cons<relat::single, relat::single, trans::unicast>> {
 
     template <typename E, typename F, typename EB>
     bool pop(E* /*elems*/, circ::u2_t& /*cur*/, F&& f, EB* elem_start) {
-        auto cur_rd = circ::index_of(rd_.load(std::memory_order_acquire));
-        if (cur_rd == circ::index_of(wt_.load(std::memory_order_relaxed))) {
+        auto cur_rd = circ::index_of(rd_.load(std::memory_order_relaxed));
+        if (cur_rd == circ::index_of(wt_.load(std::memory_order_acquire))) {
             return false; // empty
         }
         std::forward<F>(f)(elem_start + cur_rd);
@@ -70,9 +70,9 @@ struct prod_cons_impl<prod_cons<relat::single, relat::multi , trans::unicast>>
     bool pop(E* /*elems*/, circ::u2_t& /*cur*/, F&& f, EB* elem_start) {
         byte_t buff[sizeof(E)];
         for (unsigned k = 0;;) {
-            auto cur_rd = rd_.load(std::memory_order_acquire);
+            auto cur_rd = rd_.load(std::memory_order_relaxed);
             if (circ::index_of(cur_rd) ==
-                circ::index_of(wt_.load(std::memory_order_relaxed))) {
+                circ::index_of(wt_.load(std::memory_order_acquire))) {
                 return false; // empty
             }
             std::memcpy(buff, elem_start + circ::index_of(cur_rd), sizeof(buff));
@@ -95,12 +95,12 @@ struct prod_cons_impl<prod_cons<relat::multi , relat::multi, trans::unicast>>
     bool push(E* /*elems*/, F&& f, EB* elem_start) {
         circ::u2_t cur_ct, nxt_ct;
         while(1) {
-            cur_ct = ct_.load(std::memory_order_acquire);
+            cur_ct = ct_.load(std::memory_order_relaxed);
             if (circ::index_of(nxt_ct = cur_ct + 1) ==
-                circ::index_of(rd_.load(std::memory_order_relaxed))) {
+                circ::index_of(rd_.load(std::memory_order_acquire))) {
                 return false; // full
             }
-            if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_relaxed)) {
+            if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_release)) {
                 break;
             }
             std::this_thread::yield();
@@ -141,14 +141,14 @@ struct prod_cons_impl<prod_cons<relat::single, relat::multi, trans::broadcast>> 
 
     template <typename E, typename F, typename EB>
     bool push(E* elems, F&& f, EB* elem_start) {
-        auto conn_cnt = elems->conn_count(); // acquire
+        auto conn_cnt = elems->conn_count(std::memory_order_relaxed);
         if (conn_cnt == 0) return false;
-        auto el = elem_start + circ::index_of(wt_.load(std::memory_order_relaxed));
+        auto el = elem_start + circ::index_of(wt_.load(std::memory_order_acquire));
         // check all consumers have finished reading this element
         while(1) {
             rc_t expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
-                        expected, static_cast<rc_t>(conn_cnt), std::memory_order_relaxed)) {
+                        expected, static_cast<rc_t>(conn_cnt), std::memory_order_release)) {
                 break;
             }
             std::this_thread::yield();
@@ -187,16 +187,16 @@ struct prod_cons_impl<prod_cons<relat::multi , relat::multi, trans::broadcast>>
 
     template <typename E, typename F, typename EB>
     bool push(E* elems, F&& f, EB* elem_start) {
-        auto conn_cnt = elems->conn_count(); // acquire
+        auto conn_cnt = elems->conn_count(std::memory_order_relaxed);
         if (conn_cnt == 0) return false;
-        circ::u2_t cur_ct = ct_.fetch_add(1, std::memory_order_relaxed),
+        circ::u2_t cur_ct = ct_.fetch_add(1, std::memory_order_acquire),
                    nxt_ct = cur_ct + 1;
         auto el = elem_start + circ::index_of(cur_ct);
         // check all consumers have finished reading this element
         while(1) {
             rc_t expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
-                        expected, static_cast<rc_t>(conn_cnt), std::memory_order_relaxed)) {
+                        expected, static_cast<rc_t>(conn_cnt), std::memory_order_release)) {
                 break;
             }
             std::this_thread::yield();

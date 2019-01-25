@@ -131,7 +131,7 @@ public:
 
     void lock() noexcept {
         for (unsigned k = 0;;) {
-            auto old = lc_.fetch_or(w_flag, std::memory_order_acquire);
+            auto old = lc_.fetch_or(w_flag, std::memory_order_acq_rel);
             if (!old) return;           // got w-lock
             if (!(old & w_flag)) break; // other thread having r-lock
             yield(k);                   // other thread having w-lock
@@ -147,7 +147,7 @@ public:
     }
 
     void lock_shared() noexcept {
-        auto old = lc_.load(std::memory_order_relaxed);
+        auto old = lc_.load(std::memory_order_acquire);
         for (unsigned k = 0;;) {
             // if w_flag set, just continue
             if (old & w_flag) {
@@ -155,7 +155,7 @@ public:
                 old = lc_.load(std::memory_order_acquire);
             }
             // otherwise try cas lc + 1 (set r-lock)
-            else if (lc_.compare_exchange_weak(old, old + 1, std::memory_order_acquire)) {
+            else if (lc_.compare_exchange_weak(old, old + 1, std::memory_order_release)) {
                 return;
             }
             // set r-lock failed, old has been updated

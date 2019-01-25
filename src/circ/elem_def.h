@@ -55,7 +55,6 @@ public:
             if (!constructed_.load(std::memory_order_relaxed)) {
                 ::new (this) conn_head;
                 constructed_.store(true, std::memory_order_release);
-                ::printf("init...\n");
             }
         }
     }

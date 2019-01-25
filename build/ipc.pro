@@ -32,7 +32,8 @@ HEADERS += \
     ../src/circ/elem_array.h \
     ../src/prod_cons.h \
     ../src/policy.h \
-    ../src/queue.h
+    ../src/queue.h \
+    ../src/log.h
 
 SOURCES += \
     ../src/shm.cpp \

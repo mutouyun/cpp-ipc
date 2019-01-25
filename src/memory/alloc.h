@@ -163,7 +163,7 @@ public:
         if (p == nullptr) return;
         while (1) {
             next(p) = cursor_.load(std::memory_order_acquire);
-            if (cursor_.compare_exchange_weak(next(p), p, std::memory_order_relaxed)) {
+            if (cursor_.compare_exchange_weak(next(p), p, std::memory_order_release)) {
                 break;
             }
             std::this_thread::yield();
@@ -242,7 +242,7 @@ public:
         void* p;
         while (1) {
             p = expand();
-            if (this->cursor_.compare_exchange_weak(p, this->next(p), std::memory_order_relaxed)) {
+            if (this->cursor_.compare_exchange_weak(p, this->next(p), std::memory_order_release)) {
                 break;
             }
             std::this_thread::yield();

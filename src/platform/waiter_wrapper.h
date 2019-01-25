@@ -20,7 +20,6 @@ public:
 private:
     waiter_t* w_ = nullptr;
     waiter_t::handle_t h_ = waiter_t::invalid();
-    std::string n_;
 
 public:
     waiter_wrapper() = default;
@@ -44,15 +43,13 @@ public:
     bool open(char const * name) {
         if (w_ == nullptr) return false;
         close();
-        h_ = w_->open((n_ = name).c_str());
-        ::printf("%s: %p\n", name, h_);
+        h_ = w_->open(name);
         return valid();
     }
 
     void close() {
         if (!valid()) return;
-        ::printf("close %s: %p\n", n_.c_str(), h_);
-        w_->close(h_, n_.c_str());
+        w_->close(h_);
         h_ = waiter_t::invalid();
     }
 

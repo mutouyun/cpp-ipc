@@ -27,7 +27,7 @@ public:
         return ::CreateSemaphore(NULL, 0, LONG_MAX, ipc::detail::to_tchar(name).c_str());
     }
 
-    void close(handle_t h, char const * /*name*/) {
+    void close(handle_t h) {
         if (h == invalid()) return;
         ::CloseHandle(h);
     }
@@ -44,7 +44,7 @@ public:
         for (unsigned k = 0;;) {
             auto c = counter_.load(std::memory_order_acquire);
             if (c == 0) return;
-            if (counter_.compare_exchange_weak(c, c - 1, std::memory_order_relaxed)) {
+            if (counter_.compare_exchange_weak(c, c - 1, std::memory_order_release)) {
                 break;
             }
             ipc::yield(k);
