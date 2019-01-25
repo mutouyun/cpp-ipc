@@ -132,8 +132,8 @@ void benchmark_alloc() {
             sw.start();
             for (std::size_t x = 0; x < 2; ++x) {
                 for(std::size_t n = 0; n < LoopCount; ++n) {
-                    int         m  = mode.ix_[x][n];
-                    void*    (& p) = ptrs[pid][static_cast<std::size_t>(m)];
+                    int    m = mode.ix_[x][n];
+                    void*& p = ptrs[pid][static_cast<std::size_t>(m)];
                     std::size_t s  = sizes__[static_cast<std::size_t>(m)];
                     if (p == nullptr) {
                         p = AllocT::alloc(s);

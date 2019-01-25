@@ -9,7 +9,12 @@ CONFIG -= app_bundle
 
 DESTDIR = ../output
 
-!msvc:QMAKE_CXXFLAGS += -Wno-attributes -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-function
+!msvc:QMAKE_CXXFLAGS += \
+    -Wno-attributes \
+    -Wno-missing-field-initializers \
+    -Wno-unused-variable \
+    -Wno-unused-function \
+    -Wno-class-memaccess
 
 INCLUDEPATH += \
     ../test \

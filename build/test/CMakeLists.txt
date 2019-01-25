@@ -6,7 +6,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 find_package(Qt5 COMPONENTS Core Test REQUIRED)
 
 if(NOT MSVC)
-  add_compile_options(-Wno-unused-function -Wno-attributes)
+  add_compile_options(-Wno-attributes -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-function -Wno-class-memaccess)
 endif()
 
 include_directories(../../include ../../src ../../test ../../test/capo)
