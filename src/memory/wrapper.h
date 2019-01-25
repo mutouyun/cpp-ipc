@@ -13,9 +13,6 @@
 #include "def.h"
 #include "rw_lock.h"
 #include "tls_pointer.h"
-
-#include "memory/alloc.h"
-#include "memory/detail.h"
 #include "platform/detail.h"
 
 namespace ipc {
@@ -124,14 +121,6 @@ constexpr bool operator!=(const allocator_wrapper<T, AllocP>&, const allocator_w
 /// Thread-safe allocation wrapper
 ////////////////////////////////////////////////////////////////
 
-template <std::size_t BlockSize>
-using page_fixed = ipc::mem::detail::fixed<BlockSize, page_fixed_alloc>;
-
-using page_pool_alloc = detail::pool_alloc<page_fixed>;
-
-template <typename T>
-using page_allocator = allocator_wrapper<T, page_pool_alloc>;
-
 template <typename AllocP>
 class synchronized {
 public:
@@ -139,8 +128,7 @@ public:
 
 private:
     spin_lock lc_;
-    std::multimap<std::size_t, alloc_policy*, std::less<std::size_t>,
-                  page_allocator<std::pair<const std::size_t, alloc_policy*>>> allocs_;
+    std::multimap<std::size_t, alloc_policy*> allocs_;
 
     struct alloc_t {
         synchronized* t_;
@@ -156,11 +144,10 @@ private:
                     std::tie(s_, a_) = *it;
                     t_->allocs_.erase(it);
                 }
-                if (a_ == nullptr) {
-                    a_ = static_cast<alloc_policy*>(page_pool_alloc::alloc(sizeof(alloc_policy)));
-                }
             }
-            ::new (a_) alloc_policy;
+            if (a_ == nullptr) {
+                a_ = new alloc_policy;
+            }
         }
 
         ~alloc_t() {
@@ -188,11 +175,14 @@ private:
     }
 
 public:
+    ~synchronized() {
+        clear();
+    }
+
     void clear() {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
         for (auto& pair : allocs_) {
-            pair.second->~AllocP();
-            page_pool_alloc::free(pair.second, sizeof(alloc_policy));
+            delete pair.second;
         }
     }
 
