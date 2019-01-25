@@ -139,8 +139,8 @@ public:
 
 private:
     spin_lock lc_;
-    std::multimap<std::size_t, alloc_policy*/*, std::less<std::size_t>,
-                  page_allocator<std::pair<const std::size_t, alloc_policy*>>*/> allocs_;
+    std::multimap<std::size_t, alloc_policy*, std::less<std::size_t>,
+                  page_allocator<std::pair<const std::size_t, alloc_policy*>>> allocs_;
 
     struct alloc_t {
         synchronized* t_;
@@ -156,12 +156,11 @@ private:
                     std::tie(s_, a_) = *it;
                     t_->allocs_.erase(it);
                 }
-//                if (a_ == nullptr) {
-//                    a_ = static_cast<alloc_policy*>(page_pool_alloc::alloc(sizeof(alloc_policy)));
-//                }
+                if (a_ == nullptr) {
+                    a_ = static_cast<alloc_policy*>(page_pool_alloc::alloc(sizeof(alloc_policy)));
+                }
             }
-//            ::new (a_) alloc_policy;
-            a_ = new alloc_policy;
+            ::new (a_) alloc_policy;
         }
 
         ~alloc_t() {
@@ -189,16 +188,11 @@ private:
     }
 
 public:
-    ~synchronized() {
-        clear();
-    }
-
     void clear() {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
         for (auto& pair : allocs_) {
             pair.second->~AllocP();
-//            page_pool_alloc::free(pair.second, sizeof(alloc_policy));
-            delete pair.second;
+            page_pool_alloc::free(pair.second, sizeof(alloc_policy));
         }
     }
 
