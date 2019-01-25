@@ -42,7 +42,8 @@ struct msg_t<0, AlignSize> {
 };
 
 template <std::size_t DataSize, std::size_t AlignSize>
-struct msg_t : msg_t<0, AlignSize> {
+struct msg_t {
+    msg_t<0, AlignSize> head_;
     alignas(AlignSize) byte_t data_[DataSize];
 };
 
@@ -172,25 +173,25 @@ static buff_t recv(ipc::handle_t h) {
     while (1) {
         // pop a new message
         auto msg = que->pop();
-        if (msg.id_ == 0) return {};
-        if (msg.que_ == que) continue; // pop next
-        // msg.remain_ may minus & abs(msg.remain_) < data_length
+        if (msg.head_.id_ == 0) return {};
+        if (msg.head_.que_ == que) continue; // pop next
+        // msg.head_.remain_ may minus & abs(msg.head_.remain_) < data_length
         std::size_t remain = static_cast<std::size_t>(
-                             static_cast<int>(data_length) + msg.remain_);
-        // find cache with msg.id_
-        auto cac_it = rc.find(msg.id_);
+                             static_cast<int>(data_length) + msg.head_.remain_);
+        // find cache with msg.head_.id_
+        auto cac_it = rc.find(msg.head_.id_);
         if (cac_it == rc.end()) {
             if (remain <= data_length) {
                 return make_cache(msg.data_, remain);
             }
             // cache the first message fragment
-            else rc.emplace(msg.id_, cache_t { data_length, make_cache(msg.data_, remain) });
+            else rc.emplace(msg.head_.id_, cache_t { data_length, make_cache(msg.data_, remain) });
         }
         // has cached before this message
         else {
             auto& cac = cac_it->second;
             // this is the last message fragment
-            if (msg.remain_ <= 0) {
+            if (msg.head_.remain_ <= 0) {
                 cac.append(msg.data_, remain);
                 // finish this message, erase it from cache
                 auto buff = std::move(cac.buff_);
