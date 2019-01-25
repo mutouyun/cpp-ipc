@@ -25,9 +25,23 @@ struct IPC_EXPORT channel_detail {
     static buff_t recv(handle_t h);
 };
 
-template <typename Detail>
+template <>
+struct IPC_EXPORT channel_detail<prod_cons_routes> {
+    static handle_t connect   (char const * name);
+    static void     disconnect(handle_t h);
+
+    static std::size_t recv_count(handle_t h);
+    static bool wait_for_recv(handle_t h, std::size_t r_count);
+
+    static bool   send(handle_t h, void const * data, std::size_t size);
+    static buff_t recv(handle_t h);
+};
+
+template <typename Flag>
 class channel_impl {
 private:
+    using detail_t = channel_detail<Flag>;
+
     handle_t    h_ = nullptr;
     std::string n_;
 
@@ -75,23 +89,23 @@ public:
     bool connect(char const * name) {
         if (name == nullptr || name[0] == '\0') return false;
         this->disconnect();
-        h_ = Detail::connect((n_ = name).c_str());
+        h_ = detail_t::connect((n_ = name).c_str());
         return valid();
     }
 
     void disconnect() {
         if (!valid()) return;
-        Detail::disconnect(h_);
+        detail_t::disconnect(h_);
         h_ = nullptr;
         n_.clear();
     }
 
     std::size_t recv_count() const {
-        return Detail::recv_count(h_);
+        return detail_t::recv_count(h_);
     }
 
     bool wait_for_recv(std::size_t r_count) const {
-        return Detail::wait_for_recv(h_, r_count);
+        return detail_t::wait_for_recv(h_, r_count);
     }
 
     static bool wait_for_recv(char const * name, std::size_t r_count) {
@@ -99,7 +113,7 @@ public:
     }
 
     bool send(void const * data, std::size_t size) {
-        return Detail::send(h_, data, size);
+        return detail_t::send(h_, data, size);
     }
 
     bool send(buff_t const & buff) {
@@ -111,7 +125,7 @@ public:
     }
 
     buff_t recv() {
-        return Detail::recv(h_);
+        return detail_t::recv(h_);
     }
 };
 
@@ -125,9 +139,8 @@ public:
  * A route could only be used in 1 to N
  * (one producer/server/sender to multi consumers/clients/receivers)
 */
-using route = channel_impl<channel_detail<
-    ipc::prod_cons<relat::single, relat::multi, trans::broadcast>
->>;
+
+using route = channel_impl<ipc::prod_cons<relat::single, relat::multi, trans::broadcast>>;
 
 /*
  * class channel
@@ -137,8 +150,6 @@ using route = channel_impl<channel_detail<
  * would receive your sent messages.
 */
 
-using channel = channel_impl<channel_detail<
-    ipc::prod_cons<relat::multi, relat::multi, trans::broadcast>
->>;
+using channel = channel_impl<ipc::prod_cons<relat::multi, relat::multi, trans::broadcast>>;
 
 } // namespace ipc

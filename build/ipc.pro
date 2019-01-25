@@ -33,14 +33,16 @@ HEADERS += \
     ../src/prod_cons.h \
     ../src/policy.h \
     ../src/queue.h \
-    ../src/log.h
+    ../src/log.h \
+    ../src/id_pool.h
 
 SOURCES += \
     ../src/shm.cpp \
     ../src/ipc.cpp \
     ../src/pool_alloc.cpp \
     ../src/buffer.cpp \
-    ../src/waiter.cpp
+    ../src/waiter.cpp \
+    ../src/channel.cpp
 
 unix {
 

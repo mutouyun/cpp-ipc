@@ -16,6 +16,7 @@
 #include "rw_lock.h"
 
 #include "platform/waiter_wrapper.h"
+#include "platform/detail.h"
 
 namespace ipc {
 namespace detail {
