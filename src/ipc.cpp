@@ -18,7 +18,7 @@
 namespace {
 
 using namespace ipc;
-using data_t   = byte_t[data_length];
+
 using msg_id_t = std::size_t;
 
 inline auto acc_of_msg() {
@@ -26,19 +26,30 @@ inline auto acc_of_msg() {
     return static_cast<std::atomic<msg_id_t>*>(g_shm.get());
 }
 
-template <typename Policy>
-struct detail_impl {
+template <std::size_t DataSize,
+#   if __cplusplus >= 201703L
+          std::size_t AlignSize = (std::min)(DataSize, alignof(std::size_t))>
+#   else /*__cplusplus < 201703L*/
+          std::size_t AlignSize = (DataSize < alignof(std::size_t)) ? DataSize : alignof(std::size_t)>
+#   endif/*__cplusplus < 201703L*/
+struct msg_t;
 
-#pragma pack(1)
-struct msg_t {
+template <std::size_t AlignSize>
+struct msg_t<0, AlignSize> {
     void*    que_;
     msg_id_t id_;
     int      remain_;
-    data_t   data_;
 };
-#pragma pack()
 
-using queue_t = ipc::queue<msg_t, Policy>;
+template <std::size_t DataSize, std::size_t AlignSize>
+struct msg_t : msg_t<0, AlignSize> {
+    alignas(AlignSize) byte_t data_[DataSize];
+};
+
+template <typename Policy>
+struct detail_impl {
+
+using queue_t = ipc::queue<msg_t<data_length>, Policy>;
 
 constexpr static void* head_of(queue_t* que) {
     return static_cast<void*>(que->elems());
@@ -131,12 +142,11 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
     }
     // calc a new message id, start with 1
     auto msg_id = acc_of_msg()->fetch_add(1, std::memory_order_relaxed) + 1;
-    // push message fragment, one fragment size is data_length
+    // push message fragment
     int offset = 0;
     for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
-        msg_t msg {
-            que, msg_id,
-            static_cast<int>(size) - offset - static_cast<int>(data_length), {}
+        msg_t<data_length> msg {
+            { que, msg_id, static_cast<int>(size) - offset - static_cast<int>(data_length) }, {}
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset, data_length);
         if (!que->push(msg)) return false;
@@ -144,9 +154,8 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
     // if remain > 0, this is the last message fragment
     int remain = static_cast<int>(size) - offset;
     if (remain > 0) {
-        msg_t msg {
-            que, msg_id,
-            remain - static_cast<int>(data_length), {}
+        msg_t<data_length> msg {
+            { que, msg_id, remain - static_cast<int>(data_length) }, {}
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset,
                                static_cast<std::size_t>(remain));

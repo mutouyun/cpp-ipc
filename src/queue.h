@@ -240,7 +240,9 @@ public:
         return base_t::template push<T>(std::forward<P>(params)...);
     }
 
-    T pop() { return base_t::template pop<T>(); }
+    T pop() {
+        return base_t::template pop<T>();
+    }
 };
 
 } // namespace ipc
