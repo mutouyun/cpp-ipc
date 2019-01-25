@@ -125,12 +125,12 @@ constexpr bool operator!=(const allocator_wrapper<T, AllocP>&, const allocator_w
 ////////////////////////////////////////////////////////////////
 
 template <std::size_t BlockSize>
-using locked_fixed = ipc::mem::detail::fixed<BlockSize, locked_fixed_alloc>;
+using page_fixed = ipc::mem::detail::fixed<BlockSize, page_fixed_alloc>;
 
-using locked_pool_alloc = detail::pool_alloc<locked_fixed>;
+using page_pool_alloc = detail::pool_alloc<page_fixed>;
 
 template <typename T>
-using locked_allocator = allocator_wrapper<T, locked_pool_alloc>;
+using page_allocator = allocator_wrapper<T, page_pool_alloc>;
 
 template <typename AllocP>
 class synchronized {
@@ -140,7 +140,7 @@ public:
 private:
     spin_lock lc_;
     std::multimap<std::size_t, alloc_policy*, std::less<std::size_t>,
-                  locked_allocator<std::pair<const std::size_t, alloc_policy*>>> allocs_;
+                  page_allocator<std::pair<const std::size_t, alloc_policy*>>> allocs_;
 
     struct alloc_t {
         synchronized* t_;
@@ -156,11 +156,11 @@ private:
                     std::tie(s_, a_) = *it;
                     t_->allocs_.erase(it);
                 }
+                if (a_ == nullptr) {
+                    a_ = static_cast<alloc_policy*>(page_pool_alloc::alloc(sizeof(alloc_policy)));
+                }
             }
-            if (a_ == nullptr) {
-                a_ = static_cast<alloc_policy*>(locked_pool_alloc::alloc(sizeof(alloc_policy)));
-                ::new (a_) alloc_policy;
-            }
+            ::new (a_) alloc_policy;
         }
 
         ~alloc_t() {
@@ -189,22 +189,15 @@ private:
 
 public:
     ~synchronized() {
-        for (auto& pair : allocs_) {
-            pair.second->~AllocP();
-            locked_pool_alloc::free(pair.second, sizeof(alloc_policy));
-        }
+        clear();
     }
 
     void clear() {
-        auto guard = ipc::detail::unique_lock(lc_);
-        std::vector<alloc_policy*> vec(allocs_.size());
-        std::size_t i = 0;
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
         for (auto& pair : allocs_) {
-            vec[i++] = pair.second;
+            pair.second->~AllocP();
+            page_pool_alloc::free(pair.second, sizeof(alloc_policy));
         }
-        allocs_.clear();
-        guard.unlock();
-        for (auto alc : vec) delete alc;
     }
 
     void* alloc(std::size_t size) {
