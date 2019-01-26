@@ -44,10 +44,10 @@ enum class trans { // transmission
 // producer-consumer policy flag
 
 template <relat Rp, relat Rc, trans Ts>
-struct prod_cons {};
+struct wr {};
 
 // implement with multi routes
-struct prod_cons_routes {};
+struct wr_routes {};
 
 // concept helpers
 

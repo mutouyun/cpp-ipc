@@ -214,39 +214,39 @@ using policy_t = policy::choose<circ::elem_array, Flag>;
 namespace ipc {
 
 template <typename Flag>
-ipc::handle_t channel_detail<Flag>::connect(char const * name) {
+ipc::handle_t chan_impl<Flag>::connect(char const * name) {
     return detail_impl<policy_t<Flag>>::connect(name);
 }
 
 template <typename Flag>
-void channel_detail<Flag>::disconnect(ipc::handle_t h) {
+void chan_impl<Flag>::disconnect(ipc::handle_t h) {
     detail_impl<policy_t<Flag>>::disconnect(h);
 }
 
 template <typename Flag>
-std::size_t channel_detail<Flag>::recv_count(ipc::handle_t h) {
+std::size_t chan_impl<Flag>::recv_count(ipc::handle_t h) {
     return detail_impl<policy_t<Flag>>::recv_count(h);
 }
 
 template <typename Flag>
-bool channel_detail<Flag>::wait_for_recv(ipc::handle_t h, std::size_t r_count) {
+bool chan_impl<Flag>::wait_for_recv(ipc::handle_t h, std::size_t r_count) {
     return detail_impl<policy_t<Flag>>::wait_for_recv(h, r_count);
 }
 
 template <typename Flag>
-bool channel_detail<Flag>::send(ipc::handle_t h, void const * data, std::size_t size) {
+bool chan_impl<Flag>::send(ipc::handle_t h, void const * data, std::size_t size) {
     return detail_impl<policy_t<Flag>>::send(h, data, size);
 }
 
 template <typename Flag>
-buff_t channel_detail<Flag>::recv(ipc::handle_t h) {
+buff_t chan_impl<Flag>::recv(ipc::handle_t h) {
     return detail_impl<policy_t<Flag>>::recv(h);
 }
 
-template struct channel_detail<ipc::prod_cons<relat::single, relat::single, trans::unicast  >>;
-template struct channel_detail<ipc::prod_cons<relat::single, relat::multi , trans::unicast  >>;
-template struct channel_detail<ipc::prod_cons<relat::multi , relat::multi , trans::unicast  >>;
-template struct channel_detail<ipc::prod_cons<relat::single, relat::multi , trans::broadcast>>;
-template struct channel_detail<ipc::prod_cons<relat::multi , relat::multi , trans::broadcast>>;
+template struct chan_impl<ipc::wr<relat::single, relat::single, trans::unicast  >>;
+template struct chan_impl<ipc::wr<relat::single, relat::multi , trans::unicast  >>;
+template struct chan_impl<ipc::wr<relat::multi , relat::multi , trans::unicast  >>;
+template struct chan_impl<ipc::wr<relat::single, relat::multi , trans::broadcast>>;
+template struct chan_impl<ipc::wr<relat::multi , relat::multi , trans::broadcast>>;
 
 } // namespace ipc

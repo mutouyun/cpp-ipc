@@ -14,7 +14,7 @@ using handle_t = void*;
 using buff_t   = buffer;
 
 template <typename Flag>
-struct IPC_EXPORT channel_detail {
+struct IPC_EXPORT chan_impl {
     static handle_t connect   (char const * name);
     static void     disconnect(handle_t h);
 
@@ -26,7 +26,7 @@ struct IPC_EXPORT channel_detail {
 };
 
 template <>
-struct IPC_EXPORT channel_detail<prod_cons_routes> {
+struct IPC_EXPORT chan_impl<wr_routes> {
     static handle_t connect   (char const * name);
     static void     disconnect(handle_t h);
 
@@ -38,34 +38,34 @@ struct IPC_EXPORT channel_detail<prod_cons_routes> {
 };
 
 template <typename Flag>
-class channel_impl {
+class chan_wrapper {
 private:
-    using detail_t = channel_detail<Flag>;
+    using detail_t = chan_impl<Flag>;
 
     handle_t    h_ = nullptr;
     std::string n_;
 
 public:
-    channel_impl() = default;
+    chan_wrapper() = default;
 
-    explicit channel_impl(char const * name) {
+    explicit chan_wrapper(char const * name) {
         this->connect(name);
     }
 
-    channel_impl(channel_impl&& rhs) {
+    chan_wrapper(chan_wrapper&& rhs) {
         swap(rhs);
     }
 
-    ~channel_impl() {
+    ~chan_wrapper() {
         disconnect();
     }
 
-    void swap(channel_impl& rhs) {
+    void swap(chan_wrapper& rhs) {
         std::swap(h_, rhs.h_);
         n_.swap(rhs.n_);
     }
 
-    channel_impl& operator=(channel_impl rhs) {
+    chan_wrapper& operator=(chan_wrapper rhs) {
         swap(rhs);
         return *this;
     }
@@ -82,8 +82,8 @@ public:
         return (handle() != nullptr);
     }
 
-    channel_impl clone() const {
-        return channel_impl { name() };
+    chan_wrapper clone() const {
+        return chan_wrapper { name() };
     }
 
     bool connect(char const * name) {
@@ -109,7 +109,7 @@ public:
     }
 
     static bool wait_for_recv(char const * name, std::size_t r_count) {
-        return channel_impl(name).wait_for_recv(r_count);
+        return chan_wrapper(name).wait_for_recv(r_count);
     }
 
     bool send(void const * data, std::size_t size) {
@@ -129,6 +129,9 @@ public:
     }
 };
 
+template <typename Flag>
+using chan = chan_wrapper<Flag>;
+
 /*
  * class route
  *
@@ -137,19 +140,19 @@ public:
  * would receive your sent messages.
  *
  * A route could only be used in 1 to N
- * (one producer/server/sender to multi consumers/clients/receivers)
+ * (one producer/writer to multi consumers/readers)
 */
 
-using route = channel_impl<ipc::prod_cons<relat::single, relat::multi, trans::broadcast>>;
+using route = chan<ipc::wr<relat::single, relat::multi, trans::broadcast>>;
 
 /*
  * class channel
  *
- * You could use multi producers/servers/senders for sending messages to a channel,
- * then all the consumers/clients/receivers which are receiving with this channel,
+ * You could use multi producers/writers for sending messages to a channel,
+ * then all the consumers/readers which are receiving with this channel,
  * would receive your sent messages.
 */
 
-using channel = channel_impl<ipc::prod_cons<relat::multi, relat::multi, trans::broadcast>>;
+using channel = chan<ipc::wr<relat::multi, relat::multi, trans::broadcast>>;
 
 } // namespace ipc

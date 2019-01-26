@@ -13,8 +13,7 @@ DESTDIR = ../output
     -Wno-attributes \
     -Wno-missing-field-initializers \
     -Wno-unused-variable \
-    -Wno-unused-function \
-    -Wno-class-memaccess
+    -Wno-unused-function
 
 INCLUDEPATH += \
     ../test \

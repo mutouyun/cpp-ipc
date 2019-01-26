@@ -21,7 +21,7 @@ struct msg_t {
 };
 
 template <ipc::relat Rp, ipc::relat Rc, ipc::trans Ts>
-using pc_t = ipc::prod_cons_impl<ipc::prod_cons<Rp, Rc, Ts>>;
+using pc_t = ipc::prod_cons_impl<ipc::wr<Rp, Rc, Ts>>;
 
 template <std::size_t DataSize, typename Policy>
 struct ea_t : public ipc::circ::elem_array<Policy, DataSize> {
@@ -372,7 +372,7 @@ void Unit::test_prod_cons_performance() {
 void Unit::test_queue() {
     using queue_t = ipc::queue<msg_t, ipc::policy::choose<
             ipc::circ::elem_array,
-            ipc::prod_cons<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast>
+            ipc::wr<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast>
     >>;
     queue_t queue;
 

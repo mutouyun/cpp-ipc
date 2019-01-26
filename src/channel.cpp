@@ -88,26 +88,26 @@ struct ch_multi_routes {
 
 namespace ipc {
 
-ipc::handle_t channel_detail<prod_cons_routes>::connect(char const * /*name*/) {
+ipc::handle_t chan_impl<wr_routes>::connect(char const * /*name*/) {
     return nullptr;
 }
 
-void channel_detail<prod_cons_routes>::disconnect(ipc::handle_t /*h*/) {
+void chan_impl<wr_routes>::disconnect(ipc::handle_t /*h*/) {
 }
 
-std::size_t channel_detail<prod_cons_routes>::recv_count(ipc::handle_t /*h*/) {
+std::size_t chan_impl<wr_routes>::recv_count(ipc::handle_t /*h*/) {
     return 0;
 }
 
-bool channel_detail<prod_cons_routes>::wait_for_recv(ipc::handle_t /*h*/, std::size_t /*r_count*/) {
+bool chan_impl<wr_routes>::wait_for_recv(ipc::handle_t /*h*/, std::size_t /*r_count*/) {
     return false;
 }
 
-bool channel_detail<prod_cons_routes>::send(ipc::handle_t /*h*/, void const * /*data*/, std::size_t /*size*/) {
+bool chan_impl<wr_routes>::send(ipc::handle_t /*h*/, void const * /*data*/, std::size_t /*size*/) {
     return false;
 }
 
-buff_t channel_detail<prod_cons_routes>::recv(ipc::handle_t /*h*/) {
+buff_t chan_impl<wr_routes>::recv(ipc::handle_t /*h*/) {
     return {};
 }
 
