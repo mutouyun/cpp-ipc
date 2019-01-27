@@ -252,7 +252,7 @@ public:
         }
         // calc a new wait-id & construct event object
         event evt { ipc::detail::calc_unique_id() };
-        auto ids = static_cast<std::size_t*>(mem::alloc(sizeof(std::size_t[size])));
+        auto ids = static_cast<std::size_t*>(mem::alloc(sizeof(std::size_t) * size));
         for (std::size_t i = 0; i < size; ++i) {
             ids[i] = std::get<0>(all[i])->push_event(evt);
         }
@@ -260,7 +260,7 @@ public:
             for (std::size_t i = 0; i < size; ++i) {
                 std::get<0>(all[i])->pop_event(ids[i]);
             }
-            mem::free(ids, sizeof(std::size_t[size]));
+            mem::free(ids, sizeof(std::size_t) * size);
         });
         // wait for event signal
         return evt.wait();

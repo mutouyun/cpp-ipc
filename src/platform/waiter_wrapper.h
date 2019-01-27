@@ -67,8 +67,8 @@ public:
             return false;
         }
         using tp_t = decltype(std::declval<waiter_wrapper>().to_w_info());
-        auto hs = static_cast<tp_t*>(mem::alloc(sizeof(tp_t[size])));
-        IPC_UNUSED_ auto guard = unique_ptr(hs, [size](void* p) { mem::free(p, sizeof(tp_t[size])); });
+        auto hs = static_cast<tp_t*>(mem::alloc(sizeof(tp_t) * size));
+        IPC_UNUSED_ auto guard = unique_ptr(hs, [size](void* p) { mem::free(p, sizeof(tp_t) * size); });
         std::size_t i = 0;
         for (; i < size; ++i) {
             auto& w = all[i];

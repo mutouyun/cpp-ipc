@@ -41,8 +41,8 @@ public:
         if (all == nullptr || size == 0) {
             return false;
         }
-        auto hs = static_cast<handle_t*>(mem::alloc(sizeof(handle_t[size])));
-        IPC_UNUSED_ auto guard = unique_ptr(hs, [size](void* p) { mem::free(p, sizeof(handle_t[size])); });
+        auto hs = static_cast<handle_t*>(mem::alloc(sizeof(handle_t) * size));
+        IPC_UNUSED_ auto guard = unique_ptr(hs, [size](void* p) { mem::free(p, sizeof(handle_t) * size); });
         std::size_t i = 0;
         for (; i < size; ++i) {
             auto& info = all[i];
@@ -52,7 +52,7 @@ public:
             hs[i] = std::get<1>(all[i]);
         }
         std::atomic_thread_fence(std::memory_order_release);
-        return ::WaitForMultipleObjects(hs, i, FALSE, INFINITE) != WAIT_FAILED;
+        return ::WaitForMultipleObjects(static_cast<DWORD>(i), hs, FALSE, INFINITE) != WAIT_FAILED;
     }
 
     bool wait(handle_t h) {
