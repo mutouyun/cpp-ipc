@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cstring>
+#include <algorithm>
 
 #include "def.h"
-#include "platform/detail.h"
 
 namespace ipc {
 
@@ -37,7 +37,11 @@ struct id_type<0, AlignSize> {
 };
 
 template <std::size_t DataSize  = 0,
-          std::size_t AlignSize = ipc::detail::min_val(DataSize, alignof(std::size_t))>
+#if __cplusplus >= 201703L
+          std::size_t AlignSize = (std::min)(DataSize, alignof(std::size_t))>
+#else /*__cplusplus < 201703L*/
+          std::size_t AlignSize = (alignof(std::size_t) < DataSize) ? alignof(std::size_t) : DataSize>
+#endif/*__cplusplus < 201703L*/
 class id_pool {
 public:
     enum : std::size_t {

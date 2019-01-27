@@ -82,16 +82,6 @@ constexpr auto shared_lock(T&& lc) {
 
 #endif/*__cplusplus < 201703L*/
 
-template <typename T>
-constexpr T const & max_val(const T& a, const T& b) {
-    return a < b ? b : a;
-}
-
-template <typename T>
-constexpr T const & min_val(const T& a, const T& b) {
-    return b < a ? b : a;
-}
-
 std::size_t calc_unique_id();
 
 template <typename F, typename D>

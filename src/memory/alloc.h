@@ -10,8 +10,6 @@
 #include "def.h"
 #include "rw_lock.h"
 
-#include "platform/detail.h"
-
 namespace ipc {
 namespace mem {
 
@@ -150,7 +148,11 @@ public:
     using alloc_policy = AllocP;
 
     enum : std::size_t {
-        block_size = ipc::detail::max_val(BlockSize, sizeof(void*))
+#if __cplusplus >= 201703L
+        block_size = (std::max)(BlockSize, sizeof(void*))
+#else /*__cplusplus < 201703L*/
+        block_size = (BlockSize < sizeof(void*)) ? sizeof(void*) : BlockSize
+#endif/*__cplusplus < 201703L*/
     };
 
 private:

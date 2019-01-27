@@ -23,7 +23,11 @@ using namespace ipc;
 using msg_id_t = std::size_t;
 
 template <std::size_t DataSize,
-          std::size_t AlignSize = ipc::detail::min_val(DataSize, alignof(std::size_t))>
+#if __cplusplus >= 201703L
+          std::size_t AlignSize = (std::min)(DataSize, alignof(std::size_t))>
+#else /*__cplusplus < 201703L*/
+          std::size_t AlignSize = (alignof(std::size_t) < DataSize) ? alignof(std::size_t) : DataSize>
+#endif/*__cplusplus < 201703L*/
 struct msg_t;
 
 template <std::size_t AlignSize>
