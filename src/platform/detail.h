@@ -5,7 +5,6 @@
 #include <shared_mutex>
 #include <type_traits>
 #include <tuple>
-#include <algorithm>
 #include <atomic>
 
 #include "def.h"
@@ -57,8 +56,6 @@ namespace detail {
 using std::unique_ptr;
 using std::unique_lock;
 using std::shared_lock;
-using std::max;
-using std::min;
 
 #else /*__cplusplus < 201703L*/
 
@@ -83,17 +80,17 @@ constexpr auto shared_lock(T&& lc) {
     return std::shared_lock<std::decay_t<T>> { std::forward<T>(lc) };
 }
 
+#endif/*__cplusplus < 201703L*/
+
 template <typename T>
-constexpr T const & max(const T& a, const T& b) {
+constexpr T const & max_val(const T& a, const T& b) {
     return a < b ? b : a;
 }
 
 template <typename T>
-constexpr T const & min(const T& a, const T& b) {
+constexpr T const & min_val(const T& a, const T& b) {
     return b < a ? b : a;
 }
-
-#endif/*__cplusplus < 201703L*/
 
 std::size_t calc_unique_id();
 

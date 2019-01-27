@@ -23,7 +23,7 @@ using namespace ipc;
 using msg_id_t = std::size_t;
 
 template <std::size_t DataSize,
-          std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::size_t))>
+          std::size_t AlignSize = ipc::detail::min_val(DataSize, alignof(std::size_t))>
 struct msg_t;
 
 template <std::size_t AlignSize>

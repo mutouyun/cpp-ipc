@@ -37,7 +37,7 @@ struct id_type<0, AlignSize> {
 };
 
 template <std::size_t DataSize  = 0,
-          std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::size_t))>
+          std::size_t AlignSize = ipc::detail::min_val(DataSize, alignof(std::size_t))>
 class id_pool {
 public:
     enum : std::size_t {

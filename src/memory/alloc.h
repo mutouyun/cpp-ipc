@@ -150,7 +150,7 @@ public:
     using alloc_policy = AllocP;
 
     enum : std::size_t {
-        block_size = (ipc::detail::max)(BlockSize, sizeof(void*))
+        block_size = ipc::detail::max_val(BlockSize, sizeof(void*))
     };
 
 private:
