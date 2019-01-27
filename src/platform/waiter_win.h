@@ -5,9 +5,14 @@
 #include <algorithm>
 #include <iterator>
 #include <atomic>
+#include <array>
+#include <tuple>
 
 #include "rw_lock.h"
+#include "pool_alloc.h"
+
 #include "platform/to_tchar.h"
+#include "platform/detail.h"
 
 namespace ipc {
 namespace detail {
@@ -30,6 +35,24 @@ public:
     void close(handle_t h) {
         if (h == invalid()) return;
         ::CloseHandle(h);
+    }
+
+    static bool wait_all(std::tuple<waiter*, handle_t> const * all, std::size_t size) {
+        if (all == nullptr || size == 0) {
+            return false;
+        }
+        auto hs = static_cast<handle_t*>(mem::alloc(sizeof(handle_t[size])));
+        IPC_UNUSED_ auto guard = unique_ptr(hs, [size](void* p) { mem::free(p, sizeof(handle_t[size])); });
+        std::size_t i = 0;
+        for (; i < size; ++i) {
+            auto& info = all[i];
+            if ((std::get<0>(all[i]) == nullptr) ||
+                (std::get<1>(all[i]) == invalid())) continue;
+            std::get<0>(info)->counter_.fetch_add(1, std::memory_order_relaxed);
+            hs[i] = std::get<1>(all[i]);
+        }
+        std::atomic_thread_fence(std::memory_order_release);
+        return ::WaitForMultipleObjects(hs, i, FALSE, INFINITE) != WAIT_FAILED;
     }
 
     bool wait(handle_t h) {

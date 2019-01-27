@@ -1,5 +1,6 @@
 #include <array>
 #include <string>
+#include <type_traits>
 
 #include "ipc.h"
 #include "shm.h"
@@ -13,8 +14,8 @@ namespace {
 using namespace ipc;
 
 struct ch_info_t {
-    rw_lock lc_;
-    id_pool ch_acc_; // only support 255 channels with one name
+    rw_lock   lc_;
+    id_pool<> ch_acc_; // only support 255 channels with one name
 };
 
 struct ch_multi_routes {
@@ -24,7 +25,7 @@ struct ch_multi_routes {
     std::size_t id_;
     bool        marked_ = false;
 
-    std::array<route, id_pool::max_count> rts_;
+    std::array<route, decltype(ch_info_t::ch_acc_)::max_count> rts_;
 
     ch_info_t& info() {
         return *static_cast<ch_info_t*>(h_.get());

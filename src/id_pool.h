@@ -3,9 +3,41 @@
 #include <cstring>
 
 #include "def.h"
+#include "platform/detail.h"
 
 namespace ipc {
 
+template <std::size_t DataSize, std::size_t AlignSize>
+struct id_type {
+    uint_t<8> id_;
+    alignas(AlignSize) byte_t data_[DataSize] {};
+
+    id_type& operator=(uint_t<8> val) {
+        id_ = val;
+        return (*this);
+    }
+
+    operator uint_t<8>() const {
+        return id_;
+    }
+};
+
+template <std::size_t AlignSize>
+struct id_type<0, AlignSize> {
+    uint_t<8> id_;
+
+    id_type& operator=(uint_t<8> val) {
+        id_ = val;
+        return (*this);
+    }
+
+    operator uint_t<8>() const {
+        return id_;
+    }
+};
+
+template <std::size_t DataSize  = 0,
+          std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::size_t))>
 class id_pool {
 public:
     enum : std::size_t {
@@ -13,9 +45,10 @@ public:
     };
 
 private:
+    id_type<DataSize, AlignSize> next_[max_count];
+
     uint_t<8> acquir_ = 0;
     uint_t<8> cursor_ = 0;
-    uint_t<8> next_[max_count] {};
 
 public:
     void init() {
@@ -49,12 +82,13 @@ public:
     }
 
     bool release(std::size_t id) {
+        if (id == invalid_value) return false;
         if (acquir_ == max_count) return false;
         if (acquir_ == id) {
             acquir_ = next_[id]; // point to next
         }
         else {
-            auto a = next_[acquir_], l = acquir_;
+            uint_t<8> a = next_[acquir_], l = acquir_;
             while (1) {
                 if (a == max_count) {
                     return false; // found nothing
@@ -76,9 +110,13 @@ public:
     void for_acquired(F&& fr) {
         auto a = acquir_;
         while (a != max_count) {
-            fr(a);
+            if (!fr(a)) return;
             a = next_[a];
         }
+    }
+
+    void* at(std::size_t id) {
+        return next_[id].data_;
     }
 };
 

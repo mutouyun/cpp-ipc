@@ -35,12 +35,12 @@ void* acquire(char const * name, std::size_t size) {
                                    0, static_cast<DWORD>(size),
                                    ipc::detail::to_tchar(std::string{"__IPC_SHM__"} + name).c_str());
     if (h == NULL) {
-        ipc::log("fail CreateFileMapping[%d]: %s\n", static_cast<int>(::GetLastError()), name);
+        ipc::error("fail CreateFileMapping[%d]: %s\n", static_cast<int>(::GetLastError()), name);
         return nullptr;
     }
     LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     if (mem == NULL) {
-        ipc::log("fail MapViewOfFile[%d]: %s\n", static_cast<int>(::GetLastError()), name);
+        ipc::error("fail MapViewOfFile[%d]: %s\n", static_cast<int>(::GetLastError()), name);
         ::CloseHandle(h);
         return nullptr;
     }

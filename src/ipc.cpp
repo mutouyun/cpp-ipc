@@ -14,6 +14,7 @@
 #include "policy.h"
 
 #include "memory/resource.h"
+#include "platform/detail.h"
 
 namespace {
 
@@ -21,17 +22,8 @@ using namespace ipc;
 
 using msg_id_t = std::size_t;
 
-inline auto acc_of_msg() {
-    static shm::handle g_shm { "GLOBAL_ACC_STORAGE__", sizeof(std::atomic<msg_id_t>) };
-    return static_cast<std::atomic<msg_id_t>*>(g_shm.get());
-}
-
 template <std::size_t DataSize,
-#   if __cplusplus >= 201703L
-          std::size_t AlignSize = (std::min)(DataSize, alignof(std::size_t))>
-#   else /*__cplusplus < 201703L*/
-          std::size_t AlignSize = (DataSize < alignof(std::size_t)) ? DataSize : alignof(std::size_t)>
-#   endif/*__cplusplus < 201703L*/
+          std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::size_t))>
 struct msg_t;
 
 template <std::size_t AlignSize>
@@ -141,8 +133,8 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
     if (que == nullptr) {
         return false;
     }
-    // calc a new message id, start with 1
-    auto msg_id = acc_of_msg()->fetch_add(1, std::memory_order_relaxed) + 1;
+    // calc a new message id
+    auto msg_id = ipc::detail::calc_unique_id();
     // push message fragment
     int offset = 0;
     for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
@@ -173,7 +165,7 @@ static buff_t recv(ipc::handle_t h) {
     while (1) {
         // pop a new message
         auto msg = que->pop();
-        if (msg.head_.id_ == 0) return {};
+        if (msg.head_.que_ == nullptr) return {};
         if (msg.head_.que_ == que) continue; // pop next
         // msg.head_.remain_ may minus & abs(msg.head_.remain_) < data_length
         std::size_t remain = static_cast<std::size_t>(
@@ -212,6 +204,15 @@ using policy_t = policy::choose<circ::elem_array, Flag>;
 } // internal-linkage
 
 namespace ipc {
+
+namespace detail {
+
+std::size_t calc_unique_id() {
+    static shm::handle g_shm { "__GLOBAL_ACC_STORAGE__", sizeof(std::atomic<std::size_t>) };
+    return static_cast<std::atomic<std::size_t>*>(g_shm.get())->fetch_add(1, std::memory_order_relaxed);
+}
+
+} // namespace detail
 
 template <typename Flag>
 ipc::handle_t chan_impl<Flag>::connect(char const * name) {

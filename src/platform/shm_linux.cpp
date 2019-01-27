@@ -51,12 +51,12 @@ void* acquire(char const * name, std::size_t size) {
                                          S_IRGRP | S_IWGRP |
                                          S_IROTH | S_IWOTH);
     if (fd == -1) {
-        ipc::log("fail shm_open[%d]: %s\n", errno, name);
+        ipc::error("fail shm_open[%d]: %s\n", errno, name);
         return nullptr;
     }
     size += sizeof(acc_t);
     if (::ftruncate(fd, static_cast<off_t>(size)) != 0) {
-        ipc::log("fail ftruncate[%d]: %s\n", errno, name);
+        ipc::error("fail ftruncate[%d]: %s\n", errno, name);
         ::close(fd);
         ::shm_unlink(op_name.c_str());
         return nullptr;
@@ -64,7 +64,7 @@ void* acquire(char const * name, std::size_t size) {
     void* mem = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     ::close(fd);
     if (mem == MAP_FAILED) {
-        ipc::log("fail mmap[%d]: %s\n", errno, name);
+        ipc::error("fail mmap[%d]: %s\n", errno, name);
         ::shm_unlink(op_name.c_str());
         return nullptr;
     }

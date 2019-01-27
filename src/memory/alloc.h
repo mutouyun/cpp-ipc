@@ -150,11 +150,7 @@ public:
     using alloc_policy = AllocP;
 
     enum : std::size_t {
-#   if __cplusplus >= 201703L
-        block_size = (std::max)(BlockSize, sizeof(void*))
-#   else /*__cplusplus < 201703L*/
-        block_size = (BlockSize < sizeof(void*)) ? sizeof(void*) : BlockSize
-#   endif/*__cplusplus < 201703L*/
+        block_size = (ipc::detail::max)(BlockSize, sizeof(void*))
     };
 
 private:
