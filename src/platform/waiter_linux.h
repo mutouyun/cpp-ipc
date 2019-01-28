@@ -74,7 +74,7 @@ public:
 class event {
     std::atomic<std::size_t>* cnt_ = nullptr;
     semaphore::handle_t sem_ = semaphore::invalid();
-    uint_t<16> wait_id_;
+    std::size_t wait_id_;
 
     std::string name() const {
         return "__IPC_WAIT__" + std::to_string(wait_id_);
