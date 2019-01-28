@@ -1,6 +1,5 @@
 #pragma once
 
-#include <pthread.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <semaphore.h>
@@ -72,123 +71,6 @@ public:
 #pragma pop_macro("IPC_SEMAPHORE_FUNC_")
 };
 
-class mutex {
-    pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
-
-public:
-    pthread_mutex_t& native() {
-        return mutex_;
-    }
-
-    bool open() {
-        int eno;
-        // init mutex
-        pthread_mutexattr_t mutex_attr;
-        if ((eno = ::pthread_mutexattr_init(&mutex_attr)) != 0) {
-            ipc::error("fail pthread_mutexattr_init[%d]\n", eno);
-            return false;
-        }
-        IPC_UNUSED_ auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
-        if ((eno = ::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)) != 0) {
-            ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
-            return false;
-        }
-        if ((eno = ::pthread_mutex_init(&mutex_, &mutex_attr)) != 0) {
-            ipc::error("fail pthread_mutex_init[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-
-    bool close() {
-        int eno;
-        if ((eno = ::pthread_mutex_destroy(&mutex_)) != 0) {
-            ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-
-    bool lock() {
-        int eno;
-        if ((eno = ::pthread_mutex_lock(&mutex_)) != 0) {
-            ipc::error("fail pthread_mutex_lock[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-
-    bool unlock() {
-        int eno;
-        if ((eno = ::pthread_mutex_unlock(&mutex_)) != 0) {
-            ipc::error("fail pthread_mutex_unlock[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-};
-
-class condition {
-    pthread_cond_t cond_  = PTHREAD_COND_INITIALIZER;
-
-public:
-    bool open() {
-        int eno;
-        // init condition
-        pthread_condattr_t cond_attr;
-        if ((eno = ::pthread_condattr_init(&cond_attr)) != 0) {
-            ipc::error("fail pthread_condattr_init[%d]\n", eno);
-            return false;
-        }
-        IPC_UNUSED_ auto guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
-        if ((eno = ::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED)) != 0) {
-            ipc::error("fail pthread_condattr_setpshared[%d]\n", eno);
-            return false;
-        }
-        if ((eno = ::pthread_cond_init(&cond_, &cond_attr)) != 0) {
-            ipc::error("fail pthread_cond_init[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-
-    bool close() {
-        int eno;
-        if ((eno = ::pthread_cond_destroy(&cond_)) != 0) {
-            ipc::error("fail pthread_cond_destroy[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-
-    bool wait(mutex& mtx) {
-        int eno;
-        if ((eno = ::pthread_cond_wait(&cond_, &mtx.native())) != 0) {
-            ipc::error("fail pthread_cond_wait[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-
-    bool notify() {
-        int eno;
-        if ((eno = ::pthread_cond_signal(&cond_)) != 0) {
-            ipc::error("fail pthread_cond_signal[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-
-    bool broadcast() {
-        int eno;
-        if ((eno = ::pthread_cond_broadcast(&cond_)) != 0) {
-            ipc::error("fail pthread_cond_broadcast[%d]\n", eno);
-            return false;
-        }
-        return true;
-    }
-};
-
 class event {
     std::atomic<std::size_t>* cnt_ = nullptr;
     semaphore::handle_t sem_ = semaphore::invalid();
@@ -198,7 +80,9 @@ class event {
         return "__IPC_WAIT__" + std::to_string(wait_id_);
     }
 
-    void open() {
+public:
+    event(std::size_t id)
+        : wait_id_(static_cast<uint_t<16>>(id)) {
         auto n = name();
         cnt_ = static_cast<std::atomic<std::size_t>*>(
                     shm::acquire(n.c_str(), sizeof(std::atomic<std::size_t>)));
@@ -206,27 +90,16 @@ class event {
             ipc::error("fail shm::acquire: %s\n", n.c_str());
             return;
         }
-        if (cnt_->fetch_add(1, std::memory_order_acq_rel) == 0) {
-            sem_ = semaphore::open(n.c_str());
-        }
-    }
-
-    void close() {
-        semaphore::close(sem_);
-        if (cnt_->fetch_sub(1, std::memory_order_acq_rel) == 1) {
-            semaphore::destroy(name().c_str());
-        }
-        shm::release(cnt_, sizeof(std::atomic<std::size_t>));
-    }
-
-public:
-    event(std::size_t id)
-        : wait_id_(static_cast<uint_t<16>>(id)) {
-        open();
+        cnt_->fetch_add(1, std::memory_order_acquire);
+        sem_ = semaphore::open(n.c_str());
     }
 
     ~event() {
-        close();
+        semaphore::close(sem_);
+        if (cnt_->fetch_sub(1, std::memory_order_release) == 1) {
+            semaphore::destroy(name().c_str());
+        }
+        shm::release(cnt_, sizeof(std::atomic<std::size_t>));
     }
 
     auto get_id() const noexcept {
@@ -321,8 +194,7 @@ public:
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(evt_lc_);
         evt_ids_.for_acquired([this](auto id) {
             event evt { *static_cast<evt_id_t*>(evt_ids_.at(id)) };
-            evt.notify();
-            return false; // return first
+            return !evt.notify(); // return if succ
         });
     }
 

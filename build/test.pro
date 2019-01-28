@@ -27,9 +27,10 @@ HEADERS += \
 SOURCES += \
     ../test/main.cpp \
     ../test/test_shm.cpp \
+    ../test/test_mem.cpp \
     ../test/test_circ.cpp \
-    ../test/test_ipc.cpp \
-    ../test/test_mem.cpp
+    ../test/test_waiter.cpp \
+    ../test/test_ipc.cpp
 
 LIBS += \
     -L$${DESTDIR} -lipc

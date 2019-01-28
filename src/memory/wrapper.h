@@ -199,5 +199,32 @@ public:
     }
 };
 
+////////////////////////////////////////////////////////////////
+/// Static allocation wrapper
+////////////////////////////////////////////////////////////////
+
+template <typename AllocP>
+class statical {
+public:
+    using alloc_policy = AllocP;
+
+    static alloc_policy& instance() {
+        static alloc_policy alloc;
+        return alloc;
+    }
+
+    static void clear() {
+        instance().clear();
+    }
+
+    static void* alloc(std::size_t size) {
+        return instance().alloc(size);
+    }
+
+    static void free(void* p, std::size_t size) {
+        instance().free(p, size);
+    }
+};
+
 } // namespace mem
 } // namespace ipc

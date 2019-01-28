@@ -18,12 +18,12 @@ namespace ipc {
 namespace mem {
 
 template <std::size_t Size>
-using sync_fixed_alloc = synchronized<page_fixed_alloc<Size>>;
+using sync_fixed_alloc = mem::synchronized<page_fixed_alloc<Size>>;
 
 template <std::size_t Size>
 using sync_fixed = mem::detail::fixed<Size, sync_fixed_alloc>;
 
-using sync_pool_alloc = detail::pool_alloc<sync_fixed>;
+using sync_pool_alloc = mem::detail::pool_alloc<sync_fixed>;
 
 template <typename T>
 using allocator = allocator_wrapper<T, sync_pool_alloc>;
