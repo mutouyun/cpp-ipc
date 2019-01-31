@@ -110,7 +110,11 @@ public:
     bool wait_for_connect(Elems* elems, std::size_t count) {
         if (elems == nullptr) return false;
         for (unsigned k = 0; elems->conn_count() < count;) {
-            ipc::sleep(k, [this] { return cc_waiter_.wait(); });
+            ipc::sleep(k, [this, elems, count] {
+                return cc_waiter_.wait_if([elems, count] {
+                    return elems->conn_count() < count;
+                });
+            });
         }
         return true;
     }
@@ -214,13 +218,20 @@ public:
             return {};
         }
         T item;
-        for (unsigned k = 0;;) {
-            if (elems_->pop(&this->cursor_, [&item](void* p) {
+        auto pop_item = [this, &item] {
+            return elems_->pop(&this->cursor_, [&item](void* p) {
                 ::new (&item) T(std::move(*static_cast<T*>(p)));
-            })) {
-                return item;
-            }
-            ipc::sleep(k, [this] { return this->waiter_.wait(); });
+            });
+        };
+        for (unsigned k = 0;;) {
+            if (pop_item()) return item;
+            bool succ = false;
+            ipc::sleep(k, [this, &succ, &pop_item] {
+                return this->waiter_.wait_if([&succ, &pop_item] {
+                    return !(succ = pop_item());
+                });
+            });
+            if (succ) return item;
         }
     }
 };

@@ -64,7 +64,7 @@ void waiter::close() {
 }
 
 bool waiter::wait() {
-    return impl(p_)->w_.wait();
+    return impl(p_)->w_.wait_if([] { return true; });
 }
 
 bool waiter::notify() {

@@ -42,6 +42,7 @@ public:
     waiter_t const * waiter() const { return w_; }
 
     void attach(waiter_t* w) {
+        close();
         w_ = w;
     }
 
@@ -62,7 +63,9 @@ public:
         h_ = waiter_t::invalid();
     }
 
-    bool wait_all(waiter_wrapper * all, std::size_t size) {
+
+    template <typename F>
+    bool multi_wait_if(waiter_wrapper * all, std::size_t size, F&& check) {
         if (all == nullptr || size == 0) {
             return false;
         }
@@ -75,12 +78,13 @@ public:
             if (!w.valid()) continue;
             hs[i] = w.to_w_info();
         }
-        return waiter_t::wait_all(hs, i);
+        return waiter_t::multi_wait_if(hs, i, std::forward<F>(check));
     }
 
-    bool wait() {
+    template <typename F>
+    bool wait_if(F&& check) {
         if (!valid()) return false;
-        return w_->wait(h_);
+        return w_->wait_if(h_, std::forward<F>(check));
     }
 
     bool notify() {
