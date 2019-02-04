@@ -30,7 +30,7 @@ std::vector<ipc::buff_t> datas__;
 constexpr int DataMin   = 2;
 constexpr int DataMax   = 256;
 constexpr int LoopCount = 100000;
-//constexpr int LoopCount = 10000;
+//constexpr int LoopCount = 1000;
 
 } // internal-linkage
 

@@ -38,11 +38,11 @@ public:
     }
 
     template <typename F>
-    static bool multi_wait_if(std::tuple<waiter*, handle_t> const * all, std::size_t size, F&& check) {
+    static bool multi_wait_if(std::tuple<waiter*, handle_t> const * all, std::size_t size, F&& pred) {
         if (all == nullptr || size == 0) {
             return false;
         }
-        if (!std::forward<F>(check)()) return true;
+        if (!std::forward<F>(pred)()) return true;
         auto hs = static_cast<handle_t*>(mem::alloc(sizeof(handle_t) * size));
         IPC_UNUSED_ auto guard = unique_ptr(hs, [size](void* p) { mem::free(p, sizeof(handle_t) * size); });
         std::size_t i = 0;
@@ -58,9 +58,9 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t h, F&& check) {
+    bool wait_if(handle_t h, F&& pred) {
         if (h == invalid()) return false;
-        if (!std::forward<F>(check)()) return true;
+        if (!std::forward<F>(pred)()) return true;
         counter_.fetch_add(1, std::memory_order_relaxed);
         std::atomic_thread_fence(std::memory_order_release);
         return ::WaitForSingleObject(h, INFINITE) == WAIT_OBJECT_0;

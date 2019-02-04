@@ -1,9 +1,6 @@
 #pragma once
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <semaphore.h>
-#include <errno.h>
+#include <pthread.h>
 
 #include <cstring>
 #include <atomic>
@@ -22,6 +19,16 @@
 
 namespace ipc {
 namespace detail {
+
+#pragma push_macro("IPC_PTHREAD_FUNC_")
+#undef  IPC_PTHREAD_FUNC_
+#define IPC_PTHREAD_FUNC_(CALL, ...)                \
+    int eno;                                        \
+    if ((eno = ::CALL(__VA_ARGS__)) != 0) {         \
+        ipc::error("fail " #CALL "[%d]\n", eno);    \
+        return false;                               \
+    }                                               \
+    return true
 
 class mutex {
     pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
@@ -52,30 +59,15 @@ public:
     }
 
     bool close() {
-        int eno;
-        if ((eno = ::pthread_mutex_destroy(&mutex_)) != 0) {
-            ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
-            return false;
-        }
-        return true;
+        IPC_PTHREAD_FUNC_(pthread_mutex_destroy, &mutex_);
     }
 
     bool lock() {
-        int eno;
-        if ((eno = ::pthread_mutex_lock(&mutex_)) != 0) {
-            ipc::error("fail pthread_mutex_lock[%d]\n", eno);
-            return false;
-        }
-        return true;
+        IPC_PTHREAD_FUNC_(pthread_mutex_lock, &mutex_);
     }
 
     bool unlock() {
-        int eno;
-        if ((eno = ::pthread_mutex_unlock(&mutex_)) != 0) {
-            ipc::error("fail pthread_mutex_unlock[%d]\n", eno);
-            return false;
-        }
-        return true;
+        IPC_PTHREAD_FUNC_(pthread_mutex_unlock, &mutex_);
     }
 };
 
@@ -104,41 +96,23 @@ public:
     }
 
     bool close() {
-        int eno;
-        if ((eno = ::pthread_cond_destroy(&cond_)) != 0) {
-            ipc::error("fail pthread_cond_destroy[%d]\n", eno);
-            return false;
-        }
-        return true;
+        IPC_PTHREAD_FUNC_(pthread_cond_destroy, &cond_);
     }
 
     bool wait(mutex& mtx) {
-        int eno;
-        if ((eno = ::pthread_cond_wait(&cond_, &mtx.native())) != 0) {
-            ipc::error("fail pthread_cond_wait[%d]\n", eno);
-            return false;
-        }
-        return true;
+        IPC_PTHREAD_FUNC_(pthread_cond_wait, &cond_, &mtx.native());
     }
 
     bool notify() {
-        int eno;
-        if ((eno = ::pthread_cond_signal(&cond_)) != 0) {
-            ipc::error("fail pthread_cond_signal[%d]\n", eno);
-            return false;
-        }
-        return true;
+        IPC_PTHREAD_FUNC_(pthread_cond_signal, &cond_);
     }
 
     bool broadcast() {
-        int eno;
-        if ((eno = ::pthread_cond_broadcast(&cond_)) != 0) {
-            ipc::error("fail pthread_cond_broadcast[%d]\n", eno);
-            return false;
-        }
-        return true;
+        IPC_PTHREAD_FUNC_(pthread_cond_broadcast, &cond_);
     }
 };
+
+#pragma pop_macro("IPC_PTHREAD_FUNC_")
 
 class semaphore {
     mutex     lock_;
@@ -156,12 +130,14 @@ public:
     }
 
     template <typename F>
-    void wait_if(F&& check) {
+    bool wait_if(F&& check) {
+        bool ret = true;
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        while ((counter_ <= 0) && std::forward<F>(check)()) {
-            cond_.wait(lock_);
-        }
+        while ((counter_ <= 0) &&
+               std::forward<F>(check)() &&
+               (ret = cond_.wait(lock_))) ;
         -- counter_;
+        return ret;
     }
 
     template <typename F>
@@ -204,21 +180,13 @@ public:
     }
 
     template <typename F>
-    static bool multi_wait_if(std::tuple<waiter*, handle_t> const * all, std::size_t size, F&& /*check*/) {
-        if (all == nullptr || size == 0) {
-            return false;
-        }
-        return true;
-    }
-
-    template <typename F>
-    bool wait_if(handle_t h, F&& check) {
+    bool wait_if(handle_t h, F&& pred) {
         if (h == invalid()) return false;
         counter_.fetch_add(1, std::memory_order_release);
         IPC_UNUSED_ auto guard = unique_ptr(&counter_, [](decltype(counter_)* c) {
             c->fetch_sub(1, std::memory_order_release);
         });
-        sem_.wait_if(std::forward<F>(check));
+        sem_.wait_if(std::forward<F>(pred));
         return true;
     }
 

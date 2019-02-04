@@ -63,28 +63,10 @@ public:
         h_ = waiter_t::invalid();
     }
 
-
     template <typename F>
-    bool multi_wait_if(waiter_wrapper * all, std::size_t size, F&& check) {
-        if (all == nullptr || size == 0) {
-            return false;
-        }
-        using tp_t = decltype(std::declval<waiter_wrapper>().to_w_info());
-        auto hs = static_cast<tp_t*>(mem::alloc(sizeof(tp_t) * size));
-        IPC_UNUSED_ auto guard = unique_ptr(hs, [size](void* p) { mem::free(p, sizeof(tp_t) * size); });
-        std::size_t i = 0;
-        for (; i < size; ++i) {
-            auto& w = all[i];
-            if (!w.valid()) continue;
-            hs[i] = w.to_w_info();
-        }
-        return waiter_t::multi_wait_if(hs, i, std::forward<F>(check));
-    }
-
-    template <typename F>
-    bool wait_if(F&& check) {
+    bool wait_if(F&& pred) {
         if (!valid()) return false;
-        return w_->wait_if(h_, std::forward<F>(check));
+        return w_->wait_if(h_, std::forward<F>(pred));
     }
 
     bool notify() {
