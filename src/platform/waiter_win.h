@@ -2,11 +2,7 @@
 
 #include <Windows.h>
 
-#include <algorithm>
-#include <iterator>
 #include <atomic>
-#include <array>
-#include <tuple>
 
 #include "rw_lock.h"
 #include "pool_alloc.h"
@@ -51,19 +47,25 @@ public:
 
     void notify(handle_t h) {
         if (h == invalid()) return;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        if (counter_ == 0) return;
-        -- counter_;
-        ::ReleaseSemaphore(h, 1, NULL);
+        {
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+            if (counter_ == 0) return;
+            -- counter_;
+            ::ReleaseSemaphore(h, 1, NULL);
+        }
+        ::Sleep(1);
     }
 
     void broadcast(handle_t h) {
         if (h == invalid()) return;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        if (counter_ == 0) return;
-        long all_count = counter_;
-        counter_ = 0;
-        ::ReleaseSemaphore(h, all_count, NULL);
+        {
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+            if (counter_ == 0) return;
+            long all_count = counter_;
+            counter_ = 0;
+            ::ReleaseSemaphore(h, all_count, NULL);
+        }
+        ::Sleep(1);
     }
 };
 

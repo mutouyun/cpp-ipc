@@ -368,7 +368,7 @@ void Unit::test_route_rtt() {
         for (std::size_t i = 0;; ++i) {
             auto dd = cc.recv();
             if (dd.size() < 2) return;
-//            std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
+            //std::cout << "recv: " << i << "-[" << dd.size() << "]" << std::endl;
             while (!cr.send(ipc::buff_t('a'))) {
                 std::this_thread::yield();
             }
@@ -383,8 +383,8 @@ void Unit::test_route_rtt() {
         }
         sw.start();
         for (std::size_t i = 0; i < LoopCount; ++i) {
-//            std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
             cc.send(datas__[i]);
+            //std::cout << "sent: " << i << "-[" << datas__[i].size() << "]" << std::endl;
             /*auto dd = */cr.recv();
 //            if (dd.size() != 1 || dd[0] != 'a') {
 //                QVERIFY(false);
@@ -434,14 +434,17 @@ void Unit::test_channel_rtt() {
 
     std::thread t1 {[&] {
         ipc::channel cc { "my-ipc-channel" };
+        bool recv_2 = false;
         for (std::size_t i = 0;; ++i) {
             auto dd = cc.recv();
             if (dd.size() < 2) return;
-            //std::cout << "recving: " << i << "-[" << dd.size() << "]" << std::endl;
-            while (!cc.send(ipc::buff_t('a'))) {
-                cc.wait_for_recv(1);
+            //if (i % 1000 == 0) {
+            //    std::cout << "recv: " << i << "-[" << dd.size() << "]" << std::endl;
+            //}
+            while (!recv_2) {
+                recv_2 = cc.wait_for_recv(2);
             }
-            //std::cout << "sent ack." << std::endl;
+            cc.send(ipc::buff_t('a'));
         }
     }};
 
@@ -450,7 +453,9 @@ void Unit::test_channel_rtt() {
         cc.wait_for_recv(1);
         sw.start();
         for (std::size_t i = 0; i < LoopCount; ++i) {
-            //std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
+            //if (i % 1000 == 0) {
+            //    std::cout << "send: " << i << "-[" << datas__[i].size() << "]" << std::endl;
+            //}
             cc.send(datas__[i]);
             /*auto dd = */cc.recv();
             //if (dd.size() != 1 || dd.data<char>()[0] != 'a') {

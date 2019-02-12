@@ -8,6 +8,7 @@
 #include <atomic>
 
 #include "def.h"
+#include "export.h"
 
 // pre-defined
 
@@ -82,7 +83,7 @@ constexpr auto shared_lock(T&& lc) {
 
 #endif/*__cplusplus < 201703L*/
 
-std::size_t calc_unique_id();
+IPC_EXPORT std::size_t calc_unique_id();
 
 template <typename F, typename D>
 constexpr decltype(auto) static_switch(std::size_t /*i*/, std::index_sequence<>, F&& /*f*/, D&& def) {
