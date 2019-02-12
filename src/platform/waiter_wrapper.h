@@ -1,10 +1,7 @@
 #pragma once
 
-#include <string>
-#include <tuple>
 #include <type_traits>
-
-#include "pool_alloc.h"
+#include <atomic>
 
 #if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
     defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
@@ -25,10 +22,6 @@ public:
 private:
     waiter_t* w_ = nullptr;
     waiter_t::handle_t h_ = waiter_t::invalid();
-
-    auto to_w_info() {
-        return std::make_tuple(w_, h_);
-    }
 
 public:
     waiter_wrapper() = default;

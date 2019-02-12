@@ -2,18 +2,8 @@
 
 #include <pthread.h>
 
-#include <cstring>
-#include <atomic>
-#include <string>
-#include <utility>
-#include <tuple>
-
 #include "def.h"
 #include "log.h"
-#include "shm.h"
-#include "rw_lock.h"
-#include "id_pool.h"
-#include "pool_alloc.h"
 
 #include "platform/detail.h"
 
@@ -115,9 +105,9 @@ public:
 #pragma pop_macro("IPC_PTHREAD_FUNC_")
 
 class semaphore {
-    mutex     lock_;
-    condition cond_;
-    long      counter_ = 0;
+    mutex         lock_;
+    condition     cond_;
+    long volatile counter_ = 0;
 
 public:
     bool open() {

@@ -94,7 +94,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
     template <typename E, typename F, typename EB>
     bool push(E* /*elems*/, F&& f, EB* elem_start) {
         circ::u2_t cur_ct, nxt_ct;
-        while(1) {
+        while (1) {
             cur_ct = ct_.load(std::memory_order_relaxed);
             if (circ::index_of(nxt_ct = cur_ct + 1) ==
                 circ::index_of(rd_.load(std::memory_order_acquire))) {
@@ -106,7 +106,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
             std::this_thread::yield();
         }
         std::forward<F>(f)(elem_start + circ::index_of(cur_ct));
-        while(1) {
+        while (1) {
             auto exp_wt = cur_ct;
             if (wt_.compare_exchange_weak(exp_wt, nxt_ct, std::memory_order_release)) {
                 break;
@@ -145,7 +145,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
         if (conn_cnt == 0) return false;
         auto el = elem_start + circ::index_of(wt_.load(std::memory_order_acquire));
         // check all consumers have finished reading this element
-        while(1) {
+        while (1) {
             rc_t expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
                         expected, static_cast<rc_t>(conn_cnt), std::memory_order_release)) {
@@ -193,7 +193,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>>
                    nxt_ct = cur_ct + 1;
         auto el = elem_start + circ::index_of(cur_ct);
         // check all consumers have finished reading this element
-        while(1) {
+        while (1) {
             rc_t expected = 0;
             if (el->head_.rc_.compare_exchange_weak(
                         expected, static_cast<rc_t>(conn_cnt), std::memory_order_release)) {
@@ -204,7 +204,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>>
             if (conn_cnt == 0) return false;
         }
         std::forward<F>(f)(el->data_);
-        while(1) {
+        while (1) {
             auto exp_wt = cur_ct;
             if (wt_.compare_exchange_weak(exp_wt, nxt_ct, std::memory_order_release)) {
                 break;
