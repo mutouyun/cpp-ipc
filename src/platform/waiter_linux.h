@@ -176,8 +176,7 @@ public:
         IPC_UNUSED_ auto guard = unique_ptr(&counter_, [](decltype(counter_)* c) {
             c->fetch_sub(1, std::memory_order_release);
         });
-        sem_.wait_if(std::forward<F>(pred));
-        return true;
+        return sem_.wait_if(std::forward<F>(pred));
     }
 
     void notify(handle_t h) {
