@@ -199,7 +199,9 @@ public:
 
     void broadcast(handle_t h) {
         if (h == invalid()) return;
-        sem_.post([this] { return counter_.load(std::memory_order_relaxed); });
+        sem_.post([this] {
+            return counter_.load(std::memory_order_relaxed);
+        });
     }
 };
 
