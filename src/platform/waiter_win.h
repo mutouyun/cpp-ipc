@@ -68,56 +68,58 @@ public:
     }
 
 private:
-    semaphore& s(handle_t& h) { return std::get<0>(h); }
-    semaphore& w(handle_t& h) { return std::get<1>(h); }
-    mutex    & x(handle_t& h) { return std::get<2>(h); }
+    semaphore& sem(handle_t& h) { return std::get<0>(h); }
+    semaphore& han(handle_t& h) { return std::get<1>(h); }
+    mutex    & mtx(handle_t& h) { return std::get<2>(h); }
 
 public:
     handle_t open(char const * name) {
         if (name == nullptr || name[0] == '\0') return invalid();
         std::string n = name;
         return handle_t {
-            semaphore {}.open(ipc::detail::to_tchar(n + "__S__")),
-            semaphore {}.open(ipc::detail::to_tchar(n + "__W__")),
-            mutex     {}.open(ipc::detail::to_tchar(n + "__X__"))
+            semaphore {}.open(ipc::detail::to_tchar(n + "__SEM__")),
+            semaphore {}.open(ipc::detail::to_tchar(n + "__HAN__")),
+            mutex     {}.open(ipc::detail::to_tchar(n + "__MTX__"))
         };
     }
 
     void close(handle_t& h) {
         if (h == invalid()) return;
-        x(h).close();
-        w(h).close();
-        s(h).close();
+        mtx(h).close();
+        han(h).close();
+        sem(h).close();
     }
 
     template <typename F>
     bool wait_if(handle_t& h, F&& pred) {
         if (h == invalid()) return false;
         {
-            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(x(h));
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(mtx(h));
             if (!std::forward<F>(pred)()) return true;
             ++ counter_;
         }
-        return s(h).wait() && w(h).post();
+        bool ret_s = sem(h).wait();
+        bool ret_h = han(h).post();
+        return ret_s && ret_h;
     }
 
     void notify(handle_t& h) {
         if (h == invalid()) return;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(x(h));
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(mtx(h));
         if (counter_ > 0) {
-            s(h).post();
+            sem(h).post();
             -- counter_;
-            w(h).wait();
+            han(h).wait();
         }
     }
 
     void broadcast(handle_t& h) {
         if (h == invalid()) return;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(x(h));
-        s(h).post(counter_);
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(mtx(h));
+        sem(h).post(counter_);
         while (counter_ > 0) {
             -- counter_;
-            w(h).wait();
+            han(h).wait();
         }
     }
 };
