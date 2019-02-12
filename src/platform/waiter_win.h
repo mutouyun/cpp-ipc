@@ -98,8 +98,7 @@ public:
             if (!std::forward<F>(pred)()) return true;
             ++ counter_;
         }
-        if (!s(h).wait()) return false;
-        return w(h).post();
+        return s(h).wait() && w(h).post();
     }
 
     void notify(handle_t& h) {
