@@ -67,6 +67,14 @@ bool waiter::wait() {
     return impl(p_)->w_.wait_if([] { return true; });
 }
 
+bool waiter::pred() {
+    return true;
+}
+
+bool waiter::wait_if_pred() {
+    return impl(p_)->w_.wait_if([this] { return pred(); });
+}
+
 bool waiter::notify() {
     return impl(p_)->w_.notify();
 }

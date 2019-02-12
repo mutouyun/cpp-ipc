@@ -10,7 +10,7 @@ public:
     explicit waiter(char const * name);
     waiter(waiter&& rhs);
 
-    ~waiter();
+    virtual ~waiter();
 
     void swap(waiter& rhs);
     waiter& operator=(waiter rhs);
@@ -22,8 +22,13 @@ public:
     void close();
 
     bool wait();
+    bool wait_if_pred();
+
     bool notify();
     bool broadcast();
+
+protected:
+    virtual bool pred();
 
 private:
     class waiter_;
