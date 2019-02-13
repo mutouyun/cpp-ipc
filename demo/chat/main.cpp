@@ -21,8 +21,11 @@ int main() {
             auto buf = cc.recv();
             if (buf.empty()) continue;
             std::string dat { static_cast<char const *>(buf.data()), buf.size() - 1 };
-            if (dat == quit__) return;
-            std::cout << dat << std::endl;
+            if (dat == quit__) {
+                std::cout << "receiver quit..." << std::endl;
+                return;
+            }
+            std::cout << "> " << dat << std::endl;
         }
     }};
 

@@ -15,3 +15,5 @@ SOURCES += \
 
 LIBS += \
     -L$${DESTDIR} -lipc
+
+unix:LIBS += -lrt -lpthread

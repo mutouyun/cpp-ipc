@@ -53,8 +53,6 @@ SOURCES += \
     ../src/platform/shm_linux.cpp \
     ../src/platform/tls_pointer_linux.cpp
 
-LIBS += -lrt
-
 target.path = /usr/lib
 INSTALLS += target
 
