@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
     QCoreApplication app(argc, argv);
     Q_UNUSED(app)
 
-//  QThread::sleep(5);
+//    QThread::sleep(5);
 
     int failed_count = 0;
     for (const auto& suite : (*suites__)) {

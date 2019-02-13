@@ -26,7 +26,7 @@ See: [Wiki](https://github.com/mutouyun/cpp-ipc/wiki)
  Compiler | MSVC 2017 15.9.4
 
 UT & benchmark test function: [test](test)  
-Performance data: [performence.xlsx](performence.xlsx)
+Performance data: [performance.xlsx](performance.xlsx)
 
 ## Reference
 
