@@ -37,7 +37,6 @@ public:
     }
 
     bool post(long count = 1) {
-        if (count <= 0) return true;
         return !!::ReleaseSemaphore(h_, count, NULL);
     }
 };
@@ -116,10 +115,12 @@ public:
     void broadcast(handle_t& h) {
         if (h == invalid()) return;
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(mtx(h));
-        sem(h).post(counter_);
-        while (counter_ > 0) {
-            -- counter_;
-            han(h).wait();
+        if (counter_ > 0) {
+            sem(h).post(counter_);
+            do {
+                -- counter_;
+                han(h).wait();
+            } while (counter_ > 0);
         }
     }
 };
