@@ -62,7 +62,7 @@ public:
 };
 
 class condition {
-    pthread_cond_t cond_  = PTHREAD_COND_INITIALIZER;
+    pthread_cond_t cond_ = PTHREAD_COND_INITIALIZER;
 
 public:
     bool open() {
@@ -163,8 +163,8 @@ public:
     }
 
     void close(handle_t h) {
-        if (h == invalid()) return;
         if (opened_.fetch_sub(1, std::memory_order_release) == 1) {
+            if (h == invalid()) return;
             sem_.close();
         }
     }
