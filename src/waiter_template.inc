@@ -26,6 +26,7 @@ IPC_OBJECT_TYPE_::IPC_OBJECT_TYPE_(IPC_OBJECT_TYPE_&& rhs)
 }
 
 IPC_OBJECT_TYPE_::~IPC_OBJECT_TYPE_() {
+    close();
     p_->clear();
 }
 
@@ -39,7 +40,7 @@ IPC_OBJECT_TYPE_& IPC_OBJECT_TYPE_::operator=(IPC_OBJECT_TYPE_ rhs) {
 }
 
 bool IPC_OBJECT_TYPE_::valid() const {
-    return !impl(p_)->n_.empty();
+    return (p_ != nullptr) && !impl(p_)->n_.empty();
 }
 
 char const * IPC_OBJECT_TYPE_::name() const {
@@ -60,6 +61,7 @@ bool IPC_OBJECT_TYPE_::open(char const * name IPC_OBJECT_TYPE_OPEN_PARS_) {
 }
 
 void IPC_OBJECT_TYPE_::close() {
+    if (!valid()) return;
     impl(p_)->h_.close();
     impl(p_)->n_.clear();
 }
