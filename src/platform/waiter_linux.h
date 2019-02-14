@@ -107,11 +107,16 @@ public:
 class semaphore {
     mutex         lock_;
     condition     cond_;
-    long volatile counter_ = 0;
+    long volatile counter_;
 
 public:
-    bool open() {
-        return lock_.open() && cond_.open();
+    bool open(long count = 0) {
+        if (lock_.open() && cond_.open()) {
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+            counter_ = count;
+            return true;
+        }
+        return false;
     }
 
     void close() {

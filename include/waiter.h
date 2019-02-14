@@ -4,16 +4,17 @@
 
 namespace ipc {
 
-class IPC_EXPORT waiter {
+class condition;
+class IPC_EXPORT mutex {
 public:
-    waiter();
-    explicit waiter(char const * name);
-    waiter(waiter&& rhs);
+    mutex();
+    explicit mutex(char const * name);
+    mutex(mutex&& rhs);
 
-    virtual ~waiter();
+    ~mutex();
 
-    void swap(waiter& rhs);
-    waiter& operator=(waiter rhs);
+    void swap(mutex& rhs);
+    mutex& operator=(mutex rhs);
 
     bool         valid() const;
     char const * name () const;
@@ -21,18 +22,65 @@ public:
     bool open (char const * name);
     void close();
 
-    bool wait();
-    bool wait_if_pred();
+    bool lock();
+    bool unlock();
 
+private:
+    class mutex_;
+    mutex_* p_;
+
+    friend class condition;
+};
+
+class IPC_EXPORT semaphore {
+public:
+    semaphore();
+    explicit semaphore(char const * name);
+    semaphore(semaphore&& rhs);
+
+    ~semaphore();
+
+    void swap(semaphore& rhs);
+    semaphore& operator=(semaphore rhs);
+
+    bool         valid() const;
+    char const * name () const;
+
+    bool open (char const * name, long count = 0);
+    void close();
+
+    bool wait();
+    bool post(long count = 1);
+
+private:
+    class semaphore_;
+    semaphore_* p_;
+};
+
+class IPC_EXPORT condition {
+public:
+    condition();
+    explicit condition(char const * name);
+    condition(condition&& rhs);
+
+    ~condition();
+
+    void swap(condition& rhs);
+    condition& operator=(condition rhs);
+
+    bool         valid() const;
+    char const * name () const;
+
+    bool open (char const * name);
+    void close();
+
+    bool wait(mutex&);
     bool notify();
     bool broadcast();
 
-protected:
-    virtual bool pred();
-
 private:
-    class waiter_;
-    waiter_* p_;
+    class condition_;
+    condition_* p_;
 };
 
 } // namespace ipc

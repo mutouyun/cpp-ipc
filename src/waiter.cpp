@@ -5,82 +5,72 @@
 #include "def.h"
 #include "platform/waiter_wrapper.h"
 
+#undef IPC_PP_CAT_
+#undef IPC_PP_JOIN_T__
+#undef IPC_PP_JOIN_
+
+#define IPC_PP_CAT_(X, ...)            X##__VA_ARGS__
+#define IPC_PP_JOIN_T__(X, ...)        IPC_PP_CAT_(X, __VA_ARGS__)
+#define IPC_PP_JOIN_(X, ...)           IPC_PP_JOIN_T__(X, __VA_ARGS__)
+
 namespace ipc {
 
-class waiter::waiter_ : public pimpl<waiter_> {
-public:
-    std::string n_;
+#undef IPC_OBJECT_TYPE_
+#undef IPC_OBJECT_TYPE_OPEN_PARS_
+#undef IPC_OBJECT_TYPE_OPEN_ARGS_
 
-    detail::waiter_wrapper w_ { new detail::waiter };
-    ~waiter_() { delete w_.waiter(); }
-};
+#define IPC_OBJECT_TYPE_ mutex
+#define IPC_OBJECT_TYPE_OPEN_PARS_
+#define IPC_OBJECT_TYPE_OPEN_ARGS_
 
-waiter::waiter()
-    : p_(p_->make()) {
+#include "waiter_template.inc"
+
+bool mutex::lock() {
+    return impl(p_)->h_.lock();
 }
 
-waiter::waiter(char const * name)
-    : waiter() {
-    open(name);
+bool mutex::unlock() {
+    return impl(p_)->h_.unlock();
 }
 
-waiter::waiter(waiter&& rhs)
-    : waiter() {
-    swap(rhs);
+#undef IPC_OBJECT_TYPE_
+#undef IPC_OBJECT_TYPE_OPEN_PARS_
+#undef IPC_OBJECT_TYPE_OPEN_ARGS_
+
+#define IPC_OBJECT_TYPE_ semaphore
+#define IPC_OBJECT_TYPE_OPEN_PARS_ , long count
+#define IPC_OBJECT_TYPE_OPEN_ARGS_ , count
+
+#include "waiter_template.inc"
+
+bool semaphore::wait() {
+    return impl(p_)->h_.wait();
 }
 
-waiter::~waiter() {
-    p_->clear();
+bool semaphore::post(long count) {
+    return impl(p_)->h_.post(count);
 }
 
-void waiter::swap(waiter& rhs) {
-    std::swap(p_, rhs.p_);
+#undef IPC_OBJECT_TYPE_
+#undef IPC_OBJECT_TYPE_OPEN_PARS_
+#undef IPC_OBJECT_TYPE_OPEN_ARGS_
+
+#define IPC_OBJECT_TYPE_ condition
+#define IPC_OBJECT_TYPE_OPEN_PARS_
+#define IPC_OBJECT_TYPE_OPEN_ARGS_
+
+#include "waiter_template.inc"
+
+bool condition::wait(mutex& mtx) {
+    return impl(p_)->h_.wait(impl(mtx.p_)->h_);
 }
 
-waiter& waiter::operator=(waiter rhs) {
-    swap(rhs);
-    return *this;
+bool condition::notify() {
+    return impl(p_)->h_.notify();
 }
 
-bool waiter::valid() const {
-    return impl(p_)->w_.valid();
-}
-
-char const * waiter::name() const {
-    return impl(p_)->n_.c_str();
-}
-
-bool waiter::open(char const * name) {
-    if (impl(p_)->w_.open(name)) {
-        impl(p_)->n_ = name;
-        return true;
-    }
-    return false;
-}
-
-void waiter::close() {
-    impl(p_)->w_.close();
-    impl(p_)->n_.clear();
-}
-
-bool waiter::wait() {
-    return impl(p_)->w_.wait_if([] { return true; });
-}
-
-bool waiter::pred() {
-    return true;
-}
-
-bool waiter::wait_if_pred() {
-    return impl(p_)->w_.wait_if([this] { return pred(); });
-}
-
-bool waiter::notify() {
-    return impl(p_)->w_.notify();
-}
-
-bool waiter::broadcast() {
-    return impl(p_)->w_.broadcast();
+bool condition::broadcast() {
+    return impl(p_)->h_.broadcast();
 }
 
 } // namespace ipc
