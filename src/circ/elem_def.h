@@ -13,28 +13,12 @@
 namespace ipc {
 namespace circ {
 
-struct elem_head {
-    std::atomic<std::size_t> rc_ { 0 }; // read-counter
+enum {
+    cache_line_size = 64
 };
-
-template <std::size_t DataSize>
-struct elem_t {
-    elem_head head_;
-    byte_t    data_[DataSize] {};
-};
-
-template <>
-struct elem_t<0> {
-    elem_head head_;
-};
-
-template <std::size_t S>
-elem_t<S>* elem_of(void* ptr) noexcept {
-    return reinterpret_cast<elem_t<S>*>(static_cast<byte_t*>(ptr) - sizeof(elem_head));
-}
 
 using u1_t = ipc::uint_t<8>;
-using u2_t = ipc::uint_t<16>;
+using u2_t = ipc::uint_t<32>;
 
 constexpr u1_t index_of(u2_t c) noexcept {
     return static_cast<u1_t>(c);

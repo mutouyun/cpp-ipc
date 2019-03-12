@@ -18,12 +18,7 @@ class elem_array {
 public:
     using policy_t = Policy;
     using cursor_t = decltype(std::declval<policy_t>().cursor());
-
-#if __cplusplus >= 201703L
-    using elem_t = ipc::circ::elem_t<policy_t::template elem_param<DataSize>>;
-#else /*__cplusplus < 201703L*/
-    using elem_t = ipc::circ::elem_t<policy_t::template elem_param<DataSize>::value>;
-#endif/*__cplusplus < 201703L*/
+    using elem_t   = typename policy_t::template elem_t<DataSize>;
 
     enum : std::size_t {
         data_size  = DataSize,

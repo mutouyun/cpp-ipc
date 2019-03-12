@@ -213,7 +213,9 @@ struct test_cq<ipc::queue<T...>> {
     }
 
     void send(cn_t* /*cn*/, msg_t const & msg) {
-        cn_t{ ca_ }.push(msg);
+        while (!cn_t{ ca_ }.push(msg)) {
+            std::this_thread::yield();
+        }
     }
 };
 
