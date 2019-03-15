@@ -83,18 +83,15 @@ template <>
 struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
      : prod_cons_impl<wr<relat::single, relat::multi, trans::unicast>> {
 
-    enum : std::uint64_t {
-        invalid_index = (std::numeric_limits<std::uint64_t>::max)()
-    };
+    using flag_t = std::uint64_t;
 
     template <std::size_t DataSize>
     struct elem_t {
         byte_t data_[DataSize] {};
-        alignas(circ::cache_line_size) std::atomic<std::uint64_t> f_ct_ { invalid_index }; // commit flag
+        std::atomic<flag_t> f_ct_ { 0 }; // commit flag
     };
 
     alignas(circ::cache_line_size) std::atomic<circ::u2_t> ct_; // commit index
-    alignas(circ::cache_line_size) std::atomic<unsigned  > barrier_;
 
     template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
     bool push(W* /*wrapper*/, F&& f, E<DataSize>* elems) {
@@ -113,17 +110,16 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
         auto* el = elems + circ::index_of(cur_ct);
         std::forward<F>(f)(&(el->data_));
         // set flag & try update wt
-        el->f_ct_.store(cur_ct, std::memory_order_release);
+        el->f_ct_.store(~static_cast<flag_t>(cur_ct), std::memory_order_release);
         while (1) {
-            barrier_.exchange(0, std::memory_order_acq_rel);
             auto cac_ct = el->f_ct_.load(std::memory_order_acquire);
             if (cur_ct != wt_.load(std::memory_order_acquire)) {
                 return true;
             }
-            if (cac_ct != cur_ct) {
+            if ((~cac_ct) != cur_ct) {
                 return true;
             }
-            if (!el->f_ct_.compare_exchange_strong(cac_ct, invalid_index, std::memory_order_relaxed)) {
+            if (!el->f_ct_.compare_exchange_strong(cac_ct, 0, std::memory_order_relaxed)) {
                 return true;
             }
             wt_.store(nxt_ct, std::memory_order_release);
@@ -132,6 +128,36 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
             el = elems + circ::index_of(cur_ct);
         }
         return true;
+    }
+
+    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
+    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DataSize>* elems) {
+        byte_t buff[DataSize];
+        for (unsigned k = 0;;) {
+            auto cur_rd = rd_.load(std::memory_order_relaxed);
+            auto cur_wt = wt_.load(std::memory_order_acquire);
+            auto id_rd  = circ::index_of(cur_rd);
+            auto id_wt  = circ::index_of(cur_wt);
+            if (id_rd == id_wt) {
+                auto* el = elems + id_wt;
+                auto cac_ct = el->f_ct_.load(std::memory_order_acquire);
+                if ((~cac_ct) != cur_wt) {
+                    return false; // empty
+                }
+                if (el->f_ct_.compare_exchange_weak(cac_ct, 0, std::memory_order_relaxed)) {
+                    wt_.store(cur_wt + 1, std::memory_order_release);
+                }
+                k = 0;
+            }
+            else {
+                std::memcpy(buff, &(elems[circ::index_of(cur_rd)].data_), sizeof(buff));
+                if (rd_.compare_exchange_weak(cur_rd, cur_rd + 1, std::memory_order_release)) {
+                    std::forward<F>(f)(buff);
+                    return true;
+                }
+                ipc::yield(k);
+            }
+        }
     }
 };
 
@@ -143,7 +169,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
     template <std::size_t DataSize>
     struct elem_t {
         byte_t data_[DataSize] {};
-        alignas(circ::cache_line_size) std::atomic<rc_t> rc_ { 0 }; // read-counter
+        std::atomic<rc_t> rc_ { 0 }; // read-counter
     };
 
     alignas(circ::cache_line_size) std::atomic<circ::u2_t> wt_; // write index
