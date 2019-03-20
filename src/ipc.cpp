@@ -146,7 +146,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
             { que, msg_id, static_cast<int>(size) - offset - static_cast<int>(data_length) }, {}
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset, data_length);
-        if (!que->push(msg)) return false;
+        while (!que->push(msg)) std::this_thread::yield();
     }
     // if remain > 0, this is the last message fragment
     int remain = static_cast<int>(size) - offset;
@@ -156,7 +156,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
         };
         std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset,
                                static_cast<std::size_t>(remain));
-        if (!que->push(msg)) return false;
+        while (!que->push(msg)) std::this_thread::yield();
     }
     return true;
 }

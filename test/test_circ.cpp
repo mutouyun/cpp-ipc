@@ -183,12 +183,12 @@ struct test_cq<ipc::queue<T...>> {
 
     cn_t* connect() {
         cn_t* queue = new cn_t { ca_ };
-        [&] { QVERIFY(queue->connect() != ipc::invalid_value); } ();
+        [&] { QVERIFY(queue->connect()); } ();
         return queue;
     }
 
     void disconnect(cn_t* queue) {
-        QVERIFY(queue->disconnect() != ipc::invalid_value);
+        QVERIFY(queue->disconnect());
         QVERIFY(queue->detach() != nullptr);
         delete queue;
     }
@@ -241,7 +241,7 @@ private slots:
 
 #include "test_circ.moc"
 
-constexpr int LoopCount = 1000000;
+constexpr int LoopCount = 10000000;
 //constexpr int LoopCount = 1000/*0000*/;
 
 void Unit::initTestCase() {
@@ -270,6 +270,13 @@ void test_prod_cons() {
 }
 
 void Unit::test_prod_cons_1v1() {
+//    ea_t<
+//        sizeof(msg_t),
+//        pc_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast>
+//    > el_arr_mmb;
+//    benchmark_prod_cons<1, 1, LoopCount, void>(&el_arr_mmb);
+//    benchmark_prod_cons<2, 1, LoopCount, void>(&el_arr_mmb);
+
     ea_t<
         sizeof(msg_t),
         pc_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast>
@@ -387,7 +394,7 @@ void Unit::test_queue() {
     queue.attach(cq);
     QVERIFY(queue.detach() != nullptr);
 
-    ipc::detail::static_for(std::make_index_sequence<8>{}, [](auto index) {
+    ipc::detail::static_for(std::make_index_sequence<16>{}, [](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount>((queue_t*)nullptr);
     });
 }

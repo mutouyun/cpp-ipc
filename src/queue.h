@@ -81,29 +81,31 @@ public:
     }
 
     template <typename Elems>
-    std::size_t connect(Elems* elems) {
-        if (elems == nullptr) return invalid_value;
+    auto connect(Elems* elems)
+     -> std::tuple<bool, decltype(std::declval<Elems>().cursor())> {
+        if (elems == nullptr) return {};
         if (connected_) {
-            // if it's already connected, just return an error count
-            return invalid_value;
+            // if it's already connected, just return false
+            return {};
         }
         connected_ = true;
-        auto ret = elems->connect();
+        elems->connect();
+        auto ret = std::make_tuple(true, elems->cursor());
         cc_waiter_.broadcast();
         return ret;
     }
 
     template <typename Elems>
-    std::size_t disconnect(Elems* elems) {
-        if (elems == nullptr) return invalid_value;
+    bool disconnect(Elems* elems) {
+        if (elems == nullptr) return false;
         if (!connected_) {
-            // if it's already disconnected, just return an error count
-            return invalid_value;
+            // if it's already disconnected, just return false
+            return false;
         }
         connected_ = false;
-        auto ret = elems->disconnect();
+        elems->disconnect();
         cc_waiter_.broadcast();
-        return ret;
+        return true;
     }
 
     template <typename Elems>
@@ -155,11 +157,16 @@ public:
         return elems_;
     }
 
-    std::size_t connect() {
-        return base_t::connect(elems_);
+    bool connect() {
+        auto tp = base_t::connect(elems_);
+        if (std::get<0>(tp)) {
+            cursor_ = std::get<1>(tp);
+            return true;
+        }
+        return false;
     }
 
-    std::size_t disconnect() {
+    bool disconnect() {
         return base_t::disconnect(elems_);
     }
 
@@ -186,9 +193,6 @@ public:
             base_t::close(old);
         }
         else base_t::open(elems_, name);
-        if (elems_ != nullptr) {
-            cursor_ = elems_->cursor();
-        }
         return old;
     }
 
