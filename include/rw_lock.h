@@ -71,7 +71,7 @@ inline void yield(K& k) noexcept {
 }
 
 template <std::size_t N = 4096, typename K, typename F>
-inline void sleep(K& k, F&& f) noexcept {
+inline void sleep(K& k, F&& f) {
     if (k < static_cast<K>(N)) {
         std::this_thread::yield();
     }
@@ -86,7 +86,7 @@ inline void sleep(K& k, F&& f) noexcept {
 }
 
 template <std::size_t N = 4096, typename K>
-inline void sleep(K& k) noexcept {
+inline void sleep(K& k) {
     sleep<N>(k, [] { return false; });
 }
 

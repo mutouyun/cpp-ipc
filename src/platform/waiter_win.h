@@ -62,7 +62,7 @@ class condition {
     mutex     lock_;
     semaphore sema_, handshake_;
 
-    long volatile * counter_ = nullptr;
+    long * counter_ = nullptr;
 
 public:
     friend bool operator==(condition const & c1, condition const & c2) {
@@ -73,7 +73,7 @@ public:
         return !(c1 == c2);
     }
 
-    bool open(std::string const & name, long volatile * counter) {
+    bool open(std::string const & name, long * counter) {
         if (lock_     .open(name + "__COND_MTX__") &&
             sema_     .open(name + "__COND_SEM__") &&
             handshake_.open(name + "__COND_HAN__")) {
@@ -130,7 +130,7 @@ public:
 };
 
 class waiter {
-    long volatile counter_ = 0;
+    long counter_ = 0;
 
 public:
     using handle_t = condition;

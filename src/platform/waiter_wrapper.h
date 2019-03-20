@@ -25,7 +25,7 @@ class condition_impl : public ipc::detail::condition {
 public:
     bool open(std::string const & name) {
         if (h_.acquire((name + "__COND_CNT__").c_str(), sizeof(long volatile))) {
-            return ipc::detail::condition::open(name, static_cast<long volatile*>(h_.get()));
+            return ipc::detail::condition::open(name, static_cast<long *>(h_.get()));
         }
         return false;
     }

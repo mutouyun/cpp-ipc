@@ -105,9 +105,9 @@ public:
 #pragma pop_macro("IPC_PTHREAD_FUNC_")
 
 class semaphore {
-    mutex         lock_;
-    condition     cond_;
-    long volatile counter_;
+    mutex     lock_;
+    condition cond_;
+    long      counter_;
 
 public:
     bool open(long count = 0) {
