@@ -19,14 +19,13 @@
 namespace {
 
 using namespace ipc;
-
 using msg_id_t = std::size_t;
 
 template <std::size_t DataSize,
 #if __cplusplus >= 201703L
-          std::size_t AlignSize = (std::min)(DataSize, alignof(std::size_t))>
+          std::size_t AlignSize = (std::min)(DataSize, alignof(std::max_align_t))>
 #else /*__cplusplus < 201703L*/
-          std::size_t AlignSize = (alignof(std::size_t) < DataSize) ? alignof(std::size_t) : DataSize>
+          std::size_t AlignSize = (alignof(std::max_align_t) < DataSize) ? alignof(std::max_align_t) : DataSize>
 #endif/*__cplusplus < 201703L*/
 struct msg_t;
 
@@ -43,20 +42,7 @@ struct msg_t {
     alignas(AlignSize) byte_t data_[DataSize];
 };
 
-template <typename Policy>
-struct detail_impl {
-
-using queue_t = ipc::queue<msg_t<data_length>, Policy>;
-
-constexpr static void* head_of(queue_t* que) {
-    return static_cast<void*>(que->elems());
-}
-
-constexpr static queue_t* queue_of(ipc::handle_t h) {
-    return static_cast<queue_t*>(h);
-}
-
-static buff_t make_cache(void const * data, std::size_t size) {
+buff_t make_cache(void const * data, std::size_t size) {
     auto ptr = mem::alloc(size);
     std::memcpy(ptr, data, size);
     return { ptr, size, mem::free };
@@ -76,7 +62,7 @@ struct cache_t {
     }
 };
 
-static auto& recv_cache() {
+auto& recv_cache() {
     /*
         <Remarks> thread_local may have some bugs.
         See: https://sourceforge.net/p/mingw-w64/bugs/727/
@@ -88,6 +74,19 @@ static auto& recv_cache() {
     */
     static tls::pointer<mem::unordered_map<msg_id_t, cache_t>> rc;
     return *rc.create();
+}
+
+template <typename Policy>
+struct detail_impl {
+
+using queue_t = ipc::queue<msg_t<data_length>, Policy>;
+
+constexpr static void* head_of(queue_t* que) {
+    return static_cast<void*>(que->elems());
+}
+
+constexpr static queue_t* queue_of(ipc::handle_t h) {
+    return static_cast<queue_t*>(h);
 }
 
 static auto& queues_cache() {
@@ -102,7 +101,7 @@ static ipc::handle_t connect(char const * name) {
 }
 
 static void disconnect(ipc::handle_t h) {
-    queue_t* que = queue_of(h);
+    auto que = queue_of(h);
     if (que == nullptr) {
         return;
     }
