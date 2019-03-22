@@ -24,7 +24,7 @@ class condition_impl : public ipc::detail::condition {
 
 public:
     bool open(std::string const & name) {
-        if (h_.acquire((name + "__COND_CNT__").c_str(), sizeof(long volatile))) {
+        if (h_.acquire((name + "__COND_CNT__").c_str(), sizeof(long))) {
             return ipc::detail::condition::open(name, static_cast<long *>(h_.get()));
         }
         return false;
@@ -69,8 +69,9 @@ public:
         if (!h_.acquire(name, sizeof(info_t))) {
             return false;
         }
-        if ((static_cast<info_t*>(h_.get())->opened_.fetch_add(1, std::memory_order_acq_rel) == 0) &&
-            !static_cast<info_t*>(h_.get())->object_.open(std::forward<P>(params)...)) {
+        auto info = static_cast<info_t*>(h_.get());
+        if ((info->opened_.fetch_add(1, std::memory_order_acq_rel) == 0) &&
+            !info->object_.open(std::forward<P>(params)...)) {
             return false;
         }
         return true;
@@ -78,8 +79,9 @@ public:
 
     void close() {
         if (!h_.valid()) return;
-        if (static_cast<info_t*>(h_.get())->opened_.fetch_sub(1, std::memory_order_release) == 1) {
-            static_cast<info_t*>(h_.get())->object_.close();
+        auto info = static_cast<info_t*>(h_.get());
+        if (info->opened_.fetch_sub(1, std::memory_order_release) == 1) {
+            info->object_.close();
         }
         h_.release();
     }
@@ -91,17 +93,6 @@ public:
     bool unlock() { return object().unlock(); }
 };
 
-class semaphore_impl : public object_impl<ipc::detail::semaphore> {
-public:
-    bool wait() {
-        return object().wait_if([] { return true; });
-    }
-
-    bool post(long count) {
-        return object().post([count] { return count; });
-    }
-};
-
 class condition_impl : public object_impl<ipc::detail::condition> {
 public:
     bool wait(mutex_impl& mtx) {
@@ -110,6 +101,53 @@ public:
 
     bool notify   () { return object().notify   (); }
     bool broadcast() { return object().broadcast(); }
+};
+
+class semaphore_impl {
+    sem_helper::handle_t h_;
+    ipc::shm::handle     opened_; // std::atomic<unsigned>
+    std::string          name_;
+
+    auto cnt() {
+        return static_cast<std::atomic<unsigned>*>(opened_.get());
+    }
+
+public:
+    bool open(char const * name, long count) {
+        name_ = name;
+        if (!opened_.acquire(("__SEMAPHORE_IMPL_CNT__" + name_).c_str(), sizeof(std::atomic<unsigned>))) {
+            return false;
+        }
+        if ((h_ = sem_helper::open(("__SEMAPHORE_IMPL_SEM__" + name_).c_str(), count)) == sem_helper::invalid()) {
+            return false;
+        }
+        cnt()->fetch_add(1, std::memory_order_acq_rel);
+        return true;
+    }
+
+    void close() {
+        if (h_ == sem_helper::invalid()) return;
+        sem_helper::close(h_);
+        if (cnt() == nullptr) return;
+        if (cnt()->fetch_sub(1, std::memory_order_release) == 1) {
+            sem_helper::destroy(("__SEMAPHORE_IMPL_SEM__" + name_).c_str());
+        }
+        opened_.release();
+    }
+
+    bool wait() {
+        if (h_ == sem_helper::invalid()) return false;
+        return sem_helper::wait(h_);
+    }
+
+    bool post(long count) {
+        if (h_ == sem_helper::invalid()) return false;
+        bool ret = true;
+        for (long i = 0; i < count; ++i) {
+            ret = ret && sem_helper::post(h_);
+        }
+        return ret;
+    }
 };
 
 } // namespace detail

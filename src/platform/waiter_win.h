@@ -8,6 +8,7 @@
 #include "rw_lock.h"
 #include "pool_alloc.h"
 #include "log.h"
+#include "shm.h"
 
 #include "platform/to_tchar.h"
 #include "platform/detail.h"
@@ -37,11 +38,20 @@ public:
     }
 
     bool wait() {
-        return ::WaitForSingleObject(h_, INFINITE) == WAIT_OBJECT_0;
+        DWORD ret;
+        if ((ret = ::WaitForSingleObject(h_, INFINITE)) == WAIT_OBJECT_0) {
+            return true;
+        }
+        ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
+        return false;
     }
 
     bool post(long count = 1) {
-        return !!::ReleaseSemaphore(h_, count, NULL);
+        if (::ReleaseSemaphore(h_, count, NULL)) {
+            return true;
+        }
+        ipc::error("fail ReleaseSemaphore[%lu]\n", ::GetLastError());
+        return false;
     }
 };
 
@@ -62,7 +72,12 @@ class condition {
     mutex     lock_;
     semaphore sema_, handshake_;
 
+    ipc::shm::handle waiting_; // std::atomic<unsigned>
     long * counter_ = nullptr;
+
+    auto waiting_cnt() {
+        return static_cast<std::atomic<unsigned>*>(waiting_.get());
+    }
 
 public:
     friend bool operator==(condition const & c1, condition const & c2) {
@@ -74,9 +89,10 @@ public:
     }
 
     bool open(std::string const & name, long * counter) {
-        if (lock_     .open(name + "__COND_MTX__") &&
-            sema_     .open(name + "__COND_SEM__") &&
-            handshake_.open(name + "__COND_HAN__")) {
+        if (lock_     .open    ("__COND_MTX__" + name) &&
+            sema_     .open    ("__COND_SEM__" + name) &&
+            handshake_.open    ("__COND_HAN__" + name) &&
+            waiting_  .acquire(("__COND_WAITING_CNT__" + name).c_str(), sizeof(std::atomic<unsigned>))) {
             counter_ = counter;
             return true;
         }
@@ -84,6 +100,7 @@ public:
     }
 
     void close() {
+        waiting_  .release();
         handshake_.close();
         sema_     .close();
         lock_     .close();
@@ -91,41 +108,57 @@ public:
 
     template <typename Mutex, typename F>
     bool wait_if(Mutex& mtx, F&& pred) {
+        auto cnt = waiting_cnt();
+        if (cnt != nullptr) {
+            cnt->fetch_add(1, std::memory_order_release);
+        }
         {
             IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
             if (!std::forward<F>(pred)()) return true;
             ++ *counter_;
         }
         mtx.unlock();
-        bool ret_s = sema_.wait();
-        bool ret_h = handshake_.post();
+        bool ret = sema_.wait();
+        if (cnt != nullptr) {
+            cnt->fetch_sub(1, std::memory_order_release);
+        }
+        ret = handshake_.post() && ret;
         mtx.lock();
-        return ret_s && ret_h;
+        return ret;
     }
 
     bool notify() {
-        bool ret_s = true, ret_h = true;
+        std::atomic_thread_fence(std::memory_order_acq_rel);
+        if (waiting_cnt() != nullptr &&
+            waiting_cnt()->load(std::memory_order_relaxed) == 0) {
+            return true;
+        }
+        bool ret = true;
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
         if (*counter_ > 0) {
-            ret_s = sema_.post();
+            ret = sema_.post();
             -- *counter_;
-            ret_h = handshake_.wait();
+            ret = ret && handshake_.wait();
         }
-        return ret_s && ret_h;
+        return ret;
     }
 
     bool broadcast() {
-        bool ret_s = true, ret_h = true;
+        std::atomic_thread_fence(std::memory_order_acq_rel);
+        if (waiting_cnt() != nullptr &&
+            waiting_cnt()->load(std::memory_order_relaxed) == 0) {
+            return true;
+        }
+        bool ret = true;
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
         if (*counter_ > 0) {
-            ret_s = sema_.post(*counter_);
+            ret = sema_.post(*counter_);
             do {
                 -- *counter_;
-                bool rh = handshake_.wait();
-                ret_h = ret_h && rh;
+                ret = ret && handshake_.wait();
             } while (*counter_ > 0);
         }
-        return ret_s && ret_h;
+        return ret;
     }
 };
 

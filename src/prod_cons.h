@@ -266,7 +266,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         ct_.store(nxt_ct = cur_ct + 1, std::memory_order_release);
         std::forward<F>(f)(&(el->data_));
         // set flag & try update wt
-        el->f_ct_.store(~static_cast<flag_t>(cur_ct));
+        el->f_ct_.store(~static_cast<flag_t>(cur_ct), std::memory_order_release);
         return true;
     }
 

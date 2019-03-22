@@ -1,6 +1,13 @@
 #pragma once
 
 #include <pthread.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <semaphore.h>
+#include <errno.h>
+
+#include <atomic>
+#include <tuple>
 
 #include "def.h"
 #include "log.h"
@@ -104,98 +111,191 @@ public:
 
 #pragma pop_macro("IPC_PTHREAD_FUNC_")
 
-class semaphore {
-    mutex     lock_;
-    condition cond_;
-    long      counter_;
+class sem_helper {
+public:
+    using handle_t = sem_t*;
+
+    constexpr static handle_t invalid() noexcept {
+        return SEM_FAILED;
+    }
+
+    static handle_t open(char const* name, long count) {
+        handle_t sem = ::sem_open(name, O_CREAT, 0666, count);
+        if (sem == SEM_FAILED) {
+            ipc::error("fail sem_open[%d]: %s\n", errno, name);
+            return invalid();
+        }
+        return sem;
+    }
+
+#pragma push_macro("IPC_SEMAPHORE_FUNC_")
+#undef  IPC_SEMAPHORE_FUNC_
+#define IPC_SEMAPHORE_FUNC_(CALL, PAR)              \
+    if (::CALL(PAR) != 0) {                         \
+        ipc::error("fail " #CALL "[%d]\n", errno);  \
+        return false;                               \
+    }                                               \
+    return true
+
+    static bool close(handle_t h) {
+        if (h == invalid()) return false;
+        IPC_SEMAPHORE_FUNC_(sem_close, h);
+    }
+
+    static bool destroy(char const* name) {
+        IPC_SEMAPHORE_FUNC_(sem_unlink, name);
+    }
+
+    static bool post(handle_t h) {
+        if (h == invalid()) return false;
+        IPC_SEMAPHORE_FUNC_(sem_post, h);
+    }
+
+    static bool wait(handle_t h) {
+        if (h == invalid()) return false;
+        IPC_SEMAPHORE_FUNC_(sem_wait, h);
+    }
+
+#pragma pop_macro("IPC_SEMAPHORE_FUNC_")
+};
+
+class waiter_helper {
+    mutex lock_;
+
+    std::atomic<unsigned> waiting_ { 0 };
+    long counter_ = 0;
 
 public:
-    bool open(long count = 0) {
-        if (lock_.open() && cond_.open()) {
-            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-            counter_ = count;
-            return true;
+    using handle_t = std::tuple<std::string, sem_helper::handle_t, sem_helper::handle_t>;
+
+    static handle_t invalid() noexcept {
+        return std::make_tuple(std::string{}, sem_helper::invalid(), sem_helper::invalid());
+    }
+
+    handle_t open_h(std::string && name) {
+        auto sem = sem_helper::open(("__WAITER_HELPER_SEM__" + name).c_str(), 0);
+        if (sem == sem_helper::invalid()) {
+            return invalid();
         }
-        return false;
+        auto han = sem_helper::open(("__WAITER_HELPER_HAN__" + name).c_str(), 0);
+        if (han == sem_helper::invalid()) {
+            return invalid();
+        }
+        return std::make_tuple(std::move(name), sem, han);
+    }
+
+    void release_h(handle_t const & h) {
+        sem_helper::close(std::get<2>(h));
+        sem_helper::close(std::get<1>(h));
+    }
+
+    void close_h(handle_t const & h) {
+        auto const & name = std::get<0>(h);
+        sem_helper::destroy(("__WAITER_HELPER_HAN__" + name).c_str());
+        sem_helper::destroy(("__WAITER_HELPER_SEM__" + name).c_str());
+    }
+
+    bool open() {
+        return lock_.open();
     }
 
     void close() {
-        cond_.close();
         lock_.close();
     }
 
     template <typename F>
-    bool wait_if(F&& check) {
-        bool ret = true;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        while ((counter_ <= 0) &&
-               std::forward<F>(check)() &&
-               (ret = cond_.wait(lock_))) ;
-        -- counter_;
+    bool wait_if(handle_t const & h, F&& pred) {
+        waiting_.fetch_add(1, std::memory_order_release);
+        {
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+            if (!std::forward<F>(pred)()) return true;
+            ++ counter_;
+        }
+        bool ret = sem_helper::wait(std::get<1>(h));
+        waiting_.fetch_sub(1, std::memory_order_release);
+        ret = sem_helper::post(std::get<2>(h)) && ret;
         return ret;
     }
 
-    template <typename F>
-    bool post(F&& count) {
+    bool notify(handle_t const & h) {
+        std::atomic_thread_fence(std::memory_order_acq_rel);
+        if (waiting_.load(std::memory_order_relaxed) == 0) {
+            return true;
+        }
+        bool ret = true;
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        auto c = std::forward<F>(count)();
-        if (c <= 0) return false;
-        counter_ += c;
-        return cond_.broadcast();
+        if (counter_ > 0) {
+            ret = sem_helper::post(std::get<1>(h));
+            -- counter_;
+            ret = ret && sem_helper::wait(std::get<2>(h));
+        }
+        return ret;
+    }
+
+    bool broadcast(handle_t const & h) {
+        std::atomic_thread_fence(std::memory_order_acq_rel);
+        if (waiting_.load(std::memory_order_relaxed) == 0) {
+            return true;
+        }
+        bool ret = true;
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+        if (counter_ > 0) {
+            for (long i = 0; i < counter_; ++i) {
+                ret = ret && sem_helper::post(std::get<1>(h));
+            }
+            do {
+                -- counter_;
+                ret = ret && sem_helper::wait(std::get<2>(h));
+            } while (counter_ > 0);
+        }
+        return ret;
     }
 };
 
 class waiter {
-    semaphore sem_;
-    std::atomic<long>     counter_ { 0 };
-    std::atomic<unsigned> opened_  { 0 };
+    waiter_helper helper_;
+    std::atomic<unsigned> opened_ { 0 };
 
 public:
-    using handle_t = waiter * ;
+    using handle_t = waiter_helper::handle_t;
 
-    constexpr static handle_t invalid() {
-        return nullptr;
+    static handle_t invalid() noexcept {
+        return waiter_helper::invalid();
     }
 
     handle_t open(char const * name) {
         if (name == nullptr || name[0] == '\0') {
             return invalid();
         }
-        if ((opened_.fetch_add(1, std::memory_order_acq_rel) == 0) && !sem_.open()) {
+        if ((opened_.fetch_add(1, std::memory_order_acq_rel) == 0) && !helper_.open()) {
             return invalid();
         }
-        return this;
+        return helper_.open_h(name);
     }
 
     void close(handle_t h) {
+        if (h == invalid()) return;
+        helper_.release_h(h);
         if (opened_.fetch_sub(1, std::memory_order_release) == 1) {
-            if (h == invalid()) return;
-            sem_.close();
+            helper_.close_h(h);
+            helper_.close();
         }
     }
 
     template <typename F>
     bool wait_if(handle_t h, F&& pred) {
         if (h == invalid()) return false;
-        counter_.fetch_add(1, std::memory_order_release);
-        IPC_UNUSED_ auto guard = unique_ptr(&counter_, [](decltype(counter_)* c) {
-            c->fetch_sub(1, std::memory_order_release);
-        });
-        return sem_.wait_if(std::forward<F>(pred));
+        return helper_.wait_if(h, std::forward<F>(pred));
     }
 
     void notify(handle_t h) {
         if (h == invalid()) return;
-        sem_.post([this] {
-            return (0 < counter_.load(std::memory_order_relaxed)) ? 1 : 0;
-        });
+        helper_.notify(h);
     }
 
     void broadcast(handle_t h) {
         if (h == invalid()) return;
-        sem_.post([this] {
-            return counter_.load(std::memory_order_relaxed);
-        });
+        helper_.broadcast(h);
     }
 };
 
