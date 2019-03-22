@@ -46,9 +46,6 @@ enum class trans { // transmission
 template <relat Rp, relat Rc, trans Ts>
 struct wr {};
 
-// implement with multi routes
-struct wr_routes {};
-
 // concept helpers
 
 template <bool Cond, typename R>

@@ -241,7 +241,7 @@ private slots:
 
 #include "test_circ.moc"
 
-constexpr int LoopCount = 10000000;
+constexpr int LoopCount = 1000000;
 //constexpr int LoopCount = 1000/*0000*/;
 
 void Unit::initTestCase() {

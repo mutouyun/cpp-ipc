@@ -25,18 +25,6 @@ struct IPC_EXPORT chan_impl {
     static buff_t recv(handle_t h);
 };
 
-template <>
-struct IPC_EXPORT chan_impl<wr_routes> {
-    static handle_t connect   (char const * name);
-    static void     disconnect(handle_t h);
-
-    static std::size_t recv_count(handle_t h);
-    static bool wait_for_recv(handle_t h, std::size_t r_count);
-
-    static bool   send(handle_t h, void const * data, std::size_t size);
-    static buff_t recv(handle_t h);
-};
-
 template <typename Flag>
 class chan_wrapper {
 private:
