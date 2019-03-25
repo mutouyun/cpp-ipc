@@ -41,8 +41,7 @@ SOURCES += \
     ../src/ipc.cpp \
     ../src/pool_alloc.cpp \
     ../src/buffer.cpp \
-    ../src/waiter.cpp \
-    ../src/channel.cpp
+    ../src/waiter.cpp
 
 unix {
 
