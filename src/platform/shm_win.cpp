@@ -4,29 +4,16 @@
 
 #include <string>
 #include <utility>
-#include <mutex>
 
 #include "def.h"
 #include "log.h"
 #include "memory/resource.h"
 #include "platform/to_tchar.h"
 
-namespace {
-
-inline auto* m2h() {
-    static struct {
-        std::mutex lc_;
-        ipc::mem::unordered_map<void*, HANDLE> cache_;
-    } m2h_;
-    return &m2h_;
-}
-
-} // internal-linkage
-
 namespace ipc {
 namespace shm {
 
-void* acquire(char const * name, std::size_t size) {
+id_t acquire(char const * name, std::size_t size) {
     if (name == nullptr || name[0] == '\0' || size == 0) {
         return nullptr;
     }
@@ -38,32 +25,25 @@ void* acquire(char const * name, std::size_t size) {
         ipc::error("fail CreateFileMapping[%d]: %s\n", static_cast<int>(::GetLastError()), name);
         return nullptr;
     }
+    return static_cast<id_t>(h);
+}
+
+void * to_mem(id_t id) {
+    if (id == nullptr) return nullptr;
+    HANDLE h = static_cast<HANDLE>(id);
     LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     if (mem == NULL) {
         ipc::error("fail MapViewOfFile[%d]: %s\n", static_cast<int>(::GetLastError()), name);
-        ::CloseHandle(h);
         return nullptr;
     }
-    {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(m2h()->lc_);
-        m2h()->cache_.emplace(mem, h);
-    }
-    return mem;
+    return static_cast<void *>(mem);
 }
 
-void release(void* mem, std::size_t /*size*/) {
-    if (mem == nullptr) {
-        return;
-    }
-    IPC_UNUSED_ auto guard = ipc::detail::unique_lock(m2h()->lc_);
-    auto& cc = m2h()->cache_;
-    auto it = cc.find(mem);
-    if (it == cc.end()) {
-        return;
-    }
-    ::UnmapViewOfFile(mem);
-    ::CloseHandle(it->second);
-    cc.erase(it);
+void release(id_t id, void * mem, std::size_t /*size*/) {
+    if (id  == nullptr) return;
+    if (mem == nullptr) return;
+    ::UnmapViewOfFile(static_cast<LPVOID>(mem));
+    ::CloseHandle(static_cast<HANDLE>(id));
 }
 
 } // namespace shm

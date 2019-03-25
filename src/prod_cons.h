@@ -3,6 +3,7 @@
 #include <atomic>
 #include <utility>
 #include <cstring>
+#include <type_traits>
 
 #include "def.h"
 
@@ -20,9 +21,9 @@ struct prod_cons_impl;
 template <>
 struct prod_cons_impl<wr<relat::single, relat::single, trans::unicast>> {
 
-    template <std::size_t DataSize>
+    template <std::size_t DataSize, std::size_t AlignSize>
     struct elem_t {
-        byte_t data_[DataSize] {};
+        std::aligned_storage_t<DataSize, AlignSize> data_ {};
     };
 
     alignas(circ::cache_line_size) std::atomic<circ::u2_t> rd_; // read index
@@ -32,8 +33,8 @@ struct prod_cons_impl<wr<relat::single, relat::single, trans::unicast>> {
         return 0;
     }
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
-    bool push(W* /*wrapper*/, F&& f, E<DataSize>* elems) {
+    template <typename W, typename F, typename E>
+    bool push(W* /*wrapper*/, F&& f, E* elems) {
         auto cur_wt = circ::index_of(wt_.load(std::memory_order_relaxed));
         if (cur_wt == circ::index_of(rd_.load(std::memory_order_acquire) - 1)) {
             return false; // full
@@ -43,8 +44,8 @@ struct prod_cons_impl<wr<relat::single, relat::single, trans::unicast>> {
         return true;
     }
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
-    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DataSize>* elems) {
+    template <typename W, typename F, typename E>
+    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E* elems) {
         auto cur_rd = circ::index_of(rd_.load(std::memory_order_relaxed));
         if (cur_rd == circ::index_of(wt_.load(std::memory_order_acquire))) {
             return false; // empty
@@ -59,9 +60,9 @@ template <>
 struct prod_cons_impl<wr<relat::single, relat::multi , trans::unicast>>
      : prod_cons_impl<wr<relat::single, relat::single, trans::unicast>> {
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
-    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DataSize>* elems) {
-        byte_t buff[DataSize];
+    template <typename W, typename F, template <std::size_t, std::size_t> class E, std::size_t DS, std::size_t AS>
+    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DS, AS>* elems) {
+        byte_t buff[DS];
         for (unsigned k = 0;;) {
             auto cur_rd = rd_.load(std::memory_order_relaxed);
             if (circ::index_of(cur_rd) ==
@@ -84,16 +85,16 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
 
     using flag_t = std::uint64_t;
 
-    template <std::size_t DataSize>
+    template <std::size_t DataSize, std::size_t AlignSize>
     struct elem_t {
-        byte_t data_[DataSize] {};
+        std::aligned_storage_t<DataSize, AlignSize> data_ {};
         std::atomic<flag_t> f_ct_ { 0 }; // commit flag
     };
 
     alignas(circ::cache_line_size) std::atomic<circ::u2_t> ct_; // commit index
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
-    bool push(W* /*wrapper*/, F&& f, E<DataSize>* elems) {
+    template <typename W, typename F, typename E>
+    bool push(W* /*wrapper*/, F&& f, E* elems) {
         circ::u2_t cur_ct, nxt_ct;
         for (unsigned k = 0;;) {
             cur_ct = ct_.load(std::memory_order_relaxed);
@@ -129,9 +130,9 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
         return true;
     }
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
-    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DataSize>* elems) {
-        byte_t buff[DataSize];
+    template <typename W, typename F, template <std::size_t, std::size_t> class E, std::size_t DS, std::size_t AS>
+    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DS, AS>* elems) {
+        byte_t buff[DS];
         for (unsigned k = 0;;) {
             auto cur_rd = rd_.load(std::memory_order_relaxed);
             auto cur_wt = wt_.load(std::memory_order_acquire);
@@ -165,9 +166,9 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
 
     using rc_t = std::size_t;
 
-    template <std::size_t DataSize>
+    template <std::size_t DataSize, std::size_t AlignSize>
     struct elem_t {
-        byte_t data_[DataSize] {};
+        std::aligned_storage_t<DataSize, AlignSize> data_ {};
         std::atomic<rc_t> rc_ { 0 }; // read-counter
     };
 
@@ -177,8 +178,8 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
         return wt_.load(std::memory_order_acquire);
     }
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
-    bool push(W* wrapper, F&& f, E<DataSize>* elems) {
+    template <typename W, typename F, typename E>
+    bool push(W* wrapper, F&& f, E* elems) {
         auto conn_cnt = wrapper->conn_count(std::memory_order_relaxed);
         if (conn_cnt == 0) return false;
         auto* el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
@@ -193,8 +194,8 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
         return true;
     }
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
-    bool pop(W* /*wrapper*/, circ::u2_t& cur, F&& f, E<DataSize>* elems) {
+    template <typename W, typename F, typename E>
+    bool pop(W* /*wrapper*/, circ::u2_t& cur, F&& f, E* elems) {
         if (cur == cursor()) return false; // acquire
         auto* el = elems + circ::index_of(cur++);
         std::forward<F>(f)(&(el->data_));
@@ -223,9 +224,9 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         rc_incr = 0x0000000100000000ull
     };
 
-    template <std::size_t DataSize>
+    template <std::size_t DataSize, std::size_t AlignSize>
     struct elem_t {
-        byte_t data_[DataSize] {};
+        std::aligned_storage_t<DataSize, AlignSize> data_ {};
         std::atomic<rc_t  > rc_   { 0 }; // read-counter
         std::atomic<flag_t> f_ct_ { 0 }; // commit flag
     };
@@ -236,9 +237,9 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         return ct_.load(std::memory_order_acquire);
     }
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize>
-    bool push(W* wrapper, F&& f, E<DataSize>* elems) {
-        E<DataSize>* el;
+    template <typename W, typename F, typename E>
+    bool push(W* wrapper, F&& f, E* elems) {
+        E* el;
         circ::u2_t cur_ct, nxt_ct;
         for (unsigned k = 0;;) {
             auto cc = wrapper->conn_count(std::memory_order_relaxed);
@@ -269,8 +270,8 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         return true;
     }
 
-    template <typename W, typename F, template <std::size_t> class E, std::size_t DataSize, std::size_t N>
-    bool pop(W* /*wrapper*/, circ::u2_t& cur, F&& f, E<DataSize>(& elems)[N]) {
+    template <typename W, typename F, typename E, std::size_t N>
+    bool pop(W* /*wrapper*/, circ::u2_t& cur, F&& f, E(& elems)[N]) {
         auto* el = elems + circ::index_of(cur);
         auto cur_fl = el->f_ct_.load(std::memory_order_acquire);
         if (cur_fl != ~static_cast<flag_t>(cur)) {

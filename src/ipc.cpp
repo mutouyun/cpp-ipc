@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <utility>
 #include <atomic>
+#include <type_traits>
 
 #include "def.h"
 #include "shm.h"
@@ -38,8 +39,16 @@ struct msg_t<0, AlignSize> {
 
 template <std::size_t DataSize, std::size_t AlignSize>
 struct msg_t {
-    msg_t<0, AlignSize> head_;
-    alignas(AlignSize) byte_t data_[DataSize];
+    msg_t<0, AlignSize> head_ {};
+    std::aligned_storage_t<DataSize, AlignSize> data_ {};
+
+    msg_t() = default;
+    msg_t(void* q, msg_id_t i, int r, void const * d, std::size_t s) {
+        head_.que_    = q;
+        head_.id_     = i;
+        head_.remain_ = r;
+        std::memcpy(&data_, d, s);
+    }
 };
 
 buff_t make_cache(void const * data, std::size_t size) {
@@ -62,20 +71,6 @@ struct cache_t {
     }
 };
 
-auto& recv_cache() {
-    /*
-        <Remarks> thread_local may have some bugs.
-        See: https://sourceforge.net/p/mingw-w64/bugs/727/
-             https://sourceforge.net/p/mingw-w64/bugs/527/
-             https://github.com/Alexpux/MINGW-packages/issues/2519
-             https://github.com/ChaiScript/ChaiScript/issues/402
-             https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
-             https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
-    */
-    static tls::pointer<mem::unordered_map<msg_id_t, cache_t>> rc;
-    return *rc.create();
-}
-
 template <typename Policy>
 struct detail_impl {
 
@@ -92,6 +87,20 @@ constexpr static queue_t* queue_of(ipc::handle_t h) {
 static auto& queues_cache() {
     static tls::pointer<mem::vector<queue_t*>> qc;
     return *qc.create();
+}
+
+static auto& recv_cache() {
+    /*
+        <Remarks> thread_local may have some bugs.
+        See: https://sourceforge.net/p/mingw-w64/bugs/727/
+             https://sourceforge.net/p/mingw-w64/bugs/527/
+             https://github.com/Alexpux/MINGW-packages/issues/2519
+             https://github.com/ChaiScript/ChaiScript/issues/402
+             https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
+             https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
+    */
+    static tls::pointer<mem::unordered_map<msg_id_t, cache_t>> rc;
+    return *rc.create();
 }
 
 /* API implementations */
@@ -141,21 +150,18 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
     // push message fragment
     int offset = 0;
     for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
-        msg_t<data_length> msg {
-            { que, msg_id, static_cast<int>(size) - offset - static_cast<int>(data_length) }, {}
-        };
-        std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset, data_length);
-        while (!que->push(msg)) std::this_thread::yield();
+        while (!que->push(que, msg_id, static_cast<int>(size) - offset - static_cast<int>(data_length),
+                          static_cast<byte_t const *>(data) + offset, data_length)) {
+            std::this_thread::yield();
+        }
     }
     // if remain > 0, this is the last message fragment
     int remain = static_cast<int>(size) - offset;
     if (remain > 0) {
-        msg_t<data_length> msg {
-            { que, msg_id, remain - static_cast<int>(data_length) }, {}
-        };
-        std::memcpy(msg.data_, static_cast<byte_t const *>(data) + offset,
-                               static_cast<std::size_t>(remain));
-        while (!que->push(msg)) std::this_thread::yield();
+        while (!que->push(que, msg_id, remain - static_cast<int>(data_length),
+                          static_cast<byte_t const *>(data) + offset, static_cast<std::size_t>(remain))) {
+            std::this_thread::yield();
+        }
     }
     return true;
 }
@@ -177,24 +183,24 @@ static buff_t recv(ipc::handle_t h) {
         auto cac_it = rc.find(msg.head_.id_);
         if (cac_it == rc.end()) {
             if (remain <= data_length) {
-                return make_cache(msg.data_, remain);
+                return make_cache(&(msg.data_), remain);
             }
             // cache the first message fragment
-            else rc.emplace(msg.head_.id_, cache_t { data_length, make_cache(msg.data_, remain) });
+            else rc.emplace(msg.head_.id_, cache_t { data_length, make_cache(&(msg.data_), remain) });
         }
         // has cached before this message
         else {
             auto& cac = cac_it->second;
             // this is the last message fragment
             if (msg.head_.remain_ <= 0) {
-                cac.append(msg.data_, remain);
+                cac.append(&(msg.data_), remain);
                 // finish this message, erase it from cache
                 auto buff = std::move(cac.buff_);
                 rc.erase(cac_it);
                 return buff;
             }
             // there are remain datas after this message
-            cac.append(msg.data_, data_length);
+            cac.append(&(msg.data_), data_length);
         }
     }
 }

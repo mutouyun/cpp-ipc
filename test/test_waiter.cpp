@@ -28,6 +28,7 @@ void Unit::test_broadcast() {
             ipc::detail::waiter_wrapper wp { &w };
             QVERIFY(wp.open("test-ipc-waiter"));
             QVERIFY(wp.wait_if([] { return true; }));
+            wp.close();
         });
     }
 
@@ -39,6 +40,7 @@ void Unit::test_broadcast() {
     QVERIFY(wp.broadcast());
 
     for (auto& t : ts) t.join();
+    wp.close();
 }
 
 } // internal-linkage

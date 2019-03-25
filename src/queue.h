@@ -27,16 +27,18 @@ protected:
     ipc::detail::waiter_wrapper cc_waiter_;
 
     bool connected_ = false;
-    bool dismiss_   = true;
+    shm::handle elems_h_;
 
     template <typename Elems>
     Elems* open(char const * name) {
-        auto elems = static_cast<Elems*>(shm::acquire(name, sizeof(Elems)));
+        if (!elems_h_.acquire(name, sizeof(Elems))) {
+            return nullptr;
+        }
+        auto elems = static_cast<Elems*>(elems_h_.get());
         if (elems == nullptr) {
             return nullptr;
         }
         elems->init();
-        dismiss_ = false;
         return elems;
     }
 
@@ -63,12 +65,9 @@ protected:
     }
 
     template <typename Elems>
-    void close(Elems* elems) {
+    void close(Elems* /*elems*/) {
         close();
-        if (!dismiss_ && (elems != nullptr)) {
-            shm::release(elems, sizeof(Elems));
-        }
-        dismiss_ = true;
+        elems_h_.release();
     }
 
 public:
@@ -131,7 +130,7 @@ public:
     using policy_t = typename elems_t::policy_t;
 
 protected:
-    elems_t* elems_ = nullptr;
+    elems_t * elems_ = nullptr;
     decltype(std::declval<elems_t>().cursor()) cursor_ = 0;
 
 public:
@@ -243,8 +242,8 @@ public:
 } // namespace detail
 
 template <typename T, typename Policy>
-class queue : public detail::queue_base<typename Policy::template elems_t<sizeof(T)>> {
-    using base_t = detail::queue_base<typename Policy::template elems_t<sizeof(T)>>;
+class queue : public detail::queue_base<typename Policy::template elems_t<sizeof(T), alignof(T)>> {
+    using base_t = detail::queue_base<typename Policy::template elems_t<sizeof(T), alignof(T)>>;
 
 public:
     using base_t::base_t;

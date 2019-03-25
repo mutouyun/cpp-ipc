@@ -83,6 +83,8 @@ void Unit::test_hello() {
     QVERIFY(shm_hd__.get() == nullptr);
     QVERIFY(shm_hd__.acquire("my-test", 1024));
 
+    mem = shm_hd__.get();
+    QVERIFY(mem != nullptr);
     std::uint8_t buf[1024] = {};
     QVERIFY(memcmp(mem, buf, sizeof(buf)) == 0);
 

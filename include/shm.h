@@ -7,8 +7,11 @@
 namespace ipc {
 namespace shm {
 
-IPC_EXPORT void* acquire(char const * name, std::size_t size);
-IPC_EXPORT void  release(void* mem, std::size_t size);
+using id_t = void*;
+
+IPC_EXPORT id_t   acquire(char const * name, std::size_t size);
+IPC_EXPORT void * to_mem (id_t id);
+IPC_EXPORT void   release(id_t id, void * mem, std::size_t size);
 
 class IPC_EXPORT handle {
 public:

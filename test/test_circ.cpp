@@ -24,8 +24,8 @@ template <ipc::relat Rp, ipc::relat Rc, ipc::trans Ts>
 using pc_t = ipc::prod_cons_impl<ipc::wr<Rp, Rc, Ts>>;
 
 template <std::size_t DataSize, typename Policy>
-struct ea_t : public ipc::circ::elem_array<Policy, DataSize> {
-    ea_t() { std::memset(this, 0, sizeof(ipc::circ::elem_array<Policy, DataSize>)); }
+struct ea_t : public ipc::circ::elem_array<Policy, DataSize, 1> {
+    ea_t() { std::memset(this, 0, sizeof(ipc::circ::elem_array<Policy, DataSize, 1>)); }
 };
 
 using cq_t = ea_t<

@@ -10,7 +10,8 @@ namespace shm {
 
 class handle::handle_ : public pimpl<handle_> {
 public:
-    void* m_ = nullptr;
+    shm::id_t id_ = nullptr;
+    void*     m_  = nullptr;
 
     std::string n_;
     std::size_t s_ = 0;
@@ -58,16 +59,18 @@ char const * handle::name() const {
 
 bool handle::acquire(char const * name, std::size_t size) {
     release();
-    impl(p_)->m_ = shm::acquire((impl(p_)->n_ = name).c_str(),
-                                 impl(p_)->s_ = size);
+    impl(p_)->id_ = shm::acquire((impl(p_)->n_ = name).c_str(),
+                                  impl(p_)->s_ = size);
+    impl(p_)->m_  = shm::to_mem  (impl(p_)->id_);
     return valid();
 }
 
 void handle::release() {
     if (!valid()) return;
-    shm::release(impl(p_)->m_, impl(p_)->s_);
-    impl(p_)->m_ = nullptr;
-    impl(p_)->s_ = 0;
+    shm::release(impl(p_)->id_, impl(p_)->m_, impl(p_)->s_);
+    impl(p_)->id_ = nullptr;
+    impl(p_)->m_  = nullptr;
+    impl(p_)->s_  = 0;
     impl(p_)->n_.clear();
 }
 

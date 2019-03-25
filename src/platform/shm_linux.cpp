@@ -10,7 +10,7 @@
 #include <atomic>
 #include <string>
 #include <utility>
-#include <mutex>
+#include <cstring>
 
 #include "def.h"
 #include "log.h"
@@ -18,22 +18,21 @@
 
 namespace {
 
-using acc_t = std::atomic_size_t;
+struct info_t {
+    std::atomic_size_t acc_;
+    char name_[ipc::name_length];
+};
 
-constexpr acc_t* acc_of(void* mem) {
-    return static_cast<acc_t*>(mem);
+constexpr std::size_t calc_size(std::size_t size) {
+    return ((((size - 1) / alignof(info_t)) + 1) * alignof(info_t)) + sizeof(info_t);
 }
 
-constexpr void* mem_of(void* mem) {
-    return static_cast<acc_t*>(mem) - 1;
+inline auto& acc_of(void* mem, std::size_t size) {
+    return reinterpret_cast<info_t*>(static_cast<ipc::byte_t*>(mem) + size - sizeof(info_t))->acc_;
 }
 
-inline auto* m2h() {
-    static struct {
-        std::mutex lc_;
-        ipc::mem::unordered_map<void*, std::string> cache_;
-    } m2h_;
-    return &m2h_;
+inline auto& str_of(void* mem, std::size_t size) {
+    return reinterpret_cast<info_t*>(static_cast<ipc::byte_t*>(mem) + size - sizeof(info_t))->name_;
 }
 
 } // internal-linkage
@@ -41,11 +40,15 @@ inline auto* m2h() {
 namespace ipc {
 namespace shm {
 
-void* acquire(char const * name, std::size_t size) {
+id_t acquire(char const * name, std::size_t size) {
     if (name == nullptr || name[0] == '\0' || size == 0) {
         return nullptr;
     }
     std::string op_name = std::string{"__IPC_SHM__"} + name;
+    if (op_name.size() >= ipc::name_length) {
+        ipc::error("name is too long!: [%d]%s\n", static_cast<int>(op_name.size()), op_name.c_str());
+        return nullptr;
+    }
     int fd = ::shm_open(op_name.c_str(), O_CREAT | O_RDWR,
                                          S_IRUSR | S_IWUSR |
                                          S_IRGRP | S_IWGRP |
@@ -54,7 +57,7 @@ void* acquire(char const * name, std::size_t size) {
         ipc::error("fail shm_open[%d]: %s\n", errno, name);
         return nullptr;
     }
-    size += sizeof(acc_t);
+    size = calc_size(size);
     if (::ftruncate(fd, static_cast<off_t>(size)) != 0) {
         ipc::error("fail ftruncate[%d]: %s\n", errno, name);
         ::close(fd);
@@ -68,33 +71,31 @@ void* acquire(char const * name, std::size_t size) {
         ::shm_unlink(op_name.c_str());
         return nullptr;
     }
-    auto acc = acc_of(mem);
-    acc->fetch_add(1, std::memory_order_release);
-    {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(m2h()->lc_);
-        m2h()->cache_.emplace(++acc, std::move(op_name));
+    if (acc_of(mem, size).fetch_add(1, std::memory_order_release) == 0) {
+        std::memcpy(&str_of(mem, size), op_name.c_str(), op_name.size());
     }
-    return acc;
+    return static_cast<id_t>(mem);
 }
 
-void release(void* mem, std::size_t size) {
+void * to_mem(id_t id) {
+    return static_cast<void *>(id);
+}
+
+void release(id_t id, void * mem, std::size_t size) {
     if (mem == nullptr) {
         return;
     }
-    IPC_UNUSED_ auto guard = ipc::detail::unique_lock(m2h()->lc_);
-    auto& cc = m2h()->cache_;
-    auto it = cc.find(mem);
-    if (it == cc.end()) {
+    if (mem != to_mem(id)) {
         return;
     }
-    mem = mem_of(mem);
-    size += sizeof(acc_t);
-    if (acc_of(mem)->fetch_sub(1, std::memory_order_acquire) == 1) {
+    size = calc_size(size);
+    if (acc_of(mem, size).fetch_sub(1, std::memory_order_acquire) == 1) {
+        char name[ipc::name_length] = {};
+        std::memcpy(name, &str_of(mem, size), sizeof(name));
         ::munmap(mem, size);
-        ::shm_unlink(it->second.c_str());
+        ::shm_unlink(name);
     }
     else ::munmap(mem, size);
-    cc.erase(it);
 }
 
 } // namespace shm

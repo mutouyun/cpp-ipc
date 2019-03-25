@@ -13,12 +13,12 @@ namespace ipc {
 namespace circ {
 namespace detail {
 
-template <typename Policy, std::size_t DataSize>
+template <typename Policy, std::size_t DataSize, std::size_t AlignSize>
 class elem_array {
 public:
     using policy_t = Policy;
     using cursor_t = decltype(std::declval<policy_t>().cursor());
-    using elem_t   = typename policy_t::template elem_t<DataSize>;
+    using elem_t   = typename policy_t::template elem_t<DataSize, AlignSize>;
 
     enum : std::size_t {
         data_size  = DataSize,
@@ -29,7 +29,7 @@ public:
 
 private:
     policy_t head_;
-    elem_t   block_[elem_max];
+    elem_t block_[elem_max];
 
 public:
     cursor_t cursor() const noexcept {
@@ -50,11 +50,11 @@ public:
 
 } // namespace detail
 
-template <typename Policy, std::size_t DataSize>
+template <typename Policy, std::size_t DataSize, std::size_t AlignSize>
 class elem_array : public ipc::circ::conn_head {
 public:
     using base_t   = ipc::circ::conn_head;
-    using array_t  = detail::elem_array<Policy, DataSize>;
+    using array_t  = detail::elem_array<Policy, DataSize, AlignSize>;
     using policy_t = typename array_t::policy_t;
     using cursor_t = typename array_t::cursor_t;
     using elem_t   = typename array_t::elem_t;
