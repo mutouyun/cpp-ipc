@@ -101,11 +101,7 @@ constexpr static conn_info_t* info_of(ipc::handle_t h) {
 }
 
 constexpr static queue_t* queue_of(ipc::handle_t h) {
-    auto info = info_of(h);
-    if (info == nullptr) {
-        return nullptr;
-    }
-    return &(info->que_);
+    return (info_of(h) == nullptr) ? nullptr : &(info_of(h)->que_);
 }
 
 static auto& recv_cache() {
