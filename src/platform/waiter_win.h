@@ -194,8 +194,8 @@ public:
 
         class non_mutex {
         public:
-            void lock  () {}
-            void unlock() {}
+            void lock  () noexcept {}
+            void unlock() noexcept {}
         } nm;
 
         return h.wait_if(nm, std::forward<F>(pred));
