@@ -6,6 +6,7 @@
 #include <utility>
 #include <atomic>
 #include <type_traits>
+#include <string>
 
 #include "def.h"
 #include "shm.h"
@@ -13,9 +14,12 @@
 #include "pool_alloc.h"
 #include "queue.h"
 #include "policy.h"
+#include "rw_lock.h"
 
 #include "memory/resource.h"
+
 #include "platform/detail.h"
+#include "platform/waiter_wrapper.h"
 
 namespace {
 
@@ -76,17 +80,32 @@ struct detail_impl {
 
 using queue_t = ipc::queue<msg_t<data_length>, Policy>;
 
+struct conn_info_t {
+    queue_t que_;
+    waiter  cc_waiter_, wt_waiter_, rd_waiter_;
+
+    conn_info_t(char const * name)
+        : que_         ((std::string{ "__QU_CONN__" } + name).c_str()) {
+        cc_waiter_.open((std::string{ "__CC_CONN__" } + name).c_str());
+        wt_waiter_.open((std::string{ "__WT_CONN__" } + name).c_str());
+        rd_waiter_.open((std::string{ "__RD_CONN__" } + name).c_str());
+    }
+};
+
 constexpr static void* head_of(queue_t* que) {
     return static_cast<void*>(que->elems());
 }
 
-constexpr static queue_t* queue_of(ipc::handle_t h) {
-    return static_cast<queue_t*>(h);
+constexpr static conn_info_t* info_of(ipc::handle_t h) {
+    return static_cast<conn_info_t*>(h);
 }
 
-static auto& queues_cache() {
-    static tls::pointer<mem::vector<queue_t*>> qc;
-    return *qc.create();
+constexpr static queue_t* queue_of(ipc::handle_t h) {
+    auto info = info_of(h);
+    if (info == nullptr) {
+        return nullptr;
+    }
+    return &(info->que_);
 }
 
 static auto& recv_cache() {
@@ -106,7 +125,7 @@ static auto& recv_cache() {
 /* API implementations */
 
 static ipc::handle_t connect(char const * name) {
-    return mem::alloc<queue_t>(name);
+    return mem::alloc<conn_info_t>(name);
 }
 
 static void disconnect(ipc::handle_t h) {
@@ -114,8 +133,10 @@ static void disconnect(ipc::handle_t h) {
     if (que == nullptr) {
         return;
     }
-    que->disconnect(); // needn't to detach, cause it will be deleted soon.
-    mem::free(que);
+    if (que->disconnect()) {
+        info_of(h)->cc_waiter_.broadcast();
+    }
+    mem::free(info_of(h));
 }
 
 static std::size_t recv_count(ipc::handle_t h) {
@@ -131,7 +152,14 @@ static bool wait_for_recv(ipc::handle_t h, std::size_t r_count) {
     if (que == nullptr) {
         return false;
     }
-    return que->wait_for_connect(r_count);
+    for (unsigned k = 0; que->conn_count() < r_count;) {
+        ipc::sleep(k, [h, que, r_count] {
+            return info_of(h)->cc_waiter_.wait_if([que, r_count] {
+                return que->conn_count() < r_count;
+            });
+        });
+    }
+    return true;
 }
 
 static bool send(ipc::handle_t h, void const * data, std::size_t size) {
@@ -154,6 +182,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
                           static_cast<byte_t const *>(data) + offset, data_length)) {
             std::this_thread::yield();
         }
+        info_of(h)->rd_waiter_.broadcast();
     }
     // if remain > 0, this is the last message fragment
     int remain = static_cast<int>(size) - offset;
@@ -162,6 +191,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
                           static_cast<byte_t const *>(data) + offset, static_cast<std::size_t>(remain))) {
             std::this_thread::yield();
         }
+        info_of(h)->rd_waiter_.broadcast();
     }
     return true;
 }
@@ -169,11 +199,22 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
 static buff_t recv(ipc::handle_t h) {
     auto que = queue_of(h);
     if (que == nullptr) return {};
-    que->connect(); // wouldn't connect twice
+    if (que->connect()) { // wouldn't connect twice
+        info_of(h)->cc_waiter_.broadcast();
+    }
     auto& rc = recv_cache();
     while (1) {
         // pop a new message
-        auto msg = que->pop();
+        typename queue_t::value_t msg;
+        for (unsigned k = 0; !que->pop(msg);) {
+            bool succ = false;
+            ipc::sleep(k, [h, que, &msg, &succ] {
+                return info_of(h)->rd_waiter_.wait_if([que, &msg, &succ] {
+                    return !(succ = que->pop(msg));
+                });
+            });
+            if (succ) break;
+        }
         if (msg.head_.que_ == nullptr) return {};
         if (msg.head_.que_ == que) continue; // pop next
         // msg.head_.remain_ may minus & abs(msg.head_.remain_) < data_length
@@ -217,7 +258,7 @@ namespace ipc {
 namespace detail {
 
 std::size_t calc_unique_id() {
-    static shm::handle g_shm { "__GLOBAL_ACC_STORAGE__", sizeof(std::atomic<std::size_t>) };
+    static shm::handle g_shm { "__IPC_GLOBAL_ACC_STORAGE__", sizeof(std::atomic<std::size_t>) };
     return static_cast<std::atomic<std::size_t>*>(g_shm.get())->fetch_add(1, std::memory_order_relaxed);
 }
 

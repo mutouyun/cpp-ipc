@@ -113,15 +113,9 @@ struct test_cq<ipc::channel> {
 
     std::string conn_name_;
     int m_ = 0;
-    std::vector<cn_t*> s_cns_;
-    ipc::rw_lock lc_;
 
     test_cq(void*)
         : conn_name_("test-ipc-channel") {
-    }
-
-    ~test_cq() {
-        for (auto p : s_cns_) delete p;
     }
 
     cn_t connect() {
@@ -146,27 +140,22 @@ struct test_cq<ipc::channel> {
         } while(1);
     }
 
-    cn_t* connect_send() {
-        auto p = new cn_t { conn_name_.c_str() };
-        {
-            std::unique_lock<ipc::rw_lock> guard { lc_ };
-            s_cns_.push_back(p);
-        }
-        return p;
+    cn_t connect_send() {
+        return connect();
     }
 
-    void send(cn_t* cn, const std::array<int, 2>& info) {
+    void send(cn_t& cn, const std::array<int, 2>& info) {
         thread_local struct s_dummy {
-            s_dummy(cn_t* cn, int m) {
-                cn->wait_for_recv(static_cast<std::size_t>(m));
+            s_dummy(cn_t& cn, int m) {
+                cn.wait_for_recv(static_cast<std::size_t>(m));
 //                std::printf("start to send: %d.\n", m);
             }
         } _(cn, m_);
         int n = info[1];
         if (n < 0) {
-            /*QVERIFY*/(cn->send(ipc::buff_t('\0')));
+            /*QVERIFY*/(cn.send(ipc::buff_t('\0')));
         }
-        else /*QVERIFY*/(cn->send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
+        else /*QVERIFY*/(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
     }
 };
 

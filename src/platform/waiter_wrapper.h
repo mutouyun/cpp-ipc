@@ -219,4 +219,34 @@ public:
 };
 
 } // namespace detail
+
+class waiter : public detail::waiter_wrapper {
+
+    shm::handle shm_;
+
+    using detail::waiter_wrapper::attach;
+
+public:
+    ~waiter() {
+        close();
+    }
+
+    bool open(char const * name) {
+        if (name == nullptr || name[0] == '\0') {
+            return false;
+        }
+        close();
+        if (!shm_.acquire((std::string{ "__SHM_WAITER__" } + name).c_str(), sizeof(waiter_t))) {
+            return false;
+        }
+        attach(static_cast<waiter_t*>(shm_.get()));
+        return detail::waiter_wrapper::open((std::string{ "__IMP_WAITER__" } + name).c_str());
+    }
+
+    void close() {
+        detail::waiter_wrapper::close();
+        shm_.release();
+    }
+};
+
 } // namespace ipc

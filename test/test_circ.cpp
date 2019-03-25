@@ -133,6 +133,9 @@ struct test_cq<ea_t<D, P>> {
         ca_->disconnect();
     }
 
+    void disconnect(ca_t*) {
+    }
+
     void wait_start(int M) {
         while (ca_->conn_count() != static_cast<std::size_t>(M)) {
             std::this_thread::yield();
@@ -173,28 +176,23 @@ struct test_cq<ea_t<D, P>> {
 template <typename... T>
 struct test_cq<ipc::queue<T...>> {
     using cn_t = ipc::queue<T...>;
-    using ca_t = typename cn_t::elems_t;
 
-    ca_t* ca_;
-
-    test_cq(void*) : ca_(reinterpret_cast<ca_t*>(cq__)) {
-        ::new (ca_) ca_t;
-    }
+    test_cq(void*) {}
 
     cn_t* connect() {
-        cn_t* queue = new cn_t { ca_ };
+        cn_t* queue = new cn_t { "test-ipc-queue" };
         [&] { QVERIFY(queue->connect()); } ();
         return queue;
     }
 
     void disconnect(cn_t* queue) {
-        QVERIFY(queue->disconnect());
-        QVERIFY(queue->detach() != nullptr);
+        queue->disconnect();
         delete queue;
     }
 
     void wait_start(int M) {
-        while (ca_->conn_count() != static_cast<std::size_t>(M)) {
+        cn_t que("test-ipc-queue");
+        while (que.conn_count() != static_cast<std::size_t>(M)) {
             std::this_thread::yield();
         }
     }
@@ -202,18 +200,21 @@ struct test_cq<ipc::queue<T...>> {
     template <typename F>
     void recv(cn_t* queue, F&& proc) {
         while(1) {
-            auto msg = queue->pop();
+            typename cn_t::value_t msg;
+            while (!queue->pop(msg)) {
+                std::this_thread::yield();
+            }
             if (msg.pid_ < 0) return;
             proc(msg);
         }
     }
 
     cn_t* connect_send() {
-        return nullptr;
+        return new cn_t { "test-ipc-queue" };
     }
 
-    void send(cn_t* /*cn*/, msg_t const & msg) {
-        while (!cn_t{ ca_ }.push(msg)) {
+    void send(cn_t* cn, msg_t const & msg) {
+        while (!cn->push(msg)) {
             std::this_thread::yield();
         }
     }
@@ -385,14 +386,11 @@ void Unit::test_queue() {
     >>;
     queue_t queue;
 
-    queue.push(msg_t { 1, 2 });
-    QCOMPARE(queue.pop(), msg_t{});
+    QVERIFY(!queue.push(msg_t { 1, 2 }));
+    msg_t msg {};
+    QVERIFY(!queue.pop(msg));
+    QCOMPARE(msg, (msg_t {}));
     QVERIFY(sizeof(decltype(queue)::elems_t) <= sizeof(*cq__));
-
-    std::memset(cq__, 0, sizeof(decltype(queue)::elems_t));
-    auto cq = reinterpret_cast<decltype(queue)::elems_t*>(cq__);
-    queue.attach(cq);
-    QVERIFY(queue.detach() != nullptr);
 
     ipc::detail::static_for(std::make_index_sequence<16>{}, [](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount>((queue_t*)nullptr);

@@ -7,7 +7,6 @@
 
 #include "rw_lock.h"
 
-#include "platform/waiter_wrapper.h"
 #include "platform/detail.h"
 
 namespace ipc {
@@ -25,7 +24,6 @@ constexpr u1_t index_of(u2_t c) noexcept {
 }
 
 class conn_head {
-    ipc::detail::waiter      cc_waiter_, waiter_;
     std::atomic<std::size_t> cc_ { 0 }; // connection counter
 
     ipc::spin_lock lc_;
@@ -46,12 +44,6 @@ public:
     conn_head() = default;
     conn_head(const conn_head&) = delete;
     conn_head& operator=(const conn_head&) = delete;
-
-    auto       & waiter()       noexcept { return this->waiter_; }
-    auto const & waiter() const noexcept { return this->waiter_; }
-
-    auto       & conn_waiter()       noexcept { return this->cc_waiter_; }
-    auto const & conn_waiter() const noexcept { return this->cc_waiter_; }
 
     std::size_t connect() noexcept {
         return cc_.fetch_add(1, std::memory_order_release);

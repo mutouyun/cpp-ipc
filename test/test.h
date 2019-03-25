@@ -146,6 +146,7 @@ void benchmark_prod_cons(T* cq) {
             }
             // quit
             tcq.send(cn, { -1, -1 });
+            tcq.disconnect(cn);
         }};
         ++pid;
     }
