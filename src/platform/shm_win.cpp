@@ -33,7 +33,7 @@ void * to_mem(id_t id) {
     HANDLE h = static_cast<HANDLE>(id);
     LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     if (mem == NULL) {
-        ipc::error("fail MapViewOfFile[%d]: %s\n", static_cast<int>(::GetLastError()), name);
+        ipc::error("fail MapViewOfFile[%d]\n", static_cast<int>(::GetLastError()));
         return nullptr;
     }
     return static_cast<void *>(mem);
