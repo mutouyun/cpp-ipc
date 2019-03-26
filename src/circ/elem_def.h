@@ -46,11 +46,11 @@ public:
     conn_head& operator=(const conn_head&) = delete;
 
     std::size_t connect() noexcept {
-        return cc_.fetch_add(1, std::memory_order_release);
+        return cc_.fetch_add(1, std::memory_order_acq_rel);
     }
 
     std::size_t disconnect() noexcept {
-        return cc_.fetch_sub(1, std::memory_order_release);
+        return cc_.fetch_sub(1, std::memory_order_acq_rel);
     }
 
     std::size_t conn_count(std::memory_order order = std::memory_order_acquire) const noexcept {

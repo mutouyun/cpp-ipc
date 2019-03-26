@@ -190,13 +190,13 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
 
     template <typename W, typename F, typename E>
     bool push(W* wrapper, F&& f, E* elems) {
-        auto conn_cnt = wrapper->conn_count(std::memory_order_relaxed);
-        if (conn_cnt == 0) return false;
+        auto cc = wrapper->conn_count(std::memory_order_relaxed);
+        if (cc == 0) return false; // no reader
         auto* el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
         // check all consumers have finished reading this element
         rc_t expected = 0;
         if (!el->rc_.compare_exchange_strong(
-                    expected, static_cast<rc_t>(conn_cnt), std::memory_order_acq_rel)) {
+                    expected, static_cast<rc_t>(cc), std::memory_order_acq_rel)) {
             return false; // full
         }
         std::forward<F>(f)(&(el->data_));
@@ -206,11 +206,13 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
 
     template <typename W, typename F, typename E>
     bool force_push(W* wrapper, F&& f, E* elems) {
-        auto conn_cnt = wrapper->conn_count(std::memory_order_relaxed);
-        if (conn_cnt == 0) return false;
+        auto cc = wrapper->conn_count(std::memory_order_relaxed);
+        if (cc == 0) return false;      // no reader
+        cc = wrapper->disconnect() - 1; // disconnect a reader
+        if (cc == 0) return false;      // no reader
         auto* el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
         // reset reading flag
-        el->rc_.store(static_cast<rc_t>(conn_cnt), std::memory_order_relaxed);
+        el->rc_.store(static_cast<rc_t>(cc), std::memory_order_relaxed);
         std::forward<F>(f)(&(el->data_));
         wt_.fetch_add(1, std::memory_order_release);
         return true;
@@ -296,11 +298,12 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
     bool force_push(W* wrapper, F&& f, E* elems) {
         E* el;
         circ::u2_t cur_ct;
+        auto cc = wrapper->conn_count(std::memory_order_relaxed);
+        if (cc == 0) return false; // no reader
+        wrapper->disconnect();     // disconnect a reader
         for (unsigned k = 0;;) {
-            auto cc = wrapper->conn_count(std::memory_order_relaxed);
-            if (cc == 0) {
-                return false; // no reader
-            }
+            cc = wrapper->conn_count(std::memory_order_relaxed);
+            if (cc == 0) return false; // no reader
             el = elems + circ::index_of(cur_ct = ct_.load(std::memory_order_relaxed));
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             el->rc_.store(static_cast<rc_t>(cc) | ((cur_rc & ~rc_mask) + rc_incr), std::memory_order_relaxed);
