@@ -39,7 +39,6 @@ public:
             return true;
         }
         if (ret == WAIT_TIMEOUT) {
-            ipc::log("WaitForSingleObject is timeout.\n");
             return false;
         }
         ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
@@ -127,7 +126,7 @@ public:
         if (*counter_ > 0) {
             ret = sema_.post();
             -- *counter_;
-            ret = ret && handshake_.wait();
+            ret = ret && handshake_.wait(default_timeut);
         }
         return ret;
     }
@@ -143,7 +142,7 @@ public:
             ret = sema_.post(*counter_);
             do {
                 -- *counter_;
-                ret = ret && handshake_.wait();
+                ret = ret && handshake_.wait(default_timeut);
             } while (*counter_ > 0);
         }
         return ret;

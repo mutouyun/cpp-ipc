@@ -230,7 +230,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
         return [info, que, msg_id](int remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(que, msg_id, remain, data, size);
-                }, send_wait)) {
+                }, default_timeut)) {
                 if (!que->force_push(que, msg_id, remain, data, size)) {
                     return false;
                 }

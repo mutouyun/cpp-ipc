@@ -113,8 +113,10 @@ public:
             calc_wait_time(ts, tm);
             int eno;
             if ((eno = ::pthread_cond_timedwait(&cond_, &mtx.native(), &ts)) != 0) {
-                ipc::error("fail pthread_cond_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                           eno, tm, ts.tv_sec, ts.tv_nsec);
+                if (eno != ETIMEDOUT) {
+                    ipc::error("fail pthread_cond_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                               eno, tm, ts.tv_sec, ts.tv_nsec);
+                }
                 return false;
             }
             return true;
@@ -181,8 +183,10 @@ public:
             timespec ts;
             calc_wait_time(ts, tm);
             if (::sem_timedwait(h, &ts) != 0) {
-                ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                           errno, tm, ts.tv_sec, ts.tv_nsec);
+                if (errno != ETIMEDOUT) {
+                    ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                               errno, tm, ts.tv_sec, ts.tv_nsec);
+                }
                 return false;
             }
             return true;
@@ -260,7 +264,7 @@ public:
         if (counter_ > 0) {
             ret = sem_helper::post(std::get<1>(h));
             -- counter_;
-            ret = ret && sem_helper::wait(std::get<2>(h));
+            ret = ret && sem_helper::wait(std::get<2>(h), default_timeut);
         }
         return ret;
     }
@@ -278,7 +282,7 @@ public:
             }
             do {
                 -- counter_;
-                ret = ret && sem_helper::wait(std::get<2>(h));
+                ret = ret && sem_helper::wait(std::get<2>(h), default_timeut);
             } while (counter_ > 0);
         }
         return ret;
