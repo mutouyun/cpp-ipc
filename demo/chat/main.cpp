@@ -2,16 +2,9 @@
 #include <string>
 #include <thread>
 #include <regex>
+#include <atomic>
 
 #include "ipc.h"
-
-namespace ipc {
-namespace detail {
-
-IPC_EXPORT std::size_t calc_unique_id();
-
-} // namespace detail
-} // namespace ipc
 
 namespace {
 
@@ -19,10 +12,15 @@ char name__[] = "ipc-chat";
 char quit__[] = "q";
 char id__  [] = "c";
 
+std::size_t calc_unique_id() {
+    static ipc::shm::handle g_shm { "__CHAT_ACC_STORAGE__", sizeof(std::atomic<std::size_t>) };
+    return static_cast<std::atomic<std::size_t>*>(g_shm.get())->fetch_add(1, std::memory_order_relaxed);
+}
+
 } // namespace
 
 int main() {
-    std::string buf, id = id__ + std::to_string(ipc::detail::calc_unique_id());
+    std::string buf, id = id__ + std::to_string(calc_unique_id());
     std::regex  reg { "(c\\d+)> (.*)" };
 
     ipc::channel cc { name__ };

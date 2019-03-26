@@ -7,6 +7,7 @@
 #include <atomic>
 #include <type_traits>
 #include <string>
+#include <vector>
 
 #include "def.h"
 #include "shm.h"
@@ -15,6 +16,7 @@
 #include "queue.h"
 #include "policy.h"
 #include "rw_lock.h"
+#include "log.h"
 
 #include "memory/resource.h"
 
@@ -75,14 +77,33 @@ struct cache_t {
     }
 };
 
+struct conn_info_head {
+    using acc_t = std::atomic<msg_id_t>;
+
+    waiter      cc_waiter_, wt_waiter_, rd_waiter_;
+    shm::handle acc_h_;
+
+    conn_info_head(char const * name)
+        : cc_waiter_((std::string{ "__CC_CONN__" } + name).c_str())
+        , wt_waiter_((std::string{ "__WT_CONN__" } + name).c_str())
+        , rd_waiter_((std::string{ "__RD_CONN__" } + name).c_str())
+        , acc_h_    ((std::string{ "__AC_CONN__" } + name).c_str(), sizeof(acc_t)) {
+    }
+
+    auto acc() {
+        return static_cast<acc_t*>(acc_h_.get());
+    }
+};
+
 template <typename W, typename F>
 bool wait_for(W& waiter, F&& pred, std::size_t tm) {
     for (unsigned k = 0; pred();) {
         bool loop = true, ret = true;
-        ipc::sleep(k, [&loop, &ret, &waiter, &pred, tm] {
+        ipc::sleep(k, [&k, &loop, &ret, &waiter, &pred, tm] {
             ret = waiter.wait_if([&loop, &ret, &pred] {
                 return loop = pred();
             }, tm);
+            k = 0;
             return true;
         });
         if (!ret ) return false; // timeout or fail
@@ -96,15 +117,12 @@ struct detail_impl {
 
 using queue_t = ipc::queue<msg_t<data_length>, Policy>;
 
-struct conn_info_t {
+struct conn_info_t : conn_info_head {
     queue_t que_;
-    waiter  cc_waiter_, wt_waiter_, rd_waiter_;
 
     conn_info_t(char const * name)
-        : que_         ((std::string{ "__QU_CONN__" } + name).c_str()) {
-        cc_waiter_.open((std::string{ "__CC_CONN__" } + name).c_str());
-        wt_waiter_.open((std::string{ "__WT_CONN__" } + name).c_str());
-        rd_waiter_.open((std::string{ "__RD_CONN__" } + name).c_str());
+        : conn_info_head(name)
+        , que_((std::string{ "__QU_CONN__" } + name).c_str()) {
     }
 };
 
@@ -169,43 +187,80 @@ static bool wait_for_recv(ipc::handle_t h, std::size_t r_count, std::size_t tm) 
     }, tm);
 }
 
-static bool send(ipc::handle_t h, void const * data, std::size_t size) {
-    if (data == nullptr) {
-        return false;
-    }
-    if (size == 0) {
+template <typename F>
+static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t size) {
+    if (data == nullptr || size == 0) {
+        ipc::error("fail: send(%p, %zd)\n", data, size);
         return false;
     }
     auto que = queue_of(h);
     if (que == nullptr) {
+        ipc::error("fail: send, queue_of(h) == nullptr\n");
         return false;
     }
     // calc a new message id
-    auto msg_id = ipc::detail::calc_unique_id();
+    auto acc = info_of(h)->acc();
+    if (acc == nullptr) {
+        ipc::error("fail: send, info_of(h)->acc() == nullptr\n");
+        return false;
+    }
+    auto msg_id   = acc->fetch_add(1, std::memory_order_relaxed);
+    auto try_push = std::forward<F>(gen_push)(info_of(h), que, msg_id);
     // push message fragment
     int offset = 0;
     for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
-        while (!que->push(que, msg_id, static_cast<int>(size) - offset - static_cast<int>(data_length),
-                          static_cast<byte_t const *>(data) + offset, data_length)) {
-            std::this_thread::yield();
+        if (!try_push(static_cast<int>(size) - offset - static_cast<int>(data_length),
+                      static_cast<byte_t const *>(data) + offset, data_length)) {
+            return false;
         }
-        info_of(h)->rd_waiter_.broadcast();
     }
     // if remain > 0, this is the last message fragment
     int remain = static_cast<int>(size) - offset;
     if (remain > 0) {
-        while (!que->push(que, msg_id, remain - static_cast<int>(data_length),
-                          static_cast<byte_t const *>(data) + offset, static_cast<std::size_t>(remain))) {
-            std::this_thread::yield();
+        if (!try_push(remain - static_cast<int>(data_length),
+                      static_cast<byte_t const *>(data) + offset, static_cast<std::size_t>(remain))) {
+            return false;
         }
-        info_of(h)->rd_waiter_.broadcast();
     }
     return true;
 }
 
+static bool send(ipc::handle_t h, void const * data, std::size_t size) {
+    return send([](auto info, auto que, auto msg_id) {
+        return [info, que, msg_id](int remain, void const * data, std::size_t size) {
+            if (!wait_for(info->wt_waiter_, [&] {
+                    return !que->push(que, msg_id, remain, data, size);
+                }, send_wait)) {
+                if (!que->force_push(que, msg_id, remain, data, size)) {
+                    return false;
+                }
+            }
+            info->rd_waiter_.broadcast();
+            return true;
+        };
+    }, h, data, size);
+}
+
+static bool try_send(ipc::handle_t h, void const * data, std::size_t size) {
+    return send([](auto info, auto que, auto msg_id) {
+        return [info, que, msg_id](int remain, void const * data, std::size_t size) {
+            if (!wait_for(info->wt_waiter_, [&] {
+                    return !que->push(que, msg_id, remain, data, size);
+                }, 0)) {
+                return false;
+            }
+            info->rd_waiter_.broadcast();
+            return true;
+        };
+    }, h, data, size);
+}
+
 static buff_t recv(ipc::handle_t h, std::size_t tm) {
     auto que = queue_of(h);
-    if (que == nullptr) return {};
+    if (que == nullptr) {
+        ipc::error("fail: recv, queue_of(h) == nullptr\n");
+        return {};
+    }
     if (que->connect()) { // wouldn't connect twice
         info_of(h)->cc_waiter_.broadcast();
     }
@@ -217,19 +272,35 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
                       [que, &msg] { return !que->pop(msg); }, tm)) {
             return {};
         }
-        if (msg.head_.que_ == nullptr) return {};
+        info_of(h)->wt_waiter_.broadcast();
+        if (msg.head_.que_ == nullptr) {
+            ipc::error("fail: recv, msg.head_.que_ == nullptr\n");
+            return {};
+        }
         if (msg.head_.que_ == que) continue; // pop next
         // msg.head_.remain_ may minus & abs(msg.head_.remain_) < data_length
-        std::size_t remain = static_cast<std::size_t>(
-                             static_cast<int>(data_length) + msg.head_.remain_);
+        auto remain = static_cast<std::size_t>(static_cast<int>(data_length) + msg.head_.remain_);
         // find cache with msg.head_.id_
         auto cac_it = rc.find(msg.head_.id_);
         if (cac_it == rc.end()) {
             if (remain <= data_length) {
                 return make_cache(&(msg.data_), remain);
             }
-            // cache the first message fragment
-            else rc.emplace(msg.head_.id_, cache_t { data_length, make_cache(&(msg.data_), remain) });
+            else {
+                // gc
+                if (rc.size() > 1024) {
+                    std::vector<msg_id_t> need_del;
+                    for (auto const & pair : rc) {
+                        auto cmp = std::minmax(msg.head_.id_, pair.first);
+                        if (cmp.second - cmp.first > 8192) {
+                            need_del.push_back(pair.first);
+                        }
+                    }
+                    for (auto id : need_del) rc.erase(id);
+                }
+                // cache the first message fragment
+                rc.emplace(msg.head_.id_, cache_t { data_length, make_cache(&(msg.data_), remain) });
+            }
         }
         // has cached before this message
         else {
@@ -248,6 +319,10 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
     }
 }
 
+static buff_t try_recv(ipc::handle_t h) {
+    return recv(h, 0);
+}
+
 }; // detail_impl<Policy>
 
 template <typename Flag>
@@ -256,15 +331,6 @@ using policy_t = policy::choose<circ::elem_array, Flag>;
 } // internal-linkage
 
 namespace ipc {
-
-namespace detail {
-
-std::size_t calc_unique_id() {
-    static shm::handle g_shm { "__IPC_GLOBAL_ACC_STORAGE__", sizeof(std::atomic<std::size_t>) };
-    return static_cast<std::atomic<std::size_t>*>(g_shm.get())->fetch_add(1, std::memory_order_relaxed);
-}
-
-} // namespace detail
 
 template <typename Flag>
 ipc::handle_t chan_impl<Flag>::connect(char const * name) {
@@ -294,6 +360,16 @@ bool chan_impl<Flag>::send(ipc::handle_t h, void const * data, std::size_t size)
 template <typename Flag>
 buff_t chan_impl<Flag>::recv(ipc::handle_t h, std::size_t tm) {
     return detail_impl<policy_t<Flag>>::recv(h, tm);
+}
+
+template <typename Flag>
+bool chan_impl<Flag>::try_send(ipc::handle_t h, void const * data, std::size_t size) {
+    return detail_impl<policy_t<Flag>>::try_send(h, data, size);
+}
+
+template <typename Flag>
+buff_t chan_impl<Flag>::try_recv(ipc::handle_t h) {
+    return detail_impl<policy_t<Flag>>::try_recv(h);
 }
 
 template struct chan_impl<ipc::wr<relat::single, relat::single, trans::unicast  >>;

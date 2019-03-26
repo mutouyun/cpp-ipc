@@ -145,6 +145,14 @@ public:
         });
     }
 
+    template <typename T, typename... P>
+    auto force_push(P&&... params) {
+        if (elems_ == nullptr) return false;
+        return elems_->force_push([&](void* p) {
+            ::new (p) T(std::forward<P>(params)...);
+        });
+    }
+
     template <typename T>
     bool pop(T& item) {
         if (elems_ == nullptr) {
@@ -166,12 +174,15 @@ public:
     using value_t = T;
 
     using base_t::base_t;
-    using base_t::push;
-    using base_t::pop;
 
     template <typename... P>
     auto push(P&&... params) {
         return base_t::template push<T>(std::forward<P>(params)...);
+    }
+
+    template <typename... P>
+    auto force_push(P&&... params) {
+        return base_t::template force_push<T>(std::forward<P>(params)...);
     }
 
     bool pop(T& item) {

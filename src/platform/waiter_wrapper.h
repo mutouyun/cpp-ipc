@@ -232,6 +232,11 @@ class waiter : public detail::waiter_wrapper {
     using detail::waiter_wrapper::attach;
 
 public:
+    waiter() = default;
+    waiter(char const * name) {
+        open(name);
+    }
+
     ~waiter() {
         close();
     }

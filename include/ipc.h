@@ -23,6 +23,9 @@ struct IPC_EXPORT chan_impl {
 
     static bool   send(handle_t h, void const * data, std::size_t size);
     static buff_t recv(handle_t h, std::size_t tm);
+
+    static bool   try_send(handle_t h, void const * data, std::size_t size);
+    static buff_t try_recv(handle_t h);
 };
 
 template <typename Flag>
@@ -100,20 +103,20 @@ public:
         return chan_wrapper(name).wait_for_recv(r_count, tm);
     }
 
-    bool send(void const * data, std::size_t size) {
-        return detail_t::send(h_, data, size);
-    }
+    bool send    (void        const * data, std::size_t size) { return detail_t::send(h_, data, size)             ; }
+    bool send    (buff_t      const & buff)                   { return     this->send(buff.data(), buff.size())   ; }
+    bool send    (std::string const & str)                    { return     this->send(str.c_str(), str.size() + 1); }
 
-    bool send(buff_t const & buff) {
-        return this->send(buff.data(), buff.size());
-    }
-
-    bool send(std::string const & str) {
-        return this->send(str.c_str(), str.size() + 1);
-    }
+    bool try_send(void        const * data, std::size_t size) { return detail_t::try_send(h_, data, size)             ; }
+    bool try_send(buff_t      const & buff)                   { return     this->try_send(buff.data(), buff.size())   ; }
+    bool try_send(std::string const & str)                    { return     this->try_send(str.c_str(), str.size() + 1); }
 
     buff_t recv(std::size_t tm = invalid_value) {
         return detail_t::recv(h_, tm);
+    }
+
+    buff_t try_recv() {
+        return detail_t::try_recv(h_);
     }
 };
 

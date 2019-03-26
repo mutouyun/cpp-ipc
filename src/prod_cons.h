@@ -45,6 +45,11 @@ struct prod_cons_impl<wr<relat::single, relat::single, trans::unicast>> {
     }
 
     template <typename W, typename F, typename E>
+    bool force_push(W* wrapper, F&& f, E* elems) {
+        return push(wrapper, std::forward<F>(f), elems);
+    }
+
+    template <typename W, typename F, typename E>
     bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E* elems) {
         auto cur_rd = circ::index_of(rd_.load(std::memory_order_relaxed));
         if (cur_rd == circ::index_of(wt_.load(std::memory_order_acquire))) {
@@ -130,6 +135,11 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
         return true;
     }
 
+    template <typename W, typename F, typename E>
+    bool force_push(W* wrapper, F&& f, E* elems) {
+        return push(wrapper, std::forward<F>(f), elems); /* TBD */
+    }
+
     template <typename W, typename F, template <std::size_t, std::size_t> class E, std::size_t DS, std::size_t AS>
     bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DS, AS>* elems) {
         byte_t buff[DS];
@@ -186,9 +196,21 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
         // check all consumers have finished reading this element
         rc_t expected = 0;
         if (!el->rc_.compare_exchange_strong(
-                    expected, static_cast<rc_t>(conn_cnt), std::memory_order_release)) {
+                    expected, static_cast<rc_t>(conn_cnt), std::memory_order_acq_rel)) {
             return false; // full
         }
+        std::forward<F>(f)(&(el->data_));
+        wt_.fetch_add(1, std::memory_order_release);
+        return true;
+    }
+
+    template <typename W, typename F, typename E>
+    bool force_push(W* wrapper, F&& f, E* elems) {
+        auto conn_cnt = wrapper->conn_count(std::memory_order_relaxed);
+        if (conn_cnt == 0) return false;
+        auto* el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
+        // reset reading flag
+        el->rc_.store(static_cast<rc_t>(conn_cnt), std::memory_order_relaxed);
         std::forward<F>(f)(&(el->data_));
         wt_.fetch_add(1, std::memory_order_release);
         return true;
@@ -240,7 +262,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
     template <typename W, typename F, typename E>
     bool push(W* wrapper, F&& f, E* elems) {
         E* el;
-        circ::u2_t cur_ct, nxt_ct;
+        circ::u2_t cur_ct;
         for (unsigned k = 0;;) {
             auto cc = wrapper->conn_count(std::memory_order_relaxed);
             if (cc == 0) {
@@ -263,7 +285,30 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
             ipc::yield(k);
         }
         // only one thread/process would touch here at one time
-        ct_.store(nxt_ct = cur_ct + 1, std::memory_order_release);
+        ct_.store(cur_ct + 1, std::memory_order_release);
+        std::forward<F>(f)(&(el->data_));
+        // set flag & try update wt
+        el->f_ct_.store(~static_cast<flag_t>(cur_ct), std::memory_order_release);
+        return true;
+    }
+
+    template <typename W, typename F, typename E>
+    bool force_push(W* wrapper, F&& f, E* elems) {
+        E* el;
+        circ::u2_t cur_ct;
+        for (unsigned k = 0;;) {
+            auto cc = wrapper->conn_count(std::memory_order_relaxed);
+            if (cc == 0) {
+                return false; // no reader
+            }
+            el = elems + circ::index_of(cur_ct = ct_.load(std::memory_order_relaxed));
+            auto cur_rc = el->rc_.load(std::memory_order_acquire);
+            el->rc_.store(static_cast<rc_t>(cc) | ((cur_rc & ~rc_mask) + rc_incr), std::memory_order_relaxed);
+            if (ct_.compare_exchange_weak(cur_ct, cur_ct + 1, std::memory_order_release)) {
+                break;
+            }
+            ipc::yield(k);
+        }
         std::forward<F>(f)(&(el->data_));
         // set flag & try update wt
         el->f_ct_.store(~static_cast<flag_t>(cur_ct), std::memory_order_release);

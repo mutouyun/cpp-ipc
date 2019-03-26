@@ -20,8 +20,9 @@ namespace detail {
 
 inline static void calc_wait_time(timespec& ts, std::size_t tm) {
     ::clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec  += (tm / 1000);           // seconds
-    ts.tv_nsec += (tm % 1000) * 1000000; // nanoseconds
+    ts.tv_nsec += tm * 1000000; // nanoseconds
+    ts.tv_sec  += ts.tv_nsec / 1000000000;
+    ts.tv_nsec %= 1000000000;
 }
 
 #pragma push_macro("IPC_PTHREAD_FUNC_")
@@ -110,7 +111,13 @@ public:
         else {
             timespec ts;
             calc_wait_time(ts, tm);
-            IPC_PTHREAD_FUNC_(pthread_cond_timedwait, &cond_, &mtx.native(), &ts);
+            int eno;
+            if ((eno = ::pthread_cond_timedwait(&cond_, &mtx.native(), &ts)) != 0) {
+                ipc::error("fail pthread_cond_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                           eno, tm, ts.tv_sec, ts.tv_nsec);
+                return false;
+            }
+            return true;
         }
     }
 
@@ -173,7 +180,12 @@ public:
         else {
             timespec ts;
             calc_wait_time(ts, tm);
-            IPC_SEMAPHORE_FUNC_(sem_timedwait, h, &ts);
+            if (::sem_timedwait(h, &ts) != 0) {
+                ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                           errno, tm, ts.tv_sec, ts.tv_nsec);
+                return false;
+            }
+            return true;
         }
     }
 

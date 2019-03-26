@@ -83,8 +83,6 @@ constexpr auto shared_lock(T&& lc) {
 
 #endif/*__cplusplus < 201703L*/
 
-IPC_EXPORT std::size_t calc_unique_id();
-
 template <typename F, typename D>
 constexpr decltype(auto) static_switch(std::size_t /*i*/, std::index_sequence<>, F&& /*f*/, D&& def) {
     return def();
