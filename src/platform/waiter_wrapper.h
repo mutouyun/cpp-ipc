@@ -20,19 +20,24 @@ using mutex_impl     = ipc::detail::mutex;
 using semaphore_impl = ipc::detail::semaphore;
 
 class condition_impl : public ipc::detail::condition {
-    ipc::shm::handle h_;
+
+    ipc::shm::handle wait_h_, cnt_h_;
 
 public:
     bool open(std::string const & name) {
-        if (h_.acquire((name + "__COND_CNT__").c_str(), sizeof(long))) {
-            return ipc::detail::condition::open(name, static_cast<long *>(h_.get()));
+        if (wait_h_.acquire((name + "__COND_WAIT__").c_str(), sizeof(std::atomic<unsigned>)) &&
+            cnt_h_ .acquire((name + "__COND_CNT__" ).c_str(), sizeof(long))) {
+            return ipc::detail::condition::open(name,
+                                                static_cast<std::atomic<unsigned> *>(wait_h_.get()),
+                                                static_cast<long *>(cnt_h_.get()));
         }
         return false;
     }
 
     void close() {
         ipc::detail::condition::close();
-        h_.release();
+        wait_h_.release();
+        cnt_h_ .release();
     }
 
     bool wait(mutex_impl& mtx) {

@@ -20,10 +20,6 @@ class semaphore {
     HANDLE h_ = NULL;
 
 public:
-    friend bool operator==(semaphore const & s1, semaphore const & s2) {
-        return s1.h_ == s2.h_;
-    }
-
     bool open(std::string && name, long count = 0, long limit = LONG_MAX) {
         h_ = ::CreateSemaphore(NULL, count, limit, ipc::detail::to_tchar(std::move(name)).c_str());
         if (h_ == NULL) {
@@ -72,27 +68,23 @@ class condition {
     mutex     lock_;
     semaphore sema_, handshake_;
 
-    ipc::shm::handle waiting_; // std::atomic<unsigned>
-    long * counter_ = nullptr;
-
-    auto waiting_cnt() {
-        return static_cast<std::atomic<unsigned>*>(waiting_.get());
-    }
+    std::atomic<unsigned> * waiting_ = nullptr;
+    long                  * counter_ = nullptr;
 
 public:
     friend bool operator==(condition const & c1, condition const & c2) {
-        return c1.counter_ == c2.counter_;
+        return (c1.waiting_ == c2.waiting_) && (c1.counter_ == c2.counter_);
     }
 
     friend bool operator!=(condition const & c1, condition const & c2) {
         return !(c1 == c2);
     }
 
-    bool open(std::string const & name, long * counter) {
-        if (lock_     .open    ("__COND_MTX__" + name) &&
-            sema_     .open    ("__COND_SEM__" + name) &&
-            handshake_.open    ("__COND_HAN__" + name) &&
-            waiting_  .acquire(("__COND_WAITING_CNT__" + name).c_str(), sizeof(std::atomic<unsigned>))) {
+    bool open(std::string const & name, std::atomic<unsigned> * waiting, long * counter) {
+        if (lock_     .open("__COND_MTX__" + name) &&
+            sema_     .open("__COND_SEM__" + name) &&
+            handshake_.open("__COND_HAN__" + name)) {
+            waiting_ = waiting;
             counter_ = counter;
             return true;
         }
@@ -100,7 +92,6 @@ public:
     }
 
     void close() {
-        waiting_  .release();
         handshake_.close();
         sema_     .close();
         lock_     .close();
@@ -108,10 +99,7 @@ public:
 
     template <typename Mutex, typename F>
     bool wait_if(Mutex& mtx, F&& pred) {
-        auto cnt = waiting_cnt();
-        if (cnt != nullptr) {
-            cnt->fetch_add(1, std::memory_order_release);
-        }
+        waiting_->fetch_add(1, std::memory_order_release);
         {
             IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
             if (!std::forward<F>(pred)()) return true;
@@ -119,9 +107,7 @@ public:
         }
         mtx.unlock();
         bool ret = sema_.wait();
-        if (cnt != nullptr) {
-            cnt->fetch_sub(1, std::memory_order_release);
-        }
+        waiting_->fetch_sub(1, std::memory_order_release);
         ret = handshake_.post() && ret;
         mtx.lock();
         return ret;
@@ -129,8 +115,7 @@ public:
 
     bool notify() {
         std::atomic_thread_fence(std::memory_order_acq_rel);
-        if (waiting_cnt() != nullptr &&
-            waiting_cnt()->load(std::memory_order_relaxed) == 0) {
+        if (waiting_->load(std::memory_order_relaxed) == 0) {
             return true;
         }
         bool ret = true;
@@ -145,8 +130,7 @@ public:
 
     bool broadcast() {
         std::atomic_thread_fence(std::memory_order_acq_rel);
-        if (waiting_cnt() != nullptr &&
-            waiting_cnt()->load(std::memory_order_relaxed) == 0) {
+        if (waiting_->load(std::memory_order_relaxed) == 0) {
             return true;
         }
         bool ret = true;
@@ -163,7 +147,9 @@ public:
 };
 
 class waiter {
-    long counter_ = 0;
+
+    std::atomic<unsigned> waiting_ { 0 };
+    long                  counter_ = 0;
 
 public:
     using handle_t = condition;
@@ -177,7 +163,7 @@ public:
             return invalid();
         }
         condition cond;
-        if (cond.open(name, &counter_)) {
+        if (cond.open(name, &waiting_, &counter_)) {
             return cond;
         }
         return invalid();

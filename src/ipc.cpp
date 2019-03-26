@@ -75,6 +75,19 @@ struct cache_t {
     }
 };
 
+template <typename W, typename F>
+void wait_for(W& waiter, F&& pred) {
+    for (unsigned k = 0; pred();) {
+        bool ret = true;
+        ipc::sleep(k, [&ret, &waiter, &pred] {
+            return waiter.wait_if([&ret, &pred] {
+                return ret = pred();
+            });
+        });
+        if (!ret) break;
+    }
+}
+
 template <typename Policy>
 struct detail_impl {
 
@@ -148,13 +161,9 @@ static bool wait_for_recv(ipc::handle_t h, std::size_t r_count) {
     if (que == nullptr) {
         return false;
     }
-    for (unsigned k = 0; que->conn_count() < r_count;) {
-        ipc::sleep(k, [h, que, r_count] {
-            return info_of(h)->cc_waiter_.wait_if([que, r_count] {
-                return que->conn_count() < r_count;
-            });
-        });
-    }
+    wait_for(info_of(h)->cc_waiter_, [que, r_count] {
+        return que->conn_count() < r_count;
+    });
     return true;
 }
 
@@ -202,15 +211,9 @@ static buff_t recv(ipc::handle_t h) {
     while (1) {
         // pop a new message
         typename queue_t::value_t msg;
-        for (unsigned k = 0; !que->pop(msg);) {
-            bool succ = false;
-            ipc::sleep(k, [h, que, &msg, &succ] {
-                return info_of(h)->rd_waiter_.wait_if([que, &msg, &succ] {
-                    return !(succ = que->pop(msg));
-                });
-            });
-            if (succ) break;
-        }
+        wait_for(info_of(h)->rd_waiter_, [que, &msg] {
+            return !que->pop(msg);
+        });
         if (msg.head_.que_ == nullptr) return {};
         if (msg.head_.que_ == que) continue; // pop next
         // msg.head_.remain_ may minus & abs(msg.head_.remain_) < data_length
