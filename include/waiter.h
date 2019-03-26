@@ -1,6 +1,7 @@
 #pragma once
 
 #include "export.h"
+#include "def.h"
 
 namespace ipc {
 
@@ -22,7 +23,7 @@ public:
     bool open (char const * name);
     void close();
 
-    bool lock();
+    bool lock  ();
     bool unlock();
 
 private:
@@ -49,7 +50,7 @@ public:
     bool open (char const * name, long count = 0);
     void close();
 
-    bool wait();
+    bool wait(std::size_t tm = invalid_value);
     bool post(long count = 1);
 
 private:
@@ -74,7 +75,7 @@ public:
     bool open (char const * name);
     void close();
 
-    bool wait(mutex&);
+    bool wait(mutex&, std::size_t tm = invalid_value);
     bool notify();
     bool broadcast();
 

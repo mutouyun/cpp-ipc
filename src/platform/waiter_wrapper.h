@@ -40,8 +40,8 @@ public:
         cnt_h_ .release();
     }
 
-    bool wait(mutex_impl& mtx) {
-        return ipc::detail::condition::wait_if(mtx, [] { return true; });
+    bool wait(mutex_impl& mtx, std::size_t tm = invalid_value) {
+        return ipc::detail::condition::wait_if(mtx, [] { return true; }, tm);
     }
 };
 
@@ -100,8 +100,8 @@ public:
 
 class condition_impl : public object_impl<ipc::detail::condition> {
 public:
-    bool wait(mutex_impl& mtx) {
-        return object().wait(mtx.object());
+    bool wait(mutex_impl& mtx, std::size_t tm = invalid_value) {
+        return object().wait(mtx.object(), tm);
     }
 
     bool notify   () { return object().notify   (); }
@@ -140,9 +140,9 @@ public:
         opened_.release();
     }
 
-    bool wait() {
+    bool wait(std::size_t tm = invalid_value) {
         if (h_ == sem_helper::invalid()) return false;
-        return sem_helper::wait(h_);
+        return sem_helper::wait(h_, tm);
     }
 
     bool post(long count) {
@@ -205,9 +205,9 @@ public:
     }
 
     template <typename F>
-    bool wait_if(F&& pred) {
+    bool wait_if(F&& pred, std::size_t tm = invalid_value) {
         if (!valid()) return false;
-        return w_->wait_if(h_, std::forward<F>(pred));
+        return w_->wait_if(h_, std::forward<F>(pred), tm);
     }
 
     bool notify() {

@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <semaphore.h>
 #include <errno.h>
+#include <time.h>
 
 #include <atomic>
 #include <tuple>
@@ -16,6 +17,12 @@
 
 namespace ipc {
 namespace detail {
+
+inline static void calc_wait_time(timespec& ts, std::size_t tm) {
+    ::clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec  += (tm / 1000);           // seconds
+    ts.tv_nsec += (tm % 1000) * 1000000; // nanoseconds
+}
 
 #pragma push_macro("IPC_PTHREAD_FUNC_")
 #undef  IPC_PTHREAD_FUNC_
@@ -96,8 +103,15 @@ public:
         IPC_PTHREAD_FUNC_(pthread_cond_destroy, &cond_);
     }
 
-    bool wait(mutex& mtx) {
-        IPC_PTHREAD_FUNC_(pthread_cond_wait, &cond_, &mtx.native());
+    bool wait(mutex& mtx, std::size_t tm = invalid_value) {
+        if (tm == invalid_value) {
+            IPC_PTHREAD_FUNC_(pthread_cond_wait, &cond_, &mtx.native());
+        }
+        else {
+            timespec ts;
+            calc_wait_time(ts, tm);
+            IPC_PTHREAD_FUNC_(pthread_cond_timedwait, &cond_, &mtx.native(), &ts);
+        }
     }
 
     bool notify() {
@@ -130,8 +144,8 @@ public:
 
 #pragma push_macro("IPC_SEMAPHORE_FUNC_")
 #undef  IPC_SEMAPHORE_FUNC_
-#define IPC_SEMAPHORE_FUNC_(CALL, PAR)              \
-    if (::CALL(PAR) != 0) {                         \
+#define IPC_SEMAPHORE_FUNC_(CALL, ...)              \
+    if (::CALL(__VA_ARGS__) != 0) {                 \
         ipc::error("fail " #CALL "[%d]\n", errno);  \
         return false;                               \
     }                                               \
@@ -151,9 +165,16 @@ public:
         IPC_SEMAPHORE_FUNC_(sem_post, h);
     }
 
-    static bool wait(handle_t h) {
+    static bool wait(handle_t h, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
-        IPC_SEMAPHORE_FUNC_(sem_wait, h);
+        if (tm == invalid_value) {
+            IPC_SEMAPHORE_FUNC_(sem_wait, h);
+        }
+        else {
+            timespec ts;
+            calc_wait_time(ts, tm);
+            IPC_SEMAPHORE_FUNC_(sem_timedwait, h, &ts);
+        }
     }
 
 #pragma pop_macro("IPC_SEMAPHORE_FUNC_")
@@ -204,14 +225,14 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t const & h, F&& pred) {
+    bool wait_if(handle_t const & h, F&& pred, std::size_t tm = invalid_value) {
         waiting_.fetch_add(1, std::memory_order_release);
         {
             IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
             if (!std::forward<F>(pred)()) return true;
             ++ counter_;
         }
-        bool ret = sem_helper::wait(std::get<1>(h));
+        bool ret = sem_helper::wait(std::get<1>(h), tm);
         waiting_.fetch_sub(1, std::memory_order_release);
         ret = sem_helper::post(std::get<2>(h)) && ret;
         return ret;
@@ -283,9 +304,9 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t h, F&& pred) {
+    bool wait_if(handle_t h, F&& pred, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
-        return helper_.wait_if(h, std::forward<F>(pred));
+        return helper_.wait_if(h, std::forward<F>(pred), tm);
     }
 
     void notify(handle_t h) {

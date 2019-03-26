@@ -76,16 +76,19 @@ struct cache_t {
 };
 
 template <typename W, typename F>
-void wait_for(W& waiter, F&& pred) {
+bool wait_for(W& waiter, F&& pred, std::size_t tm) {
     for (unsigned k = 0; pred();) {
-        bool ret = true;
-        ipc::sleep(k, [&ret, &waiter, &pred] {
-            return waiter.wait_if([&ret, &pred] {
-                return ret = pred();
-            });
+        bool loop = true, ret = true;
+        ipc::sleep(k, [&loop, &ret, &waiter, &pred, tm] {
+            ret = waiter.wait_if([&loop, &ret, &pred] {
+                return loop = pred();
+            }, tm);
+            return true;
         });
-        if (!ret) break;
+        if (!ret ) return false; // timeout or fail
+        if (!loop) break;
     }
+    return true;
 }
 
 template <typename Policy>
@@ -156,15 +159,14 @@ static std::size_t recv_count(ipc::handle_t h) {
     return que->conn_count();
 }
 
-static bool wait_for_recv(ipc::handle_t h, std::size_t r_count) {
+static bool wait_for_recv(ipc::handle_t h, std::size_t r_count, std::size_t tm) {
     auto que = queue_of(h);
     if (que == nullptr) {
         return false;
     }
-    wait_for(info_of(h)->cc_waiter_, [que, r_count] {
+    return wait_for(info_of(h)->cc_waiter_, [que, r_count] {
         return que->conn_count() < r_count;
-    });
-    return true;
+    }, tm);
 }
 
 static bool send(ipc::handle_t h, void const * data, std::size_t size) {
@@ -201,7 +203,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
     return true;
 }
 
-static buff_t recv(ipc::handle_t h) {
+static buff_t recv(ipc::handle_t h, std::size_t tm) {
     auto que = queue_of(h);
     if (que == nullptr) return {};
     if (que->connect()) { // wouldn't connect twice
@@ -211,9 +213,10 @@ static buff_t recv(ipc::handle_t h) {
     while (1) {
         // pop a new message
         typename queue_t::value_t msg;
-        wait_for(info_of(h)->rd_waiter_, [que, &msg] {
-            return !que->pop(msg);
-        });
+        if (!wait_for(info_of(h)->rd_waiter_,
+                      [que, &msg] { return !que->pop(msg); }, tm)) {
+            return {};
+        }
         if (msg.head_.que_ == nullptr) return {};
         if (msg.head_.que_ == que) continue; // pop next
         // msg.head_.remain_ may minus & abs(msg.head_.remain_) < data_length
@@ -279,8 +282,8 @@ std::size_t chan_impl<Flag>::recv_count(ipc::handle_t h) {
 }
 
 template <typename Flag>
-bool chan_impl<Flag>::wait_for_recv(ipc::handle_t h, std::size_t r_count) {
-    return detail_impl<policy_t<Flag>>::wait_for_recv(h, r_count);
+bool chan_impl<Flag>::wait_for_recv(ipc::handle_t h, std::size_t r_count, std::size_t tm) {
+    return detail_impl<policy_t<Flag>>::wait_for_recv(h, r_count, tm);
 }
 
 template <typename Flag>
@@ -289,8 +292,8 @@ bool chan_impl<Flag>::send(ipc::handle_t h, void const * data, std::size_t size)
 }
 
 template <typename Flag>
-buff_t chan_impl<Flag>::recv(ipc::handle_t h) {
-    return detail_impl<policy_t<Flag>>::recv(h);
+buff_t chan_impl<Flag>::recv(ipc::handle_t h, std::size_t tm) {
+    return detail_impl<policy_t<Flag>>::recv(h, tm);
 }
 
 template struct chan_impl<ipc::wr<relat::single, relat::single, trans::unicast  >>;

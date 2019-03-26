@@ -43,8 +43,8 @@ bool mutex::unlock() {
 
 #include "waiter_template.inc"
 
-bool semaphore::wait() {
-    return impl(p_)->h_.wait();
+bool semaphore::wait(std::size_t tm) {
+    return impl(p_)->h_.wait(tm);
 }
 
 bool semaphore::post(long count) {
@@ -61,8 +61,8 @@ bool semaphore::post(long count) {
 
 #include "waiter_template.inc"
 
-bool condition::wait(mutex& mtx) {
-    return impl(p_)->h_.wait(impl(mtx.p_)->h_);
+bool condition::wait(mutex& mtx, std::size_t tm) {
+    return impl(p_)->h_.wait(impl(mtx.p_)->h_, tm);
 }
 
 bool condition::notify() {

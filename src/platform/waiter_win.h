@@ -33,10 +33,14 @@ public:
         ::CloseHandle(h_);
     }
 
-    bool wait() {
-        DWORD ret;
-        if ((ret = ::WaitForSingleObject(h_, INFINITE)) == WAIT_OBJECT_0) {
+    bool wait(std::size_t tm = invalid_value) {
+        DWORD ret, ms = (tm == invalid_value) ? INFINITE : static_cast<DWORD>(tm);
+        if ((ret = ::WaitForSingleObject(h_, ms)) == WAIT_OBJECT_0) {
             return true;
+        }
+        if (ret == WAIT_TIMEOUT) {
+            ipc::log("WaitForSingleObject is timeout.\n");
+            return false;
         }
         ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
         return false;
@@ -98,7 +102,7 @@ public:
     }
 
     template <typename Mutex, typename F>
-    bool wait_if(Mutex& mtx, F&& pred) {
+    bool wait_if(Mutex& mtx, F&& pred, std::size_t tm = invalid_value) {
         waiting_->fetch_add(1, std::memory_order_release);
         {
             IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
@@ -106,7 +110,7 @@ public:
             ++ *counter_;
         }
         mtx.unlock();
-        bool ret = sema_.wait();
+        bool ret = sema_.wait(tm);
         waiting_->fetch_sub(1, std::memory_order_release);
         ret = handshake_.post() && ret;
         mtx.lock();
@@ -175,7 +179,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t& h, F&& pred) {
+    bool wait_if(handle_t& h, F&& pred, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
 
         class non_mutex {
@@ -184,7 +188,7 @@ public:
             void unlock() noexcept {}
         } nm;
 
-        return h.wait_if(nm, std::forward<F>(pred));
+        return h.wait_if(nm, std::forward<F>(pred), tm);
     }
 
     void notify(handle_t& h) {
