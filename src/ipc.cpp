@@ -100,7 +100,7 @@ bool wait_for(W& waiter, F&& pred, std::size_t tm) {
     for (unsigned k = 0; pred();) {
         bool loop = true, ret = true;
         ipc::sleep(k, [&k, &loop, &ret, &waiter, &pred, tm] {
-            ret = waiter.wait_if([&loop, &ret, &pred] {
+            ret = waiter.wait_if([&loop, &pred] {
                 return loop = pred();
             }, tm);
             k = 0;
