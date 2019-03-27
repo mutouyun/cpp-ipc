@@ -26,8 +26,9 @@ class condition_impl : public ipc::detail::condition {
 public:
     static void remove(char const * name) {
         ipc::detail::condition::remove(name);
-        ipc::shm::remove((name + "__COND_CNT__" ).c_str());
-        ipc::shm::remove((name + "__COND_WAIT__").c_str());
+        std::string n = name;
+        ipc::shm::remove((n + "__COND_CNT__" ).c_str());
+        ipc::shm::remove((n + "__COND_WAIT__").c_str());
     }
 
     bool open(std::string const & name) {
