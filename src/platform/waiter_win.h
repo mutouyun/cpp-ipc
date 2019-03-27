@@ -86,9 +86,9 @@ public:
     }
 
     static void remove(char const * name) {
-        semaphore::remove(std::string{ "__COND_HAN__" } + name);
-        semaphore::remove(std::string{ "__COND_SEM__" } + name);
-        mutex    ::remove(std::string{ "__COND_MTX__" } + name);
+        semaphore::remove((std::string{ "__COND_HAN__" } + name).c_str());
+        semaphore::remove((std::string{ "__COND_SEM__" } + name).c_str());
+        mutex    ::remove((std::string{ "__COND_MTX__" } + name).c_str());
     }
 
     bool open(std::string const & name, std::atomic<unsigned> * waiting, long * counter) {
