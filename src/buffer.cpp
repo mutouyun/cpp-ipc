@@ -41,7 +41,7 @@ buffer::buffer(char const & c)
 }
 
 buffer::buffer(buffer&& rhs)
-    : p_(nullptr) {
+    : buffer() {
     swap(rhs);
 }
 
