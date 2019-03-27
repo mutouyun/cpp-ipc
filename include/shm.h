@@ -12,6 +12,7 @@ using id_t = void*;
 IPC_EXPORT id_t   acquire(char const * name, std::size_t size);
 IPC_EXPORT void * to_mem (id_t id);
 IPC_EXPORT void   release(id_t id, void * mem, std::size_t size);
+IPC_EXPORT void   remove (char const * name);
 
 class IPC_EXPORT handle {
 public:

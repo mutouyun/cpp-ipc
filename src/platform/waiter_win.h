@@ -20,6 +20,8 @@ class semaphore {
     HANDLE h_ = NULL;
 
 public:
+    static void remove(char const * /*name*/) {}
+
     bool open(std::string && name, long count = 0, long limit = LONG_MAX) {
         h_ = ::CreateSemaphore(NULL, count, limit, ipc::detail::to_tchar(std::move(name)).c_str());
         if (h_ == NULL) {
@@ -81,6 +83,12 @@ public:
 
     friend bool operator!=(condition const & c1, condition const & c2) {
         return !(c1 == c2);
+    }
+
+    static void remove(char const * name) {
+        semaphore::remove(std::string{ "__COND_HAN__" } + name);
+        semaphore::remove(std::string{ "__COND_SEM__" } + name);
+        mutex    ::remove(std::string{ "__COND_MTX__" } + name);
     }
 
     bool open(std::string const & name, std::atomic<unsigned> * waiting, long * counter) {

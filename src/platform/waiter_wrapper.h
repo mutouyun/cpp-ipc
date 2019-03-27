@@ -24,6 +24,12 @@ class condition_impl : public ipc::detail::condition {
     ipc::shm::handle wait_h_, cnt_h_;
 
 public:
+    static void remove(char const * name) {
+        ipc::detail::condition::remove(name);
+        ipc::shm::remove((name + "__COND_CNT__" ).c_str());
+        ipc::shm::remove((name + "__COND_WAIT__").c_str());
+    }
+
     bool open(std::string const & name) {
         if (wait_h_.acquire((name + "__COND_WAIT__").c_str(), sizeof(std::atomic<unsigned>)) &&
             cnt_h_ .acquire((name + "__COND_CNT__" ).c_str(), sizeof(long))) {
@@ -36,8 +42,8 @@ public:
 
     void close() {
         ipc::detail::condition::close();
-        wait_h_.release();
         cnt_h_ .release();
+        wait_h_.release();
     }
 
     bool wait(mutex_impl& mtx, std::size_t tm = invalid_value) {
@@ -65,6 +71,17 @@ class object_impl {
     };
 
 public:
+    static void remove(char const * name) {
+        {
+            ipc::shm::handle h { name, sizeof(info_t) };
+            if (h.valid()) {
+                auto info = static_cast<info_t*>(h.get());
+                info->object_.close();
+            }
+        }
+        ipc::shm::remove(name);
+    }
+
     T& object() {
         return static_cast<info_t*>(h_.get())->object_;
     }
@@ -118,6 +135,11 @@ class semaphore_impl {
     }
 
 public:
+    static void remove(char const * name) {
+        sem_helper::destroy((std::string{ "__SEMAPHORE_IMPL_SEM__" } + name).c_str());
+        ipc::shm::remove   ((std::string{ "__SEMAPHORE_IMPL_CNT__" } + name).c_str());
+    }
+
     bool open(char const * name, long count) {
         name_ = name;
         if (!opened_.acquire(("__SEMAPHORE_IMPL_CNT__" + name_).c_str(), sizeof(std::atomic<unsigned>))) {

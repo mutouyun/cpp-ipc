@@ -14,6 +14,8 @@ public:
 
     ~mutex();
 
+    static void remove(char const * name);
+
     void swap(mutex& rhs);
     mutex& operator=(mutex rhs);
 
@@ -41,6 +43,8 @@ public:
 
     ~semaphore();
 
+    static void remove(char const * name);
+
     void swap(semaphore& rhs);
     semaphore& operator=(semaphore rhs);
 
@@ -65,6 +69,8 @@ public:
     condition(condition&& rhs);
 
     ~condition();
+
+    static void remove(char const * name);
 
     void swap(condition& rhs);
     condition& operator=(condition rhs);

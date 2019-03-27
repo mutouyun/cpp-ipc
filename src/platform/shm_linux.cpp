@@ -98,5 +98,17 @@ void release(id_t id, void * mem, std::size_t size) {
     else ::munmap(mem, size);
 }
 
+void remove(char const * name) {
+    if (name == nullptr || name[0] == '\0') {
+        return;
+    }
+    std::string op_name = std::string{"__IPC_SHM__"} + name;
+    if (op_name.size() >= ipc::name_length) {
+        ipc::error("name is too long!: [%d]%s\n", static_cast<int>(op_name.size()), op_name.c_str());
+        return;
+    }
+    ::shm_unlink(op_name.c_str());
+}
+
 } // namespace shm
 } // namespace ipc

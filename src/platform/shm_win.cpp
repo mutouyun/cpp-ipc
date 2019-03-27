@@ -46,5 +46,8 @@ void release(id_t id, void * mem, std::size_t /*size*/) {
     ::CloseHandle(static_cast<HANDLE>(id));
 }
 
+void remove(char const * /*name*/) {
+}
+
 } // namespace shm
 } // namespace ipc

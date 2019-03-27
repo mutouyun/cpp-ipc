@@ -11,6 +11,10 @@ public:
     ipc::detail::IPC_OBJECT_TYPE_I_ h_;
 };
 
+void IPC_OBJECT_TYPE_::remove(char const * name) {
+    detail::IPC_OBJECT_TYPE_I_::remove(name);
+}
+
 IPC_OBJECT_TYPE_::IPC_OBJECT_TYPE_()
     : p_(p_->make()) {
 }
