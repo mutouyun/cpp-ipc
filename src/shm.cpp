@@ -21,9 +21,9 @@ handle::handle()
     : p_(p_->make()) {
 }
 
-handle::handle(char const * name, std::size_t size)
+handle::handle(char const * name, std::size_t size, unsigned mode)
     : handle() {
-    acquire(name, size);
+    acquire(name, size, mode);
 }
 
 handle::handle(handle&& rhs)
@@ -57,10 +57,10 @@ char const * handle::name() const {
     return impl(p_)->n_.c_str();
 }
 
-bool handle::acquire(char const * name, std::size_t size) {
+bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
     release();
     impl(p_)->id_ = shm::acquire((impl(p_)->n_ = name).c_str(),
-                                  impl(p_)->s_ = size);
+                                  impl(p_)->s_ = size, mode);
     impl(p_)->m_  = shm::to_mem  (impl(p_)->id_);
     return valid();
 }

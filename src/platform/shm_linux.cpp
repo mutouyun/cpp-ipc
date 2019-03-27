@@ -40,7 +40,7 @@ inline auto& str_of(void* mem, std::size_t size) {
 namespace ipc {
 namespace shm {
 
-id_t acquire(char const * name, std::size_t size) {
+id_t acquire(char const * name, std::size_t size, unsigned mode) {
     if (name == nullptr || name[0] == '\0' || size == 0) {
         return nullptr;
     }
@@ -49,10 +49,24 @@ id_t acquire(char const * name, std::size_t size) {
         ipc::error("name is too long!: [%d]%s\n", static_cast<int>(op_name.size()), op_name.c_str());
         return nullptr;
     }
-    int fd = ::shm_open(op_name.c_str(), O_CREAT | O_RDWR,
-                                         S_IRUSR | S_IWUSR |
-                                         S_IRGRP | S_IWGRP |
-                                         S_IROTH | S_IWOTH);
+    // Open the object for read-write access.
+    int flag = O_RDWR;
+    switch (mode) {
+    case open:
+        break;
+    // The check for the existence of the object, 
+    // and its creation if it does not exist, are performed atomically.
+    case create:
+        flag |= O_CREAT | O_EXCL;
+        break;
+    // Create the shared memory object if it does not exist.
+    default:
+        flag |= O_CREAT;
+        break;
+    }
+    int fd = ::shm_open(op_name.c_str(), flag, S_IRUSR | S_IWUSR |
+                                               S_IRGRP | S_IWGRP |
+                                               S_IROTH | S_IWOTH);
     if (fd == -1) {
         ipc::error("fail shm_open[%d]: %s\n", errno, name);
         return nullptr;
