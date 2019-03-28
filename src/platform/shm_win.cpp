@@ -75,7 +75,7 @@ void * get_mem(id_t id, std::size_t * size) {
         ipc::error("fail MapViewOfFile[%d]\n", static_cast<int>(::GetLastError()));
         return nullptr;
     }
-    PMEMORY_BASIC_INFORMATION mem_info;
+    MEMORY_BASIC_INFORMATION mem_info;
     if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
         ipc::error("fail VirtualQuery[%d]\n", static_cast<int>(::GetLastError()));
         return nullptr;

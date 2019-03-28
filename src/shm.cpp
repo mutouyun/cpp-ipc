@@ -66,16 +66,22 @@ bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
 
 void handle::release() {
     if (!valid()) return;
-    shm::release(impl(p_)->id_);
-    impl(p_)->id_ = nullptr;
-    impl(p_)->m_  = nullptr;
-    impl(p_)->s_  = 0;
-    impl(p_)->n_.clear();
+    shm::release(dismiss());
 }
 
 void* handle::get() const {
     if (!valid()) return nullptr;
     return impl(p_)->m_;
+}
+
+id_t handle::dismiss() {
+    if (!valid()) return nullptr;
+    auto old = impl(p_)->id_;
+    impl(p_)->id_ = nullptr;
+    impl(p_)->m_  = nullptr;
+    impl(p_)->s_  = 0;
+    impl(p_)->n_.clear();
+    return old;
 }
 
 } // namespace shm
