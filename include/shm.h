@@ -38,7 +38,9 @@ public:
     void release();
 
     void* get() const;
-    id_t dismiss();
+
+    void attach(id_t);
+    id_t detach();
 
 private:
     class handle_;

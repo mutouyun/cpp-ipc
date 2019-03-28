@@ -66,7 +66,7 @@ bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
 
 void handle::release() {
     if (!valid()) return;
-    shm::release(dismiss());
+    shm::release(detach());
 }
 
 void* handle::get() const {
@@ -74,7 +74,14 @@ void* handle::get() const {
     return impl(p_)->m_;
 }
 
-id_t handle::dismiss() {
+void handle::attach(id_t id) {
+    if (id == nullptr) return;
+    release();
+    impl(p_)->id_ = id;
+    impl(p_)->m_  = shm::get_mem(impl(p_)->id_, &(impl(p_)->s_));
+}
+
+id_t handle::detach() {
     if (!valid()) return nullptr;
     auto old = impl(p_)->id_;
     impl(p_)->id_ = nullptr;
