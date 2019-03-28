@@ -65,6 +65,7 @@ bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
 }
 
 void handle::release() {
+    if (impl(p_)->id_ == nullptr) return;
     shm::release(detach());
 }
 
