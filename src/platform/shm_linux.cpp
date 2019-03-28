@@ -53,6 +53,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     int flag = O_RDWR;
     switch (mode) {
     case open:
+        size = 0;
         break;
     // The check for the existence of the object, 
     // and its creation if it does not exist, are performed atomically.
