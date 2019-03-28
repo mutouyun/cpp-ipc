@@ -134,9 +134,8 @@ void release(id_t id) {
     auto ii = static_cast<id_info_t*>(id);
     if (ii->mem_ == nullptr || ii->size_ == 0) {
         ipc::error("fail release: invalid id (mem = %p, size = %zd)\n", ii->mem_, ii->size_);
-        return;
     }
-    if (acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acquire) == 1) {
+    else if (acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acquire) == 1) {
         ::munmap(ii->mem_, ii->size_);
         ::shm_unlink(ii->name_.c_str());
     }

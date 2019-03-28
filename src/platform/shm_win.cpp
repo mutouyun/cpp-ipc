@@ -94,14 +94,12 @@ void release(id_t id) {
     auto ii = static_cast<id_info_t*>(id);
     if (ii->mem_ == nullptr || ii->size_ == 0) {
         ipc::error("fail release: invalid id (mem = %p, size = %zd)\n", ii->mem_, ii->size_);
-        return;
     }
+    else ::UnmapViewOfFile(static_cast<LPCVOID>(ii->mem_));
     if (ii->h_ == NULL) {
         ipc::error("fail release: invalid id (h = null)\n");
-        return;
     }
-    ::UnmapViewOfFile(static_cast<LPCVOID>(ii->mem_));
-    ::CloseHandle(ii->h_);
+    else ::CloseHandle(ii->h_);
     mem::free(ii);
 }
 
