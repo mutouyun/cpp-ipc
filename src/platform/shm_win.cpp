@@ -7,14 +7,26 @@
 
 #include "def.h"
 #include "log.h"
-#include "memory/resource.h"
+#include "pool_alloc.h"
+
 #include "platform/to_tchar.h"
+
+namespace {
+
+struct id_info_t {
+    HANDLE      h_    = NULL;
+    void*       mem_  = nullptr;
+    std::size_t size_ = 0;
+};
+
+} // internal-linkage
 
 namespace ipc {
 namespace shm {
 
 id_t acquire(char const * name, std::size_t size, unsigned mode) {
-    if (name == nullptr || name[0] == '\0' || size == 0) {
+    if (name == nullptr || name[0] == '\0') {
+        ipc::error("fail acquire: name is empty\n");
         return nullptr;
     }
     HANDLE h;
@@ -38,28 +50,67 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         ipc::error("fail CreateFileMapping/OpenFileMapping[%d]: %s\n", static_cast<int>(::GetLastError()), name);
         return nullptr;
     }
-    return static_cast<id_t>(h);
+    auto ii = mem::alloc<id_info_t>();
+    ii->h_    = h;
+    ii->size_ = size;
+    return ii;
 }
 
-void * to_mem(id_t id) {
-    if (id == nullptr) return nullptr;
-    HANDLE h = static_cast<HANDLE>(id);
-    LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+void * get_mem(id_t id, std::size_t * size) {
+    if (id == nullptr) {
+        ipc::error("fail get_mem: invalid id (null)\n");
+        return nullptr;
+    }
+    auto ii = static_cast<id_info_t*>(id);
+    if (ii->mem_ != nullptr) {
+        if (size != nullptr) *size = ii->size_;
+        return ii->mem_;
+    }
+    if (ii->h_ == NULL) {
+        ipc::error("fail to_mem: invalid id (h = null)\n");
+        return nullptr;
+    }
+    LPVOID mem = ::MapViewOfFile(ii->h_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     if (mem == NULL) {
         ipc::error("fail MapViewOfFile[%d]\n", static_cast<int>(::GetLastError()));
         return nullptr;
     }
+    PMEMORY_BASIC_INFORMATION mem_info;
+    if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
+        ipc::error("fail VirtualQuery[%d]\n", static_cast<int>(::GetLastError()));
+        return nullptr;
+    }
+    ii->mem_  = mem;
+    ii->size_ = static_cast<std::size_t>(mem_info.RegionSize);
+    if (size != nullptr) *size = ii->size_;
     return static_cast<void *>(mem);
 }
 
-void release(id_t id, void * mem, std::size_t /*size*/) {
-    if (id  == nullptr) return;
-    if (mem == nullptr) return;
-    ::UnmapViewOfFile(static_cast<LPVOID>(mem));
-    ::CloseHandle(static_cast<HANDLE>(id));
+void release(id_t id) {
+    if (id == nullptr) {
+        ipc::error("fail release: invalid id (null)\n");
+        return;
+    }
+    auto ii = static_cast<id_info_t*>(id);
+    if (ii->mem_ == nullptr || ii->size_ == 0) {
+        ipc::error("fail release: invalid id (mem = %p, size = %zd)\n", ii->mem_, ii->size_);
+        return;
+    }
+    if (ii->h_ == NULL) {
+        ipc::error("fail release: invalid id (h = null)\n");
+        return;
+    }
+    ::UnmapViewOfFile(static_cast<LPCVOID>(ii->mem_));
+    ::CloseHandle(ii->h_);
+    mem::free(ii);
 }
 
-void remove(char const * /*name*/) {
+void remove(char const * name) {
+    if (name == nullptr || name[0] == '\0') {
+        ipc::error("fail remove: name is empty\n");
+        return;
+    }
+    // Do Nothing.
 }
 
 } // namespace shm

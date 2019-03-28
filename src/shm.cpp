@@ -59,15 +59,14 @@ char const * handle::name() const {
 
 bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
     release();
-    impl(p_)->id_ = shm::acquire((impl(p_)->n_ = name).c_str(),
-                                  impl(p_)->s_ = size, mode);
-    impl(p_)->m_  = shm::to_mem  (impl(p_)->id_);
+    impl(p_)->id_ = shm::acquire((impl(p_)->n_ = name).c_str(), size, mode);
+    impl(p_)->m_  = shm::get_mem(impl(p_)->id_, &(impl(p_)->s_));
     return valid();
 }
 
 void handle::release() {
     if (!valid()) return;
-    shm::release(impl(p_)->id_, impl(p_)->m_, impl(p_)->s_);
+    shm::release(impl(p_)->id_);
     impl(p_)->id_ = nullptr;
     impl(p_)->m_  = nullptr;
     impl(p_)->s_  = 0;

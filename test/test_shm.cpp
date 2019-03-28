@@ -38,15 +38,15 @@ void Unit::test_acquire() {
     QVERIFY(!shm_hd__.valid());
 
     QVERIFY(shm_hd__.acquire("my-test-1", 1024));
-    QVERIFY(shm_hd__.size() == 1024);
+    QVERIFY(shm_hd__.valid());
     QCOMPARE(shm_hd__.name(), "my-test-1");
 
     QVERIFY(shm_hd__.acquire("my-test-2", 2048));
-    QVERIFY(shm_hd__.size() == 2048);
+    QVERIFY(shm_hd__.valid());
     QCOMPARE(shm_hd__.name(), "my-test-2");
 
     QVERIFY(shm_hd__.acquire("my-test-3", 4096));
-    QVERIFY(shm_hd__.size() == 4096);
+    QVERIFY(shm_hd__.valid());
     QCOMPARE(shm_hd__.name(), "my-test-3");
 }
 
