@@ -57,9 +57,10 @@ struct msg_t {
     }
 };
 
-buff_t make_cache(void const * data, std::size_t size) {
+template <typename T>
+buff_t make_cache(T& data, std::size_t size) {
     auto ptr = mem::alloc(size);
-    std::memcpy(ptr, data, size);
+    std::memcpy(ptr, &data, (std::min)(sizeof(data), size));
     return { ptr, size, mem::free };
 }
 
@@ -72,8 +73,10 @@ struct cache_t {
     {}
 
     void append(void const * data, std::size_t size) {
-        std::memcpy(static_cast<byte_t*>(buff_.data()) + fill_, data, size);
-        fill_ += size;
+        if (fill_ >= buff_.size() || data == nullptr || size == 0) return;
+        auto new_fill = (std::min)(fill_ + size, buff_.size());
+        std::memcpy(static_cast<byte_t*>(buff_.data()) + fill_, data, new_fill - fill_);
+        fill_ = new_fill;
     }
 };
 
@@ -284,7 +287,7 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
         auto cac_it = rc.find(msg.head_.id_);
         if (cac_it == rc.end()) {
             if (remain <= data_length) {
-                return make_cache(&(msg.data_), remain);
+                return make_cache(msg.data_, remain);
             }
             else {
                 // gc
@@ -299,7 +302,7 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
                     for (auto id : need_del) rc.erase(id);
                 }
                 // cache the first message fragment
-                rc.emplace(msg.head_.id_, cache_t { data_length, make_cache(&(msg.data_), remain) });
+                rc.emplace(msg.head_.id_, cache_t { data_length, make_cache(msg.data_, remain) });
             }
         }
         // has cached before this message
