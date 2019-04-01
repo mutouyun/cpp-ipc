@@ -61,9 +61,9 @@ public:
 
     template <typename... P>
     T* create(P&&... params) {
-        auto ptr = static_cast<T*>(*this);
+        thread_local auto ptr = static_cast<T*>(*this);
         if (ptr == nullptr) {
-            return (*this) = new T(std::forward<P>(params)...);
+            return ptr = (*this) = new T(std::forward<P>(params)...);
         }
         return ptr;
     }
