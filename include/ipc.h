@@ -15,7 +15,7 @@ using buff_t   = buffer;
 
 template <typename Flag>
 struct IPC_EXPORT chan_impl {
-    static handle_t connect   (char const * name);
+    static handle_t connect   (char const * name, bool start);
     static void     disconnect(handle_t h);
 
     static std::size_t recv_count(handle_t h);
@@ -39,8 +39,8 @@ private:
 public:
     chan_wrapper() = default;
 
-    explicit chan_wrapper(char const * name) {
-        this->connect(name);
+    explicit chan_wrapper(char const * name, bool start = false) {
+        this->connect(name, start);
     }
 
     chan_wrapper(chan_wrapper&& rhs) {
@@ -77,10 +77,10 @@ public:
         return chan_wrapper { name() };
     }
 
-    bool connect(char const * name) {
+    bool connect(char const * name, bool start = true) {
         if (name == nullptr || name[0] == '\0') return false;
         this->disconnect();
-        h_ = detail_t::connect((n_ = name).c_str());
+        h_ = detail_t::connect((n_ = name).c_str(), start);
         return valid();
     }
 

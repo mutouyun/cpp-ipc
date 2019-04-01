@@ -157,8 +157,18 @@ static auto& recv_cache() {
 
 /* API implementations */
 
-static ipc::handle_t connect(char const * name) {
-    return mem::alloc<conn_info_t>(name);
+static ipc::handle_t connect(char const * name, bool start) {
+    auto h = mem::alloc<conn_info_t>(name);
+    auto que = queue_of(h);
+    if (que == nullptr) {
+        return nullptr;
+    }
+    if (start) {
+        if (que->connect()) { // wouldn't connect twice
+            info_of(h)->cc_waiter_.broadcast();
+        }
+    }
+    return h;
 }
 
 static void disconnect(ipc::handle_t h) {
@@ -336,8 +346,8 @@ using policy_t = policy::choose<circ::elem_array, Flag>;
 namespace ipc {
 
 template <typename Flag>
-ipc::handle_t chan_impl<Flag>::connect(char const * name) {
-    return detail_impl<policy_t<Flag>>::connect(name);
+ipc::handle_t chan_impl<Flag>::connect(char const * name, bool start) {
+    return detail_impl<policy_t<Flag>>::connect(name, start);
 }
 
 template <typename Flag>
