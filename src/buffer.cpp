@@ -1,4 +1,5 @@
 #include "buffer.h"
+#include "pimpl.h"
 
 #include <cstring>
 
