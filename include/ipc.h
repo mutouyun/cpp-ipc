@@ -13,9 +13,14 @@ namespace ipc {
 using handle_t = void*;
 using buff_t   = buffer;
 
+enum : unsigned {
+    sender,
+    receiver
+};
+
 template <typename Flag>
 struct IPC_EXPORT chan_impl {
-    static handle_t connect   (char const * name, bool start);
+    static handle_t connect   (char const * name, unsigned mode);
     static void     disconnect(handle_t h);
 
     static std::size_t recv_count(handle_t h);
@@ -39,8 +44,8 @@ private:
 public:
     chan_wrapper() = default;
 
-    explicit chan_wrapper(char const * name, bool start = false) {
-        this->connect(name, start);
+    explicit chan_wrapper(char const * name, unsigned mode = sender) {
+        this->connect(name, mode);
     }
 
     chan_wrapper(chan_wrapper&& rhs) {
@@ -77,10 +82,10 @@ public:
         return chan_wrapper { name() };
     }
 
-    bool connect(char const * name, bool start = true) {
+    bool connect(char const * name, unsigned mode = sender | receiver) {
         if (name == nullptr || name[0] == '\0') return false;
         this->disconnect();
-        h_ = detail_t::connect((n_ = name).c_str(), start);
+        h_ = detail_t::connect((n_ = name).c_str(), mode);
         return valid();
     }
 
