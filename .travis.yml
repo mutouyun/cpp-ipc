@@ -7,14 +7,14 @@ addons:
     sources:
       - ubuntu-toolchain-r-test
     packages:
-      - g++-7
+      - g++-8
       - qtbase5-dev
 
 matrix:
   include:
     - compiler: gcc
       env:
-        - MATRIX_EVAL="USING_CMAKE=0 CC=gcc-7 && CXX=g++-7"
+        - MATRIX_EVAL="USING_CMAKE=0 CC=gcc-8 && CXX=g++-8"
     - compiler: clang
     - compiler: clang
       env:
