@@ -6,10 +6,11 @@
 #include <string>
 #include <locale>
 #include <codecvt>
-#include <algorithm>
 #include <cstring>
 
 #include "concept.h"
+
+#include "platform/detail.h"
 
 namespace ipc::detail {
 
@@ -49,7 +50,7 @@ inline auto to_tchar(T* dst, char const * src, std::size_t size) -> IsSameChar<T
 template <typename T>
 inline auto to_tchar(T* dst, char const * src, std::size_t size) -> IsSameChar<T, wchar_t, void> {
     auto wstr = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(src, src + size);
-    std::memcpy(dst, wstr.data(), (std::min)(wstr.size(), size));
+    std::memcpy(dst, wstr.data(), (ipc::detail::min)(wstr.size(), size));
 }
 
 } // namespace ipc::detail

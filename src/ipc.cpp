@@ -29,11 +29,7 @@ using namespace ipc;
 using msg_id_t = std::size_t;
 
 template <std::size_t DataSize,
-#if __cplusplus >= 201703L
-          std::size_t AlignSize = (std::min)(DataSize, alignof(std::max_align_t))>
-#else /*__cplusplus < 201703L*/
-          std::size_t AlignSize = (alignof(std::max_align_t) < DataSize) ? alignof(std::max_align_t) : DataSize>
-#endif/*__cplusplus < 201703L*/
+          std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::max_align_t))>
 struct msg_t;
 
 template <std::size_t AlignSize>
@@ -60,7 +56,7 @@ struct msg_t {
 template <typename T>
 buff_t make_cache(T& data, std::size_t size) {
     auto ptr = mem::alloc(size);
-    std::memcpy(ptr, &data, (std::min)(sizeof(data), size));
+    std::memcpy(ptr, &data, (ipc::detail::min)(sizeof(data), size));
     return { ptr, size, mem::free };
 }
 
@@ -74,7 +70,7 @@ struct cache_t {
 
     void append(void const * data, std::size_t size) {
         if (fill_ >= buff_.size() || data == nullptr || size == 0) return;
-        auto new_fill = (std::min)(fill_ + size, buff_.size());
+        auto new_fill = (ipc::detail::min)(fill_ + size, buff_.size());
         std::memcpy(static_cast<byte_t*>(buff_.data()) + fill_, data, new_fill - fill_);
         fill_ = new_fill;
     }

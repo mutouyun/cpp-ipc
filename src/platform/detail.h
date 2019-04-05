@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <tuple>
 #include <atomic>
+#include <algorithm>
 
 #include "def.h"
 #include "export.h"
@@ -57,6 +58,8 @@ namespace detail {
 using std::unique_ptr;
 using std::unique_lock;
 using std::shared_lock;
+using std::max;
+using std::min;
 
 #else /*__cplusplus < 201703L*/
 
@@ -79,6 +82,16 @@ constexpr auto unique_lock(T&& lc) {
 template <typename T>
 constexpr auto shared_lock(T&& lc) {
     return std::shared_lock<std::decay_t<T>> { std::forward<T>(lc) };
+}
+
+template <typename T>
+constexpr const T& (max)(const T& a, const T& b) {
+    return (a < b) ? b : a;
+}
+
+template <typename T>
+constexpr const T& (min)(const T& a, const T& b) {
+    return (b < a) ? b : a;
 }
 
 #endif/*__cplusplus < 201703L*/
