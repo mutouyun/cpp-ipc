@@ -135,10 +135,6 @@ struct detail_impl {
 using queue_t     = typename queue_generator<Policy, data_length>::queue_t;
 using conn_info_t = typename queue_generator<Policy, data_length>::conn_info_t;
 
-constexpr static void* head_of(queue_t* que) {
-    return static_cast<void*>(que->elems());
-}
-
 constexpr static conn_info_t* info_of(ipc::handle_t h) {
     return static_cast<conn_info_t*>(h);
 }
