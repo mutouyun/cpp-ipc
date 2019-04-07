@@ -50,8 +50,7 @@ inline std::size_t classify(std::size_t size) {
 
 template <template <std::size_t> class Fixed, typename F>
 decltype(auto) choose(std::size_t size, F&& f) {
-    return ipc::detail::static_switch(classify(size), std::make_index_sequence<32> {
-    }, [&f](auto index) {
+    return ipc::detail::static_switch<32>(classify(size), [&f](auto index) {
         return f(Fixed<(decltype(index)::value + 1) * base_size>::pool());
     }, [&f] {
         return f(static_alloc{});
@@ -62,7 +61,7 @@ template <template <std::size_t> class Fixed>
 class pool_alloc {
 public:
     static void clear() {
-        ipc::detail::static_for(std::make_index_sequence<32> {}, [](auto index) {
+        ipc::detail::static_for<32>([](auto index) {
             Fixed<(decltype(index)::value + 1) * base_size>::pool().clear();
         });
     }

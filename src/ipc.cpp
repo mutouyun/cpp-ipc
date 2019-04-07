@@ -28,8 +28,7 @@ namespace {
 using namespace ipc;
 using msg_id_t = std::size_t;
 
-template <std::size_t DataSize,
-          std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::max_align_t))>
+template <std::size_t DataSize, std::size_t AlignSize>
 struct msg_t;
 
 template <std::size_t AlignSize>
@@ -111,19 +110,30 @@ bool wait_for(W& waiter, F&& pred, std::size_t tm) {
     return true;
 }
 
+template <typename Policy, 
+          std::size_t DataSize, 
+          std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::max_align_t))>
+struct queue_generator {
+
+    using queue_t = ipc::queue<msg_t<DataSize, AlignSize>, Policy>;
+    
+    struct conn_info_t : conn_info_head {
+        queue_t que_;
+
+        conn_info_t(char const * name)
+            : conn_info_head(name)
+            , que_(("__QU_CONN__" + 
+                    std::to_string(DataSize ) + "__" + 
+                    std::to_string(AlignSize) + "__" + name).c_str()) {
+        }
+    };
+};
+
 template <typename Policy>
 struct detail_impl {
 
-using queue_t = ipc::queue<msg_t<data_length>, Policy>;
-
-struct conn_info_t : conn_info_head {
-    queue_t que_;
-
-    conn_info_t(char const * name)
-        : conn_info_head(name)
-        , que_((std::string{ "__QU_CONN__" } + name).c_str()) {
-    }
-};
+using queue_t     = typename queue_generator<Policy, data_length>::queue_t;
+using conn_info_t = typename queue_generator<Policy, data_length>::conn_info_t;
 
 constexpr static void* head_of(queue_t* que) {
     return static_cast<void*>(que->elems());

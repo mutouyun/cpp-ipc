@@ -7,6 +7,7 @@
 #include <tuple>
 #include <atomic>
 #include <algorithm>
+#include <utility>
 
 #include "def.h"
 #include "export.h"
@@ -37,9 +38,9 @@
 #   define IPC_STBIND_(A, B, ...) auto [A, B] = __VA_ARGS__
 #else /*__cplusplus < 201703L*/
 #   define IPC_STBIND_(A, B, ...) \
-    auto tp = __VA_ARGS__         \
-    auto A  = std::get<0>(tp);    \
-    auto B  = std::get<1>(tp)
+    auto tp___ = __VA_ARGS__      \
+    auto A     = std::get<0>(tp);    \
+    auto B     = std::get<1>(tp)
 #endif/*__cplusplus < 201703L*/
 
 #if __cplusplus >= 201703L
@@ -98,13 +99,18 @@ constexpr const T& (min)(const T& a, const T& b) {
 
 template <typename F, typename D>
 constexpr decltype(auto) static_switch(std::size_t /*i*/, std::index_sequence<>, F&& /*f*/, D&& def) {
-    return def();
+    return std::forward<D>(def)();
 }
 
 template <typename F, typename D, std::size_t N, std::size_t...I>
 constexpr decltype(auto) static_switch(std::size_t i, std::index_sequence<N, I...>, F&& f, D&& def) {
-    return (i == N) ? f(std::integral_constant<size_t, N>{}) :
-                      static_switch(i, std::index_sequence<I...>{}, f, def);
+    return (i == N) ? std::forward<F>(f)(std::integral_constant<size_t, N>{}) :
+                      static_switch(i, std::index_sequence<I...>{}, std::forward<F>(f), std::forward<D>(def));
+}
+
+template <std::size_t N, typename F, typename D>
+constexpr decltype(auto) static_switch(std::size_t i, F&& f, D&& def) {
+    return static_switch(i, std::make_index_sequence<N>{}, std::forward<F>(f), std::forward<D>(def));
 }
 
 template <typename F, std::size_t...I>
@@ -113,7 +119,16 @@ constexpr void static_for(std::index_sequence<I...>, F&& f) {
 #else /*__cplusplus < 201703L*/
 inline void static_for(std::index_sequence<I...>, F&& f) {
 #endif/*__cplusplus < 201703L*/
-    IPC_UNUSED_ auto expand = { (f(std::integral_constant<size_t, I>{}), 0)... };
+    IPC_UNUSED_ auto expand = { (std::forward<F>(f)(std::integral_constant<size_t, I>{}), 0)... };
+}
+
+template <std::size_t N, typename F>
+#if __cplusplus >= 201703L
+constexpr void static_for(F&& f) {
+#else /*__cplusplus < 201703L*/
+inline void static_for(F&& f) {
+#endif/*__cplusplus < 201703L*/
+    static_for(std::make_index_sequence<N>{}, std::forward<F>(f));
 }
 
 } // namespace detail
