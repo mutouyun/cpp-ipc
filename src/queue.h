@@ -125,6 +125,10 @@ public:
         return base_t::disconnect(elems_);
     }
 
+    bool dis_flag() {
+        return elems_->dis_flag();
+    }
+
     std::size_t conn_count() const noexcept {
         return (elems_ == nullptr) ? invalid_value : elems_->conn_count();
     }

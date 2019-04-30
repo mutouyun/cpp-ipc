@@ -29,6 +29,8 @@ class conn_head {
     ipc::spin_lock lc_;
     std::atomic<bool> constructed_;
 
+    std::atomic<bool> dis_flag_;
+
 public:
     void init() {
         /* DCLP */
@@ -51,6 +53,21 @@ public:
 
     std::size_t disconnect() noexcept {
         return cc_.fetch_sub(1, std::memory_order_acq_rel);
+    }
+
+    void try_disconnect() noexcept {
+        if (!dis_flag_.load(std::memory_order_acquire)) {
+            cc_.fetch_sub(1, std::memory_order_relaxed);
+            dis_flag_.store(true, std::memory_order_release);
+        }
+    }
+
+    void clear_dis_flag(std::memory_order order = std::memory_order_release) noexcept {
+        dis_flag_.store(false, order);
+    }
+
+    bool dis_flag(std::memory_order order = std::memory_order_acquire) const noexcept {
+        return dis_flag_.load(order);
     }
 
     std::size_t conn_count(std::memory_order order = std::memory_order_acquire) const noexcept {

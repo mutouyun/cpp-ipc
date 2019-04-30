@@ -95,6 +95,7 @@ struct conn_info_head {
 
 template <typename W, typename F>
 bool wait_for(W& waiter, F&& pred, std::size_t tm) {
+    if (tm == 0) return !pred();
     for (unsigned k = 0; pred();) {
         bool loop = true, ret = true;
         ipc::sleep(k, [&k, &loop, &ret, &waiter, &pred, tm] {
@@ -245,7 +246,8 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
         return [info, que, msg_id](int remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(que, msg_id, remain, data, size);
-                }, default_timeut)) {
+                }, que->dis_flag() ? 0 : static_cast<std::size_t>(default_timeut))) {
+                ipc::log("force_push: msg_id = %zd, remain = %d, size = %zd\n", msg_id, remain, size);
                 if (!que->force_push(que, msg_id, remain, data, size)) {
                     return false;
                 }

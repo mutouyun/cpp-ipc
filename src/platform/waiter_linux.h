@@ -105,19 +105,22 @@ public:
     }
 
     bool wait(mutex& mtx, std::size_t tm = invalid_value) {
-        if (tm == invalid_value) {
+        switch (tm) {
+        case 0:
+            return true;
+        case invalid_value:
             IPC_PTHREAD_FUNC_(pthread_cond_wait, &cond_, &mtx.native());
-        }
-        else {
-            timespec ts;
-            calc_wait_time(ts, tm);
-            int eno;
-            if ((eno = ::pthread_cond_timedwait(&cond_, &mtx.native(), &ts)) != 0) {
-                if (eno != ETIMEDOUT) {
-                    ipc::error("fail pthread_cond_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                               eno, tm, ts.tv_sec, ts.tv_nsec);
+        default: {
+                timespec ts;
+                calc_wait_time(ts, tm);
+                int eno;
+                if ((eno = ::pthread_cond_timedwait(&cond_, &mtx.native(), &ts)) != 0) {
+                    if (eno != ETIMEDOUT) {
+                        ipc::error("fail pthread_cond_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                                   eno, tm, ts.tv_sec, ts.tv_nsec);
+                    }
+                    return false;
                 }
-                return false;
             }
             return true;
         }
@@ -176,18 +179,21 @@ public:
 
     static bool wait(handle_t h, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
-        if (tm == invalid_value) {
+        switch (tm) {
+        case 0:
+            return true;
+        case invalid_value:
             IPC_SEMAPHORE_FUNC_(sem_wait, h);
-        }
-        else {
-            timespec ts;
-            calc_wait_time(ts, tm);
-            if (::sem_timedwait(h, &ts) != 0) {
-                if (errno != ETIMEDOUT) {
-                    ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                               errno, tm, ts.tv_sec, ts.tv_nsec);
+        default: {
+                timespec ts;
+                calc_wait_time(ts, tm);
+                if (::sem_timedwait(h, &ts) != 0) {
+                    if (errno != ETIMEDOUT) {
+                        ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                                   errno, tm, ts.tv_sec, ts.tv_nsec);
+                    }
+                    return false;
                 }
-                return false;
             }
             return true;
         }

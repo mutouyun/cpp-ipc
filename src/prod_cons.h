@@ -190,14 +190,23 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
 
     template <typename W, typename F, typename E>
     bool push(W* wrapper, F&& f, E* elems) {
-        auto cc = wrapper->conn_count(std::memory_order_relaxed);
-        if (cc == 0) return false; // no reader
-        auto* el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
-        // check all consumers have finished reading this element
-        rc_t expected = 0;
-        if (!el->rc_.compare_exchange_strong(
-                    expected, static_cast<rc_t>(cc), std::memory_order_acq_rel)) {
-            return false; // full
+        E* el;
+        for (unsigned k = 0;;) {
+            auto cc = wrapper->conn_count(std::memory_order_relaxed);
+            if (cc == 0) return false; // no reader
+            el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
+            // check all consumers have finished reading this element
+            auto cur_rc = el->rc_.load(std::memory_order_acquire);
+            if (cur_rc) {
+                return false; // full
+            }
+            // cur_rc should be 0 here
+            if (el->rc_.compare_exchange_weak(
+                        cur_rc, static_cast<rc_t>(cc), std::memory_order_release)) {
+                wrapper->clear_dis_flag(std::memory_order_relaxed);
+                break;
+            }
+            ipc::yield(k);
         }
         std::forward<F>(f)(&(el->data_));
         wt_.fetch_add(1, std::memory_order_release);
@@ -206,13 +215,25 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
 
     template <typename W, typename F, typename E>
     bool force_push(W* wrapper, F&& f, E* elems) {
-        auto cc = wrapper->conn_count(std::memory_order_relaxed);
-        if (cc == 0) return false;      // no reader
-        cc = wrapper->disconnect() - 1; // disconnect a reader
-        if (cc == 0) return false;      // no reader
-        auto* el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
-        // reset reading flag
-        el->rc_.store(static_cast<rc_t>(cc), std::memory_order_relaxed);
+        E* el;
+        for (unsigned k = 0;;) {
+            auto cc = wrapper->conn_count(std::memory_order_relaxed);
+            if (cc == 0) return false; // no reader
+            el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
+            // check all consumers have finished reading this element
+            auto cur_rc = el->rc_.load(std::memory_order_acquire);
+            if (cur_rc) {
+                wrapper->try_disconnect(); // try disconnect a reader
+                cc = wrapper->conn_count(std::memory_order_relaxed);
+                if (cc == 0) return false; // no reader
+            }
+            // just compare & exchange
+            if (el->rc_.compare_exchange_weak(
+                        cur_rc, static_cast<rc_t>(cc), std::memory_order_release)) {
+                break;
+            }
+            ipc::yield(k);
+        }
         std::forward<F>(f)(&(el->data_));
         wt_.fetch_add(1, std::memory_order_release);
         return true;
@@ -267,10 +288,9 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         circ::u2_t cur_ct;
         for (unsigned k = 0;;) {
             auto cc = wrapper->conn_count(std::memory_order_relaxed);
-            if (cc == 0) {
-                return false; // no reader
-            }
+            if (cc == 0) return false; // no reader
             el = elems + circ::index_of(cur_ct = ct_.load(std::memory_order_relaxed));
+            // check all consumers have finished reading this element
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             if (cur_rc & rc_mask) {
                 return false; // full
@@ -279,9 +299,10 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
             if ((cur_fl != cur_ct) && cur_fl) {
                 return false; // full
             }
-            // (cur_rc & rc_mask) should == 0 here
+            // (cur_rc & rc_mask) should be 0 here
             if (el->rc_.compare_exchange_weak(
                         cur_rc, static_cast<rc_t>(cc) | ((cur_rc & ~rc_mask) + rc_incr), std::memory_order_release)) {
+                wrapper->clear_dis_flag(std::memory_order_relaxed);
                 break;
             }
             ipc::yield(k);
@@ -298,20 +319,27 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
     bool force_push(W* wrapper, F&& f, E* elems) {
         E* el;
         circ::u2_t cur_ct;
-        auto cc = wrapper->conn_count(std::memory_order_relaxed);
-        if (cc == 0) return false; // no reader
-        wrapper->disconnect();     // disconnect a reader
         for (unsigned k = 0;;) {
-            cc = wrapper->conn_count(std::memory_order_relaxed);
+            auto cc = wrapper->conn_count(std::memory_order_relaxed);
             if (cc == 0) return false; // no reader
             el = elems + circ::index_of(cur_ct = ct_.load(std::memory_order_relaxed));
+            // check all consumers have finished reading this element
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
-            el->rc_.store(static_cast<rc_t>(cc) | ((cur_rc & ~rc_mask) + rc_incr), std::memory_order_relaxed);
-            if (ct_.compare_exchange_weak(cur_ct, cur_ct + 1, std::memory_order_release)) {
+            ipc::log("force_push: k = %d, cc = %zd, rc = %zd\n", k, cc, (cur_rc & rc_mask));
+            if (cur_rc & rc_mask) {
+                wrapper->try_disconnect(); // try disconnect a reader
+                cc = wrapper->conn_count(std::memory_order_relaxed);
+                if (cc == 0) return false; // no reader
+            }
+            // just compare & exchange
+            if (el->rc_.compare_exchange_weak(
+                        cur_rc, static_cast<rc_t>(cc) | ((cur_rc & ~rc_mask) + rc_incr), std::memory_order_release)) {
                 break;
             }
             ipc::yield(k);
         }
+        // only one thread/process would touch here at one time
+        ct_.store(cur_ct + 1, std::memory_order_release);
         std::forward<F>(f)(&(el->data_));
         // set flag & try update wt
         el->f_ct_.store(~static_cast<flag_t>(cur_ct), std::memory_order_release);
