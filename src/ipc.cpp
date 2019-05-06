@@ -285,18 +285,18 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
     for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
         if (!try_push(static_cast<int>(size) - offset - static_cast<int>(data_length),
                       static_cast<byte_t const *>(data) + offset, data_length)) {
-            info_of(h)->clear_store();
             return false;
         }
+        info_of(h)->clear_store();
     }
     // if remain > 0, this is the last message fragment
     int remain = static_cast<int>(size) - offset;
     if (remain > 0) {
         if (!try_push(remain - static_cast<int>(data_length),
                       static_cast<byte_t const *>(data) + offset, static_cast<std::size_t>(remain))) {
-            info_of(h)->clear_store();
             return false;
         }
+        info_of(h)->clear_store();
     }
     return true;
 }
