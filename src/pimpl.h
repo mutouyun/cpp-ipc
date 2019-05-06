@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "concept.h"
+#include "pool_alloc.h"
 
 namespace ipc {
 
@@ -34,12 +35,12 @@ constexpr auto clear_impl(T* p) -> IsImplComfortable<T, void> {
 
 template <typename T, typename... P>
 constexpr auto make_impl(P&&... params) -> IsImplUncomfortable<T> {
-    return new T { std::forward<P>(params)... };
+    return mem::alloc<T>(std::forward<P>(params)...);
 }
 
 template <typename T>
 constexpr auto clear_impl(T* p) -> IsImplUncomfortable<T, void> {
-    delete p;
+    mem::free(p);
 }
 
 template <typename T>

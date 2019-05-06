@@ -4,6 +4,7 @@
 #include <tuple>
 #include <vector>
 #include <type_traits>
+#include <functional>
 
 #include "export.h"
 #include "def.h"
@@ -14,9 +15,14 @@ class IPC_EXPORT buffer {
 public:
     using destructor_t = void (*)(void*, std::size_t);
 
+    enum class use {
+        functor
+    };
+
     buffer();
 
     buffer(void* p, std::size_t s, destructor_t d);
+    buffer(void* p, std::size_t s, std::function<void(void*, std::size_t)> d, use);
     buffer(void* p, std::size_t s);
 
     template <std::size_t N>

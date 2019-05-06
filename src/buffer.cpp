@@ -11,16 +11,16 @@ bool operator==(buffer const & b1, buffer const & b2) {
 
 class buffer::buffer_ : public pimpl<buffer_> {
 public:
-    void*        p_;
-    std::size_t  s_;
-    destructor_t d_;
+    void*       p_;
+    std::size_t s_;
+    std::function<void(void*, std::size_t)> d_;
 
-    buffer_(void* p, std::size_t s, destructor_t d)
-        : p_(p), s_(s), d_(d) {
+    buffer_(void* p, std::size_t s, std::function<void(void*, std::size_t)> d)
+        : p_(p), s_(s), d_(std::move(d)) {
     }
 
     ~buffer_() {
-        if (d_ == nullptr) return;
+        if (!d_) return;
         d_(p_, s_);
     }
 };
@@ -31,6 +31,10 @@ buffer::buffer()
 
 buffer::buffer(void* p, std::size_t s, destructor_t d)
     : p_(p_->make(p, s, d)) {
+}
+
+buffer::buffer(void* p, std::size_t s, std::function<void(void*, std::size_t)> d, use)
+    : p_(p_->make(p, s, std::move(d))) {
 }
 
 buffer::buffer(void* p, std::size_t s)
