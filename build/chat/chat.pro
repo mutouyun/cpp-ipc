@@ -5,13 +5,13 @@ CONFIG += c++14 c++1z # may be useless
 CONFIG -= app_bundle
 CONFIG -= qt
 
-DESTDIR = ../output
+DESTDIR = ../../output
 
 INCLUDEPATH += \
-    ../include
+    ../../include
 
 SOURCES += \
-    ../demo/chat/main.cpp
+    ../../demo/chat/main.cpp
 
 LIBS += \
     -L$${DESTDIR} -lipc

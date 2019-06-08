@@ -7,7 +7,7 @@ CONFIG += console
 CONFIG += c++14 c++1z # may be useless
 CONFIG -= app_bundle
 
-DESTDIR = ../output
+DESTDIR = ../../output
 
 !msvc:QMAKE_CXXFLAGS += \
     -Wno-attributes \
@@ -16,21 +16,21 @@ DESTDIR = ../output
     -Wno-unused-function
 
 INCLUDEPATH += \
-    ../test \
-    ../test/capo \
-    ../include \
-    ../src
+    ../../test \
+    ../../test/capo \
+    ../../include \
+    ../../src
 
 HEADERS += \
-    ../test/test.h
+    ../../test/test.h
 
 SOURCES += \
-    ../test/main.cpp \
-    ../test/test_shm.cpp \
-    ../test/test_mem.cpp \
-    ../test/test_circ.cpp \
-    ../test/test_waiter.cpp \
-    ../test/test_ipc.cpp
+    ../../test/main.cpp \
+    ../../test/test_shm.cpp \
+    ../../test/test_mem.cpp \
+    ../../test/test_circ.cpp \
+    ../../test/test_waiter.cpp \
+    ../../test/test_ipc.cpp
 
 LIBS += \
     -L$${DESTDIR} -lipc
