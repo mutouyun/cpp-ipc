@@ -37,18 +37,15 @@ public:
 
     bool wait(std::size_t tm = invalid_value) {
         DWORD ret, ms = (tm == invalid_value) ? INFINITE : static_cast<DWORD>(tm);
-        if ((ret = ::WaitForSingleObject(h_, ms)) == WAIT_OBJECT_0) {
-            return true;
-        }
-		if (ret == WAIT_ABANDONED) {
-			ipc::log("WaitForSingleObject ret: WAIT_ABANDONED\n");
+		switch ((ret = ::WaitForSingleObject(h_, ms))) {
+		case WAIT_OBJECT_0:
 			return true;
+		case WAIT_ABANDONED:
+		case WAIT_TIMEOUT:
+		default:
+			ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
+			return false;
 		}
-        if (ret == WAIT_TIMEOUT) {
-            return false;
-        }
-        ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
-        return false;
     }
 
     bool post(long count = 1) {
