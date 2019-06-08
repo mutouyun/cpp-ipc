@@ -40,6 +40,10 @@ public:
         if ((ret = ::WaitForSingleObject(h_, ms)) == WAIT_OBJECT_0) {
             return true;
         }
+		if (ret == WAIT_ABANDONED) {
+			ipc::log("WaitForSingleObject ret: WAIT_ABANDONED\n");
+			return true;
+		}
         if (ret == WAIT_TIMEOUT) {
             return false;
         }
