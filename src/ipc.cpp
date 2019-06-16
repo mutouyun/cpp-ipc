@@ -84,6 +84,20 @@ struct cache_t {
     }
 };
 
+auto& recv_cache() {
+    /*
+        <Remarks> thread_local may have some bugs.
+        See: https://sourceforge.net/p/mingw-w64/bugs/727/
+             https://sourceforge.net/p/mingw-w64/bugs/527/
+             https://github.com/Alexpux/MINGW-packages/issues/2519
+             https://github.com/ChaiScript/ChaiScript/issues/402
+             https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
+             https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
+    */
+    static tls::pointer<mem::unordered_map<msg_id_t, cache_t>> rc;
+    return *rc.create();
+}
+
 struct conn_info_head {
     using acc_t = std::atomic<msg_id_t>;
 
@@ -189,20 +203,6 @@ constexpr static conn_info_t* info_of(ipc::handle_t h) {
 
 constexpr static queue_t* queue_of(ipc::handle_t h) {
     return (info_of(h) == nullptr) ? nullptr : &(info_of(h)->que_);
-}
-
-static auto& recv_cache() {
-    /*
-        <Remarks> thread_local may have some bugs.
-        See: https://sourceforge.net/p/mingw-w64/bugs/727/
-             https://sourceforge.net/p/mingw-w64/bugs/527/
-             https://github.com/Alexpux/MINGW-packages/issues/2519
-             https://github.com/ChaiScript/ChaiScript/issues/402
-             https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
-             https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
-    */
-    static tls::pointer<mem::unordered_map<msg_id_t, cache_t>> rc;
-    return *rc.create();
 }
 
 /* API implementations */
