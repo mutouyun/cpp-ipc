@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "pimpl.h"
+#include "memory/resource.h"
 
 namespace ipc {
 namespace shm {
@@ -13,7 +14,7 @@ public:
     shm::id_t id_ = nullptr;
     void*     m_  = nullptr;
 
-    std::string n_;
+    ipc::string n_;
     std::size_t s_ = 0;
 };
 

@@ -84,7 +84,19 @@ struct cache_t {
     }
 };
 
-auto& recv_cache() {
+struct conn_info_head {
+    using acc_t = std::atomic<msg_id_t>;
+
+    static auto cc_acc() {
+        static shm::handle acc_h("__CA_CONN__", sizeof(acc_t));
+        return static_cast<acc_t*>(acc_h.get());
+    }
+
+    ipc::string name_;
+    msg_id_t    cc_id_; // connection-info id
+    waiter      cc_waiter_, wt_waiter_, rd_waiter_;
+    shm::handle acc_h_;
+
     /*
         <Remarks> thread_local may have some bugs.
         See: https://sourceforge.net/p/mingw-w64/bugs/727/
@@ -94,20 +106,7 @@ auto& recv_cache() {
              https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
              https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
     */
-    static tls::pointer<mem::unordered_map<msg_id_t, cache_t>> rc;
-    return *rc.create();
-}
-
-struct conn_info_head {
-    using acc_t = std::atomic<msg_id_t>;
-
-    static auto acc() {
-        static shm::handle acc_h("__AC_CONN__", sizeof(acc_t));
-        return static_cast<acc_t*>(acc_h.get());
-    }
-
-    msg_id_t    cc_id_; // connection-info id
-    waiter      cc_waiter_, wt_waiter_, rd_waiter_;
+    tls::pointer<ipc::unordered_map<msg_id_t, cache_t>> recv_cache_;
 
     struct simple_push {
 
@@ -131,18 +130,28 @@ struct conn_info_head {
     circ::elem_array<simple_push, sizeof(shm::id_t)> msg_datas_;
 
     conn_info_head(char const * name)
-        : cc_id_    ((acc() == nullptr) ? 0 : acc()->fetch_add(1, std::memory_order_relaxed))
-        , cc_waiter_((std::string { "__CC_CONN__" } + name).c_str())
-        , wt_waiter_((std::string { "__WT_CONN__" } + name).c_str())
-        , rd_waiter_((std::string { "__RD_CONN__" } + name).c_str()) {
+        : name_     (name)
+        , cc_id_    ((cc_acc() == nullptr) ? 0 : cc_acc()->fetch_add(1, std::memory_order_relaxed))
+        , cc_waiter_(("__CC_CONN__" + name_).c_str())
+        , wt_waiter_(("__WT_CONN__" + name_).c_str())
+        , rd_waiter_(("__RD_CONN__" + name_).c_str())
+        , acc_h_    (("__AC_CONN__" + name_).c_str(), sizeof(acc_t)) {
+    }
+
+    auto acc() {
+        return static_cast<acc_t*>(acc_h_.get());
+    }
+
+    auto& recv_cache() {
+        return *recv_cache_.create();
     }
 
     static shm::id_t apply_storage(msg_id_t msg_id, std::size_t size) {
-        return shm::acquire(("__ST_CONN__" + std::to_string(msg_id)).c_str(), size, shm::create);
+        return shm::acquire(("__ST_CONN__" + ipc::to_string(msg_id)).c_str(), size, shm::create);
     }
 
     static shm::id_t apply_storage(msg_id_t msg_id) {
-        return shm::acquire(("__ST_CONN__" + std::to_string(msg_id)).c_str(), 0, shm::open);
+        return shm::acquire(("__ST_CONN__" + ipc::to_string(msg_id)).c_str(), 0, shm::open);
     }
 
     void store(shm::id_t dat) {
@@ -153,7 +162,9 @@ struct conn_info_head {
 
     void clear_store() {
         msg_datas_.push([](shm::id_t * id) {
-            if (*id != nullptr) shm::remove(*id);
+            if (*id == nullptr) return;
+            shm::remove(*id);
+            (*id) = nullptr;
         });
     }
 };
@@ -189,8 +200,8 @@ struct queue_generator {
         conn_info_t(char const * name)
             : conn_info_head(name)
             , que_(("__QU_CONN__" + 
-                    std::to_string(DataSize ) + "__" + 
-                    std::to_string(AlignSize) + "__" + name).c_str()) {
+                    ipc::to_string(DataSize)  + "__" +
+                    ipc::to_string(AlignSize) + "__" + name).c_str()) {
         }
     };
 };
@@ -345,7 +356,7 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
     if (que->connect()) { // wouldn't connect twice
         info_of(h)->cc_waiter_.broadcast();
     }
-    auto& rc = recv_cache();
+    auto& rc = info_of(h)->recv_cache();
     while (1) {
         // pop a new message
         typename queue_t::value_t msg;
@@ -428,6 +439,12 @@ ipc::handle_t chan_impl<Flag>::connect(char const * name, unsigned mode) {
 template <typename Flag>
 void chan_impl<Flag>::disconnect(ipc::handle_t h) {
     detail_impl<policy_t<Flag>>::disconnect(h);
+}
+
+template <typename Flag>
+char const * chan_impl<Flag>::name(ipc::handle_t h) {
+    auto info = detail_impl<policy_t<Flag>>::info_of(h);
+    return (info == nullptr) ? nullptr : info->name_.c_str();
 }
 
 template <typename Flag>

@@ -36,6 +36,7 @@ public:
     typedef value_type&       reference;
     typedef const value_type& const_reference;
     typedef std::size_t       size_type;
+    typedef std::ptrdiff_t    difference_type;
     typedef AllocP            alloc_policy;
 
 private:
@@ -103,8 +104,13 @@ public:
 template <class AllocP>
 class allocator_wrapper<void, AllocP> {
 public:
-    typedef void    value_type;
-    typedef AllocP  alloc_policy;
+    // type definitions
+    typedef void              value_type;
+    typedef value_type*       pointer;
+    typedef const value_type* const_pointer;
+    typedef std::size_t       size_type;
+    typedef std::ptrdiff_t    difference_type;
+    typedef AllocP            alloc_policy;
 };
 
 template <typename T, typename U, class AllocP>

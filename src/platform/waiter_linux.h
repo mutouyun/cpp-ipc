@@ -14,6 +14,7 @@
 #include "log.h"
 
 #include "platform/detail.h"
+#include "memory/resource.h"
 
 namespace ipc {
 namespace detail {
@@ -209,13 +210,13 @@ class waiter_helper {
     long counter_ = 0;
 
 public:
-    using handle_t = std::tuple<std::string, sem_helper::handle_t, sem_helper::handle_t>;
+    using handle_t = std::tuple<ipc::string, sem_helper::handle_t, sem_helper::handle_t>;
 
     static handle_t invalid() noexcept {
-        return std::make_tuple(std::string{}, sem_helper::invalid(), sem_helper::invalid());
+        return std::make_tuple(ipc::string{}, sem_helper::invalid(), sem_helper::invalid());
     }
 
-    handle_t open_h(std::string && name) {
+    handle_t open_h(ipc::string && name) {
         auto sem = sem_helper::open(("__WAITER_HELPER_SEM__" + name).c_str(), 0);
         if (sem == sem_helper::invalid()) {
             return invalid();

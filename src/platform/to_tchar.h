@@ -11,6 +11,7 @@
 #include "concept.h"
 
 #include "platform/detail.h"
+#include "memory/resource.h"
 
 namespace ipc::detail {
 
@@ -33,13 +34,18 @@ using IsSameChar = ipc::Requires<is_same_char<T, S>::value, R>;
 ////////////////////////////////////////////////////////////////
 
 template <typename T = TCHAR>
-constexpr auto to_tchar(std::string && str) -> IsSameChar<T, std::string, std::string &&> {
+constexpr auto to_tchar(ipc::string && str) -> IsSameChar<T, ipc::string, ipc::string &&> {
     return std::move(str);
 }
 
 template <typename T = TCHAR>
-constexpr auto to_tchar(std::string && str) -> IsSameChar<T, std::wstring> {
-    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(std::move(str));
+constexpr auto to_tchar(ipc::string && str) -> IsSameChar<T, ipc::wstring> {
+    return std::wstring_convert<
+        std::codecvt_utf8_utf16<wchar_t>,
+        wchar_t,
+        ipc::mem::allocator<wchar_t>,
+        ipc::mem::allocator<char>
+    >{}.from_bytes(std::move(str));
 }
 
 template <typename T>
@@ -49,7 +55,12 @@ inline auto to_tchar(T* dst, char const * src, std::size_t size) -> IsSameChar<T
 
 template <typename T>
 inline auto to_tchar(T* dst, char const * src, std::size_t size) -> IsSameChar<T, wchar_t, void> {
-    auto wstr = std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(src, src + size);
+    auto wstr = std::wstring_convert<
+        std::codecvt_utf8_utf16<wchar_t>,
+        wchar_t,
+        ipc::mem::allocator<wchar_t>,
+        ipc::mem::allocator<char>
+    >{}.from_bytes(src, src + size);
     std::memcpy(dst, wstr.data(), (ipc::detail::min)(wstr.size(), size));
 }
 

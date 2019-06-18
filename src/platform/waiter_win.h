@@ -12,6 +12,7 @@
 
 #include "platform/to_tchar.h"
 #include "platform/detail.h"
+#include "memory/resource.h"
 
 namespace ipc {
 namespace detail {
@@ -22,7 +23,7 @@ class semaphore {
 public:
     static void remove(char const * /*name*/) {}
 
-    bool open(std::string && name, long count = 0, long limit = LONG_MAX) {
+    bool open(ipc::string && name, long count = 0, long limit = LONG_MAX) {
         h_ = ::CreateSemaphore(NULL, count, limit, ipc::detail::to_tchar(std::move(name)).c_str());
         if (h_ == NULL) {
             ipc::error("fail CreateSemaphore[%lu]: %s\n", ::GetLastError(), name.c_str());
@@ -62,7 +63,7 @@ class mutex : public semaphore {
     using semaphore::post;
 
 public:
-    bool open(std::string && name) {
+    bool open(ipc::string && name) {
         return semaphore::open(std::move(name), 1, 1);
     }
 
@@ -87,12 +88,12 @@ public:
     }
 
     static void remove(char const * name) {
-        semaphore::remove((std::string{ "__COND_HAN__" } + name).c_str());
-        semaphore::remove((std::string{ "__COND_SEM__" } + name).c_str());
-        mutex    ::remove((std::string{ "__COND_MTX__" } + name).c_str());
+        semaphore::remove((ipc::string{ "__COND_HAN__" } + name).c_str());
+        semaphore::remove((ipc::string{ "__COND_SEM__" } + name).c_str());
+        mutex    ::remove((ipc::string{ "__COND_MTX__" } + name).c_str());
     }
 
-    bool open(std::string const & name, std::atomic<unsigned> * waiting, long * counter) {
+    bool open(ipc::string const & name, std::atomic<unsigned> * waiting, long * counter) {
         if (lock_     .open("__COND_MTX__" + name) &&
             sema_     .open("__COND_SEM__" + name) &&
             handshake_.open("__COND_HAN__" + name)) {

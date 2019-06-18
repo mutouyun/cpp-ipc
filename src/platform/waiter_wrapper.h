@@ -6,6 +6,7 @@
 
 #include "shm.h"
 
+#include "memory/resource.h"
 #include "platform/detail.h"
 #if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
     defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
@@ -26,12 +27,12 @@ class condition_impl : public ipc::detail::condition {
 public:
     static void remove(char const * name) {
         ipc::detail::condition::remove(name);
-        std::string n = name;
+        ipc::string n = name;
         ipc::shm::remove((n + "__COND_CNT__" ).c_str());
         ipc::shm::remove((n + "__COND_WAIT__").c_str());
     }
 
-    bool open(std::string const & name) {
+    bool open(ipc::string const & name) {
         if (wait_h_.acquire((name + "__COND_WAIT__").c_str(), sizeof(std::atomic<unsigned>)) &&
             cnt_h_ .acquire((name + "__COND_CNT__" ).c_str(), sizeof(long))) {
             return ipc::detail::condition::open(name,
@@ -129,7 +130,7 @@ public:
 class semaphore_impl {
     sem_helper::handle_t h_;
     ipc::shm::handle     opened_; // std::atomic<unsigned>
-    std::string          name_;
+    ipc::string          name_;
 
     auto cnt() {
         return static_cast<std::atomic<unsigned>*>(opened_.get());
@@ -137,8 +138,8 @@ class semaphore_impl {
 
 public:
     static void remove(char const * name) {
-        sem_helper::destroy((std::string{ "__SEMAPHORE_IMPL_SEM__" } + name).c_str());
-        ipc::shm::remove   ((std::string{ "__SEMAPHORE_IMPL_CNT__" } + name).c_str());
+        sem_helper::destroy((ipc::string{ "__SEMAPHORE_IMPL_SEM__" } + name).c_str());
+        ipc::shm::remove   ((ipc::string{ "__SEMAPHORE_IMPL_CNT__" } + name).c_str());
     }
 
     bool open(char const * name, long count) {
@@ -269,11 +270,11 @@ public:
             return false;
         }
         close();
-        if (!shm_.acquire((std::string{ "__SHM_WAITER__" } + name).c_str(), sizeof(waiter_t))) {
+        if (!shm_.acquire((ipc::string{ "__SHM_WAITER__" } + name).c_str(), sizeof(waiter_t))) {
             return false;
         }
         attach(static_cast<waiter_t*>(shm_.get()));
-        return detail::waiter_wrapper::open((std::string{ "__IMP_WAITER__" } + name).c_str());
+        return detail::waiter_wrapper::open((ipc::string{ "__IMP_WAITER__" } + name).c_str());
     }
 
     void close() {

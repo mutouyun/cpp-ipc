@@ -1,8 +1,5 @@
 #pragma once
 
-#include <vector>
-#include <string>
-
 #include "export.h"
 #include "def.h"
 #include "buffer.h"
@@ -23,6 +20,8 @@ struct IPC_EXPORT chan_impl {
     static handle_t connect   (char const * name, unsigned mode);
     static void     disconnect(handle_t h);
 
+    static char const * name(handle_t h);
+
     static std::size_t recv_count(handle_t h);
     static bool wait_for_recv(handle_t h, std::size_t r_count, std::size_t tm);
 
@@ -37,9 +36,7 @@ template <typename Flag>
 class chan_wrapper {
 private:
     using detail_t = chan_impl<Flag>;
-
-    handle_t    h_ = nullptr;
-    std::string n_;
+    handle_t h_ = nullptr;
 
 public:
     chan_wrapper() = default;
@@ -58,7 +55,6 @@ public:
 
     void swap(chan_wrapper& rhs) {
         std::swap(h_, rhs.h_);
-        n_.swap(rhs.n_);
     }
 
     chan_wrapper& operator=(chan_wrapper rhs) {
@@ -67,7 +63,7 @@ public:
     }
 
     char const * name() const {
-        return n_.c_str();
+        return detail_t::name(h_);
     }
 
     handle_t handle() const {
@@ -85,7 +81,7 @@ public:
     bool connect(char const * name, unsigned mode = sender | receiver) {
         if (name == nullptr || name[0] == '\0') return false;
         this->disconnect();
-        h_ = detail_t::connect((n_ = name).c_str(), mode);
+        h_ = detail_t::connect(name, mode);
         return valid();
     }
 
@@ -93,7 +89,6 @@ public:
         if (!valid()) return;
         detail_t::disconnect(h_);
         h_ = nullptr;
-        n_.clear();
     }
 
     std::size_t recv_count() const {

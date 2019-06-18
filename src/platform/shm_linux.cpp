@@ -17,6 +17,8 @@
 #include "log.h"
 #include "pool_alloc.h"
 
+#include "memory/resource.h"
+
 namespace {
 
 struct info_t {
@@ -27,7 +29,7 @@ struct id_info_t {
     int         fd_   = -1;
     void*       mem_  = nullptr;
     std::size_t size_ = 0;
-    std::string name_;
+    ipc::string name_;
 };
 
 constexpr std::size_t calc_size(std::size_t size) {
@@ -48,7 +50,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         ipc::error("fail acquire: name is empty\n");
         return nullptr;
     }
-    std::string op_name = std::string{"__IPC_SHM__"} + name;
+    ipc::string op_name = ipc::string{"__IPC_SHM__"} + name;
     // Open the object for read-write access.
     int flag = O_RDWR;
     switch (mode) {
@@ -163,7 +165,7 @@ void remove(char const * name) {
         ipc::error("fail remove: name is empty\n");
         return;
     }
-    ::shm_unlink((std::string{"__IPC_SHM__"} + name).c_str());
+    ::shm_unlink((ipc::string{"__IPC_SHM__"} + name).c_str());
 }
 
 } // namespace shm
