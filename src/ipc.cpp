@@ -43,7 +43,7 @@ struct msg_t<0, AlignSize> {
 
 template <std::size_t DataSize, std::size_t AlignSize>
 struct msg_t {
-    msg_t<0, AlignSize> head_ {};
+    msg_t<0, AlignSize> head_ { 0, 0, 0, false };
     std::aligned_storage_t<DataSize, AlignSize> data_ {};
 
     msg_t() = default;

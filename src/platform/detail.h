@@ -17,10 +17,21 @@
 #ifdef IPC_UNUSED_
 #   error "IPC_UNUSED_ has been defined."
 #endif
+#ifdef IPC_FALLTHROUGH_
+#   error "IPC_FALLTHROUGH_ has been defined."
+#endif
+#ifdef IPC_STBIND_
+#   error "IPC_STBIND_ has been defined."
+#endif
 
 #if __cplusplus >= 201703L
-#   define IPC_UNUSED_ [[maybe_unused]]
+
+#define IPC_UNUSED_      [[maybe_unused]]
+#define IPC_FALLTHROUGH_ [[fallthrough]]
+#define IPC_STBIND_(A, B, ...) auto [A, B] = __VA_ARGS__
+
 #else /*__cplusplus < 201703L*/
+
 #if defined(_MSC_VER)
 #   define IPC_UNUSED_ __pragma(warning(suppress: 4100 4101 4189))
 #elif defined(__GNUC__)
@@ -28,19 +39,14 @@
 #else
 #   define IPC_UNUSED_
 #endif
-#endif/*__cplusplus < 201703L*/
 
-#ifdef IPC_STBIND_
-#   error "IPC_STBIND_ has been defined."
-#endif
+#define IPC_FALLTHROUGH_
 
-#if __cplusplus >= 201703L
-#   define IPC_STBIND_(A, B, ...) auto [A, B] = __VA_ARGS__
-#else /*__cplusplus < 201703L*/
-#   define IPC_STBIND_(A, B, ...) \
-    auto tp___ = __VA_ARGS__      \
-    auto A     = std::get<0>(tp);    \
-    auto B     = std::get<1>(tp)
+#define IPC_STBIND_(A, B, ...)       \
+    auto tp___ = __VA_ARGS__         \
+    auto A     = std::get<0>(tp___); \
+    auto B     = std::get<1>(tp___)
+
 #endif/*__cplusplus < 201703L*/
 
 #if __cplusplus >= 201703L

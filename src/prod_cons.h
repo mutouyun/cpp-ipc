@@ -6,7 +6,7 @@
 #include <type_traits>
 
 #include "def.h"
-
+#include "platform/detail.h"
 #include "circ/elem_def.h"
 
 namespace ipc {
@@ -363,7 +363,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
                 return true;
             case 1:
                 el->f_ct_.store(cur + N - 1, std::memory_order_release);
-                [[fallthrough]];
+                IPC_FALLTHROUGH_;
             default:
                 if (el->rc_.compare_exchange_weak(
                             cur_rc, cur_rc + rc_incr - 1, std::memory_order_release)) {
