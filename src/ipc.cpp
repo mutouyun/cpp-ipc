@@ -49,14 +49,12 @@ struct msg_t {
     msg_t() = default;
     msg_t(msg_id_t c, msg_id_t i, int r, void const * d, std::size_t s)
         : head_ { c, i, r, false } {
-        if ((d != nullptr) && (s > 0)) {
-            std::memcpy(&data_, d, s);
-        }
-        else {
-            head_.storage_ = true;
-            if (d != nullptr) {
-                std::memcpy(&data_, d, sizeof(msg_id_t));
+        if (d != nullptr) {
+            if (s == 0) {
+                head_.storage_ = true;
+                s = sizeof(msg_id_t);
             }
+            std::memcpy(&data_, d, s);
         }
     }
 };
@@ -187,19 +185,19 @@ bool wait_for(W& waiter, F&& pred, std::size_t tm) {
     return true;
 }
 
-template <typename Policy, 
+template <typename Policy,
           std::size_t DataSize  = data_length,
           std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::max_align_t))>
 struct queue_generator {
 
     using queue_t = ipc::queue<msg_t<DataSize, AlignSize>, Policy>;
-    
+
     struct conn_info_t : conn_info_head {
         queue_t que_;
 
         conn_info_t(char const * name)
             : conn_info_head(name)
-            , que_(("__QU_CONN__" + 
+            , que_(("__QU_CONN__" +
                     ipc::to_string(DataSize)  + "__" +
                     ipc::to_string(AlignSize) + "__" + name).c_str()) {
         }
@@ -380,9 +378,9 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
                 std::size_t dat_sz = 0;
                 void * buf = shm::get_mem(dat, &dat_sz);
                 if (buf != nullptr && remain <= dat_sz) {
-                    return buff_t { buf, remain, [dat](void *, std::size_t) {
-                        shm::release(dat);
-                    }, buff_t::use::functor };
+                    return buff_t { buf, remain, [](void * p, std::size_t) {
+                        shm::release(p);
+                    }, dat };
                 }
                 else ipc::log("fail: shm::handle for big message. msg_id: %zd, size: %zd, shm.size: %zd\n",
                               msg.head_.id_, remain, dat_sz);

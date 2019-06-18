@@ -13,28 +13,29 @@ class buffer::buffer_ : public pimpl<buffer_> {
 public:
     void*       p_;
     std::size_t s_;
-    std::function<void(void*, std::size_t)> d_;
+    void*       a_;
+    buffer::destructor_t d_;
 
-    buffer_(void* p, std::size_t s, std::function<void(void*, std::size_t)> d)
-        : p_(p), s_(s), d_(std::move(d)) {
+    buffer_(void* p, std::size_t s, buffer::destructor_t d, void* a)
+        : p_(p), s_(s), a_(a), d_(d) {
     }
 
     ~buffer_() {
-        if (!d_) return;
-        d_(p_, s_);
+        if (d_ == nullptr) return;
+        d_((a_ == nullptr) ? p_ : a_, s_);
     }
 };
 
 buffer::buffer()
-    : buffer(nullptr, 0, nullptr) {
+    : buffer(nullptr, 0, nullptr, nullptr) {
 }
 
 buffer::buffer(void* p, std::size_t s, destructor_t d)
-    : p_(p_->make(p, s, d)) {
+    : p_(p_->make(p, s, d, nullptr)) {
 }
 
-buffer::buffer(void* p, std::size_t s, std::function<void(void*, std::size_t)> d, use)
-    : p_(p_->make(p, s, std::move(d))) {
+buffer::buffer(void* p, std::size_t s, destructor_t d, void* additional)
+    : p_(p_->make(p, s, d, additional)) {
 }
 
 buffer::buffer(void* p, std::size_t s)
@@ -42,7 +43,7 @@ buffer::buffer(void* p, std::size_t s)
 }
 
 buffer::buffer(char const & c)
-    : buffer(const_cast<char*>(&c), 1, nullptr) {
+    : buffer(const_cast<char*>(&c), 1) {
 }
 
 buffer::buffer(buffer&& rhs)
