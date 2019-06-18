@@ -112,7 +112,7 @@ struct conn_info_head {
     struct simple_push {
 
         template <std::size_t, std::size_t>
-        using elem_t = shm::handle;
+        using elem_t = shm::id_t;
 
         circ::u2_t wt_; // write index
 
@@ -128,7 +128,7 @@ struct conn_info_head {
         }
     };
 
-    circ::elem_array<simple_push, sizeof(shm::handle), 0> msg_datas_;
+    circ::elem_array<simple_push, sizeof(shm::id_t)> msg_datas_;
 
     conn_info_head(char const * name)
         : cc_id_    ((acc() == nullptr) ? 0 : acc()->fetch_add(1, std::memory_order_relaxed))
@@ -137,20 +137,24 @@ struct conn_info_head {
         , rd_waiter_((std::string { "__RD_CONN__" } + name).c_str()) {
     }
 
-    static shm::handle apply_storage(msg_id_t msg_id, std::size_t size) {
-        return { ("__ST_CONN__" + std::to_string(msg_id)).c_str(), size, shm::create };
+    static shm::id_t apply_storage(msg_id_t msg_id, std::size_t size) {
+        return shm::acquire(("__ST_CONN__" + std::to_string(msg_id)).c_str(), size, shm::create);
     }
 
-    static shm::handle apply_storage(msg_id_t msg_id) {
-        return { ("__ST_CONN__" + std::to_string(msg_id)).c_str(), 0, shm::open };
+    static shm::id_t apply_storage(msg_id_t msg_id) {
+        return shm::acquire(("__ST_CONN__" + std::to_string(msg_id)).c_str(), 0, shm::open);
     }
 
-    void store(shm::handle && dat) {
-        msg_datas_.push([&dat](shm::handle * p) { p->swap(dat); });
+    void store(shm::id_t dat) {
+        msg_datas_.push([dat](shm::id_t * id) {
+            (*id) = dat;
+        });
     }
 
     void clear_store() {
-        msg_datas_.push([](shm::handle * p) { p->release(); });
+        msg_datas_.push([](shm::id_t * id) {
+            if (*id != nullptr) shm::remove(*id);
+        });
     }
 };
 
@@ -271,10 +275,10 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
     auto try_push = std::forward<F>(gen_push)(info_of(h), que, msg_id);
     if (size > small_msg_limit) {
         auto   dat = info_of(h)->apply_storage(msg_id, size);
-        void * buf = dat.get();
+        void * buf = shm::get_mem(dat, nullptr);
         if (buf != nullptr) {
             std::memcpy(buf, data, size);
-            info_of(h)->store(std::move(dat));
+            info_of(h)->store(dat);
             return try_push(static_cast<int>(size) - static_cast<int>(data_length), nullptr, 0);
         }
         // try using message fragment
@@ -361,17 +365,16 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
                 return make_cache(msg.data_, remain);
             }
             if (msg.head_.storage_) {
-                auto   dat = info_of(h)->apply_storage(msg.head_.id_);
-                void * buf = dat.get();
-                if (buf != nullptr && remain <= dat.size()) {
-                    auto id = dat.detach();
-                    return buff_t { buf, remain, [id](void *, std::size_t) {
-                        shm::handle dat;
-                        dat.attach(id);
+                auto dat = info_of(h)->apply_storage(msg.head_.id_);
+                std::size_t dat_sz = 0;
+                void * buf = shm::get_mem(dat, &dat_sz);
+                if (buf != nullptr && remain <= dat_sz) {
+                    return buff_t { buf, remain, [dat](void *, std::size_t) {
+                        shm::release(dat);
                     }, buff_t::use::functor };
                 }
                 else ipc::log("fail: shm::handle for big message. msg_id: %zd, size: %zd, shm.size: %zd\n",
-                              msg.head_.id_, remain, dat.size());
+                              msg.head_.id_, remain, dat_sz);
             }
             // gc
             if (rc.size() > 1024) {

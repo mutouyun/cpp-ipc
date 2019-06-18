@@ -137,10 +137,25 @@ void release(id_t id) {
     }
     else if (acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acquire) == 1) {
         ::munmap(ii->mem_, ii->size_);
-        ::shm_unlink(ii->name_.c_str());
+        if (!ii->name_.empty()) {
+            ::shm_unlink(ii->name_.c_str());
+        }
     }
     else ::munmap(ii->mem_, ii->size_);
     mem::free(ii);
+}
+
+void remove(id_t id) {
+    if (id == nullptr) {
+        ipc::error("fail remove: invalid id (null)\n");
+        return;
+    }
+    auto ii = static_cast<id_info_t*>(id);
+    auto name = std::move(ii->name_);
+    release(id);
+    if (!name.empty()) {
+        ::shm_unlink(name.c_str());
+    }
 }
 
 void remove(char const * name) {

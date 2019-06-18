@@ -12,7 +12,9 @@
 namespace ipc {
 namespace circ {
 
-template <typename Policy, std::size_t DataSize, std::size_t AlignSize>
+template <typename Policy,
+          std::size_t DataSize,
+          std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::max_align_t))>
 class elem_array : public ipc::circ::conn_head {
 public:
     using base_t   = ipc::circ::conn_head;
@@ -30,7 +32,7 @@ public:
 
 private:
     policy_t head_;
-    elem_t   block_[elem_max];
+    elem_t   block_[elem_max] {};
 
 public:
     cursor_t cursor() const noexcept {

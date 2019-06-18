@@ -103,6 +103,14 @@ void release(id_t id) {
     mem::free(ii);
 }
 
+void remove(id_t id) {
+    if (id == nullptr) {
+        ipc::error("fail release: invalid id (null)\n");
+        return;
+    }
+    release(id);
+}
+
 void remove(char const * name) {
     if (name == nullptr || name[0] == '\0') {
         ipc::error("fail remove: name is empty\n");
