@@ -50,13 +50,13 @@ using unordered_map = std::unordered_map<
     Key, T, std::hash<Key>, std::equal_to<Key>, ipc::mem::allocator<std::pair<const Key, T>>
 >;
 
-using string = std::basic_string<
-    char, std::char_traits<char>, ipc::mem::allocator<char>
+template <typename Char>
+using basic_string = std::basic_string<
+    Char, std::char_traits<Char>, ipc::mem::allocator<Char>
 >;
 
-using wstring = std::basic_string<
-    wchar_t, std::char_traits<wchar_t>, ipc::mem::allocator<wchar_t>
->;
+using string  = basic_string<char>;
+using wstring = basic_string<wchar_t>;
 
 template <typename T>
 ipc::string to_string(T val) {

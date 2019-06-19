@@ -38,15 +38,15 @@ public:
 
     bool wait(std::size_t tm = invalid_value) {
         DWORD ret, ms = (tm == invalid_value) ? INFINITE : static_cast<DWORD>(tm);
-		switch ((ret = ::WaitForSingleObject(h_, ms))) {
-		case WAIT_OBJECT_0:
-			return true;
-		case WAIT_ABANDONED:
-		case WAIT_TIMEOUT:
-		default:
-			ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
-			return false;
-		}
+        switch ((ret = ::WaitForSingleObject(h_, ms))) {
+        case WAIT_OBJECT_0:
+            return true;
+        case WAIT_ABANDONED:
+        case WAIT_TIMEOUT:
+        default:
+            ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
+            return false;
+        }
     }
 
     bool post(long count = 1) {
