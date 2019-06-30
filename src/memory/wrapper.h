@@ -133,20 +133,22 @@ public:
     using alloc_policy = AllocP;
 
 private:
-    class alloc_proxy : public alloc_policy {
+    spin_lock master_lock_;
+    std::vector<alloc_policy> master_allocs_;
+
+    class alloc_proxy : public AllocP {
         async_wrapper * w_ = nullptr;
 
     public:
         alloc_proxy(alloc_proxy&& rhs)
-            : alloc_policy(std::move(rhs))
+            : AllocP(std::move(rhs))
         {}
 
-        alloc_proxy(async_wrapper* w)
-            : alloc_policy(), w_(w) {
+        alloc_proxy(async_wrapper* w) : w_(w) {
             if (w_ == nullptr) return;
             IPC_UNUSED_ auto guard = ipc::detail::unique_lock(w_->master_lock_);
             if (!w_->master_allocs_.empty()) {
-                alloc_policy::swap(w_->master_allocs_.back());
+                AllocP::swap(w_->master_allocs_.back());
                 w_->master_allocs_.pop_back();
             }
         }
@@ -159,9 +161,6 @@ private:
     };
 
     friend class alloc_proxy;
-
-    spin_lock master_lock_;
-    std::vector<alloc_proxy> master_allocs_;
 
     auto& get_alloc() {
         static tls::pointer<alloc_proxy> tls_alc;
