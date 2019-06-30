@@ -8,6 +8,7 @@
 #include <atomic>
 #include <algorithm>
 #include <utility>
+#include <new>
 
 #include "def.h"
 #include "export.h"
@@ -136,6 +137,15 @@ inline void static_for(F&& f) {
 #endif/*__cplusplus < 201703L*/
     static_for(std::make_index_sequence<N>{}, std::forward<F>(f));
 }
+
+// Minimum offset between two objects to avoid false sharing.
+enum {
+// #if __cplusplus >= 201703L
+//     cache_line_size = std::hardware_destructive_interference_size
+// #else /*__cplusplus < 201703L*/
+    cache_line_size = 64
+// #endif/*__cplusplus < 201703L*/
+};
 
 } // namespace detail
 } // namespace ipc

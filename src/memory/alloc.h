@@ -2,9 +2,6 @@
 
 #include <algorithm>
 #include <utility>
-#include <atomic>
-#include <thread>
-#include <mutex>
 #include <cstdlib>
 
 #include "def.h"
@@ -31,10 +28,6 @@ public:
     static void free(void* p, std::size_t /*size*/) {
         free(p);
     }
-
-    static std::size_t size_of(void* /*p*/) {
-        return 0;
-    }
 };
 
 ////////////////////////////////////////////////////////////////
@@ -54,8 +47,8 @@ public:
     void free(void* /*p*/) {}
     void free(void* /*p*/, std::size_t) {}
 
-    constexpr std::size_t size_of(void* /*p*/) const {
-        return 0;
+    void swap(scope_alloc_base & rhs) {
+        std::swap(this->list_, rhs.list_);
     }
 };
 
@@ -64,6 +57,7 @@ public:
 template <typename AllocP = static_alloc>
 class scope_alloc : public detail::scope_alloc_base {
 public:
+    using base_t = detail::scope_alloc_base;
     using alloc_policy = AllocP;
 
 private:
@@ -80,7 +74,7 @@ public:
 public:
     void swap(scope_alloc& rhs) {
         std::swap(this->alloc_, rhs.alloc_);
-        std::swap(this->list_ , rhs.list_);
+        base_t::swap(rhs);
     }
 
     void clear() {
@@ -106,6 +100,14 @@ public:
 
 namespace detail {
 
+template <std::size_t BlockSize>
+struct fixed_expand_policy {
+    static std::size_t next(std::size_t & e) {
+        static constexpr std::size_t basic_size = (ipc::detail::max)(BlockSize, static_cast<std::size_t>(2048));
+        return basic_size * (e *= 2);
+    }
+};
+
 class fixed_alloc_base {
 protected:
     std::size_t init_expand_;
@@ -113,7 +115,7 @@ protected:
 
     void init(std::size_t init_expand) {
         init_expand_ = init_expand;
-        cursor_ = nullptr;
+        cursor_      = nullptr;
     }
 
     static void** node_p(void* node) {
@@ -127,7 +129,7 @@ protected:
 public:
     void swap(fixed_alloc_base& rhs) {
         std::swap(this->init_expand_, rhs.init_expand_);
-        std::swap(this->cursor_     , rhs.cursor_     );
+        std::swap(this->cursor_     , rhs.cursor_);
     }
 
     void free(void* p) {
@@ -143,7 +145,7 @@ public:
 
 } // namespace detail
 
-template <std::size_t BlockSize, typename AllocP = scope_alloc<>>
+template <std::size_t BlockSize, template <std::size_t> class ExpandP = detail::fixed_expand_policy, typename AllocP = scope_alloc<>>
 class fixed_alloc : public detail::fixed_alloc_base {
 public:
     using base_t = detail::fixed_alloc_base;
@@ -160,9 +162,9 @@ private:
         if (this->cursor_ != nullptr) {
             return this->cursor_;
         }
-        auto p = this->node_p(this->cursor_ = alloc_.alloc(block_size));
-        auto size = alloc_.size_of(p);
-        if (size > 0) for (std::size_t i = 0; i < (size / block_size) - 1; ++i)
+        auto size = ExpandP<block_size>::next(this->init_expand_);
+        auto p = this->node_p(this->cursor_ = alloc_.alloc(size));
+        for (std::size_t i = 0; i < (size / block_size) - 1; ++i)
             p = this->node_p((*p) = reinterpret_cast<byte_t*>(p) + block_size);
         (*p) = nullptr;
         return this->cursor_;
@@ -187,10 +189,6 @@ public:
         this->init(this->init_expand_);
     }
 
-    constexpr std::size_t size_of(void* /*p*/) const {
-        return block_size;
-    }
-
     void* alloc() {
         void* p = try_expand();
         this->cursor_ = this->next(p);
@@ -201,15 +199,6 @@ public:
         return alloc();
     }
 };
-
-////////////////////////////////////////////////////////////////
-/// page memory allocation
-////////////////////////////////////////////////////////////////
-
-using page_alloc = fixed_alloc<4096>;
-
-template <std::size_t BlockSize>
-using page_fixed_alloc = fixed_alloc<BlockSize, page_alloc>;
 
 } // namespace mem
 } // namespace ipc

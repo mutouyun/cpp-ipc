@@ -19,15 +19,11 @@ namespace ipc {
 namespace mem {
 
 template <std::size_t Size>
-using sync_fixed_alloc = mem::synchronized<page_fixed_alloc<Size>>;
-
-template <std::size_t Size>
-using sync_fixed = mem::detail::fixed<Size, sync_fixed_alloc>;
-
-using sync_pool_alloc = mem::detail::pool_alloc<sync_fixed>;
+using static_async_fixed = mem::static_wrapper<mem::async_wrapper<mem::fixed_alloc<Size>>>;
+using async_pool_alloc   = mem::detail::fixed_alloc_policy<static_async_fixed>;
 
 template <typename T>
-using allocator = allocator_wrapper<T, sync_pool_alloc>;
+using allocator = allocator_wrapper<T, async_pool_alloc>;
 
 } // namespace mem
 

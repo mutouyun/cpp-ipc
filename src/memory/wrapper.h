@@ -3,7 +3,7 @@
 #include <limits>
 #include <new>
 #include <tuple>
-#include <map>
+#include <thread>
 #include <vector>
 #include <functional>
 #include <utility>
@@ -128,76 +128,62 @@ constexpr bool operator!=(const allocator_wrapper<T, AllocP>&, const allocator_w
 ////////////////////////////////////////////////////////////////
 
 template <typename AllocP>
-class synchronized {
+class async_wrapper {
 public:
     using alloc_policy = AllocP;
 
 private:
-    spin_lock lc_;
-    std::multimap<std::size_t, alloc_policy*> allocs_;
+    class alloc_proxy : public alloc_policy {
+        async_wrapper * w_ = nullptr;
 
-    struct alloc_t {
-        synchronized* t_;
-        std::size_t   s_ = 0;
-        alloc_policy* a_ = nullptr;
+    public:
+        alloc_proxy(alloc_proxy&& rhs)
+            : alloc_policy(std::move(rhs))
+        {}
 
-        alloc_t(synchronized* t)
-            : t_ { t } {
-            {
-                IPC_UNUSED_ auto guard = ipc::detail::unique_lock(t_->lc_);
-                auto it = t_->allocs_.begin();
-                if (it != t_->allocs_.end()) {
-                    std::tie(s_, a_) = *it;
-                    t_->allocs_.erase(it);
-                }
-            }
-            if (a_ == nullptr) {
-                a_ = new alloc_policy;
+        alloc_proxy(async_wrapper* w)
+            : alloc_policy(), w_(w) {
+            if (w_ == nullptr) return;
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(w_->master_lock_);
+            if (!w_->master_allocs_.empty()) {
+                alloc_policy::swap(w_->master_allocs_.back());
+                w_->master_allocs_.pop_back();
             }
         }
 
-        ~alloc_t() {
-            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(t_->lc_);
-            t_->allocs_.emplace(s_, a_);
-        }
-
-        void* alloc(std::size_t size) {
-            void* p = a_->alloc(size);
-            if ((p != nullptr) && (s_ > 0)) {
-                --s_;
-            }
-            return p;
-        }
-
-        void free(void* p) {
-            a_->free(p);
-            ++s_;
+        ~alloc_proxy() {
+            if (w_ == nullptr) return;
+            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(w_->master_lock_);
+            w_->master_allocs_.emplace_back(std::move(*this));
         }
     };
 
-    auto& alc_info() {
-        static tls::pointer<alloc_t> alc;
-        return *alc.create(this);
+    friend class alloc_proxy;
+
+    spin_lock master_lock_;
+    std::vector<alloc_proxy> master_allocs_;
+
+    auto& get_alloc() {
+        static tls::pointer<alloc_proxy> tls_alc;
+        return *tls_alc.create(this);
     }
 
 public:
-    ~synchronized() {
+    ~async_wrapper() {
         clear();
     }
 
     void clear() {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lc_);
-        for (auto& pair : allocs_) {
-            delete pair.second;
-        }
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
+        master_allocs_.clear();
     }
 
     void* alloc(std::size_t size) {
-        return alc_info().alloc(size);
+        return get_alloc().alloc(size);
     }
 
     void free(void* p) {
-        alc_info().free(p);
+        get_alloc().free(p);
     }
 
     void free(void* p, std::size_t /*size*/) {
@@ -210,7 +196,7 @@ public:
 ////////////////////////////////////////////////////////////////
 
 template <typename AllocP>
-class statical {
+class static_wrapper {
 public:
     using alloc_policy = AllocP;
 

@@ -23,14 +23,15 @@ private slots:
     void initTestCase();
 
     void test_alloc_free();
-    void test_linear();
-} /*unit__*/;
+    void test_static();
+    void test_pool();
+} unit__;
 
 #include "test_mem.moc"
 
 constexpr int DataMin   = sizeof(void*);
 constexpr int DataMax   = sizeof(void*) * 16;
-constexpr int LoopCount = 1000000;
+constexpr int LoopCount = 10000000;
 
 std::vector<std::size_t> sizes__;
 
@@ -106,7 +107,7 @@ void benchmark_alloc() {
 
 void Unit::test_alloc_free() {
     benchmark_alloc<ipc::mem::static_alloc>();
-    benchmark_alloc<ipc::mem::sync_pool_alloc>();
+    benchmark_alloc<ipc::mem::async_pool_alloc>();
 }
 
 template <typename AllocT, typename ModeT, int ThreadsN>
@@ -145,7 +146,7 @@ void benchmark_alloc() {
                 }
             }
             if ((fini.fetch_add(1, std::memory_order_relaxed) + 1) == ThreadsN) {
-                sw.print_elapsed<1>(DataMin, DataMax, LoopCount);
+                sw.print_elapsed<1>(DataMin, DataMax, LoopCount * ThreadsN);
             }
         }};
         ++pid;
@@ -170,15 +171,16 @@ struct test_performance<AllocT, ModeT, 1> {
     }
 };
 
-void Unit::test_linear() {
-    test_performance<ipc::mem::static_alloc, alloc_random, 8>::start();
-    test_performance<ipc::mem::pool_alloc  , alloc_random, 8>::start();
-
-    test_performance<ipc::mem::static_alloc, alloc_LIFO  , 8>::start();
-    test_performance<ipc::mem::pool_alloc  , alloc_LIFO  , 8>::start();
-
+void Unit::test_static() {
     test_performance<ipc::mem::static_alloc, alloc_FIFO  , 8>::start();
-    test_performance<ipc::mem::pool_alloc  , alloc_FIFO  , 8>::start();
+    test_performance<ipc::mem::static_alloc, alloc_LIFO  , 8>::start();
+    test_performance<ipc::mem::static_alloc, alloc_random, 8>::start();
+}
+
+void Unit::test_pool() {
+    test_performance<ipc::mem::pool_alloc, alloc_FIFO  , 8>::start();
+    test_performance<ipc::mem::pool_alloc, alloc_LIFO  , 8>::start();
+    test_performance<ipc::mem::pool_alloc, alloc_random, 8>::start();
 }
 
 } // internal-linkage

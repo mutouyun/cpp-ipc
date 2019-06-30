@@ -26,8 +26,8 @@ struct prod_cons_impl<wr<relat::single, relat::single, trans::unicast>> {
         std::aligned_storage_t<DataSize, AlignSize> data_ {};
     };
 
-    alignas(circ::cache_line_size) std::atomic<circ::u2_t> rd_; // read index
-    alignas(circ::cache_line_size) std::atomic<circ::u2_t> wt_; // write index
+    alignas(detail::cache_line_size) std::atomic<circ::u2_t> rd_; // read index
+    alignas(detail::cache_line_size) std::atomic<circ::u2_t> wt_; // write index
 
     constexpr circ::u2_t cursor() const noexcept {
         return 0;
@@ -96,7 +96,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
         std::atomic<flag_t> f_ct_ { 0 }; // commit flag
     };
 
-    alignas(circ::cache_line_size) std::atomic<circ::u2_t> ct_; // commit index
+    alignas(detail::cache_line_size) std::atomic<circ::u2_t> ct_; // commit index
 
     template <typename W, typename F, typename E>
     bool push(W* /*wrapper*/, F&& f, E* elems) {
@@ -182,7 +182,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
         std::atomic<rc_t> rc_ { 0 }; // read-counter
     };
 
-    alignas(circ::cache_line_size) std::atomic<circ::u2_t> wt_; // write index
+    alignas(detail::cache_line_size) std::atomic<circ::u2_t> wt_; // write index
 
     circ::u2_t cursor() const noexcept {
         return wt_.load(std::memory_order_acquire);
@@ -276,7 +276,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         std::atomic<flag_t> f_ct_ { 0 }; // commit flag
     };
 
-    alignas(circ::cache_line_size) std::atomic<circ::u2_t> ct_; // commit index
+    alignas(detail::cache_line_size) std::atomic<circ::u2_t> ct_; // commit index
 
     circ::u2_t cursor() const noexcept {
         return ct_.load(std::memory_order_acquire);

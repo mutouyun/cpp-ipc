@@ -12,10 +12,6 @@
 namespace ipc {
 namespace circ {
 
-enum {
-    cache_line_size = 64
-};
-
 using u1_t = ipc::uint_t<8>;
 using u2_t = ipc::uint_t<32>;
 

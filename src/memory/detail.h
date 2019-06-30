@@ -13,14 +13,6 @@ enum : std::size_t {
     base_size = sizeof(void*)
 };
 
-template <std::size_t Size, template <std::size_t> class FixedAlloc>
-struct fixed {
-    static auto& pool() {
-        static FixedAlloc<Size> pool;
-        return pool;
-    }
-};
-
 #if __cplusplus >= 201703L
 constexpr std::size_t classify(std::size_t size) {
     constexpr std::size_t mapping[] = {
@@ -51,18 +43,18 @@ inline std::size_t classify(std::size_t size) {
 template <template <std::size_t> class Fixed, typename F>
 decltype(auto) choose(std::size_t size, F&& f) {
     return ipc::detail::static_switch<32>(classify(size), [&f](auto index) {
-        return f(Fixed<(decltype(index)::value + 1) * base_size>::pool());
+        return f(Fixed<(decltype(index)::value + 1) * base_size>::instance());
     }, [&f] {
         return f(static_alloc{});
     });
 }
 
 template <template <std::size_t> class Fixed>
-class pool_alloc {
+class fixed_alloc_policy {
 public:
     static void clear() {
         ipc::detail::static_for<32>([](auto index) {
-            Fixed<(decltype(index)::value + 1) * base_size>::pool().clear();
+            Fixed<(decltype(index)::value + 1) * base_size>::instance().clear();
         });
     }
 
