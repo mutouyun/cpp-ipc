@@ -24,12 +24,16 @@
 #ifdef IPC_STBIND_
 #   error "IPC_STBIND_ has been defined."
 #endif
+#ifdef IPC_CONSTEXPR_
+#   error "IPC_CONSTEXPR_ has been defined."
+#endif
 
 #if __cplusplus >= 201703L
 
 #define IPC_UNUSED_      [[maybe_unused]]
 #define IPC_FALLTHROUGH_ [[fallthrough]]
 #define IPC_STBIND_(A, B, ...) auto [A, B] = __VA_ARGS__
+#define IPC_CONSTEXPR_   constexpr
 
 #else /*__cplusplus < 201703L*/
 
@@ -47,6 +51,8 @@
     auto tp___ = __VA_ARGS__         \
     auto A     = std::get<0>(tp___); \
     auto B     = std::get<1>(tp___)
+
+#define IPC_CONSTEXPR_ inline
 
 #endif/*__cplusplus < 201703L*/
 
@@ -121,20 +127,12 @@ constexpr decltype(auto) static_switch(std::size_t i, F&& f, D&& def) {
 }
 
 template <typename F, std::size_t...I>
-#if __cplusplus >= 201703L
-constexpr void static_for(std::index_sequence<I...>, F&& f) {
-#else /*__cplusplus < 201703L*/
-inline void static_for(std::index_sequence<I...>, F&& f) {
-#endif/*__cplusplus < 201703L*/
+IPC_CONSTEXPR_ void static_for(std::index_sequence<I...>, F&& f) {
     IPC_UNUSED_ auto expand = { (std::forward<F>(f)(std::integral_constant<size_t, I>{}), 0)... };
 }
 
 template <std::size_t N, typename F>
-#if __cplusplus >= 201703L
-constexpr void static_for(F&& f) {
-#else /*__cplusplus < 201703L*/
-inline void static_for(F&& f) {
-#endif/*__cplusplus < 201703L*/
+IPC_CONSTEXPR_ void static_for(F&& f) {
     static_for(std::make_index_sequence<N>{}, std::forward<F>(f));
 }
 

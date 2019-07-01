@@ -13,6 +13,8 @@
 #include "def.h"
 #include "rw_lock.h"
 #include "tls_pointer.h"
+
+#include "memory/alloc.h"
 #include "platform/detail.h"
 
 namespace ipc {
@@ -181,12 +183,8 @@ public:
         return get_alloc().alloc(size);
     }
 
-    void free(void* p) {
-        get_alloc().free(p);
-    }
-
-    void free(void* p, std::size_t /*size*/) {
-        free(p);
+    void free(void* p, std::size_t size) {
+        get_alloc().free(p, size);
     }
 };
 
@@ -214,6 +212,64 @@ public:
 
     static void free(void* p, std::size_t size) {
         instance().free(p, size);
+    }
+};
+
+////////////////////////////////////////////////////////////////
+/// Variable memory allocation wrapper
+////////////////////////////////////////////////////////////////
+
+template <std::size_t BaseSize = sizeof(void*)>
+struct default_mapping_policy {
+
+    enum : std::size_t {
+        base_size    = BaseSize,
+        classes_size = 32
+    };
+
+    static const std::size_t table[classes_size];
+
+    constexpr static std::size_t classify(std::size_t size) {
+        return (((size - 1) / base_size) < classes_size) ? table[((size - 1) / base_size)] : classes_size;
+    }
+};
+
+template <std::size_t B>
+const std::size_t default_mapping_policy<B>::table[default_mapping_policy<B>::classes_size] = {
+    /* 1 - 8 ~ 32 */
+    0 , 1 , 2 , 3 ,
+    /* 2 - 48 ~ 256 */
+    5 , 5 , 7 , 7 , 9 , 9 , 11, 11, 13, 13, 15, 15, 17, 17,
+    19, 19, 21, 21, 23, 23, 25, 25, 27, 27, 29, 29, 31, 31
+};
+
+template <template <std::size_t> class Fixed,
+          typename StaticAlloc = mem::static_alloc,
+          typename MappingP    = default_mapping_policy<>>
+class variable_wrapper {
+
+    template <typename F>
+    constexpr static auto choose(std::size_t size, F&& f) {
+        return ipc::detail::static_switch<MappingP::classes_size>(MappingP::classify(size), [&f](auto index) {
+            return f(Fixed<(decltype(index)::value + 1) * MappingP::base_size>{});
+        }, [&f] {
+            return f(StaticAlloc{});
+        });
+    }
+
+public:
+    static void clear() {
+        ipc::detail::static_for<MappingP::classes_size>([](auto index) {
+            Fixed<(decltype(index)::value + 1) * MappingP::base_size>::clear();
+        });
+    }
+
+    static void* alloc(std::size_t size) {
+        return choose(size, [size](auto&& alc) { return alc.alloc(size); });
+    }
+
+    static void free(void* p, std::size_t size) {
+        choose(size, [p, size](auto&& alc) { alc.free(p, size); });
     }
 };
 

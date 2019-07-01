@@ -22,7 +22,6 @@ HEADERS += \
     ../../include/tls_pointer.h \
     ../../include/pool_alloc.h \
     ../../include/buffer.h \
-    ../../src/memory/detail.h \
     ../../src/memory/alloc.h \
     ../../src/memory/wrapper.h \
     ../../src/memory/resource.h \

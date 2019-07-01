@@ -25,13 +25,13 @@ private slots:
     void test_alloc_free();
     void test_static();
     void test_pool();
-} /*unit__*/;
+} unit__;
 
 #include "test_mem.moc"
 
 constexpr int DataMin   = sizeof(void*);
 constexpr int DataMax   = sizeof(void*) * 16;
-constexpr int LoopCount = 10000000;
+constexpr int LoopCount = 1000000;
 
 std::vector<std::size_t> sizes__;
 

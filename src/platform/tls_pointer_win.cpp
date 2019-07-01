@@ -6,15 +6,17 @@
 namespace ipc {
 
 /*
-    <Remarks>
-
-    Windows doesn't support a per-thread destructor with its TLS primitives.
-    So, here will build it manually by inserting a function to be called on each thread's exit.
-    See: https://www.codeproject.com/Articles/8113/Thread-Local-Storage-The-C-Way
-         https://src.chromium.org/viewvc/chrome/trunk/src/base/threading/thread_local_storage_win.cc
-         https://github.com/mirror/mingw-org-wsl/blob/master/src/libcrt/crt/tlssup.c
-         https://github.com/Alexpux/mingw-w64/blob/master/mingw-w64-crt/crt/tlssup.c
-         http://svn.boost.org/svn/boost/trunk/libs/thread/src/win32/tss_pe.cpp
+ * <Remarks>
+ *
+ * Windows doesn't support a per-thread destructor with its TLS primitives.
+ * So, here will build it manually by inserting a function to be called on each thread's exit.
+ *
+ * <Reference>
+ * - https://www.codeproject.com/Articles/8113/Thread-Local-Storage-The-C-Way
+ * - https://src.chromium.org/viewvc/chrome/trunk/src/base/threading/thread_local_storage_win.cc
+ * - https://github.com/mirror/mingw-org-wsl/blob/master/src/libcrt/crt/tlssup.c
+ * - https://github.com/Alexpux/mingw-w64/blob/master/mingw-w64-crt/crt/tlssup.c
+ * - http://svn.boost.org/svn/boost/trunk/libs/thread/src/win32/tss_pe.cpp
 */
 
 namespace {

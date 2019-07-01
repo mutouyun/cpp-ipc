@@ -12,15 +12,14 @@
 
 #include "memory/alloc.h"
 #include "memory/wrapper.h"
-#include "memory/detail.h"
 #include "platform/detail.h"
 
 namespace ipc {
 namespace mem {
 
 template <std::size_t Size>
-using static_async_fixed = mem::static_wrapper<mem::async_wrapper<mem::fixed_alloc<Size>>>;
-using async_pool_alloc   = mem::detail::fixed_alloc_policy<static_async_fixed>;
+using static_async_fixed = static_wrapper<async_wrapper<fixed_alloc<Size>>>;
+using async_pool_alloc   = variable_wrapper<static_async_fixed>;
 
 template <typename T>
 using allocator = allocator_wrapper<T, async_pool_alloc>;

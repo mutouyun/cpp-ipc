@@ -91,13 +91,15 @@ struct conn_info_head {
     shm::handle acc_h_;
 
     /*
-        <Remarks> thread_local may have some bugs.
-        See: https://sourceforge.net/p/mingw-w64/bugs/727/
-             https://sourceforge.net/p/mingw-w64/bugs/527/
-             https://github.com/Alexpux/MINGW-packages/issues/2519
-             https://github.com/ChaiScript/ChaiScript/issues/402
-             https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
-             https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
+     * <Remarks> thread_local may have some bugs.
+     *
+     * <Reference>
+     * - https://sourceforge.net/p/mingw-w64/bugs/727/
+     * - https://sourceforge.net/p/mingw-w64/bugs/527/
+     * - https://github.com/Alexpux/MINGW-packages/issues/2519
+     * - https://github.com/ChaiScript/ChaiScript/issues/402
+     * - https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
+     * - https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
     */
     tls::pointer<ipc::unordered_map<msg_id_t, cache_t>> recv_cache_;
 
