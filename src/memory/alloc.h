@@ -44,12 +44,12 @@ protected:
     block_t* list_ = nullptr;
 
 public:
-    void free(void* /*p*/) {}
-    void free(void* /*p*/, std::size_t) {}
-
     void swap(scope_alloc_base & rhs) {
         std::swap(this->list_, rhs.list_);
     }
+
+    void free(void* /*p*/) {}
+    void free(void* /*p*/, std::size_t) {}
 };
 
 } // namespace detail
@@ -71,7 +71,6 @@ public:
 
     ~scope_alloc() { clear(); }
 
-public:
     void swap(scope_alloc& rhs) {
         std::swap(this->alloc_, rhs.alloc_);
         base_t::swap(rhs);
@@ -103,8 +102,7 @@ namespace detail {
 template <std::size_t BlockSize>
 struct fixed_expand_policy {
     static std::size_t next(std::size_t & e) {
-        static constexpr std::size_t basic_size = (ipc::detail::max)(BlockSize, static_cast<std::size_t>(2048));
-        return basic_size * (e *= 2);
+        return (ipc::detail::max)(BlockSize, static_cast<std::size_t>(2048)) * (e *= 2);
     }
 };
 
@@ -145,7 +143,9 @@ public:
 
 } // namespace detail
 
-template <std::size_t BlockSize, template <std::size_t> class ExpandP = detail::fixed_expand_policy, typename AllocP = scope_alloc<>>
+template <std::size_t BlockSize,
+          template <std::size_t> class ExpandP = detail::fixed_expand_policy,
+          typename AllocP = scope_alloc<>>
 class fixed_alloc : public detail::fixed_alloc_base {
 public:
     using base_t = detail::fixed_alloc_base;
@@ -178,7 +178,6 @@ public:
     fixed_alloc(fixed_alloc&& rhs)            { this->swap(rhs); }
     fixed_alloc& operator=(fixed_alloc&& rhs) { this->swap(rhs); return (*this); }
 
-public:
     void swap(fixed_alloc& rhs) {
         std::swap(this->alloc_, rhs.alloc_);
         base_t::swap(rhs);
@@ -197,6 +196,127 @@ public:
 
     void* alloc(std::size_t) {
         return alloc();
+    }
+};
+
+////////////////////////////////////////////////////////////////
+/// Variable-size blocks allocation
+////////////////////////////////////////////////////////////////
+
+namespace detail {
+
+class variable_alloc_base {
+protected:
+    struct head_t {
+        head_t * next_;
+        size_t   size_;
+        size_t   free_;
+    };
+
+    char * head_, * tail_;
+
+    void init() {
+        // makes chain to nullptr
+        head_ = tail_ = reinterpret_cast<char*>(sizeof(head_t));
+    }
+
+    head_t* chain() {
+        return reinterpret_cast<head_t*>(head_ - sizeof(head_t));
+    }
+
+public:
+    void swap(variable_alloc_base& rhs) {
+        std::swap(this->head_, rhs.head_);
+        std::swap(this->tail_, rhs.tail_);
+    }
+
+    void free(void* /*p*/) {}
+    void free(void* /*p*/, std::size_t) {}
+};
+
+} // namespace detail
+
+template <std::size_t ChunkSize = 4096, typename AllocP = scope_alloc<>>
+class variable_alloc : public detail::variable_alloc_base {
+public:
+    using base_t = detail::variable_alloc_base;
+    using head_t = base_t::head_t;
+    using alloc_policy = AllocP;
+
+private:
+    alloc_policy alloc_;
+
+    head_t* alloc_head(std::size_t size) {
+        size = (ipc::detail::max)(ChunkSize, (ipc::detail::max)(size, sizeof(head_t)));
+        head_t* p = static_cast<head_t*>(alloc_.alloc(size));
+        p->free_ = (p->size_ = size) - sizeof(head_t);
+        return p;
+    }
+
+    void free_head(head_t* curr) {
+        alloc_.free(curr, curr->size_);
+    }
+
+    std::size_t remain() const {
+        return (tail_ - head_);
+    }
+
+    void* alloc_new_chunk(std::size_t size) {
+        head_t* p = alloc_head(sizeof(head_t) + size);
+        if (p == nullptr) return nullptr;
+        head_t* list = chain();
+        if (size > (ChunkSize - sizeof(head_t)) && list != nullptr) {
+            p->next_ = list->next_;
+            list->next_ = p;
+            char* head = reinterpret_cast<char*>(p + 1);
+            char* tail = head + p->free_ - size;
+            p->free_ = tail - head;
+            return tail;
+        }
+        else {
+            p->next_ = list;
+            head_ = reinterpret_cast<char*>(p + 1);
+            tail_ = head_ + p->free_ - size;
+            p->free_ = remain();
+            return tail_;
+        }
+    }
+
+public:
+    variable_alloc() { this->init(); }
+
+    variable_alloc(variable_alloc&& rhs)            { this->swap(rhs); }
+    variable_alloc& operator=(variable_alloc&& rhs) { this->swap(rhs); return (*this); }
+
+    ~variable_alloc() { clear(); }
+
+    void swap(variable_alloc& rhs) {
+        std::swap(this->alloc_, rhs.alloc_);
+        base_t::swap(rhs);
+    }
+
+    void clear() {
+        head_t* list = chain();
+        while (list != nullptr) {
+            head_t* curr = list;
+            list = list->next_;
+            free_head(curr);
+        }
+        alloc_.clear();
+        this->init();
+    }
+
+    void* alloc(size_t size) {
+        if (remain() < size) {
+            return alloc_new_chunk(size);
+        }
+        char* buff = tail_ - size;
+        if (buff < head_) {
+            return alloc_new_chunk(size);
+        }
+        tail_ = buff;
+        chain()->free_ = remain();
+        return tail_;
     }
 };
 

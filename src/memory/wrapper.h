@@ -230,7 +230,9 @@ struct default_mapping_policy {
     static const std::size_t table[classes_size];
 
     constexpr static std::size_t classify(std::size_t size) {
-        return (((size - 1) / base_size) < classes_size) ? table[((size - 1) / base_size)] : classes_size;
+        return (((size - 1) / base_size) < classes_size) ?
+            // always uses default_mapping_policy<sizeof(void*)>::table
+            default_mapping_policy<>::table[((size - 1) / base_size)] : classes_size;
     }
 };
 
