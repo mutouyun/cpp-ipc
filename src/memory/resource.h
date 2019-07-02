@@ -18,8 +18,44 @@ namespace ipc {
 namespace mem {
 
 template <std::size_t Size>
-using static_async_fixed = static_wrapper<async_wrapper<fixed_alloc<Size>>>;
-using async_pool_alloc   = variable_wrapper<static_async_fixed>;
+using static_sync_fixed = static_wrapper<sync_wrapper<fixed_alloc<Size>>>;
+
+namespace detail {
+
+struct chunk_mapping_policy {
+
+    enum : std::size_t {
+        base_size    = sizeof(void*) * 1024 * 1024, /* 8MB(x64) */
+        classes_size = 1
+    };
+
+    constexpr static std::size_t classify(std::size_t size) {
+        return (size <= base_size) ? 0 : classes_size;
+    }
+};
+
+template <typename AllocP>
+struct chunk_alloc_recoverer {
+public:
+    using alloc_policy = AllocP;
+
+    constexpr static void swap(chunk_alloc_recoverer &) {}
+    constexpr static void clear() {}
+    constexpr static void try_recover(alloc_policy &) {}
+    constexpr static void collect(alloc_policy &&) {}
+};
+
+} // namespace detail
+
+using static_chunk_alloc   = variable_wrapper<static_sync_fixed, detail::chunk_mapping_policy>;
+using chunk_variable_alloc = variable_alloc<detail::chunk_mapping_policy::base_size, static_chunk_alloc>;
+
+template <std::size_t Size>
+using static_async_fixed =
+      static_wrapper<async_wrapper<fixed_alloc<Size, chunk_variable_alloc>, detail::chunk_alloc_recoverer>>;
+
+using async_pool_alloc = variable_wrapper<static_async_fixed>;
+//using async_pool_alloc = static_wrapper<async_wrapper<chunk_variable_alloc, detail::chunk_alloc_recoverer>>;
 
 template <typename T>
 using allocator = allocator_wrapper<T, async_pool_alloc>;
