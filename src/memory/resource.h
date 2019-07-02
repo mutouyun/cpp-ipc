@@ -30,7 +30,7 @@ struct chunk_mapping_policy {
     };
 
     constexpr static std::size_t classify(std::size_t size) {
-        return (size <= base_size) ? 0 : classes_size;
+        return (size <= base_size) ? 0 : static_cast<std::size_t>(classes_size);
     }
 };
 
@@ -52,7 +52,7 @@ using chunk_variable_alloc = variable_alloc<detail::chunk_mapping_policy::base_s
 
 template <std::size_t Size>
 using static_async_fixed =
-      static_wrapper<async_wrapper<fixed_alloc<Size, chunk_variable_alloc>, detail::chunk_alloc_recoverer>>;
+      static_wrapper<async_wrapper<fixed_alloc<Size/*, chunk_variable_alloc*/>/*, detail::chunk_alloc_recoverer*/>>;
 
 using async_pool_alloc = variable_wrapper<static_async_fixed>;
 //using async_pool_alloc = static_wrapper<async_wrapper<chunk_variable_alloc, detail::chunk_alloc_recoverer>>;
