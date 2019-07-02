@@ -43,7 +43,8 @@ constexpr std::size_t aligned(std::size_t size, size_t alignment) noexcept {
 class scope_alloc_base {
 protected:
     struct block_t {
-        block_t* next_;
+        block_t   * next_;
+        std::size_t size_;
     } * list_ = nullptr;
 
     enum : std::size_t {
@@ -74,7 +75,7 @@ private:
         while (list_ != nullptr) {
             auto curr = list_;
             list_ = list_->next_;
-            alloc_.free(curr);
+            alloc_.free(curr, curr->size_);
         }
         // now list_ is nullptr
     }
@@ -103,8 +104,9 @@ public:
     }
 
     void* alloc(std::size_t size) {
-        auto curr = static_cast<block_t*>(alloc_.alloc(aligned_block_size + size));
+        auto curr = static_cast<block_t*>(alloc_.alloc(size += aligned_block_size));
         curr->next_ = list_;
+        curr->size_ = size;
         return (reinterpret_cast<byte_t*>(list_ = curr) + aligned_block_size);
     }
 };
@@ -151,9 +153,23 @@ public:
 };
 
 struct fixed_expand_policy {
+
+    enum : std::size_t {
+        base_size = sizeof(void*) * 1024 / 2
+    };
+
+    static std::size_t prev(std::size_t& e) {
+        if ((e /= 2) == 0) e = 1;
+        return e;
+    }
+
+    static std::size_t next(std::size_t& e) {
+        return e *= 2;
+    }
+
     template <std::size_t BlockSize>
-    IPC_CONSTEXPR_ static std::size_t next(std::size_t & e) {
-        return ipc::detail::max<std::size_t>(BlockSize, (sizeof(void*) * 1024) / 2) * (e *= 2);
+    static std::size_t next(std::size_t & e) {
+        return ipc::detail::max<std::size_t>(BlockSize, base_size) * next(e);
     }
 };
 
@@ -205,8 +221,9 @@ public:
     }
 
     void clear() {
+        ExpandP::prev(this->init_expand_);
+        this->cursor_ = nullptr;
         alloc_.~alloc_policy();
-        this->init(this->init_expand_);
     }
 
     void* alloc() {

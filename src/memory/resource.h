@@ -35,14 +35,11 @@ struct chunk_mapping_policy {
 };
 
 template <typename AllocP>
-struct chunk_alloc_recoverer {
-public:
-    using alloc_policy = AllocP;
-
-    constexpr static void swap(chunk_alloc_recoverer &) {}
-    constexpr static void clear() {}
-    constexpr static void try_recover(alloc_policy &) {}
-    constexpr static void collect(alloc_policy &&) {}
+struct chunk_alloc_recoverer : default_alloc_recoverer<AllocP> {
+    void collect(alloc_policy && alc) {
+        alc.clear(); // recycle memory to the central heap (static_chunk_alloc)
+        default_alloc_recoverer<AllocP>::collect(std::move(alc));
+    }
 };
 
 } // namespace detail

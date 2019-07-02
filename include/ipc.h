@@ -5,6 +5,8 @@
 #include "buffer.h"
 #include "shm.h"
 
+#include <string>
+
 namespace ipc {
 
 using handle_t = void*;

@@ -172,9 +172,9 @@ struct test_performance<AllocT, ModeT, 1> {
 };
 
 void Unit::test_static() {
-    test_performance<ipc::mem::static_alloc, alloc_FIFO  , 8>::start();
-    test_performance<ipc::mem::static_alloc, alloc_LIFO  , 8>::start();
-    test_performance<ipc::mem::static_alloc, alloc_random, 8>::start();
+    //test_performance<ipc::mem::static_alloc, alloc_FIFO  , 8>::start();
+    //test_performance<ipc::mem::static_alloc, alloc_LIFO  , 8>::start();
+    //test_performance<ipc::mem::static_alloc, alloc_random, 8>::start();
 }
 
 void Unit::test_pool() {
