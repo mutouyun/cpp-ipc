@@ -17,7 +17,7 @@
 namespace ipc {
 namespace mem {
 
-using chunk_variable_alloc = variable_alloc<sizeof(void*) * 1024 * 1024 /* 8MB(x64) */>;
+using chunk_variable_alloc = variable_alloc<sizeof(void*) * 256 * 1024 /* 2MB(x64) */>;
 
 template <std::size_t Size>
 using static_async_fixed = static_wrapper<async_wrapper<fixed_alloc<Size, chunk_variable_alloc>>>;
