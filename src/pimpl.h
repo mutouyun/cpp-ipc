@@ -11,10 +11,10 @@ namespace ipc {
 // pimpl small object optimization helpers
 
 template <typename T, typename R = T*>
-using IsImplComfortable = Requires<(sizeof(T) <= sizeof(T*)), R>;
+using IsImplComfortable = ipc::require<(sizeof(T) <= sizeof(T*)), R>;
 
 template <typename T, typename R = T*>
-using IsImplUncomfortable = Requires<(sizeof(T) > sizeof(T*)), R>;
+using IsImplUncomfortable = ipc::require<(sizeof(T) > sizeof(T*)), R>;
 
 template <typename T, typename... P>
 constexpr auto make_impl(P&&... params) -> IsImplComfortable<T> {

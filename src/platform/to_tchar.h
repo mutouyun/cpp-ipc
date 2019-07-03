@@ -27,7 +27,7 @@ template <typename T, typename U>
 struct is_same_char<T, U, std::true_type> : std::is_same<T, typename U::value_type> {};
 
 template <typename T, typename S, typename R = S>
-using IsSameChar = ipc::Requires<is_same_char<T, S>::value, R>;
+using IsSameChar = ipc::require<is_same_char<T, S>::value, R>;
 
 ////////////////////////////////////////////////////////////////
 /// to_tchar implementation

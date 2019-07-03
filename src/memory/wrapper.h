@@ -13,6 +13,7 @@
 #include "def.h"
 #include "rw_lock.h"
 #include "tls_pointer.h"
+#include "concept.h"
 
 #include "memory/alloc.h"
 #include "platform/detail.h"
@@ -157,6 +158,19 @@ public:
         }
     }
 
+    template <typename A = AllocP>
+    auto try_replenish(alloc_policy & alc) -> ipc::require<detail::has_take<A>::value> {
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
+        if (!master_allocs_.empty()) {
+            alc.take(std::move(master_allocs_.back()));
+            master_allocs_.pop_back();
+        }
+    }
+
+    template <typename A = AllocP>
+    constexpr static auto try_replenish(alloc_policy & /*alc*/) noexcept
+        -> ipc::require<!detail::has_take<A>::value> {}
+
     void collect(alloc_policy && alc) {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
         master_allocs_.emplace_back(std::move(alc));
@@ -175,6 +189,8 @@ private:
     class alloc_proxy : public AllocP {
         async_wrapper * w_ = nullptr;
 
+        IPC_CONCEPT_(has_empty, empty());
+
     public:
         alloc_proxy(alloc_proxy && rhs)
             : AllocP(std::move(rhs))
@@ -189,6 +205,20 @@ private:
         ~alloc_proxy() {
             if (w_ == nullptr) return;
             w_->recoverer_.collect(std::move(*this));
+        }
+
+        template <typename A = AllocP>
+        auto alloc(std::size_t size) -> ipc::require<has_empty<A>::value, void*> {
+            auto p = AllocP::alloc(size);
+            if (AllocP::empty() && (w_ != nullptr)) {
+                w_->recoverer_.try_replenish(*this);
+            }
+            return p;
+        }
+
+        template <typename A = AllocP>
+        auto alloc(std::size_t size) -> ipc::require<!has_empty<A>::value, void*> {
+            return AllocP::alloc(size);
         }
     };
 

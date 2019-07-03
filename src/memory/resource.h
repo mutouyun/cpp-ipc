@@ -18,7 +18,7 @@ namespace ipc {
 namespace mem {
 
 template <std::size_t Size>
-using static_sync_fixed = static_wrapper<sync_wrapper<fixed_alloc<Size>>>;
+using static_sync_fixed = static_wrapper<async_wrapper<fixed_alloc<Size, static_alloc>>>;
 
 namespace detail {
 
@@ -34,25 +34,15 @@ struct chunk_mapping_policy {
     }
 };
 
-template <typename AllocP>
-struct chunk_alloc_recoverer : default_alloc_recoverer<AllocP> {
-    void collect(alloc_policy && alc) {
-        alc.clear(); // recycle memory to the central heap (static_chunk_alloc)
-        default_alloc_recoverer<AllocP>::collect(std::move(alc));
-    }
-};
-
 } // namespace detail
 
 using static_chunk_alloc   = variable_wrapper<static_sync_fixed, detail::chunk_mapping_policy>;
 using chunk_variable_alloc = variable_alloc<detail::chunk_mapping_policy::base_size, static_chunk_alloc>;
 
 template <std::size_t Size>
-using static_async_fixed =
-      static_wrapper<async_wrapper<fixed_alloc<Size/*, chunk_variable_alloc*/>/*, detail::chunk_alloc_recoverer*/>>;
+using static_async_fixed = static_wrapper<async_wrapper<fixed_alloc<Size, chunk_variable_alloc>>>;
 
 using async_pool_alloc = variable_wrapper<static_async_fixed>;
-//using async_pool_alloc = static_wrapper<async_wrapper<chunk_variable_alloc, detail::chunk_alloc_recoverer>>;
 
 template <typename T>
 using allocator = allocator_wrapper<T, async_pool_alloc>;

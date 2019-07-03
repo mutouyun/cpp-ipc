@@ -33,7 +33,9 @@ HEADERS += \
     ../../src/policy.h \
     ../../src/queue.h \
     ../../src/log.h \
-    ../../src/id_pool.h
+    ../../src/id_pool.h \
+    ../../src/pimpl.h \
+    ../../src/concept.h
 
 SOURCES += \
     ../../src/shm.cpp \
