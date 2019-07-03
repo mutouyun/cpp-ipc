@@ -168,7 +168,7 @@ public:
     }
 
     template <typename A = AllocP>
-    constexpr static auto try_replenish(alloc_policy & /*alc*/) noexcept
+    constexpr auto try_replenish(alloc_policy & /*alc*/) noexcept
         -> ipc::require<!detail::has_take<A>::value> {}
 
     void collect(alloc_policy && alc) {
