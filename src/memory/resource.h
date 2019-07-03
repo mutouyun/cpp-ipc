@@ -17,27 +17,7 @@
 namespace ipc {
 namespace mem {
 
-template <std::size_t Size>
-using static_sync_fixed = static_wrapper<async_wrapper<fixed_alloc<Size, static_alloc>>>;
-
-namespace detail {
-
-struct chunk_mapping_policy {
-
-    enum : std::size_t {
-        base_size    = sizeof(void*) * 1024 * 1024, /* 8MB(x64) */
-        classes_size = 1
-    };
-
-    constexpr static std::size_t classify(std::size_t size) {
-        return (size <= base_size) ? 0 : static_cast<std::size_t>(classes_size);
-    }
-};
-
-} // namespace detail
-
-using static_chunk_alloc   = variable_wrapper<static_sync_fixed, detail::chunk_mapping_policy>;
-using chunk_variable_alloc = variable_alloc<detail::chunk_mapping_policy::base_size, static_chunk_alloc>;
+using chunk_variable_alloc = variable_alloc<sizeof(void*) * 1024 * 1024 /* 8MB(x64) */>;
 
 template <std::size_t Size>
 using static_async_fixed = static_wrapper<async_wrapper<fixed_alloc<Size, chunk_variable_alloc>>>;
