@@ -17,8 +17,6 @@
 namespace ipc {
 namespace mem {
 
-namespace detail {
-
 using chunk_variable_alloc =
       static_wrapper<async_wrapper<variable_alloc<
                                    sizeof(void*) * 1024 * 256 /* 2MB(x64) */ >>>;
