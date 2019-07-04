@@ -17,12 +17,18 @@
 namespace ipc {
 namespace mem {
 
-using chunk_variable_alloc = variable_alloc<sizeof(void*) * 256 * 1024 /* 2MB(x64) */>;
+namespace detail {
+
+using chunk_variable_alloc =
+      static_wrapper<async_wrapper<variable_alloc<
+                                   sizeof(void*) * 1024 * 256 /* 2MB(x64) */ >>>;
 
 template <std::size_t Size>
-using static_async_fixed = static_wrapper<async_wrapper<fixed_alloc<Size, chunk_variable_alloc>>>;
+using static_async_fixed =
+      static_wrapper<async_wrapper<fixed_alloc<
+                                   Size, chunk_variable_alloc >>>;
 
-using async_pool_alloc = static_alloc/*variable_wrapper<static_async_fixed>*/;
+using async_pool_alloc = /*static_alloc*/variable_wrapper<static_async_fixed>;
 
 template <typename T>
 using allocator = allocator_wrapper<T, async_pool_alloc>;

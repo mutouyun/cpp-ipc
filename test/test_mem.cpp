@@ -25,7 +25,7 @@ private slots:
     void test_alloc_free();
     void test_static();
     void test_pool();
-} /*unit__*/;
+} unit__;
 
 #include "test_mem.moc"
 
@@ -178,9 +178,12 @@ void Unit::test_static() {
 }
 
 void Unit::test_pool() {
-    test_performance<ipc::mem::pool_alloc, alloc_FIFO  , 8>::start();
-    test_performance<ipc::mem::pool_alloc, alloc_LIFO  , 8>::start();
-    test_performance<ipc::mem::pool_alloc, alloc_random, 8>::start();
+//    test_performance<ipc::mem::pool_alloc, alloc_FIFO  , 8>::start();
+//    for (;;) {
+        test_performance<ipc::mem::pool_alloc, alloc_FIFO  , 8>::start();
+        test_performance<ipc::mem::pool_alloc, alloc_LIFO  , 8>::start();
+        test_performance<ipc::mem::pool_alloc, alloc_random, 8>::start();
+//    }
 }
 
 } // internal-linkage

@@ -28,17 +28,17 @@
 namespace {
 
 using namespace ipc;
-using msg_id_t = std::size_t;
+using msg_id_t = std::uint32_t;
 
 template <std::size_t DataSize, std::size_t AlignSize>
 struct msg_t;
 
 template <std::size_t AlignSize>
 struct msg_t<0, AlignSize> {
-    msg_id_t conn_;
-    msg_id_t id_;
-    int      remain_;
-    bool     storage_;
+    msg_id_t     conn_;
+    msg_id_t     id_;
+    std::int32_t remain_;
+    bool         storage_;
 };
 
 template <std::size_t DataSize, std::size_t AlignSize>
@@ -46,7 +46,7 @@ struct msg_t : msg_t<0, AlignSize> {
     std::aligned_storage_t<DataSize, AlignSize> data_ {};
 
     msg_t() = default;
-    msg_t(msg_id_t c, msg_id_t i, int r, void const * d, std::size_t s)
+    msg_t(msg_id_t c, msg_id_t i, std::int32_t r, void const * d, std::size_t s)
         : msg_t<0, AlignSize> { c, i, r, (d == nullptr) || (s == 0) } {
         if (!this->storage_) {
             std::memcpy(&data_, d, s);
@@ -367,7 +367,7 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
             continue; // ignore message to self
         }
         // msg.remain_ may minus & abs(msg.remain_) < data_length
-        auto remain = static_cast<std::size_t>(static_cast<int>(data_length) + msg.remain_);
+        auto remain = static_cast<std::size_t>(static_cast<std::int32_t>(data_length) + msg.remain_);
         // find cache with msg.id_
         auto cac_it = rc.find(msg.id_);
         if (cac_it == rc.end()) {

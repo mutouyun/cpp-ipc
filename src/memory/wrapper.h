@@ -131,7 +131,7 @@ constexpr bool operator!=(const allocator_wrapper<T, AllocP>&, const allocator_w
 ////////////////////////////////////////////////////////////////
 
 template <typename AllocP>
-class default_alloc_recoverer {
+class default_alloc_recycler {
 public:
     using alloc_policy = AllocP;
 
@@ -139,8 +139,11 @@ private:
     ipc::spin_lock            master_lock_;
     std::vector<alloc_policy> master_allocs_;
 
+    IPC_CONCEPT_(has_remain, remain());
+    IPC_CONCEPT_(has_empty , empty());
+
 public:
-    void swap(default_alloc_recoverer& rhs) {
+    void swap(default_alloc_recycler& rhs) {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
         master_allocs_.swap(rhs.master_allocs_);
     }
@@ -159,7 +162,9 @@ public:
     }
 
     template <typename A = AllocP>
-    auto try_replenish(alloc_policy & alc) -> ipc::require<detail::has_take<A>::value> {
+    auto try_replenish(alloc_policy & alc, std::size_t size)
+        -> ipc::require<detail::has_take<A>::value && has_remain<A>::value> {
+        if (alc.remain() >= size) return;
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
         if (!master_allocs_.empty()) {
             alc.take(std::move(master_allocs_.back()));
@@ -168,8 +173,19 @@ public:
     }
 
     template <typename A = AllocP>
-    constexpr auto try_replenish(alloc_policy & /*alc*/) noexcept
-        -> ipc::require<!detail::has_take<A>::value> {}
+    auto try_replenish(alloc_policy & alc, std::size_t /*size*/)
+        -> ipc::require<detail::has_take<A>::value && !has_remain<A>::value && has_empty<A>::value> {
+        if (!alc.empty()) return;
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
+        if (!master_allocs_.empty()) {
+            alc.take(std::move(master_allocs_.back()));
+            master_allocs_.pop_back();
+        }
+    }
+
+    template <typename A = AllocP>
+    constexpr auto try_replenish(alloc_policy & /*alc*/, std::size_t /*size*/) noexcept
+        -> ipc::require<!detail::has_take<A>::value || (!has_remain<A>::value && !has_empty<A>::value)> {}
 
     void collect(alloc_policy && alc) {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
@@ -177,19 +193,29 @@ public:
     }
 };
 
+template <typename AllocP>
+class empty_alloc_recycler {
+public:
+    using alloc_policy = AllocP;
+
+    constexpr static void swap(empty_alloc_recycler&)               noexcept {}
+    constexpr static void clear()                                   noexcept {}
+    constexpr static void try_recover(alloc_policy&)                noexcept {}
+    constexpr static auto try_replenish(alloc_policy&, std::size_t) noexcept {}
+    constexpr static void collect(alloc_policy&&)                   noexcept {}
+};
+
 template <typename AllocP,
-          template <typename> class RecovererP = default_alloc_recoverer>
+          template <typename> class RecyclerP = default_alloc_recycler>
 class async_wrapper {
 public:
     using alloc_policy = AllocP;
 
 private:
-    RecovererP<alloc_policy> recoverer_;
+    RecyclerP<alloc_policy> recycler_;
 
     class alloc_proxy : public AllocP {
         async_wrapper * w_ = nullptr;
-
-        IPC_CONCEPT_(has_empty, empty());
 
     public:
         alloc_proxy(alloc_proxy && rhs)
@@ -199,25 +225,18 @@ private:
         alloc_proxy(async_wrapper* w)
             : AllocP(), w_(w) {
             if (w_ == nullptr) return;
-            w_->recoverer_.try_recover(*this);
+            w_->recycler_.try_recover(*this);
         }
 
         ~alloc_proxy() {
             if (w_ == nullptr) return;
-            w_->recoverer_.collect(std::move(*this));
+            w_->recycler_.collect(std::move(*this));
         }
 
-        template <typename A = AllocP>
-        auto alloc(std::size_t size) -> ipc::require<has_empty<A>::value, void*> {
-            auto p = AllocP::alloc(size);
-            if (AllocP::empty() && (w_ != nullptr)) {
-                w_->recoverer_.try_replenish(*this);
+        auto alloc(std::size_t size) {
+            if (w_ != nullptr) {
+                w_->recycler_.try_replenish(*this, size);
             }
-            return p;
-        }
-
-        template <typename A = AllocP>
-        auto alloc(std::size_t size) -> ipc::require<!has_empty<A>::value, void*> {
             return AllocP::alloc(size);
         }
     };
@@ -231,11 +250,11 @@ private:
 
 public:
     void swap(async_wrapper& rhs) {
-        recoverer_.swap(rhs.recoverer_);
+        recycler_.swap(rhs.recycler_);
     }
 
     void clear() {
-        recoverer_.clear();
+        recycler_.clear();
     }
 
     void* alloc(std::size_t size) {
@@ -326,10 +345,15 @@ struct default_mapping_policy {
 
     static const std::size_t table[classes_size];
 
-    constexpr static std::size_t classify(std::size_t size) {
-        return (((size - 1) / base_size) < classes_size) ?
+    IPC_CONSTEXPR_ static std::size_t classify(std::size_t size) noexcept {
+        auto index = (size - 1) / base_size;
+        return (index < classes_size) ?
             // always uses default_mapping_policy<sizeof(void*)>::table
-            default_mapping_policy<>::table[((size - 1) / base_size)] : classes_size;
+            default_mapping_policy<>::table[index] : classes_size;
+    }
+
+    constexpr static std::size_t block_size(std::size_t value) noexcept {
+        return (value + 1) * base_size;
     }
 };
 
@@ -350,7 +374,7 @@ class variable_wrapper {
     template <typename F>
     constexpr static auto choose(std::size_t size, F&& f) {
         return ipc::detail::static_switch<MappingP::classes_size>(MappingP::classify(size), [&f](auto index) {
-            return f(Fixed<(decltype(index)::value + 1) * MappingP::base_size>{});
+            return f(Fixed<MappingP::block_size(decltype(index)::value)>{});
         }, [&f] {
             return f(StaticAlloc{});
         });
@@ -361,7 +385,7 @@ public:
 
     static void clear() {
         ipc::detail::static_for<MappingP::classes_size>([](auto index) {
-            Fixed<(decltype(index)::value + 1) * MappingP::base_size>::clear();
+            Fixed<MappingP::block_size(decltype(index)::value)>::clear();
         });
         StaticAlloc::clear();
     }

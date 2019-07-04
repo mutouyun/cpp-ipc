@@ -27,21 +27,21 @@ IPC_EXPORT void* get(key_t key);
 ////////////////////////////////////////////////////////////////
 
 /*
-    <Remarks>
-
- 1. In Windows, if you do not compile thread_local_ptr.cpp,
-    use thread_local_ptr will cause memory leaks.
-
- 2. You need to set the thread_local_ptr's storage manually:
-    ```
-        thread_local_ptr<int> p;
-        if (!p) p = new int(123);
-    ```
-    Just like an ordinary pointer. Or you could just call create:
-    ```
-        thread_local_ptr<int> p;
-        p.create(123);
-    ```
+ * <Remarks>
+ *
+ * 1. In Windows, if you do not compile thread_local_ptr.cpp,
+ *    use thread_local_ptr will cause memory leaks.
+ *
+ * 2. You need to set the thread_local_ptr's storage manually:
+ *    ```
+ *        tls::pointer<int> p;
+ *        if (!p) p = new int(123);
+ *    ```
+ *    Just like an ordinary pointer. Or you could just call create:
+ *    ```
+ *        tls::pointer<int> p;
+ *        p.create(123);
+ *    ```
 */
 
 template <typename T>
@@ -51,8 +51,8 @@ class pointer {
 public:
     using value_type = T;
 
-    pointer() {
-        key_ = tls::create([](void* p) { delete static_cast<T*>(p); });
+    pointer()
+        : key_(tls::create([](void* p) { delete static_cast<T*>(p); })) {
     }
 
     ~pointer() {
@@ -61,9 +61,13 @@ public:
 
     template <typename... P>
     T* create(P&&... params) {
-        thread_local auto ptr = static_cast<T*>(*this);
+        thread_local auto ptr = static_cast<T*>(get(key_));
         if (ptr == nullptr) {
-            return ptr = (*this) = new T(std::forward<P>(params)...);
+            ptr = new T(std::forward<P>(params)...);
+            if (!set(key_, ptr)) {
+                delete ptr;
+                return nullptr;
+            }
         }
         return ptr;
     }

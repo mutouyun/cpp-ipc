@@ -20,7 +20,7 @@ constexpr u1_t index_of(u2_t c) noexcept {
 }
 
 class conn_head {
-    std::atomic<std::size_t> cc_ { 0 }; // connection counter
+    std::atomic<u2_t> cc_ { 0 }; // connection counter
 
     ipc::spin_lock lc_;
     std::atomic<bool> constructed_;

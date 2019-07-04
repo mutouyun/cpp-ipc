@@ -174,7 +174,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
 template <>
 struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
 
-    using rc_t = std::size_t;
+    using rc_t = std::uint32_t;
 
     template <std::size_t DataSize, std::size_t AlignSize>
     struct elem_t {

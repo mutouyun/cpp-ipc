@@ -104,8 +104,8 @@ private:
 public:
     scope_alloc() = default;
 
-    scope_alloc(scope_alloc&& rhs)            { swap(rhs); }
-    scope_alloc& operator=(scope_alloc&& rhs) { swap(rhs); return (*this); }
+    scope_alloc(scope_alloc&& rhs)          { swap(rhs); }
+    scope_alloc& operator=(scope_alloc rhs) { swap(rhs); return (*this); }
 
     ~scope_alloc() { free_all(); }
 
@@ -211,32 +211,33 @@ public:
     }
 };
 
+} // namespace detail
+
 struct fixed_expand_policy {
 
     enum : std::size_t {
-        base_size = sizeof(void*) * 1024 / 2
+        base_size = sizeof(void*) * 1024
     };
 
-    static std::size_t prev(std::size_t& e) {
-        if ((e /= 2) == 0) e = 1;
-        return e;
+    constexpr static std::size_t prev(std::size_t e) noexcept {
+        return ((e / 2) == 0) ? 1 : (e / 2);
     }
 
-    static std::size_t next(std::size_t& e) {
-        return e *= 2;
+    constexpr static std::size_t next(std::size_t e) noexcept {
+        return e * 2;
     }
 
     template <std::size_t BlockSize>
     static std::size_t next(std::size_t & e) {
-        return ipc::detail::max<std::size_t>(BlockSize, base_size) * next(e);
+        auto n = ipc::detail::max<std::size_t>(BlockSize, base_size) * e;
+        e = next(e);
+        return n;
     }
 };
 
-} // namespace detail
-
 template <std::size_t BlockSize,
           typename AllocP  = scope_alloc<>,
-          typename ExpandP = detail::fixed_expand_policy>
+          typename ExpandP = fixed_expand_policy>
 class fixed_alloc : public detail::fixed_alloc_base {
 public:
     using base_t = detail::fixed_alloc_base;
@@ -266,7 +267,7 @@ public:
     }
 
     fixed_alloc(fixed_alloc&& rhs) : fixed_alloc() { swap(rhs); }
-    fixed_alloc& operator=(fixed_alloc&& rhs)      { swap(rhs); return (*this); }
+    fixed_alloc& operator=(fixed_alloc rhs)        { swap(rhs); return (*this); }
 
     template <typename A>
     void set_allocator(A && alc) {
@@ -290,7 +291,7 @@ public:
     }
 
     void clear() {
-        ExpandP::prev(init_expand_);
+        init_expand_ = ExpandP::prev(init_expand_);
         cursor_ = nullptr;
         alloc_.~alloc_policy();
     }
@@ -328,13 +329,13 @@ protected:
         return reinterpret_cast<byte_t*>(p) + aligned_head_size + p->free_;
     }
 
-    std::size_t remain() const noexcept {
-        return (head_ == nullptr) ? 0 : head_->free_;
-    }
-
 public:
     void swap(variable_alloc_base& rhs) {
         std::swap(head_, rhs.head_);
+    }
+
+    std::size_t remain() const noexcept {
+        return (head_ == nullptr) ? 0 : head_->free_;
     }
 
     bool empty() const noexcept {
@@ -373,8 +374,8 @@ private:
 public:
     variable_alloc() = default;
 
-    variable_alloc(variable_alloc&& rhs)            { swap(rhs); }
-    variable_alloc& operator=(variable_alloc&& rhs) { swap(rhs); return (*this); }
+    variable_alloc(variable_alloc&& rhs)          { swap(rhs); }
+    variable_alloc& operator=(variable_alloc rhs) { swap(rhs); return (*this); }
 
     template <typename A>
     void set_allocator(A && alc) {
@@ -402,14 +403,14 @@ public:
     }
 
     void* alloc(std::size_t size) {
-        if (size >= (ChunkSize - aligned_head_size)) {
+        if (size >= ChunkSize) {
             return alloc_.alloc(size);
         }
         if (remain() < size) {
             auto it = reserves_.begin();
             if ((it == reserves_.end()) || (it->first < size)) {
-                head_ = static_cast<head_t*>(alloc_.alloc(ChunkSize));
-                head_->free_ = ChunkSize - aligned_head_size - size;
+                head_ = static_cast<head_t*>(alloc_.alloc(ChunkSize + aligned_head_size));
+                head_->free_ = ChunkSize - size;
             }
             else {
                 auto temp = it->second;
