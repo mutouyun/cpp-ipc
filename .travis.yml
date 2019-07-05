@@ -28,15 +28,11 @@ script:
   - cd ./build
   - if [ $USING_CMAKE -eq 1 ]; then
       cmake -DCMAKE_BUILD_TYPE=Release CMakeLists.txt;
-      make;
-      export IPC_TARGET=test-ipc;
     else
       qmake -o Makefile cpp-ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX QMAKE_CXXFLAGS+=-std=gnu++1z;
-      make;
-      make -f MakefileTest;
-      export IPC_TARGET=test;
     fi
-  - export LD_LIBRARY_PATH=../output:$LD_LIBRARY_PATH && ../output/$IPC_TARGET
+  - make -j`getconf _NPROCESSORS_ONLN`
+  - export LD_LIBRARY_PATH=../output:$LD_LIBRARY_PATH && ../output/test-ipc
 
 notifications:
   slack:

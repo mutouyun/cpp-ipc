@@ -1,4 +1,5 @@
 TEMPLATE = app
+TARGET = test-ipc
 
 QT += core testlib
 QT -= gui
