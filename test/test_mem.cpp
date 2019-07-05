@@ -3,10 +3,12 @@
 #include <atomic>
 #include <cstddef>
 
-#include "random.hpp"
+#include "capo/random.hpp"
 
 #include "memory/resource.h"
 #include "pool_alloc.h"
+
+//#include "gperftools/tcmalloc.h"
 
 #include "test.h"
 
@@ -23,15 +25,13 @@ private slots:
     void initTestCase();
 
     void test_alloc_free();
-    void test_static();
-    void test_pool();
 } unit__;
 
 #include "test_mem.moc"
 
-constexpr int DataMin   = sizeof(void*);
-constexpr int DataMax   = sizeof(void*) * 16;
-constexpr int LoopCount = 1000000;
+constexpr int DataMin   = 4;
+constexpr int DataMax   = 256;
+constexpr int LoopCount = 100000;
 
 std::vector<std::size_t> sizes__;
 
@@ -96,18 +96,13 @@ void benchmark_alloc() {
     test_stopwatch sw;
     sw.start();
 
-    for (std::size_t x = 0; x < 10; ++x)
+    for (std::size_t k = 0; k < 100; ++k)
     for (std::size_t n = 0; n < LoopCount; ++n) {
         std::size_t s = sizes__[n];
         AllocT::free(AllocT::alloc(s), s);
     }
 
-    sw.print_elapsed<1>(DataMin, DataMax, LoopCount * 10);
-}
-
-void Unit::test_alloc_free() {
-    benchmark_alloc<ipc::mem::static_alloc>();
-    benchmark_alloc<ipc::mem::async_pool_alloc>();
+    sw.print_elapsed<1>(DataMin, DataMax, LoopCount * 100);
 }
 
 template <typename AllocT, typename ModeT, int ThreadsN>
@@ -131,6 +126,7 @@ void benchmark_alloc() {
     for (auto& w : works) {
         w = std::thread {[&, pid] {
             sw.start();
+            for (std::size_t k = 0; k < 10; ++k)
             for (std::size_t x = 0; x < 2; ++x) {
                 for(std::size_t n = 0; n < LoopCount; ++n) {
                     int    m = mode.ix_[x][n];
@@ -146,7 +142,7 @@ void benchmark_alloc() {
                 }
             }
             if ((fini.fetch_add(1, std::memory_order_relaxed) + 1) == ThreadsN) {
-                sw.print_elapsed<1>(DataMin, DataMax, LoopCount * ThreadsN);
+                sw.print_elapsed<1>(DataMin, DataMax, LoopCount * 10 * ThreadsN);
             }
         }};
         ++pid;
@@ -171,19 +167,29 @@ struct test_performance<AllocT, ModeT, 1> {
     }
 };
 
-void Unit::test_static() {
-    test_performance<ipc::mem::static_alloc, alloc_FIFO  , 8>::start();
-    test_performance<ipc::mem::static_alloc, alloc_LIFO  , 8>::start();
-    test_performance<ipc::mem::static_alloc, alloc_random, 8>::start();
-}
+//class tc_alloc {
+//public:
+//    static void clear() {}
 
-void Unit::test_pool() {
-//    test_performance<ipc::mem::pool_alloc, alloc_FIFO  , 8>::start();
-//    for (;;) {
-        test_performance<ipc::mem::pool_alloc, alloc_FIFO  , 8>::start();
-        test_performance<ipc::mem::pool_alloc, alloc_LIFO  , 8>::start();
-        test_performance<ipc::mem::pool_alloc, alloc_random, 8>::start();
+//    static void* alloc(std::size_t size) {
+//        return size ? tc_malloc(size) : nullptr;
 //    }
+
+//    static void free(void* p, std::size_t size) {
+//        tc_free_sized(p, size);
+//    }
+//};
+
+#define TEST_ALLOC_TYPE /*ipc::mem::static_alloc*/ ipc::mem::async_pool_alloc /*tc_alloc*/
+
+void Unit::test_alloc_free() {
+//    benchmark_alloc <TEST_ALLOC_TYPE>();
+//    test_performance<TEST_ALLOC_TYPE, alloc_FIFO  , 24>::start();
+
+    benchmark_alloc <TEST_ALLOC_TYPE>();
+    test_performance<TEST_ALLOC_TYPE, alloc_FIFO  , 16>::start();
+    test_performance<TEST_ALLOC_TYPE, alloc_LIFO  , 16>::start();
+    test_performance<TEST_ALLOC_TYPE, alloc_random, 16>::start();
 }
 
 } // internal-linkage

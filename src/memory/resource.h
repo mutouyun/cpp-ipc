@@ -26,7 +26,14 @@ using static_async_fixed =
       static_wrapper<async_wrapper<fixed_alloc<
                                    Size, chunk_variable_alloc >>>;
 
-using async_pool_alloc = /*static_alloc*/variable_wrapper<static_async_fixed>;
+using big_size_alloc   = variable_wrapper<static_async_fixed,
+                                          default_mapping_policy<
+                                          default_mapping_policy<>::block_size(default_mapping_policy<>::classes_size),
+                                          default_mapping_policy<>::iter_size * 2 >>;
+
+using async_pool_alloc = variable_wrapper<static_async_fixed,
+                                          default_mapping_policy<>,
+                                          big_size_alloc>;
 
 template <typename T>
 using allocator = allocator_wrapper<T, async_pool_alloc>;

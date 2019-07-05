@@ -13,9 +13,9 @@
 #include <limits>
 #include <utility>
 
-#include "stopwatch.hpp"
-#include "spin_lock.hpp"
-#include "random.hpp"
+#include "capo/stopwatch.hpp"
+#include "capo/spin_lock.hpp"
+#include "capo/random.hpp"
 
 #include "ipc.h"
 #include "rw_lock.h"

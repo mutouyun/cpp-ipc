@@ -13,8 +13,8 @@
 #   include <cxxabi.h>  // abi::__cxa_demangle
 #endif/*__GNUC__*/
 
-#include "stopwatch.hpp"
-#include "spin_lock.hpp"
+#include "capo/stopwatch.hpp"
+#include "capo/spin_lock.hpp"
 
 class TestSuite : public QObject
 {

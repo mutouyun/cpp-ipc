@@ -335,30 +335,31 @@ public:
 /// Variable memory allocation wrapper
 ////////////////////////////////////////////////////////////////
 
-template <std::size_t BaseSize = sizeof(void*)>
+template <std::size_t BaseSize = 0, std::size_t IterSize = sizeof(void*)>
 struct default_mapping_policy {
 
     enum : std::size_t {
         base_size    = BaseSize,
+        iter_size    = IterSize,
         classes_size = 32
     };
 
     static const std::size_t table[classes_size];
 
     IPC_CONSTEXPR_ static std::size_t classify(std::size_t size) noexcept {
-        auto index = (size - 1) / base_size;
+        auto index = (size <= base_size) ? 0 : ((size - base_size - 1) / iter_size);
         return (index < classes_size) ?
-            // always uses default_mapping_policy<sizeof(void*)>::table
+            // always uses default_mapping_policy<>::table
             default_mapping_policy<>::table[index] : classes_size;
     }
 
     constexpr static std::size_t block_size(std::size_t value) noexcept {
-        return (value + 1) * base_size;
+        return base_size + (value + 1) * iter_size;
     }
 };
 
-template <std::size_t B>
-const std::size_t default_mapping_policy<B>::table[default_mapping_policy<B>::classes_size] = {
+template <std::size_t B, std::size_t I>
+const std::size_t default_mapping_policy<B, I>::table[default_mapping_policy<B, I>::classes_size] = {
     /* 1 - 8 ~ 32 */
     0 , 1 , 2 , 3 ,
     /* 2 - 48 ~ 256 */

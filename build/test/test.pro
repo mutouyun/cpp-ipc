@@ -18,7 +18,6 @@ DESTDIR = ../../output
 
 INCLUDEPATH += \
     ../../test \
-    ../../test/capo \
     ../../include \
     ../../src
 
@@ -36,4 +35,6 @@ SOURCES += \
 LIBS += \
     -L$${DESTDIR} -lipc
 
-unix:LIBS += -lrt -lpthread
+unix:LIBS += \
+#    -L../../test/gperftools -ltcmalloc_minimal \
+    -lrt -lpthread
