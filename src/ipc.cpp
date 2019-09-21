@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <utility>
 #include <atomic>
-#include <type_traits>
+#include <type_traits> // aligned_storage_t
 #include <string>
 #include <vector>
 

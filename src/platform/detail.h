@@ -117,7 +117,7 @@ constexpr decltype(auto) static_switch(std::size_t /*i*/, std::index_sequence<>,
 
 template <typename F, typename D, std::size_t N, std::size_t...I>
 constexpr decltype(auto) static_switch(std::size_t i, std::index_sequence<N, I...>, F&& f, D&& def) {
-    return (i == N) ? std::forward<F>(f)(std::integral_constant<size_t, N>{}) :
+    return (i == N) ? std::forward<F>(f)(std::integral_constant<std::size_t, N>{}) :
                       static_switch(i, std::index_sequence<I...>{}, std::forward<F>(f), std::forward<D>(def));
 }
 
@@ -128,7 +128,7 @@ constexpr decltype(auto) static_switch(std::size_t i, F&& f, D&& def) {
 
 template <typename F, std::size_t...I>
 IPC_CONSTEXPR_ void static_for(std::index_sequence<I...>, F&& f) {
-    IPC_UNUSED_ auto expand = { (std::forward<F>(f)(std::integral_constant<size_t, I>{}), 0)... };
+    IPC_UNUSED_ auto expand = { (std::forward<F>(f)(std::integral_constant<std::size_t, I>{}), 0)... };
 }
 
 template <std::size_t N, typename F>

@@ -61,7 +61,7 @@ public:
 
     template <typename... P>
     T* create(P&&... params) {
-        thread_local auto ptr = static_cast<T*>(get(key_));
+        auto ptr = static_cast<T*>(get(key_));
         if (ptr == nullptr) {
             ptr = new T(std::forward<P>(params)...);
             if (!set(key_, ptr)) {
