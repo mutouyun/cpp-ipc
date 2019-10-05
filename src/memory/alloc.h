@@ -12,8 +12,6 @@
 
 #include "platform/detail.h"
 
-#include "log.h"
-
 namespace ipc {
 namespace mem {
 

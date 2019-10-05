@@ -224,10 +224,10 @@ private:
             w_->recycler_.collect(std::move(*this));
         }
 
-        // auto alloc(std::size_t size) {
-        //     w_->recycler_.try_replenish(*this, size);
-        //     return AllocP::alloc(size);
-        // }
+        auto alloc(std::size_t size) {
+            w_->recycler_.try_replenish(*this, size);
+            return AllocP::alloc(size);
+        }
     };
 
     friend class alloc_proxy;
