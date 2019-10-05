@@ -40,12 +40,11 @@ struct test_stopwatch {
         }
     }
 
-    template <int Factor>
-    void print_elapsed(int N, int M, int Loops) {
-        auto ts = sw_.elapsed<std::chrono::microseconds>();
+    template <int Factor, typename ToDur = std::chrono::microseconds>
+    void print_elapsed(int N, int M, int Loops, const char * unit = " us/d") {
+        auto ts = sw_.elapsed<ToDur>();
         std::cout << "[" << N << ":" << M << ", " << Loops << "] "
-                  << "performance: " << (ts / 1000.0) << " ms, "
-                  << (double(ts) / double(Factor ? (Loops * Factor) : (Loops * N))) << " us/d" << std::endl;
+                  << (double(ts) / double(Factor ? (Loops * Factor) : (Loops * N))) << unit << std::endl;
     }
 
     void print_elapsed(int N, int M, int Loops) {

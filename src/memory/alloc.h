@@ -12,13 +12,14 @@
 
 #include "platform/detail.h"
 
+#include "log.h"
+
 namespace ipc {
 namespace mem {
 
 class static_alloc {
 public:
     static void swap(static_alloc&) {}
-    static void clear() {}
 
     static void* alloc(std::size_t size) {
         return size ? std::malloc(size) : nullptr;
@@ -104,15 +105,10 @@ private:
 public:
     scope_alloc() = default;
 
-    scope_alloc(scope_alloc&& rhs)          { swap(rhs); }
+    scope_alloc(scope_alloc && rhs)         { swap(rhs); }
     scope_alloc& operator=(scope_alloc rhs) { swap(rhs); return (*this); }
 
     ~scope_alloc() { free_all(); }
-
-    template <typename A>
-    void set_allocator(A && alc) {
-        alloc_ = std::forward<A>(alc);
-    }
 
     void swap(scope_alloc& rhs) {
         alloc_.swap(rhs.alloc_);
@@ -128,12 +124,6 @@ public:
     template <typename A = AllocP>
     auto take(scope_alloc && rhs) -> ipc::require<!detail::has_take<A>::value> {
         base_t::take(std::move(rhs));
-    }
-
-    void clear() {
-        free_all();
-        tail_ = nullptr;
-        alloc_.~alloc_policy();
     }
 
     void* alloc(std::size_t size) {
@@ -156,10 +146,12 @@ namespace detail {
 
 class fixed_alloc_base {
 protected:
+    std::size_t block_size_;
     std::size_t init_expand_;
     void      * cursor_;
 
-    void init(std::size_t init_expand) {
+    void init(std::size_t block_size, std::size_t init_expand) {
+        block_size_  = block_size;
         init_expand_ = init_expand;
         cursor_      = nullptr;
     }
@@ -173,7 +165,12 @@ protected:
     }
 
 public:
+    void set_block_size(std::size_t block_size) {
+        block_size_ = block_size;
+    }
+
     void swap(fixed_alloc_base& rhs) {
+        std::swap(block_size_ , rhs.block_size_);
         std::swap(init_expand_, rhs.init_expand_);
         std::swap(cursor_     , rhs.cursor_);
     }
@@ -211,6 +208,63 @@ public:
     }
 };
 
+template <typename AllocP, typename ExpandP>
+class fixed_alloc : public detail::fixed_alloc_base {
+public:
+    using base_t = detail::fixed_alloc_base;
+    using alloc_policy = AllocP;
+
+private:
+    alloc_policy alloc_;
+
+    void* try_expand() {
+        if (empty()) {
+            auto size = ExpandP::next(block_size_, init_expand_);
+            auto p = node_p(cursor_ = alloc_.alloc(size));
+            for (std::size_t i = 0; i < (size / block_size_) - 1; ++i)
+                p = node_p((*p) = reinterpret_cast<byte_t*>(p) + block_size_);
+            (*p) = nullptr;
+        }
+        return cursor_;
+    }
+
+public:
+    explicit fixed_alloc(std::size_t block_size, std::size_t init_expand = 1) {
+        init(block_size, init_expand);
+    }
+
+    fixed_alloc(fixed_alloc && rhs) {
+        init(0, 0);
+        swap(rhs);
+    }
+
+    fixed_alloc& operator=(fixed_alloc rhs) {
+        swap(rhs);
+        return (*this);
+    }
+
+    void swap(fixed_alloc& rhs) {
+        alloc_.swap(rhs.alloc_);
+        base_t::swap(rhs);
+    }
+
+    template <typename A = AllocP>
+    auto take(fixed_alloc && rhs) -> ipc::require<detail::has_take<A>::value> {
+        base_t::take(std::move(rhs));
+        alloc_.take(std::move(rhs.alloc_));
+    }
+
+    void* alloc() {
+        void* p = try_expand();
+        cursor_ = next(p);
+        return p;
+    }
+
+    void* alloc(std::size_t) {
+        return alloc();
+    }
+};
+
 } // namespace detail
 
 struct fixed_expand_policy {
@@ -227,9 +281,8 @@ struct fixed_expand_policy {
         return e * 2;
     }
 
-    template <std::size_t BlockSize>
-    static std::size_t next(std::size_t & e) {
-        auto n = ipc::detail::max<std::size_t>(BlockSize, base_size) * e;
+    static std::size_t next(std::size_t block_size, std::size_t & e) {
+        auto n = ipc::detail::max<std::size_t>(block_size, base_size) * e;
         e = next(e);
         return n;
     }
@@ -238,72 +291,30 @@ struct fixed_expand_policy {
 template <std::size_t BlockSize,
           typename AllocP  = scope_alloc<>,
           typename ExpandP = fixed_expand_policy>
-class fixed_alloc : public detail::fixed_alloc_base {
+class fixed_alloc : public detail::fixed_alloc<AllocP, ExpandP> {
 public:
-    using base_t = detail::fixed_alloc_base;
-    using alloc_policy = AllocP;
+    using base_t = detail::fixed_alloc<AllocP, ExpandP>;
 
     enum : std::size_t {
         block_size = (ipc::detail::max)(BlockSize, sizeof(void*))
     };
 
-private:
-    alloc_policy alloc_;
-
-    void* try_expand() {
-        if (empty()) {
-            auto size = ExpandP::template next<block_size>(init_expand_);
-            auto p = node_p(cursor_ = alloc_.alloc(size));
-            for (std::size_t i = 0; i < (size / block_size) - 1; ++i)
-                p = node_p((*p) = reinterpret_cast<byte_t*>(p) + block_size);
-            (*p) = nullptr;
-        }
-        return cursor_;
-    }
-
 public:
-    explicit fixed_alloc(std::size_t init_expand = 1) {
-        init(init_expand);
+    explicit fixed_alloc(std::size_t init_expand = 1)
+        : base_t(block_size) {
     }
 
-    fixed_alloc(fixed_alloc&& rhs) : fixed_alloc() { swap(rhs); }
-    fixed_alloc& operator=(fixed_alloc rhs)        { swap(rhs); return (*this); }
+    fixed_alloc(fixed_alloc && rhs)
+        : base_t(std::move(rhs)) {
+    }
 
-    template <typename A>
-    void set_allocator(A && alc) {
-        alloc_ = std::forward<A>(alc);
+    fixed_alloc& operator=(fixed_alloc rhs) {
+        swap(rhs);
+        return (*this);
     }
 
     void swap(fixed_alloc& rhs) {
-        alloc_.swap(rhs.alloc_);
         base_t::swap(rhs);
-    }
-
-    template <typename A = AllocP>
-    auto take(fixed_alloc && rhs) -> ipc::require<detail::has_take<A>::value> {
-        base_t::take(std::move(rhs));
-        alloc_.take(std::move(rhs.alloc_));
-    }
-
-    template <typename A = AllocP>
-    auto take(fixed_alloc && rhs) -> ipc::require<!detail::has_take<A>::value> {
-        base_t::take(std::move(rhs));
-    }
-
-    void clear() {
-        init_expand_ = ExpandP::prev(init_expand_);
-        cursor_ = nullptr;
-        alloc_.~alloc_policy();
-    }
-
-    void* alloc() {
-        void* p = try_expand();
-        cursor_ = next(p);
-        return p;
-    }
-
-    void* alloc(std::size_t) {
-        return alloc();
     }
 };
 
@@ -374,13 +385,8 @@ private:
 public:
     variable_alloc() = default;
 
-    variable_alloc(variable_alloc&& rhs)          { swap(rhs); }
+    variable_alloc(variable_alloc && rhs)         { swap(rhs); }
     variable_alloc& operator=(variable_alloc rhs) { swap(rhs); return (*this); }
-
-    template <typename A>
-    void set_allocator(A && alc) {
-        alloc_ = std::forward<A>(alc);
-    }
 
     void swap(variable_alloc& rhs) {
         alloc_.swap(rhs.alloc_);
@@ -396,10 +402,6 @@ public:
     template <typename A = AllocP>
     auto take(variable_alloc && rhs) -> ipc::require<!detail::has_take<A>::value> {
         base_t::take(std::move(rhs));
-    }
-
-    void clear() {
-        alloc_.~alloc_policy();
     }
 
     void* alloc(std::size_t size) {

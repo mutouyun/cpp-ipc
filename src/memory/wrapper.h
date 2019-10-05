@@ -1,14 +1,15 @@
 #pragma once
 
 #include <limits>
-#include <new>
+#include <new>          // ::new
 #include <tuple>
 #include <thread>
 #include <vector>
-#include <functional>
-#include <utility>
+#include <functional>   // std::function
+#include <utility>      // std::forward
 #include <cstddef>
-#include <type_traits>
+#include <cassert>      // assert
+#include <type_traits>  // std::aligned_storage_t
 
 #include "def.h"
 #include "rw_lock.h"
@@ -80,27 +81,27 @@ public:
     struct rebind { typedef allocator_wrapper<U, AllocP> other; };
 
     constexpr size_type max_size(void) const noexcept {
-        return (std::numeric_limits<size_type>::max)() / sizeof(T);
+        return (std::numeric_limits<size_type>::max)() / sizeof(value_type);
     }
 
 public:
     pointer allocate(size_type count) noexcept {
         if (count == 0) return nullptr;
         if (count > this->max_size()) return nullptr;
-        return static_cast<pointer>(alloc_.alloc(count * sizeof(T)));
+        return static_cast<pointer>(alloc_.alloc(count * sizeof(value_type)));
     }
 
     void deallocate(pointer p, size_type count) noexcept {
-        alloc_.free(p, count * sizeof(T));
+        alloc_.free(p, count * sizeof(value_type));
     }
 
     template <typename... P>
-    static void construct(pointer p, P&&... params) {
-        ::new (static_cast<void*>(p)) T(std::forward<P>(params)...);
+    static void construct(pointer p, P && ... params) {
+        ::new (static_cast<void*>(p)) value_type(std::forward<P>(params) ...);
     }
 
     static void destroy(pointer p) {
-        p->~T();
+        p->~value_type();
     }
 };
 
@@ -148,11 +149,6 @@ public:
         master_allocs_.swap(rhs.master_allocs_);
     }
 
-    void clear() {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
-        master_allocs_.clear();
-    }
-
     void try_recover(alloc_policy & alc) {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
         if (!master_allocs_.empty()) {
@@ -174,18 +170,16 @@ public:
 
     template <typename A = AllocP>
     auto try_replenish(alloc_policy & alc, std::size_t /*size*/)
-        -> ipc::require<detail::has_take<A>::value && !has_remain<A>::value && has_empty<A>::value> {
+        -> ipc::require<(!detail::has_take<A>::value || !has_remain<A>::value) && has_empty<A>::value> {
         if (!alc.empty()) return;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
-        if (!master_allocs_.empty()) {
-            alc.take(std::move(master_allocs_.back()));
-            master_allocs_.pop_back();
-        }
+        try_recover(alc);
     }
 
     template <typename A = AllocP>
     constexpr auto try_replenish(alloc_policy & /*alc*/, std::size_t /*size*/) const noexcept
-        -> ipc::require<!detail::has_take<A>::value || (!has_remain<A>::value && !has_empty<A>::value)> {}
+        -> ipc::require<(!detail::has_take<A>::value || !has_remain<A>::value) && !has_empty<A>::value> {
+        // Do Nothing.
+    }
 
     void collect(alloc_policy && alc) {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
@@ -199,7 +193,6 @@ public:
     using alloc_policy = AllocP;
 
     constexpr static void swap(empty_alloc_recycler&)               noexcept {}
-    constexpr static void clear()                                   noexcept {}
     constexpr static void try_recover(alloc_policy&)                noexcept {}
     constexpr static auto try_replenish(alloc_policy&, std::size_t) noexcept {}
     constexpr static void collect(alloc_policy&&)                   noexcept {}
@@ -218,51 +211,47 @@ private:
         async_wrapper * w_ = nullptr;
 
     public:
-        alloc_proxy(alloc_proxy && rhs)
-            : AllocP(std::move(rhs))
-        {}
+        alloc_proxy(alloc_proxy && rhs) = default;
 
-        alloc_proxy(async_wrapper* w)
-            : AllocP(), w_(w) {
-            if (w_ == nullptr) return;
+        template <typename ... P>
+        alloc_proxy(async_wrapper* w, P && ... pars)
+            : AllocP(std::forward<P>(pars) ...), w_(w) {
+            assert(w_ != nullptr);
             w_->recycler_.try_recover(*this);
         }
 
         ~alloc_proxy() {
-            if (w_ == nullptr) return;
             w_->recycler_.collect(std::move(*this));
         }
 
-        auto alloc(std::size_t size) {
-            if (w_ != nullptr) {
-                w_->recycler_.try_replenish(*this, size);
-            }
-            return AllocP::alloc(size);
-        }
+        // auto alloc(std::size_t size) {
+        //     w_->recycler_.try_replenish(*this, size);
+        //     return AllocP::alloc(size);
+        // }
     };
 
     friend class alloc_proxy;
 
-    auto& get_alloc() {
-        static tls::pointer<alloc_proxy> tls_alc;
-        return *tls_alc.create(this);
-    }
+    using ref_t = alloc_proxy&;
+    using tls_t = tls::pointer<alloc_proxy>;
+
+    tls_t tls_;
+    std::function<ref_t()> get_alloc_;
 
 public:
-    void swap(async_wrapper& rhs) {
-        recycler_.swap(rhs.recycler_);
-    }
-
-    void clear() {
-        recycler_.clear();
+    template <typename ... P>
+    async_wrapper(P ... pars) {
+        get_alloc_ = [this, pars ...]()->ref_t {
+            return *tls_.create(this, pars ...);
+        };
     }
 
     void* alloc(std::size_t size) {
-        return get_alloc().alloc(size);
+        return get_alloc_().alloc(size);
     }
 
     void free(void* p, std::size_t size) {
-        get_alloc().free(p, size);
+        get_alloc_().free(p, size);
     }
 };
 
@@ -281,14 +270,14 @@ private:
     alloc_policy alloc_;
 
 public:
+    template <typename ... P>
+    sync_wrapper(P && ... pars)
+        : alloc_(std::forward<P>(pars) ...)
+    {}
+
     void swap(sync_wrapper& rhs) {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
         alloc_.swap(rhs.alloc_);
-    }
-
-    void clear() {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        alloc_.~alloc_policy();
     }
 
     void* alloc(std::size_t size) {
@@ -318,10 +307,6 @@ public:
 
     static void swap(static_wrapper&) {}
 
-    static void clear() {
-        instance().clear();
-    }
-
     static void* alloc(std::size_t size) {
         return instance().alloc(size);
     }
@@ -341,62 +326,56 @@ struct default_mapping_policy {
     enum : std::size_t {
         base_size    = BaseSize,
         iter_size    = IterSize,
-        classes_size = 32
+        classes_size = 64
     };
 
-    static const std::size_t table[classes_size];
-
-    IPC_CONSTEXPR_ static std::size_t classify(std::size_t size) noexcept {
-        auto index = (size <= base_size) ? 0 : ((size - base_size - 1) / iter_size);
-        return (index < classes_size) ?
-            // always uses default_mapping_policy<>::table
-            default_mapping_policy<>::table[index] : classes_size;
+    template <typename F, typename ... P>
+    IPC_CONSTEXPR_ static void foreach(F f, P ... params) {
+        for (std::size_t i = 0; i < classes_size; ++i) f(i, params...);
     }
 
-    constexpr static std::size_t block_size(std::size_t value) noexcept {
-        return base_size + (value + 1) * iter_size;
+    IPC_CONSTEXPR_ static std::size_t block_size(std::size_t id) noexcept {
+        return (id < classes_size) ? (base_size + (id + 1) * iter_size) : 0;
+    }
+
+    template <typename F, typename D, typename ... P>
+    IPC_CONSTEXPR_ static auto classify(F f, D d, std::size_t size, P ... params) {
+        std::size_t id = (size - base_size - 1) / iter_size;
+        return (id < classes_size) ? f(id, params..., size) : d(params..., size);
     }
 };
 
-template <std::size_t B, std::size_t I>
-const std::size_t default_mapping_policy<B, I>::table[default_mapping_policy<B, I>::classes_size] = {
-    /* 1 - 8 ~ 32 */
-    0 , 1 , 2 , 3 ,
-    /* 2 - 48 ~ 256 */
-    5 , 5 , 7 , 7 , 9 , 9 , 11, 11, 13, 13, 15, 15, 17, 17,
-    19, 19, 21, 21, 23, 23, 25, 25, 27, 27, 29, 29, 31, 31
-};
-
-template <template <std::size_t> class Fixed,
-          typename MappingP    = default_mapping_policy<>,
-          typename StaticAlloc = mem::static_alloc>
-class variable_wrapper {
-
-    template <typename F>
-    constexpr static auto choose(std::size_t size, F&& f) {
-        return ipc::detail::static_switch<MappingP::classes_size>(MappingP::classify(size), [&f](auto index) {
-            return f(Fixed<MappingP::block_size(decltype(index)::value)>{});
-        }, [&f] {
-            return f(StaticAlloc{});
-        });
+template <typename FixedAlloc,
+          typename DefaultAlloc = mem::static_alloc,
+          typename MappingP     = default_mapping_policy<>>
+class static_variable_wrapper {
+private:
+    static FixedAlloc& instance(std::size_t id) {
+        static struct initiator {
+            std::aligned_storage_t<sizeof (FixedAlloc), 
+                                   alignof(FixedAlloc)> arr_[MappingP::classes_size];
+            initiator() {
+                MappingP::foreach([](std::size_t id, initiator* t) {
+                    ::new (&(t->arr_[id])) FixedAlloc(MappingP::block_size(id));
+                }, this);
+            }
+        } init__;
+        return reinterpret_cast<FixedAlloc&>(init__.arr_[id]);
     }
 
 public:
-    static void swap(variable_wrapper&) {}
-
-    static void clear() {
-        ipc::detail::static_for<MappingP::classes_size>([](auto index) {
-            Fixed<MappingP::block_size(decltype(index)::value)>::clear();
-        });
-        StaticAlloc::clear();
-    }
+    static void swap(static_variable_wrapper&) {}
 
     static void* alloc(std::size_t size) {
-        return choose(size, [size](auto&& alc) { return alc.alloc(size); });
+        return MappingP::classify([](std::size_t id, std::size_t size) {
+            return instance(id).alloc(size);
+        }, DefaultAlloc::alloc, size);
     }
 
     static void free(void* p, std::size_t size) {
-        choose(size, [p, size](auto&& alc) { alc.free(p, size); });
+        MappingP::classify([](std::size_t id, void* p, std::size_t size) {
+            instance(id).free(p, size);
+        }, static_cast<void(*)(void*, std::size_t)>(DefaultAlloc::free), size, p);
     }
 };
 

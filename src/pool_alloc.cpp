@@ -5,10 +5,6 @@
 namespace ipc {
 namespace mem {
 
-void pool_alloc::clear() {
-    async_pool_alloc::clear();
-}
-
 void* pool_alloc::alloc(std::size_t size) {
     return async_pool_alloc::alloc(size);
 }

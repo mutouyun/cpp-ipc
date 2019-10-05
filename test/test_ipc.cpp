@@ -30,7 +30,7 @@ std::vector<ipc::buff_t> datas__;
 constexpr int DataMin   = 2;
 constexpr int DataMax   = 256;
 constexpr int LoopCount = 100000;
-//constexpr int LoopCount = 1000;
+// constexpr int LoopCount = 1000;
 
 } // internal-linkage
 
@@ -179,6 +179,7 @@ private slots:
     void test_channel();
     void test_channel_rtt();
     void test_channel_performance();
+// };
 } unit__;
 
 #include "test_ipc.moc"
@@ -352,7 +353,6 @@ void Unit::test_route() {
 }
 
 void Unit::test_route_rtt() {
-    //return;
     test_stopwatch sw;
 
     std::thread t1 {[&] {
@@ -392,15 +392,13 @@ void Unit::test_route_rtt() {
 }
 
 void Unit::test_route_performance() {
-    //return;
     ipc::detail::static_for<8>([](auto index) {
         test_prod_cons<ipc::route, 1, decltype(index)::value + 1, false>();
     });
-    test_prod_cons<ipc::route, 1, 8>(); // test & verify
+    // test_prod_cons<ipc::route, 1, 8>(); // test & verify
 }
 
 void Unit::test_channel() {
-    //return;
     std::thread t1 {[&] {
         ipc::channel cc { "my-ipc-channel" };
         for (std::size_t i = 0;; ++i) {
