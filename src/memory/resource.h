@@ -19,7 +19,7 @@ namespace mem {
 
 using async_pool_alloc = 
       static_wrapper<variable_wrapper<async_wrapper<detail::fixed_alloc<
-                                                    scope_alloc<>, fixed_expand_policy<> >>>>;
+                                                    static_alloc, fixed_expand_policy<> >>>>;
 
 template <typename T>
 using allocator = allocator_wrapper<T, async_pool_alloc>;

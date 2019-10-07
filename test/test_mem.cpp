@@ -127,7 +127,7 @@ void benchmark_alloc() {
         w = std::thread {[&, pid] {
             sw.start();
             for (std::size_t k = 0; k < 100; ++k)
-            for (std::size_t n = (CacheSize * pid); n < (CacheSize * (pid + 1)); ++n) {
+            for (int n = (CacheSize * pid); n < (CacheSize * (pid + 1)); ++n) {
                 std::size_t s = sizes__[n];
                 AllocT::free(AllocT::alloc(s), s);
             }

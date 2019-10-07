@@ -52,9 +52,9 @@ public:
     allocator_wrapper() noexcept {}
 
     // no copy
-    allocator_wrapper(const allocator_wrapper<T, AllocP>& rhs) noexcept {}
+    allocator_wrapper(const allocator_wrapper<T, AllocP>&) noexcept {}
     template <typename U>
-    allocator_wrapper(const allocator_wrapper<U, AllocP>& rhs) noexcept {}
+    allocator_wrapper(const allocator_wrapper<U, AllocP>&) noexcept {}
 
     allocator_wrapper(allocator_wrapper<T, AllocP> && rhs) noexcept : alloc_(std::move(rhs.alloc_)) {}
     template <typename U>
