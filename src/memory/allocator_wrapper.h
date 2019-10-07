@@ -51,31 +51,15 @@ private:
 public:
     allocator_wrapper() noexcept {}
 
-    allocator_wrapper(const allocator_wrapper<T, AllocP>& rhs) noexcept
-        : alloc_(rhs.alloc_)
-    {}
-
+    // no copy
+    allocator_wrapper(const allocator_wrapper<T, AllocP>& rhs) noexcept {}
     template <typename U>
-    allocator_wrapper(const allocator_wrapper<U, AllocP>& rhs) noexcept
-        : alloc_(rhs.alloc_)
-    {}
+    allocator_wrapper(const allocator_wrapper<U, AllocP>& rhs) noexcept {}
 
-    allocator_wrapper(allocator_wrapper<T, AllocP>&& rhs) noexcept
-        : alloc_(std::move(rhs.alloc_))
-    {}
-
+    allocator_wrapper(allocator_wrapper<T, AllocP> && rhs) noexcept : alloc_(std::move(rhs.alloc_)) {}
     template <typename U>
-    allocator_wrapper(allocator_wrapper<U, AllocP>&& rhs) noexcept
-        : alloc_(std::move(rhs.alloc_))
-    {}
-
-    allocator_wrapper(const AllocP& rhs) noexcept
-        : alloc_(rhs)
-    {}
-
-    allocator_wrapper(AllocP&& rhs) noexcept
-        : alloc_(std::move(rhs))
-    {}
+    allocator_wrapper(allocator_wrapper<U, AllocP> && rhs) noexcept : alloc_(std::move(rhs.alloc_)) {}
+    allocator_wrapper(alloc_policy                 && rhs) noexcept : alloc_(std::move(rhs)) {}
 
 public:
     // the other type of std_allocator
