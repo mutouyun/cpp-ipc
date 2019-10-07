@@ -5,11 +5,13 @@
 #include <cstdlib>
 #include <map>
 #include <iterator>
+#include <cassert>      // assert
 
 #include "def.h"
 #include "rw_lock.h"
 #include "concept.h"
 
+#include "memory/allocator_wrapper.h"
 #include "platform/detail.h"
 
 namespace ipc {
@@ -42,7 +44,7 @@ constexpr std::size_t aligned(std::size_t size, size_t alignment) noexcept {
     return ((size - 1) & ~(alignment - 1)) + alignment;
 }
 
-IPC_CONCEPT_(has_take, take(Type{}));
+IPC_CONCEPT_(has_take, take(std::move(std::declval<Type>())));
 
 class scope_alloc_base {
 protected:
@@ -163,6 +165,10 @@ protected:
     }
 
 public:
+    bool operator<(fixed_alloc_base const & right) const {
+        return init_expand_ < right.init_expand_;
+    }
+
     void set_block_size(std::size_t block_size) {
         block_size_ = block_size;
     }
@@ -178,6 +184,7 @@ public:
     }
 
     void take(fixed_alloc_base && rhs) {
+        assert(block_size_ == rhs.block_size_);
         init_expand_ = (ipc::detail::max)(init_expand_, rhs.init_expand_);
         if (rhs.empty()) return;
         auto curr = cursor_;
@@ -265,10 +272,11 @@ public:
 
 } // namespace detail
 
+template <std::size_t BaseSize = sizeof(void*) * 1024>
 struct fixed_expand_policy {
 
     enum : std::size_t {
-        base_size = sizeof(void*) * 1024
+        base_size = BaseSize
     };
 
     constexpr static std::size_t prev(std::size_t e) noexcept {
@@ -288,7 +296,7 @@ struct fixed_expand_policy {
 
 template <std::size_t BlockSize,
           typename AllocP  = scope_alloc<>,
-          typename ExpandP = fixed_expand_policy>
+          typename ExpandP = fixed_expand_policy<>>
 class fixed_alloc : public detail::fixed_alloc<AllocP, ExpandP> {
 public:
     using base_t = detail::fixed_alloc<AllocP, ExpandP>;
@@ -298,9 +306,11 @@ public:
     };
 
 public:
-    explicit fixed_alloc(std::size_t init_expand = 1)
-        : base_t(block_size) {
+    explicit fixed_alloc(std::size_t init_expand)
+        : base_t(block_size, init_expand) {
     }
+
+    fixed_alloc() : fixed_alloc(1) {}
 
     fixed_alloc(fixed_alloc && rhs)
         : base_t(std::move(rhs)) {
@@ -328,8 +338,6 @@ protected:
         std::size_t free_;
     } * head_ = nullptr;
 
-    std::map<std::size_t, head_t*, std::greater<std::size_t>> reserves_;
-
     enum : std::size_t {
         aligned_head_size = aligned(sizeof(head_t), alignof(std::max_align_t))
     };
@@ -339,6 +347,10 @@ protected:
     }
 
 public:
+    bool operator<(variable_alloc_base const & right) const {
+        return remain() < right.remain();
+    }
+
     void swap(variable_alloc_base& rhs) {
         std::swap(head_, rhs.head_);
     }
@@ -351,7 +363,33 @@ public:
         return remain() == 0;
     }
 
-    void take(variable_alloc_base && rhs) {
+    void free(void* /*p*/) {}
+    void free(void* /*p*/, std::size_t) {}
+};
+
+} // namespace detail
+
+template <std::size_t ChunkSize = (sizeof(void*) * 1024), typename AllocP = scope_alloc<>>
+class variable_alloc : public detail::variable_alloc_base {
+public:
+    using base_t       = detail::variable_alloc_base;
+    using head_t       = base_t::head_t;
+    using alloc_policy = AllocP;
+
+private:
+    template <typename T>
+    struct fixed_alloc_t : public fixed_alloc<sizeof(T), alloc_policy> {};
+
+    template <typename T>
+    using allocator = allocator_wrapper<T, fixed_alloc_t<T>>;
+
+    std::map<std::size_t, head_t*, std::greater<std::size_t>, 
+             allocator<std::pair<const std::size_t, head_t*>>
+    > reserves_;
+
+    alloc_policy alloc_;
+
+    void take_base(variable_alloc && rhs) {
         if (rhs.remain() > remain()) {
             if (!empty()) {
                 reserves_.emplace(head_->free_, head_);
@@ -363,22 +401,6 @@ public:
         }
         rhs.head_ = nullptr;
     }
-
-    void free(void* /*p*/) {}
-    void free(void* /*p*/, std::size_t) {}
-};
-
-} // namespace detail
-
-template <std::size_t ChunkSize = (sizeof(void*) * 1024), typename AllocP = scope_alloc<>>
-class variable_alloc : public detail::variable_alloc_base {
-public:
-    using base_t = detail::variable_alloc_base;
-    using head_t = base_t::head_t;
-    using alloc_policy = AllocP;
-
-private:
-    alloc_policy alloc_;
 
 public:
     variable_alloc() = default;
@@ -393,13 +415,13 @@ public:
 
     template <typename A = AllocP>
     auto take(variable_alloc && rhs) -> ipc::require<detail::has_take<A>::value> {
-        base_t::take(std::move(rhs));
+        take_base(std::move(rhs));
         alloc_.take(std::move(rhs.alloc_));
     }
 
     template <typename A = AllocP>
     auto take(variable_alloc && rhs) -> ipc::require<!detail::has_take<A>::value> {
-        base_t::take(std::move(rhs));
+        take_base(std::move(rhs));
     }
 
     void* alloc(std::size_t size) {
