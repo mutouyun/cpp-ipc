@@ -33,13 +33,13 @@ private slots:
 
 #include "test_mem.moc"
 
-// constexpr int DataMin   = 4;
-// constexpr int DataMax   = 256;
-// constexpr int LoopCount = 4194304;
+constexpr int DataMin   = 4;
+constexpr int DataMax   = 256;
+constexpr int LoopCount = 4194304;
 
-constexpr int DataMin   = 256;
-constexpr int DataMax   = 512;
-constexpr int LoopCount = 2097152;
+// constexpr int DataMin   = 256;
+// constexpr int DataMax   = 512;
+// constexpr int LoopCount = 2097152;
 
 std::vector<std::size_t> sizes__;
 

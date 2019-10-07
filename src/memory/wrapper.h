@@ -69,8 +69,8 @@ public:
             master_allocs_.emplace(std::move(alc));
         }
         else const_cast<alloc_policy&>(*it).swap(alc);
-        if (master_allocs_.size() <= 32) return;
-        take_first_do([](alloc_policy &) {}); // erase first
+        // if (master_allocs_.size() <= 32) return;
+        // take_first_do([](alloc_policy &) {}); // erase first
     }
 
     constexpr static auto try_replenish(alloc_policy&, std::size_t) noexcept {}
