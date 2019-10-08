@@ -167,7 +167,7 @@ void benchmark_alloc() {
             auto& vec = ptrs[pid];
             sw.start();
             for (std::size_t k = 0; k < 2; ++k)
-            for (std::size_t n = (CacheSize * pid); n < (CacheSize * (pid + 1)); ++n) {
+            for (int n = (CacheSize * pid); n < (CacheSize * (pid + 1)); ++n) {
                 int    m = mode.index(pid, k, n);
                 void*& p = vec[static_cast<std::size_t>(m)];
                 std::size_t s  = sizes__[static_cast<std::size_t>(m)];
