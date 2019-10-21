@@ -25,8 +25,17 @@ namespace mem {
 /// Thread-safe allocation wrapper
 ////////////////////////////////////////////////////////////////
 
+namespace detail {
+
+IPC_CONCEPT_(is_comparable, operator<(std::declval<Type>()));
+
+} // namespace detail
+
+template <typename AllocP, bool = detail::is_comparable<AllocP>::value>
+class limited_recycler;
+
 template <typename AllocP>
-class limited_recycler {
+class limited_recycler<AllocP, true> {
 public:
     using alloc_policy = AllocP;
 
@@ -35,10 +44,10 @@ protected:
     struct fixed_alloc_t : public fixed_alloc<sizeof(T)> {};
 
     template <typename T>
-    using allocator = allocator_wrapper<T, fixed_alloc_t<T>>;
+    using allocator = ipc::mem::allocator_wrapper<T, fixed_alloc_t<T>>;
 
-    std::set<alloc_policy, std::less<alloc_policy>, 
-             allocator<alloc_policy>
+    std::multiset<alloc_policy, std::less<alloc_policy>, 
+                  allocator<alloc_policy>
     > master_allocs_;
 
     ipc::spin_lock master_lock_;
@@ -64,16 +73,13 @@ public:
 
     void collect(alloc_policy && alc) {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
-        auto it = master_allocs_.find(alc);
-        if (it == master_allocs_.end()) {
-            master_allocs_.emplace(std::move(alc));
+        if (master_allocs_.size() >= 32) {
+            take_first_do([](alloc_policy &) {}); // erase first
         }
-        else const_cast<alloc_policy&>(*it).swap(alc);
-        // if (master_allocs_.size() <= 32) return;
-        // take_first_do([](alloc_policy &) {}); // erase first
+        master_allocs_.emplace(std::move(alc));
     }
 
-    constexpr static auto try_replenish(alloc_policy&, std::size_t) noexcept {}
+    constexpr auto try_replenish(alloc_policy&, std::size_t) noexcept {}
 };
 
 template <typename AllocP>
@@ -125,10 +131,10 @@ class empty_recycler {
 public:
     using alloc_policy = AllocP;
 
-    constexpr static void swap(empty_recycler&)                     noexcept {}
-    constexpr static void try_recover(alloc_policy&)                noexcept {}
-    constexpr static auto try_replenish(alloc_policy&, std::size_t) noexcept {}
-    constexpr static void collect(alloc_policy&&)                   noexcept {}
+    constexpr void swap(empty_recycler&)                     noexcept {}
+    constexpr void try_recover(alloc_policy&)                noexcept {}
+    constexpr auto try_replenish(alloc_policy&, std::size_t) noexcept {}
+    constexpr void collect(alloc_policy&&)                   noexcept {}
 };
 
 template <typename AllocP,

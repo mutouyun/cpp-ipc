@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <limits>
+#include <limits>       // std::numeric_limits
 #include <new>
 #include <utility>
 

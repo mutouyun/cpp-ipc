@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <utility>
-#include <cstdlib>
-#include <map>
 #include <iterator>
+#include <limits>       // std::numeric_limits
+#include <cstdlib>
 #include <cassert>      // assert
 
 #include "def.h"
@@ -41,7 +41,7 @@ public:
 namespace detail {
 
 constexpr std::size_t aligned(std::size_t size, size_t alignment) noexcept {
-    return ((size - 1) & ~(alignment - 1)) + alignment;
+    return ( (size - 1) & ~(alignment - 1) ) + alignment;
 }
 
 IPC_CONCEPT_(has_take, take(std::move(std::declval<Type>())));
@@ -49,8 +49,8 @@ IPC_CONCEPT_(has_take, take(std::move(std::declval<Type>())));
 class scope_alloc_base {
 protected:
     struct block_t {
-        block_t   * next_;
         std::size_t size_;
+        block_t   * next_;
     } * head_ = nullptr, * tail_ = nullptr;
 
     enum : std::size_t {
@@ -127,9 +127,10 @@ public:
     }
 
     void* alloc(std::size_t size) {
-        auto curr = static_cast<block_t*>(alloc_.alloc(size += aligned_block_size));
+        std::size_t real_size = aligned_block_size + size;
+        auto curr = static_cast<block_t*>(alloc_.alloc(real_size));
+        curr->size_ = real_size;
         curr->next_ = head_;
-        curr->size_ = size;
         head_ = curr;
         if (tail_ == nullptr) {
             tail_ = curr;
@@ -272,11 +273,13 @@ public:
 
 } // namespace detail
 
-template <std::size_t BaseSize = sizeof(void*) * 1024>
+template <std::size_t BaseSize  = sizeof(void*) * 1024, 
+          std::size_t LimitSize = (std::numeric_limits<std::uint32_t>::max)()>
 struct fixed_expand_policy {
 
     enum : std::size_t {
-        base_size = BaseSize
+        base_size  = BaseSize,
+        limit_size = LimitSize
     };
 
     constexpr static std::size_t prev(std::size_t e) noexcept {
@@ -289,7 +292,7 @@ struct fixed_expand_policy {
 
     static std::size_t next(std::size_t block_size, std::size_t & e) {
         auto n = ipc::detail::max<std::size_t>(block_size, base_size) * e;
-        e = next(e);
+             e = ipc::detail::min<std::size_t>(limit_size, next(e));
         return n;
     }
 };
@@ -302,7 +305,7 @@ public:
     using base_t = detail::fixed_alloc<AllocP, ExpandP>;
 
     enum : std::size_t {
-        block_size = (ipc::detail::max)(BlockSize, sizeof(void*))
+        block_size = ipc::detail::max<std::size_t>(BlockSize, sizeof(void*))
     };
 
 public:
@@ -334,33 +337,30 @@ namespace detail {
 
 class variable_alloc_base {
 protected:
-    struct head_t {
-        std::size_t free_;
-    } * head_ = nullptr;
-
-    enum : std::size_t {
-        aligned_head_size = aligned(sizeof(head_t), alignof(std::max_align_t))
-    };
-
-    static byte_t * buffer(head_t* p) {
-        return reinterpret_cast<byte_t*>(p) + aligned_head_size + p->free_;
-    }
+    byte_t * head_ = nullptr, * tail_ = nullptr;
 
 public:
-    bool operator<(variable_alloc_base const & right) const {
-        return remain() < right.remain();
-    }
-
-    void swap(variable_alloc_base& rhs) {
+    void swap(variable_alloc_base & rhs) {
         std::swap(head_, rhs.head_);
+        std::swap(tail_, rhs.tail_);
     }
 
     std::size_t remain() const noexcept {
-        return (head_ == nullptr) ? 0 : head_->free_;
+        return static_cast<std::size_t>(tail_ - head_);
     }
 
     bool empty() const noexcept {
         return remain() == 0;
+    }
+
+    void take(variable_alloc_base && rhs) {
+        if (remain() < rhs.remain()) {
+            // replace this by rhs
+            head_ = rhs.head_;
+            tail_ = rhs.tail_;
+        }
+        // discard rhs
+        rhs.head_ = rhs.tail_ = nullptr;
     }
 
     void free(void* /*p*/) {}
@@ -373,34 +373,14 @@ template <std::size_t ChunkSize = (sizeof(void*) * 1024), typename AllocP = scop
 class variable_alloc : public detail::variable_alloc_base {
 public:
     using base_t       = detail::variable_alloc_base;
-    using head_t       = base_t::head_t;
     using alloc_policy = AllocP;
 
+    enum : std::size_t {
+        aligned_chunk_size = detail::aligned(ChunkSize, alignof(std::max_align_t))
+    };
+
 private:
-    template <typename T>
-    struct fixed_alloc_t : public fixed_alloc<sizeof(T), alloc_policy> {};
-
-    template <typename T>
-    using allocator = allocator_wrapper<T, fixed_alloc_t<T>>;
-
-    std::map<std::size_t, head_t*, std::greater<std::size_t>, 
-             allocator<std::pair<const std::size_t, head_t*>>
-    > reserves_;
-
     alloc_policy alloc_;
-
-    void take_base(variable_alloc && rhs) {
-        if (rhs.remain() > remain()) {
-            if (!empty()) {
-                reserves_.emplace(head_->free_, head_);
-            }
-            head_ = rhs.head_;
-        }
-        else if (!rhs.empty()) {
-            reserves_.emplace(rhs.head_->free_, rhs.head_);
-        }
-        rhs.head_ = nullptr;
-    }
 
 public:
     variable_alloc() = default;
@@ -415,38 +395,28 @@ public:
 
     template <typename A = AllocP>
     auto take(variable_alloc && rhs) -> ipc::require<detail::has_take<A>::value> {
-        take_base(std::move(rhs));
+        base_t::take(std::move(rhs));
         alloc_.take(std::move(rhs.alloc_));
     }
 
-    template <typename A = AllocP>
-    auto take(variable_alloc && rhs) -> ipc::require<!detail::has_take<A>::value> {
-        take_base(std::move(rhs));
-    }
-
     void* alloc(std::size_t size) {
-        if (size >= ChunkSize) {
-            return alloc_.alloc(size);
-        }
+        /*
+         * byte alignment is always alignof(std::max_align_t).
+        */
+        size = detail::aligned(size, alignof(std::max_align_t));
+        void* ptr;
+        // size would never be 0 here
         if (remain() < size) {
-            auto it = reserves_.begin();
-            if ((it == reserves_.end()) || (it->first < size)) {
-                head_ = static_cast<head_t*>(alloc_.alloc(ChunkSize + aligned_head_size));
-                head_->free_ = ChunkSize - size;
-            }
-            else {
-                auto temp = it->second;
-                temp->free_ -= size;
-                reserves_.erase(it);
-                if (remain() < temp->free_) {
-                    head_ = temp;
-                }
-                else return base_t::buffer(temp);
-            }
+            std::size_t chunk_size = ipc::detail::max<std::size_t>(aligned_chunk_size, size);
+            ptr   = alloc_.alloc(chunk_size);
+            tail_ = static_cast<byte_t*>(ptr) + chunk_size;
+            head_ = tail_ - (chunk_size - size);
         }
-        // size shouldn't be 0 here, otherwise behavior is undefined
-        else head_->free_ -= size;
-        return base_t::buffer(head_);
+        else {
+            ptr   = head_;
+            head_ += size;
+        }
+        return ptr;
     }
 };
 
