@@ -28,7 +28,7 @@ using uint_t = typename uint<N>::type;
 enum : std::size_t {
     invalid_value   = (std::numeric_limits<std::size_t>::max)(),
     data_length     = 64,
-    small_msg_limit = data_length * 64 - 1, // 4095
+    small_msg_limit = data_length,
     default_timeut  = 100 // ms
 };
 
