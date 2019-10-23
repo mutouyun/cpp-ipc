@@ -146,7 +146,7 @@ std::pair<std::size_t, void*> apply_storage(std::size_t size) {
     return { id, cls_shm.mems_[id].get() };
 }
 
-void* find_storage(msg_id_t id, std::size_t size) {
+void* find_storage(std::size_t id, std::size_t size) {
     std::size_t cls_size = calc_cls_size(size);
 
     cls_lock().lock();
@@ -164,7 +164,7 @@ void* find_storage(msg_id_t id, std::size_t size) {
     return cls_shm.mems_[id].get();
 }
 
-void recycle_storage(msg_id_t id, std::size_t size) {
+void recycle_storage(std::size_t id, std::size_t size) {
     std::size_t cls_size = calc_cls_size(size);
 
     cls_lock().lock();
