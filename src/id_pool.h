@@ -34,9 +34,15 @@ struct id_type : id_type<0, AlignSize> {
 template <std::size_t DataSize  = 0,
           std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::max_align_t))>
 class id_pool {
+
+    static constexpr std::size_t limited_max_count() {
+        return ipc::detail::min<std::size_t>(large_msg_cache, (std::numeric_limits<uint_t<8>>::max)());
+    }
+
 public:
     enum : std::size_t {
-        max_count = ipc::detail::min<std::size_t>(large_msg_cache, (std::numeric_limits<uint_t<8>>::max)())
+        /* eliminate error: taking address of temporary */
+        max_count = limited_max_count()
     };
 
 private:
