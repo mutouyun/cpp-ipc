@@ -149,11 +149,11 @@ public:
         });
     }
 
-    template <typename T, typename... P>
-    auto force_push(P&&... params) {
+    template <typename T, typename F, typename... P>
+    auto force_push(F&& prep, P&&... params) {
         if (elems_ == nullptr) return false;
         return elems_->force_push([&](void* p) {
-            ::new (p) T(std::forward<P>(params)...);
+            if (prep(p)) ::new (p) T(std::forward<P>(params)...);
         });
     }
 

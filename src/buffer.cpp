@@ -9,6 +9,10 @@ bool operator==(buffer const & b1, buffer const & b2) {
     return (b1.size() == b2.size()) && (std::memcmp(b1.data(), b2.data(), b1.size()) == 0);
 }
 
+bool operator!=(buffer const & b1, buffer const & b2) {
+    return !(b1 == b2);
+}
+
 class buffer::buffer_ : public pimpl<buffer_> {
 public:
     void*       p_;

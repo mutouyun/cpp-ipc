@@ -8,6 +8,7 @@
 #include <string>
 #include <memory>
 #include <mutex>
+#include <utility>
 
 #if defined(__GNUC__)
 #   include <cxxabi.h>  // abi::__cxa_demangle
@@ -106,7 +107,7 @@ void benchmark_prod_cons(T* cq) {
 //                    std::unique_lock<capo::spin_lock> guard { lc };
 //                    std::cout << cid << "-recving: " << (i * 100) / (Loops * N) << "%" << std::endl;
 //                }
-                vf.push_data(cid, msg);
+                vf.push_data(cid, std::forward<decltype(msg)>(msg));
                 ++i;
             });
 //            {

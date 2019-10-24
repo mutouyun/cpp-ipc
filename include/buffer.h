@@ -37,27 +37,15 @@ public:
     void *       data()       noexcept;
     void const * data() const noexcept;
 
-#   if __cplusplus >= 201703L
     template <typename T>
-    auto data() noexcept -> std::enable_if_t<!std::is_const_v<T>, T*> {
+    auto data() noexcept -> typename std::enable_if<!std::is_const<T>::value, T*>::type {
         return static_cast<T*>(data());
     }
 
     template <typename T>
-    auto data() const noexcept -> std::enable_if_t<std::is_const_v<T>, T*> {
+    auto data() const noexcept -> typename std::enable_if<std::is_const<T>::value, T*>::type {
         return static_cast<T*>(data());
     }
-#   else /*__cplusplus < 201703L*/
-    template <typename T>
-    auto data() noexcept -> std::enable_if_t<!std::is_const<T>::value, T*> {
-        return static_cast<T*>(data());
-    }
-
-    template <typename T>
-    auto data() const noexcept -> std::enable_if_t<std::is_const<T>::value, T*> {
-        return static_cast<T*>(data());
-    }
-#   endif/*__cplusplus < 201703L*/
 
     std::size_t size() const noexcept;
 
@@ -84,6 +72,7 @@ public:
     }
 
     friend IPC_EXPORT bool operator==(buffer const & b1, buffer const & b2);
+    friend IPC_EXPORT bool operator!=(buffer const & b1, buffer const & b2);
 
 private:
     class buffer_;

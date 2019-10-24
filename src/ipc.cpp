@@ -113,21 +113,55 @@ constexpr std::size_t calc_cls_size(std::size_t size) noexcept {
     return (((size - 1) / small_msg_limit) + 1) * small_msg_limit;
 }
 
-std::pair<std::size_t, void*> apply_storage(std::size_t size) {
-    std::size_t cls_size = calc_cls_size(size);
+auto& cls_storage(std::size_t cls_size) {
+    IPC_UNUSED_ auto guard = ipc::detail::unique_lock(cls_lock());
+    return cls_storages()[cls_size];
+}
 
-    cls_lock().lock();
-    auto& cls_shm = cls_storages()[cls_size];
-    cls_lock().unlock();
-
+template <typename T>
+cls_info_t* cls_storage_info(const char* func, T& cls_shm, std::size_t cls_size) {
     if (!cls_shm.id_info_.valid() &&
         !cls_shm.id_info_.acquire(("__CLS_INFO__" + ipc::to_string(cls_size)).c_str(), sizeof(cls_info_t))) {
-        return {};
+        ipc::error("[%s] cls_shm.id_info_.acquire failed: cls_size = %zd\n", func, cls_size);
+        return nullptr;
     }
     auto info = static_cast<cls_info_t*>(cls_shm.id_info_.get());
     if (info == nullptr) {
-        return {};
+        ipc::error("[%s] cls_shm.id_info_.get failed: cls_size = %zd\n", func, cls_size);
+        return nullptr;
     }
+    return info;
+}
+
+template <typename T>
+byte_t* cls_storage_mem(const char* func, T& cls_shm, std::size_t cls_size, std::size_t id) {
+    if (id == invalid_value) {
+        return nullptr;
+    }
+    if (!cls_shm.mems_[id].valid() &&
+        !cls_shm.mems_[id].acquire(("__CLS_MEM_BLOCK__" + ipc::to_string(cls_size) +
+                                                   "__" + ipc::to_string(id)).c_str(), 
+                                   cls_size + sizeof(acc_t))) {
+        ipc::error("[%s] cls_shm.mems_[id].acquire failed: id = %zd, cls_size = %zd\n", func, id, cls_size);
+        return nullptr;
+    }
+
+    byte_t* ptr = static_cast<byte_t*>(cls_shm.mems_[id].get());
+    if (ptr == nullptr) {
+        ipc::error("[%s] cls_shm.mems_[id].get failed: id = %zd, cls_size = %zd\n", func, id, cls_size);
+        return nullptr;
+    }
+    return ptr;
+}
+
+std::pair<std::size_t, void*> apply_storage(std::size_t conn_count, std::size_t size) {
+    if (conn_count == 0) return {};
+
+    std::size_t cls_size = calc_cls_size(size);
+    auto &      cls_shm  = cls_storage(cls_size);
+
+    auto info = cls_storage_info("apply_storage", cls_shm, cls_size);
+    if (info == nullptr) return {};
 
     info->lock_.lock();
     info->pool_.prepare();
@@ -135,50 +169,80 @@ std::pair<std::size_t, void*> apply_storage(std::size_t size) {
     auto id = info->pool_.acquire();
     info->lock_.unlock();
 
-    if (id == invalid_value) {
-        return {};
-    }
-    if (!cls_shm.mems_[id].valid() &&
-        !cls_shm.mems_[id].acquire(("__CLS_MEM_BLOCK__" + ipc::to_string(cls_size) +
-                                                   "__" + ipc::to_string(id)).c_str(), cls_size)) {
-        return {};
-    }
-    return { id, cls_shm.mems_[id].get() };
+    auto ptr = cls_storage_mem("apply_storage", cls_shm, cls_size, id);
+    if (ptr == nullptr) return {};
+    reinterpret_cast<acc_t*>(ptr + cls_size)->store(static_cast<msg_id_t>(conn_count), std::memory_order_release);
+    return { id, ptr };
 }
 
 void* find_storage(std::size_t id, std::size_t size) {
     std::size_t cls_size = calc_cls_size(size);
+    auto &      cls_shm  = cls_storage(cls_size);
 
-    cls_lock().lock();
-    auto& cls_shm = cls_storages()[cls_size];
-    cls_lock().unlock();
-
-    if (id == invalid_value) {
+    auto ptr = cls_storage_mem("find_storage", cls_shm, cls_size, id);
+    if (ptr == nullptr) return nullptr;
+    if (reinterpret_cast<acc_t*>(ptr + cls_size)->load(std::memory_order_acquire) == 0) {
+        ipc::error("[find_storage] cc test failed: id = %zd, cls_size = %zd\n", id, cls_size);
         return nullptr;
     }
-    if (!cls_shm.mems_[id].valid() &&
-        !cls_shm.mems_[id].acquire(("__CLS_MEM_BLOCK__" + ipc::to_string(cls_size) +
-                                                   "__" + ipc::to_string(id)).c_str(), cls_size)) {
-        return nullptr;
-    }
-    return cls_shm.mems_[id].get();
+    return ptr;
 }
 
 void recycle_storage(std::size_t id, std::size_t size) {
+    if (id == invalid_value) {
+        ipc::error("[recycle_storage] id is invalid: id = %zd, size = %zd\n", id, size);
+        return;
+    }
+
     std::size_t cls_size = calc_cls_size(size);
+    auto &      cls_shm  = cls_storage(cls_size);
 
-    cls_lock().lock();
-    auto& cls_shm = cls_storages()[cls_size];
-    cls_lock().unlock();
-
-    if (!cls_shm.id_info_.valid() &&
-        !cls_shm.id_info_.acquire(("__CLS_INFO__" + ipc::to_string(cls_size)).c_str(), sizeof(cls_info_t))) {
+    if (!cls_shm.mems_[id].valid()) {
+        ipc::error("[recycle_storage] should find storage first: id = %zd, cls_size = %zd\n", id, cls_size);
         return;
     }
-    auto info = static_cast<cls_info_t*>(cls_shm.id_info_.get());
-    if (info == nullptr) {
+    byte_t* ptr = static_cast<byte_t*>(cls_shm.mems_[id].get());
+    if (ptr == nullptr) {
+        ipc::error("[recycle_storage] cls_shm.mems_[id].get failed: id = %zd, cls_size = %zd\n", id, cls_size);
         return;
     }
+    if (reinterpret_cast<acc_t*>(ptr + cls_size)->fetch_sub(1, std::memory_order_acq_rel) > 1) {
+        // not the last receiver, just return
+        return;
+    }
+
+    auto info = cls_storage_info("recycle_storage", cls_shm, cls_size);
+    if (info == nullptr) return;
+
+    info->lock_.lock();
+    info->pool_.release(id);
+    info->lock_.unlock();
+}
+
+void clear_storage(std::size_t id, std::size_t size) {
+    if (id == invalid_value) {
+        ipc::error("[clear_storage] id is invalid: id = %zd, size = %zd\n", id, size);
+        return;
+    }
+
+    std::size_t cls_size = calc_cls_size(size);
+    auto &      cls_shm  = cls_storage(cls_size);
+
+    auto ptr = cls_storage_mem("clear_storage", cls_shm, cls_size, id);
+    if (ptr == nullptr) return;
+
+    auto cc_flag = reinterpret_cast<acc_t*>(ptr + cls_size);
+    for (unsigned k = 0;;) {
+        auto cc_curr = cc_flag->load(std::memory_order_acquire);
+        if (cc_curr == 0) return; // means this id has been cleared
+        if (cc_flag->compare_exchange_weak(cc_curr, 0, std::memory_order_release)) {
+            break;
+        }
+        ipc::yield(k);
+    }
+
+    auto info = cls_storage_info("clear_storage", cls_shm, cls_size);
+    if (info == nullptr) return;
 
     info->lock_.lock();
     info->pool_.release(id);
@@ -339,27 +403,28 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
     auto msg_id   = acc->fetch_add(1, std::memory_order_relaxed);
     auto try_push = std::forward<F>(gen_push)(info_of(h), que, msg_id);
     if (size > small_msg_limit) {
-        auto   dat = apply_storage(size);
+        auto   dat = apply_storage(que->conn_count(), size);
         void * buf = dat.second;
         if (buf != nullptr) {
             std::memcpy(buf, data, size);
-            return try_push(static_cast<int>(size) - static_cast<int>(data_length), &(dat.first), 0);
+            return try_push(static_cast<std::int32_t>(size) - 
+                            static_cast<std::int32_t>(data_length), &(dat.first), 0);
         }
         // try using message fragment
         // ipc::log("fail: shm::handle for big message. msg_id: %zd, size: %zd\n", msg_id, size);
     }
     // push message fragment
-    int offset = 0;
+    std::int32_t offset = 0;
     for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
-        if (!try_push(static_cast<int>(size) - offset - static_cast<int>(data_length),
+        if (!try_push(static_cast<std::int32_t>(size) - offset - static_cast<std::int32_t>(data_length),
                       static_cast<byte_t const *>(data) + offset, data_length)) {
             return false;
         }
     }
     // if remain > 0, this is the last message fragment
-    int remain = static_cast<int>(size) - offset;
+    std::int32_t remain = static_cast<std::int32_t>(size) - offset;
     if (remain > 0) {
-        if (!try_push(remain - static_cast<int>(data_length),
+        if (!try_push(remain - static_cast<std::int32_t>(data_length),
                       static_cast<byte_t const *>(data) + offset, static_cast<std::size_t>(remain))) {
             return false;
         }
@@ -369,12 +434,19 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
 
 static bool send(ipc::handle_t h, void const * data, std::size_t size) {
     return send([](auto info, auto que, auto msg_id) {
-        return [info, que, msg_id](int remain, void const * data, std::size_t size) {
+        return [info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(info->cc_id_, msg_id, remain, data, size);
                 }, que->dis_flag() ? 0 : static_cast<std::size_t>(default_timeut))) {
                 ipc::log("force_push: msg_id = %zd, remain = %d, size = %zd\n", msg_id, remain, size);
-                if (!que->force_push(info->cc_id_, msg_id, remain, data, size)) {
+                if (!que->force_push([](void* p) {
+                    auto tmp_msg = static_cast<typename queue_t::value_t*>(p);
+                    if (tmp_msg->storage_) {
+                        clear_storage(*reinterpret_cast<std::size_t*>(&tmp_msg->data_), 
+                                      static_cast<std::int32_t>(data_length) + tmp_msg->remain_);
+                    }
+                    return true;
+                }, info->cc_id_, msg_id, remain, data, size)) {
                     return false;
                 }
             }
@@ -386,7 +458,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
 
 static bool try_send(ipc::handle_t h, void const * data, std::size_t size) {
     return send([](auto info, auto que, auto msg_id) {
-        return [info, que, msg_id](int remain, void const * data, std::size_t size) {
+        return [info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(info->cc_id_, msg_id, remain, data, size);
                 }, 0)) {
@@ -419,7 +491,7 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
             continue; // ignore message to self
         }
         // msg.remain_ may minus & abs(msg.remain_) < data_length
-        auto remain = static_cast<std::size_t>(static_cast<std::int32_t>(data_length) + msg.remain_);
+        std::size_t remain = static_cast<std::int32_t>(data_length) + msg.remain_;
         // find cache with msg.id_
         auto cac_it = rc.find(msg.id_);
         if (cac_it == rc.end()) {

@@ -44,7 +44,7 @@ struct test_verify {
 
     void prepare(void* /*pt*/) {}
 
-    void push_data(int cid, ipc::buff_t & msg) {
+    void push_data(int cid, ipc::buff_t && msg) {
         list_[cid].emplace_back(std::move(msg));
     }
 
@@ -90,7 +90,7 @@ struct test_cq<ipc::route> {
                 QCOMPARE(msg, ipc::buff_t('\0'));
                 return;
             }
-            proc(msg);
+            proc(std::move(msg));
         } while(1);
     }
 
@@ -136,7 +136,7 @@ struct test_cq<ipc::channel> {
                 QCOMPARE(msg, ipc::buff_t('\0'));
                 return;
             }
-            proc(msg);
+            proc(std::move(msg));
         } while(1);
     }
 
@@ -313,7 +313,7 @@ void test_prod_cons() {
 }
 
 void Unit::test_route() {
-    //return;
+    // return;
     std::vector<char const *> const datas = {
         "hello!",
         "foo",
@@ -402,12 +402,24 @@ void Unit::test_route_performance() {
 
 void Unit::test_channel() {
     // return;
+    int fail_v = 0;
+
     std::thread t1 {[&] {
         ipc::channel cc { "my-ipc-channel" };
         for (std::size_t i = 0;; ++i) {
             ipc::buff_t dd = cc.recv();
             if (dd.size() < 2) return;
-            QCOMPARE(dd, datas__[i]);
+            if (dd != datas__[i]) {
+                std::printf("fail recv: %zd-[%zd, %zd]\n", i, dd.size(), datas__[i].size());
+                // for (std::size_t k = 0; k < dd.size(); ++k) {
+                //     if (dd.data<ipc::byte_t>()[k] != datas__[i].data<ipc::byte_t>()[k]) {
+                //         std::printf("fail check: %zd-%zd, %02x != %02x\n", 
+                //                     i, k, (unsigned)dd        .data<ipc::byte_t>()[k], 
+                //                           (unsigned)datas__[i].data<ipc::byte_t>()[k]);
+                //     }
+                // }
+                ++fail_v;
+            }
         }
     }};
 
@@ -415,7 +427,7 @@ void Unit::test_channel() {
         ipc::channel cc { "my-ipc-channel" };
         cc.wait_for_recv(1);
         for (std::size_t i = 0; i < static_cast<std::size_t>((std::min)(100, LoopCount)); ++i) {
-            std::cout << "sending: " << i << "-[" << datas__[i].size() << "]" << std::endl;
+            std::printf("sending: %zd-[%zd]\n", i, datas__[i].size());
             cc.send(datas__[i]);
         }
         cc.send(ipc::buff_t('\0'));
@@ -423,6 +435,8 @@ void Unit::test_channel() {
     }};
 
     t2.join();
+
+    QCOMPARE(fail_v, 0);
 }
 
 void Unit::test_channel_rtt() {

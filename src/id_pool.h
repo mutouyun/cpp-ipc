@@ -10,12 +10,14 @@
 namespace ipc {
 
 template <std::size_t DataSize, std::size_t AlignSize>
-struct id_type {
-    uint_t<8> id_;
-    std::aligned_storage_t<DataSize, AlignSize> data_;
+struct id_type;
 
-    id_type& operator=(uint_t<8> val) {
-        id_ = val;
+template <std::size_t AlignSize>
+struct id_type<0, AlignSize> {
+    uint_t<8> id_;
+
+    id_type& operator=(std::size_t val) {
+        id_ = static_cast<uint_t<8>>(val);
         return (*this);
     }
 
@@ -24,18 +26,9 @@ struct id_type {
     }
 };
 
-template <std::size_t AlignSize>
-struct id_type<0, AlignSize> {
-    uint_t<8> id_;
-
-    id_type& operator=(uint_t<8> val) {
-        id_ = val;
-        return (*this);
-    }
-
-    operator uint_t<8>() const {
-        return id_;
-    }
+template <std::size_t DataSize, std::size_t AlignSize>
+struct id_type : id_type<0, AlignSize> {
+    std::aligned_storage_t<DataSize, AlignSize> data_;
 };
 
 template <std::size_t DataSize  = 0,
@@ -43,7 +36,7 @@ template <std::size_t DataSize  = 0,
 class id_pool {
 public:
     enum : std::size_t {
-        max_count = (std::numeric_limits<uint_t<8>>::max)() // 255
+        max_count = ipc::detail::min<std::size_t>(large_msg_cache, (std::numeric_limits<uint_t<8>>::max)())
     };
 
 private:
@@ -59,7 +52,7 @@ public:
 
     void init() {
         for (std::size_t i = 0; i < max_count;) {
-            i = next_[i] = static_cast<uint_t<8>>(i + 1);
+            i = next_[i] = (i + 1);
         }
     }
 
@@ -73,9 +66,7 @@ public:
     }
 
     std::size_t acquire() {
-        if (empty()) {
-            return invalid_value;
-        }
+        if (empty()) return invalid_value;
         std::size_t id = cursor_;
         cursor_ = next_[id]; // point to next
         return id;
