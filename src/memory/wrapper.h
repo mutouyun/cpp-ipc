@@ -79,7 +79,7 @@ public:
         master_allocs_.emplace(std::move(alc));
     }
 
-    constexpr auto try_replenish(alloc_policy&, std::size_t) noexcept {}
+    IPC_CONSTEXPR_ auto try_replenish(alloc_policy&, std::size_t) noexcept {}
 };
 
 template <typename AllocP>
@@ -120,7 +120,7 @@ public:
     }
 
     template <typename A = AllocP>
-    constexpr auto try_replenish(alloc_policy & /*alc*/, std::size_t /*size*/) const noexcept
+    IPC_CONSTEXPR_ auto try_replenish(alloc_policy & /*alc*/, std::size_t /*size*/) noexcept
         -> ipc::require<(!detail::has_take<A>::value || !has_remain<A>::value) && !has_empty<A>::value> {
         // Do Nothing.
     }
@@ -131,10 +131,10 @@ class empty_recycler {
 public:
     using alloc_policy = AllocP;
 
-    constexpr void swap(empty_recycler&)                     noexcept {}
-    constexpr void try_recover(alloc_policy&)                noexcept {}
-    constexpr auto try_replenish(alloc_policy&, std::size_t) noexcept {}
-    constexpr void collect(alloc_policy&&)                   noexcept {}
+    IPC_CONSTEXPR_ void swap(empty_recycler&)                     noexcept {}
+    IPC_CONSTEXPR_ void try_recover(alloc_policy&)                noexcept {}
+    IPC_CONSTEXPR_ auto try_replenish(alloc_policy&, std::size_t) noexcept {}
+    IPC_CONSTEXPR_ void collect(alloc_policy&&)                   noexcept {}
 };
 
 template <typename AllocP,
