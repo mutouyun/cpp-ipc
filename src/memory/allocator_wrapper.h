@@ -51,20 +51,16 @@ private:
 public:
     allocator_wrapper() noexcept {}
 
-    // no copy
-    allocator_wrapper(const allocator_wrapper<T, AllocP>&) noexcept {}
-    template <typename U>
-    allocator_wrapper(const allocator_wrapper<U, AllocP>&) noexcept {}
+    // construct by copying (do nothing)
+    allocator_wrapper           (const allocator_wrapper<T, AllocP>&) noexcept {}
+    allocator_wrapper& operator=(const allocator_wrapper<T, AllocP>&) noexcept { return *this; }
+	
+    // construct from a related allocator (do nothing)
+    template <typename U, typename AllocU> allocator_wrapper           (const allocator_wrapper<U, AllocU>&) noexcept {}
+    template <typename U, typename AllocU> allocator_wrapper& operator=(const allocator_wrapper<U, AllocU>&) noexcept { return *this; }
 
-    allocator_wrapper(allocator_wrapper<T, AllocP> && rhs) noexcept : alloc_(std::move(rhs.alloc_)) {}
-    template <typename U>
-    allocator_wrapper(allocator_wrapper<U, AllocP> && rhs) noexcept : alloc_(std::move(rhs.alloc_)) {}
-    allocator_wrapper(alloc_policy                 && rhs) noexcept : alloc_(std::move(rhs)) {}
-
-    allocator_wrapper& operator=(allocator_wrapper && rhs) noexcept {
-        alloc_ = std::move(rhs.alloc_);
-        return *this;
-    }
+    allocator_wrapper           (allocator_wrapper && rhs) noexcept : alloc_ { std::move(rhs.alloc_) } {}
+    allocator_wrapper& operator=(allocator_wrapper && rhs) noexcept { alloc_ = std::move(rhs.alloc_); return *this; }
 
 public:
     // the other type of std_allocator
