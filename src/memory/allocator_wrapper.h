@@ -59,7 +59,7 @@ public:
     template <typename U, typename AllocU> allocator_wrapper           (const allocator_wrapper<U, AllocU>&) noexcept {}
     template <typename U, typename AllocU> allocator_wrapper& operator=(const allocator_wrapper<U, AllocU>&) noexcept { return *this; }
 
-    allocator_wrapper           (allocator_wrapper && rhs) noexcept : alloc_ { std::move(rhs.alloc_) } {}
+    allocator_wrapper           (allocator_wrapper && rhs) noexcept : alloc_ ( std::move(rhs.alloc_) ) {}
     allocator_wrapper& operator=(allocator_wrapper && rhs) noexcept { alloc_ = std::move(rhs.alloc_); return *this; }
 
 public:
