@@ -38,14 +38,7 @@ public:
     void const * data() const noexcept;
 
     template <typename T>
-    auto data() noexcept -> typename std::enable_if<!std::is_const<T>::value, T*>::type {
-        return static_cast<T*>(data());
-    }
-
-    template <typename T>
-    auto data() const noexcept -> typename std::enable_if<std::is_const<T>::value, T*>::type {
-        return static_cast<T*>(data());
-    }
+    T get() const { return T(data()); }
 
     std::size_t size() const noexcept;
 
@@ -58,16 +51,9 @@ public:
     }
 
     std::vector<byte_t> to_vector() const {
-#   if __cplusplus >= 201703L
-        auto [d, s] = to_tuple();
-#   else /*__cplusplus < 201703L*/
-        auto tp = to_tuple();
-        auto d  = std::get<0>(tp);
-        auto s  = std::get<1>(tp);
-#   endif/*__cplusplus < 201703L*/
         return {
-            static_cast<byte_t const *>(d),
-            static_cast<byte_t const *>(d) + s
+            get<byte_t const *>(),
+            get<byte_t const *>() + size()
         };
     }
 

@@ -31,7 +31,7 @@ int main() {
         while (1) {
             auto buf = cc.recv();
             if (buf.empty()) continue;
-            std::string dat { static_cast<char const *>(buf.data()), buf.size() - 1 };
+            std::string dat { buf.get<char const *>(), buf.size() - 1 };
             std::smatch mid;
             if (std::regex_match(dat, mid, reg)) {
                 if (mid.str(1) == id) {
