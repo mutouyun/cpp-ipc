@@ -136,7 +136,7 @@ public:
         if (*counter_ > 0) {
             ret = sema_.post();
             -- *counter_;
-            ret = ret && handshake_.wait(default_timeut);
+            ret = ret && handshake_.wait(default_timeout);
         }
         return ret;
     }
@@ -152,7 +152,7 @@ public:
             ret = sema_.post(*counter_);
             do {
                 -- *counter_;
-                ret = ret && handshake_.wait(default_timeut);
+                ret = ret && handshake_.wait(default_timeout);
             } while (*counter_ > 0);
         }
         return ret;

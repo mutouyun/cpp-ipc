@@ -110,7 +110,7 @@ struct cls_info_t {
 };
 
 constexpr std::size_t calc_cls_size(std::size_t size) noexcept {
-    return (((size - 1) / small_msg_limit) + 1) * small_msg_limit;
+    return (((size - 1) / large_msg_limit) + 1) * large_msg_limit;
 }
 
 auto& cls_storage(std::size_t cls_size) {
@@ -402,7 +402,7 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
     }
     auto msg_id   = acc->fetch_add(1, std::memory_order_relaxed);
     auto try_push = std::forward<F>(gen_push)(info_of(h), que, msg_id);
-    if (size > small_msg_limit) {
+    if (size > large_msg_limit) {
         auto   dat = apply_storage(que->conn_count(), size);
         void * buf = dat.second;
         if (buf != nullptr) {
@@ -437,7 +437,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
         return [info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(info->cc_id_, msg_id, remain, data, size);
-                }, que->dis_flag() ? 0 : static_cast<std::size_t>(default_timeut))) {
+                }, que->dis_flag() ? 0 : static_cast<std::size_t>(default_timeout))) {
                 ipc::log("force_push: msg_id = %zd, remain = %d, size = %zd\n", msg_id, remain, size);
                 if (!que->force_push([](void* p) {
                     auto tmp_msg = static_cast<typename queue_t::value_t*>(p);

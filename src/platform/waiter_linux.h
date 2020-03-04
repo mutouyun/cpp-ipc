@@ -271,7 +271,7 @@ public:
         if (counter_ > 0) {
             ret = sem_helper::post(std::get<1>(h));
             -- counter_;
-            ret = ret && sem_helper::wait(std::get<2>(h), default_timeut);
+            ret = ret && sem_helper::wait(std::get<2>(h), default_timeout);
         }
         return ret;
     }
@@ -289,7 +289,7 @@ public:
             }
             do {
                 -- counter_;
-                ret = ret && sem_helper::wait(std::get<2>(h), default_timeut);
+                ret = ret && sem_helper::wait(std::get<2>(h), default_timeout);
             } while (counter_ > 0);
         }
         return ret;
