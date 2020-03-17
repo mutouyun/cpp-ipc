@@ -107,8 +107,8 @@ public:
         base_t::close();
     }
 
-    constexpr elems_t       * elems()       noexcept { return elems_; }
-    constexpr elems_t const * elems() const noexcept { return elems_; }
+    elems_t       * elems()       noexcept { return elems_; }
+    elems_t const * elems() const noexcept { return elems_; }
 
     bool connect() {
         auto tp = base_t::connect(elems_);
