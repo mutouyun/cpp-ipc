@@ -39,20 +39,20 @@ public:
         return head_.cursor();
     }
 
-    template <typename F>
-    bool push(F&& f) {
-        return head_.push(this, std::forward<F>(f), block_);
+    template <typename Q, typename F>
+    bool push(Q* que, F&& f) {
+        return head_.push(que, std::forward<F>(f), block_);
     }
 
-    template <typename F>
-    bool force_push(F&& f) {
-        return head_.force_push(this, std::forward<F>(f), block_);
+    template <typename Q, typename F>
+    bool force_push(Q* que, F&& f) {
+        return head_.force_push(que, std::forward<F>(f), block_);
     }
 
-    template <typename F>
-    bool pop(cursor_t* cur, F&& f) {
+    template <typename Q, typename F>
+    bool pop(Q* que, cursor_t* cur, F&& f) {
         if (cur == nullptr) return false;
-        return head_.pop(this, *cur, std::forward<F>(f), block_);
+        return head_.pop(que, *cur, std::forward<F>(f), block_);
     }
 };
 

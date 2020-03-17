@@ -192,18 +192,17 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
     bool push(W* wrapper, F&& f, E* elems) {
         E* el;
         for (unsigned k = 0;;) {
-            auto cc = wrapper->conn_count(std::memory_order_relaxed);
+            circ::cc_t cc = wrapper->elems()->connections(std::memory_order_relaxed);
             if (cc == 0) return false; // no reader
             el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
             // check all consumers have finished reading this element
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             if (cur_rc) {
-                return false; // full
+                return false; // not reading finished yet
             }
             // cur_rc should be 0 here
             if (el->rc_.compare_exchange_weak(
                         cur_rc, static_cast<rc_t>(cc), std::memory_order_release)) {
-                wrapper->clear_dis_flag(std::memory_order_relaxed);
                 break;
             }
             ipc::yield(k);
@@ -217,14 +216,14 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
     bool force_push(W* wrapper, F&& f, E* elems) {
         E* el;
         for (unsigned k = 0;;) {
-            auto cc = wrapper->conn_count(std::memory_order_relaxed);
+            circ::cc_t cc = wrapper->elems()->connections(std::memory_order_relaxed);
             if (cc == 0) return false; // no reader
             el = elems + circ::index_of(wt_.load(std::memory_order_acquire));
             // check all consumers have finished reading this element
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             if (cur_rc) {
-                wrapper->try_disconnect(); // try disconnect a reader
-                cc = wrapper->conn_count(std::memory_order_relaxed);
+                ipc::log("force_push: k = %d, cc = %d, rem_cc = %d\n", k, cc, cur_rc);
+                cc = wrapper->elems()->disconnect(cur_rc); // disconnect all remained readers
                 if (cc == 0) return false; // no reader
             }
             // just compare & exchange
@@ -240,7 +239,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
     }
 
     template <typename W, typename F, typename E>
-    bool pop(W* /*wrapper*/, circ::u2_t& cur, F&& f, E* elems) {
+    bool pop(W* wrapper, circ::u2_t& cur, F&& f, E* elems) {
         if (cur == cursor()) return false; // acquire
         auto* el = elems + circ::index_of(cur++);
         std::forward<F>(f)(&(el->data_));
@@ -249,8 +248,9 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
             if (cur_rc == 0) {
                 return true;
             }
-            if (el->rc_.compare_exchange_weak(
-                        cur_rc, cur_rc - 1, std::memory_order_release)) {
+            if (el->rc_.compare_exchange_weak(cur_rc,
+                        cur_rc & ~static_cast<rc_t>(wrapper->connected_id()),
+                        std::memory_order_release)) {
                 return true;
             }
             ipc::yield(k);
@@ -287,13 +287,13 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         E* el;
         circ::u2_t cur_ct;
         for (unsigned k = 0;;) {
-            auto cc = wrapper->conn_count(std::memory_order_relaxed);
+            circ::cc_t cc = wrapper->elems()->connections(std::memory_order_relaxed);
             if (cc == 0) return false; // no reader
             el = elems + circ::index_of(cur_ct = ct_.load(std::memory_order_relaxed));
             // check all consumers have finished reading this element
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             if (cur_rc & rc_mask) {
-                return false; // full
+                return false; // not reading finished yet
             }
             auto cur_fl = el->f_ct_.load(std::memory_order_acquire);
             if ((cur_fl != cur_ct) && cur_fl) {
@@ -301,8 +301,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
             }
             // (cur_rc & rc_mask) should be 0 here
             if (el->rc_.compare_exchange_weak(
-                        cur_rc, static_cast<rc_t>(cc) | ((cur_rc & ~rc_mask) + rc_incr), std::memory_order_release)) {
-                wrapper->clear_dis_flag(std::memory_order_relaxed);
+                        cur_rc, ((cur_rc + rc_incr) & ~rc_mask) | static_cast<rc_t>(cc), std::memory_order_release)) {
                 break;
             }
             ipc::yield(k);
@@ -320,20 +319,20 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         E* el;
         circ::u2_t cur_ct;
         for (unsigned k = 0;;) {
-            auto cc = wrapper->conn_count(std::memory_order_relaxed);
+            circ::cc_t cc = wrapper->elems()->connections(std::memory_order_relaxed);
             if (cc == 0) return false; // no reader
             el = elems + circ::index_of(cur_ct = ct_.load(std::memory_order_relaxed));
             // check all consumers have finished reading this element
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
-            ipc::log("force_push: k = %d, cc = %zd, rc = %zd\n", k, cc, (cur_rc & rc_mask));
-            if (cur_rc & rc_mask) {
-                wrapper->try_disconnect(); // try disconnect a reader
-                cc = wrapper->conn_count(std::memory_order_relaxed);
+            circ::cc_t rem_cc = cur_rc & rc_mask;
+            if (rem_cc) {
+                ipc::log("force_push: k = %d, cc = %d, rem_cc = %d\n", k, cc, rem_cc);
+                cc = wrapper->elems()->disconnect(rem_cc); // disconnect all remained readers
                 if (cc == 0) return false; // no reader
             }
             // just compare & exchange
             if (el->rc_.compare_exchange_weak(
-                        cur_rc, static_cast<rc_t>(cc) | ((cur_rc & ~rc_mask) + rc_incr), std::memory_order_release)) {
+                        cur_rc, ((cur_rc + rc_incr) & ~rc_mask) | static_cast<rc_t>(cc), std::memory_order_release)) {
                 break;
             }
             ipc::yield(k);
@@ -347,7 +346,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
     }
 
     template <typename W, typename F, typename E, std::size_t N>
-    bool pop(W* /*wrapper*/, circ::u2_t& cur, F&& f, E(& elems)[N]) {
+    bool pop(W* wrapper, circ::u2_t& cur, F&& f, E(& elems)[N]) {
         auto* el = elems + circ::index_of(cur);
         auto cur_fl = el->f_ct_.load(std::memory_order_acquire);
         if (cur_fl != ~static_cast<flag_t>(cur)) {
@@ -357,19 +356,18 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
         std::forward<F>(f)(&(el->data_));
         for (unsigned k = 0;;) {
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
-            switch (cur_rc & rc_mask) {
-            case 0:
+            circ::cc_t rem_cc = cur_rc & rc_mask;
+            if (rem_cc == 0) {
                 el->f_ct_.store(cur + N - 1, std::memory_order_release);
                 return true;
-            case 1:
+            }
+            if ((rem_cc & ~wrapper->connected_id()) == 0) {
                 el->f_ct_.store(cur + N - 1, std::memory_order_release);
-                IPC_FALLTHROUGH_;
-            default:
-                if (el->rc_.compare_exchange_weak(
-                            cur_rc, cur_rc + rc_incr - 1, std::memory_order_release)) {
-                    return true;
-                }
-                break;
+            }
+            if (el->rc_.compare_exchange_weak(cur_rc,
+                        (cur_rc + rc_incr) & ~static_cast<rc_t>(wrapper->connected_id()),
+                        std::memory_order_release)) {
+                return true;
             }
             ipc::yield(k);
         }

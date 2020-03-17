@@ -16,13 +16,14 @@
 #include "rw_lock.h"
 
 #include "platform/detail.h"
+#include "circ/elem_def.h"
 
 namespace ipc {
 namespace detail {
 
 class queue_conn {
 protected:
-    bool connected_ = false;
+    circ::cc_t connected_ = 0;
     shm::handle elems_h_;
 
     template <typename Elems>
@@ -53,6 +54,10 @@ public:
     queue_conn& operator=(const queue_conn&) = delete;
 
     bool connected() const noexcept {
+        return connected_ != 0;
+    }
+
+    circ::cc_t connected_id() const noexcept {
         return connected_;
     }
 
@@ -60,24 +65,18 @@ public:
     auto connect(Elems* elems)
      -> std::tuple<bool, decltype(std::declval<Elems>().cursor())> {
         if (elems == nullptr) return {};
-        if (connected_) {
-            // if it's already connected, just return false
-            return {};
-        }
-        connected_ = true;
-        elems->connect();
-        return std::make_tuple(true, elems->cursor());
+        // if it's already connected, just return false
+        if (connected()) return {};
+        connected_ = elems->connect();
+        return std::make_tuple(connected(), elems->cursor());
     }
 
     template <typename Elems>
     bool disconnect(Elems* elems) {
         if (elems == nullptr) return false;
-        if (!connected_) {
-            // if it's already disconnected, just return false
-            return false;
-        }
-        connected_ = false;
-        elems->disconnect();
+        // if it's already disconnected, just return false
+        if (!connected()) return false;
+        elems->disconnect(connected_);
         return true;
     }
 };
@@ -108,9 +107,8 @@ public:
         base_t::close();
     }
 
-    constexpr elems_t * elems() const noexcept {
-        return elems_;
-    }
+    constexpr elems_t       * elems()       noexcept { return elems_; }
+    constexpr elems_t const * elems() const noexcept { return elems_; }
 
     bool connect() {
         auto tp = base_t::connect(elems_);
@@ -125,10 +123,6 @@ public:
         return base_t::disconnect(elems_);
     }
 
-    bool dis_flag() {
-        return elems_->dis_flag();
-    }
-
     std::size_t conn_count() const noexcept {
         return (elems_ == nullptr) ? invalid_value : elems_->conn_count();
     }
@@ -138,13 +132,13 @@ public:
     }
 
     bool empty() const noexcept {
-        return (elems_ == nullptr) ? true : (cursor_ == elems_->cursor());
+        return !valid() || (cursor_ == elems_->cursor());
     }
 
     template <typename T, typename... P>
     auto push(P&&... params) {
         if (elems_ == nullptr) return false;
-        return elems_->push([&](void* p) {
+        return elems_->push(this, [&](void* p) {
             ::new (p) T(std::forward<P>(params)...);
         });
     }
@@ -152,7 +146,7 @@ public:
     template <typename T, typename F, typename... P>
     auto force_push(F&& prep, P&&... params) {
         if (elems_ == nullptr) return false;
-        return elems_->force_push([&](void* p) {
+        return elems_->force_push(this, [&](void* p) {
             if (prep(p)) ::new (p) T(std::forward<P>(params)...);
         });
     }
@@ -162,7 +156,7 @@ public:
         if (elems_ == nullptr) {
             return false;
         }
-        return elems_->pop(&(this->cursor_), [&item](void* p) {
+        return elems_->pop(this, &(this->cursor_), [&item](void* p) {
             ::new (&item) T(std::move(*static_cast<T*>(p)));
         });
     }

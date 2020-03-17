@@ -57,6 +57,10 @@ public:
             ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
             return false;
         }
+        if ((eno = ::pthread_mutexattr_setrobust(&mutex_attr, PTHREAD_MUTEX_ROBUST)) != 0) {
+            ipc::error("fail pthread_mutexattr_setrobust[%d]\n", eno);
+            return false;
+        }
         if ((eno = ::pthread_mutex_init(&mutex_, &mutex_attr)) != 0) {
             ipc::error("fail pthread_mutex_init[%d]\n", eno);
             return false;
@@ -69,7 +73,27 @@ public:
     }
 
     bool lock() {
-        IPC_PTHREAD_FUNC_(pthread_mutex_lock, &mutex_);
+        for (;;) {
+            int eno = ::pthread_mutex_lock(&mutex_);
+            switch (eno) {
+            case 0:
+                return true;
+            case EOWNERDEAD:
+                if (::pthread_mutex_consistent(&mutex_) == 0) {
+                    ::pthread_mutex_unlock(&mutex_);
+                    break;
+                }
+                IPC_FALLTHROUGH_;
+            case ENOTRECOVERABLE:
+                if (close() && open()) {
+                    break;
+                }
+                IPC_FALLTHROUGH_;
+            default:
+                ipc::error("fail pthread_mutex_lock[%d]\n", eno);
+                return false;
+            }
+        }
     }
 
     bool unlock() {

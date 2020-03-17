@@ -437,7 +437,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size) {
         return [info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(info->cc_id_, msg_id, remain, data, size);
-                }, que->dis_flag() ? 0 : static_cast<std::size_t>(default_timeout))) {
+                }, default_timeout)) {
                 ipc::log("force_push: msg_id = %zd, remain = %d, size = %zd\n", msg_id, remain, size);
                 if (!que->force_push([](void* p) {
                     auto tmp_msg = static_cast<typename queue_t::value_t*>(p);

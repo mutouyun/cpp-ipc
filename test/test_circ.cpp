@@ -116,25 +116,32 @@ struct quit_mode<pc_t<Rp, Rc, ipc::trans::broadcast>> {
 template <std::size_t D, typename P>
 struct test_cq<ea_t<D, P>> {
     using ca_t = ea_t<D, P>;
-    using cn_t = decltype(std::declval<ca_t>().cursor());
+    using cn_t = decltype(std::declval<ca_t>().connect());
 
     typename quit_mode<P>::type quit_ = false;
     ca_t* ca_;
+    cn_t  cc_id_;
 
     test_cq(ca_t* ca) : ca_(ca) {}
 
     cn_t connect() {
-        auto cur = ca_->cursor();
-        ca_->connect();
-        return cur;
+        return cc_id_ = ca_->connect();
     }
 
-    void disconnect(cn_t) {
-        ca_->disconnect();
+    void disconnect(cn_t cc_id) {
+        ca_->disconnect(cc_id);
     }
 
-    void disconnect(ca_t*) {
+    void disconnect(ca_t* ca) {
+        ca->disconnect(cc_id_);
     }
+
+    cn_t connected_id() const noexcept {
+        return cc_id_;
+    }
+
+    constexpr ca_t       * elems()       noexcept { return ca_; }
+    constexpr ca_t const * elems() const noexcept { return ca_; }
 
     void wait_start(int M) {
         while (ca_->conn_count() != static_cast<std::size_t>(M)) {
@@ -146,7 +153,7 @@ struct test_cq<ea_t<D, P>> {
     void recv(cn_t cur, F&& proc) {
         while (1) {
             msg_t msg;
-            while (ca_->pop(&cur, [&msg](void* p) {
+            while (ca_->pop(this, &cur, [&msg](void* p) {
                 msg = *static_cast<msg_t*>(p);
             })) {
                 if (msg.pid_ < 0) {
@@ -165,7 +172,7 @@ struct test_cq<ea_t<D, P>> {
     }
 
     void send(ca_t* ca, msg_t const & msg) {
-        while (!ca->push([&msg](void* p) {
+        while (!ca->push(this, [&msg](void* p) {
             (*static_cast<msg_t*>(p)) = msg;
         })) {
             std::this_thread::yield();

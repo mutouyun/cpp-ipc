@@ -23,10 +23,10 @@ int main() {
     std::string buf, id = id__ + std::to_string(calc_unique_id());
     std::regex  reg { "(c\\d+)> (.*)" };
 
-    ipc::channel cc { name__ };
+    ipc::channel cc { name__, ipc::sender };
 
     std::thread r {[&id, &reg] {
-        ipc::channel cc { name__ };
+        ipc::channel cc { name__, ipc::receiver };
         std::cout << id << " is ready." << std::endl;
         while (1) {
             auto buf = cc.recv();
@@ -46,8 +46,9 @@ int main() {
         }
     }};
 
-    while (1) {
+    for (/*int i = 1*/;; /*++i*/) {
         std::cin >> buf;
+//        std::cout << "[" << i << "]" << std::endl;
         cc.send(id + "> " + buf);
         if (buf == quit__) break;
     }
