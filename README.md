@@ -9,7 +9,7 @@ A high-performance inter-process communication using shared memory on Linux/Wind
  * 除STL外，无其他依赖
  * 无锁（lock-free）或轻量级spin-lock
  * 底层数据结构为循环数组（circular array）
- * `ipc::route`支持单写多读，`ipc::channel`支持多写多读
+ * `ipc::route`支持单写多读，`ipc::channel`支持多写多读【**注意：目前同一条通道最多支持32个receiver，sender无限制**】
  * 默认采用广播模式收发数据，支持用户任意选择读写方案
  * 不会长时间忙等（重试一定次数后会使用信号量进行等待），支持超时
  
