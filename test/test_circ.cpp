@@ -140,8 +140,8 @@ struct test_cq<ea_t<D, P>> {
         return cc_id_;
     }
 
-    constexpr ca_t       * elems()       noexcept { return ca_; }
-    constexpr ca_t const * elems() const noexcept { return ca_; }
+    ca_t       * elems()       noexcept { return ca_; }
+    ca_t const * elems() const noexcept { return ca_; }
 
     void wait_start(int M) {
         while (ca_->conn_count() != static_cast<std::size_t>(M)) {
