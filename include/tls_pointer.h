@@ -29,19 +29,17 @@ IPC_EXPORT void* get(key_t key);
 /*
  * <Remarks>
  *
- * 1. In Windows, if you do not compile thread_local_ptr.cpp,
- *    use thread_local_ptr will cause memory leaks.
- *
- * 2. You need to set the thread_local_ptr's storage manually:
- *    ```
- *        tls::pointer<int> p;
- *        if (!p) p = new int(123);
- *    ```
- *    Just like an ordinary pointer. Or you could just call create:
- *    ```
- *        tls::pointer<int> p;
- *        p.create(123);
- *    ```
+ * You need to set the ipc::tls::pointer's storage manually:
+ * ```
+ *     tls::pointer<int> p;
+ *     if (!p) p = new int(123);
+ * ```
+ * It would be like an ordinary pointer.
+ * Or you could just call create to 'new' this pointer automatically.
+ * ```
+ *     tls::pointer<int> p;
+ *     p.create(123);
+ * ```
 */
 
 template <typename T>
