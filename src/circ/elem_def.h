@@ -45,11 +45,11 @@ public:
 
     cc_t connect() noexcept {
         for (unsigned k = 0;;) {
-            cc_t cur = cc_.load(std::memory_order_acquire);
-            cc_t next = cur | (cur + 1); // find the first 0, and set it to 1.
+            cc_t curr = cc_.load(std::memory_order_acquire);
+            cc_t next = curr | (curr + 1); // find the first 0, and set it to 1.
             if (next == 0) return 0;
-            if (cc_.compare_exchange_weak(cur, next, std::memory_order_release)) {
-                return next ^ cur; // return connected id
+            if (cc_.compare_exchange_weak(curr, next, std::memory_order_release)) {
+                return next ^ curr; // return connected id
             }
             ipc::yield(k);
         }

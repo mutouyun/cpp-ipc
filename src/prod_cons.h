@@ -222,7 +222,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
             // check all consumers have finished reading this element
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             if (cc & cur_rc) {
-                ipc::log("force_push: k = %d, cc = %d, rem_cc = %d\n", k, cc, cur_rc);
+                ipc::log("force_push: k = %u, cc = %u, rem_cc = %u\n", k, cc, cur_rc);
                 cc = wrapper->elems()->disconnect(cur_rc); // disconnect all remained readers
                 if (cc == 0) return false; // no reader
             }
@@ -292,12 +292,15 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
             el = elems + circ::index_of(cur_ct = ct_.load(std::memory_order_relaxed));
             // check all consumers have finished reading this element
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
-            if (cc & (cur_rc & rc_mask)) {
+            circ::cc_t rem_cc = cur_rc & rc_mask;
+            if (cc & rem_cc) {
                 return false; // has not finished yet
             }
-            auto cur_fl = el->f_ct_.load(std::memory_order_acquire);
-            if ((cur_fl != cur_ct) && cur_fl) {
-                return false; // full
+            else if (!rem_cc) {
+                auto cur_fl = el->f_ct_.load(std::memory_order_acquire);
+                if ((cur_fl != cur_ct) && cur_fl) {
+                    return false; // full
+                }
             }
             // (cur_rc & rc_mask) should be 0 here
             if (el->rc_.compare_exchange_weak(
@@ -326,7 +329,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::broadcast>> {
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             circ::cc_t rem_cc = cur_rc & rc_mask;
             if (cc & rem_cc) {
-                ipc::log("force_push: k = %d, cc = %d, rem_cc = %d\n", k, cc, rem_cc);
+                ipc::log("force_push: k = %u, cc = %u, rem_cc = %u\n", k, cc, rem_cc);
                 cc = wrapper->elems()->disconnect(rem_cc); // disconnect all remained readers
                 if (cc == 0) return false; // no reader
             }
