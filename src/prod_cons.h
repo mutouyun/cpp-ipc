@@ -45,8 +45,22 @@ struct prod_cons_impl<wr<relat::single, relat::single, trans::unicast>> {
     }
 
     template <typename W, typename F, typename E>
-    bool force_push(W* wrapper, F&& f, E* elems) {
-        return push(wrapper, std::forward<F>(f), elems);
+    bool force_push(W* /*wrapper*/, F&& f, E* elems) {
+        auto cur_wt = circ::index_of(wt_.load(std::memory_order_relaxed));
+        for (unsigned k = 0;;) {
+            auto cur_rd = rd_.load(std::memory_order_acquire);
+            if (cur_wt != circ::index_of(cur_rd - 1)) {
+                break;
+            }
+            // full
+            if (rd_.compare_exchange_weak(cur_rd, cur_rd + 1, std::memory_order_acq_rel)) {
+                break;
+            }
+            ipc::yield(k);
+        }
+        std::forward<F>(f)(&(elems[cur_wt].data_));
+        wt_.fetch_add(1, std::memory_order_release);
+        return true;
     }
 
     template <typename W, typename F, typename E>
@@ -107,7 +121,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
                 circ::index_of(rd_.load(std::memory_order_acquire))) {
                 return false; // full
             }
-            if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_release)) {
+            if (ct_.compare_exchange_weak(cur_ct, nxt_ct, std::memory_order_acq_rel)) {
                 break;
             }
             ipc::yield(k);
@@ -118,7 +132,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
         el->f_ct_.store(~static_cast<flag_t>(cur_ct), std::memory_order_release);
         while (1) {
             auto cac_ct = el->f_ct_.load(std::memory_order_acquire);
-            if (cur_ct != wt_.load(std::memory_order_acquire)) {
+            if (cur_ct != wt_.load(std::memory_order_relaxed)) {
                 return true;
             }
             if ((~cac_ct) != cur_ct) {
