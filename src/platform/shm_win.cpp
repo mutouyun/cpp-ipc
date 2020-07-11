@@ -10,6 +10,7 @@
 #include "pool_alloc.h"
 
 #include "platform/to_tchar.h"
+#include "platform/get_sa.h"
 #include "memory/resource.h"
 
 namespace {
@@ -38,7 +39,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     }
     // Creates or opens a named file mapping object for a specified file.
     else {
-        h = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_COMMIT,
+        h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
                                 0, static_cast<DWORD>(size), fmt_name.c_str());
         // If the object exists before the function call, the function returns a handle to the existing object 
         // (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.

@@ -11,6 +11,7 @@
 #include "shm.h"
 
 #include "platform/to_tchar.h"
+#include "platform/get_sa.h"
 #include "platform/detail.h"
 #include "memory/resource.h"
 
@@ -24,7 +25,7 @@ public:
     static void remove(char const * /*name*/) {}
 
     bool open(ipc::string && name, long count = 0, long limit = LONG_MAX) {
-        h_ = ::CreateSemaphore(NULL, count, limit, ipc::detail::to_tchar(std::move(name)).c_str());
+        h_ = ::CreateSemaphore(detail::get_sa(), count, limit, ipc::detail::to_tchar(std::move(name)).c_str());
         if (h_ == NULL) {
             ipc::error("fail CreateSemaphore[%lu]: %s\n", ::GetLastError(), name.c_str());
             return false;

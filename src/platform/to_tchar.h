@@ -13,7 +13,8 @@
 #include "platform/detail.h"
 #include "memory/resource.h"
 
-namespace ipc::detail {
+namespace ipc {
+namespace detail {
 
 struct has_value_type_ {
     template <typename T> static std::true_type  check(typename T::value_type *);
@@ -64,4 +65,5 @@ inline auto to_tchar(T* dst, char const * src, std::size_t size) -> IsSameChar<T
     std::memcpy(dst, wstr.data(), (ipc::detail::min)(wstr.size(), size));
 }
 
-} // namespace ipc::detail
+} // namespace detail
+} // namespace ipc
