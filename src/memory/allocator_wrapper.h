@@ -20,7 +20,7 @@ struct rebind {
     using alloc_t = AllocP;
 };
 
-template <template <typename U> class AllocT, typename T>
+template <typename T, template <typename> class AllocT>
 struct rebind<T, AllocT<T>> {
     template <typename U>
     using alloc_t = AllocT<U>;
@@ -65,7 +65,9 @@ public:
 public:
     // the other type of std_allocator
     template <typename U>
-    struct rebind { typedef allocator_wrapper< U, typename detail::rebind<T, AllocP>::template alloc_t<U> > other; };
+    struct rebind { 
+        using other = allocator_wrapper< U, typename detail::rebind<T, AllocP>::template alloc_t<U> >;
+    };
 
     constexpr size_type max_size(void) const noexcept {
         return (std::numeric_limits<size_type>::max)() / sizeof(value_type);

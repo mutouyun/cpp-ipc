@@ -2,7 +2,7 @@
 
 #include <tuple>
 #include <thread>
-#include <set>          // std::set
+#include <deque>        // std::deque
 #include <functional>   // std::function
 #include <utility>      // std::forward
 #include <cstddef>
@@ -40,16 +40,7 @@ public:
     using alloc_policy = AllocP;
 
 protected:
-    template <typename T>
-    struct fixed_alloc_t : public fixed_alloc<sizeof(T)> {};
-
-    template <typename T>
-    using allocator = ipc::mem::allocator_wrapper<T, fixed_alloc_t<T>>;
-
-    std::multiset<alloc_policy, std::less<alloc_policy>, 
-                  allocator<alloc_policy>
-    > master_allocs_;
-
+    std::deque<alloc_policy> master_allocs_;
     ipc::spin_lock master_lock_;
 
     template <typename F>
@@ -60,11 +51,6 @@ protected:
     }
 
 public:
-    void swap(limited_recycler & rhs) {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
-        master_allocs_.swap(rhs.master_allocs_);
-    }
-
     void try_recover(alloc_policy & alc) {
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
         if (master_allocs_.empty()) return;
@@ -76,7 +62,7 @@ public:
         if (master_allocs_.size() >= 32) {
             take_first_do([](alloc_policy &) {}); // erase first
         }
-        master_allocs_.emplace(std::move(alc));
+        master_allocs_.emplace_back(std::move(alc));
     }
 
     IPC_CONSTEXPR_ auto try_replenish(alloc_policy&, std::size_t) noexcept {}
@@ -131,7 +117,6 @@ class empty_recycler {
 public:
     using alloc_policy = AllocP;
 
-    IPC_CONSTEXPR_ void swap(empty_recycler&)                     noexcept {}
     IPC_CONSTEXPR_ void try_recover(alloc_policy&)                noexcept {}
     IPC_CONSTEXPR_ auto try_replenish(alloc_policy&, std::size_t) noexcept {}
     IPC_CONSTEXPR_ void collect(alloc_policy&&)                   noexcept {}
