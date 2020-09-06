@@ -16,15 +16,15 @@ TEST(SHM, acquire) {
 
     EXPECT_TRUE(shm_hd__.acquire("my-test-1", 1024));
     EXPECT_TRUE(shm_hd__.valid());
-    EXPECT_EQ(shm_hd__.name(), "my-test-1");
+    EXPECT_STREQ(shm_hd__.name(), "my-test-1");
 
     EXPECT_TRUE(shm_hd__.acquire("my-test-2", 2048));
     EXPECT_TRUE(shm_hd__.valid());
-    EXPECT_EQ(shm_hd__.name(), "my-test-2");
+    EXPECT_STREQ(shm_hd__.name(), "my-test-2");
 
     EXPECT_TRUE(shm_hd__.acquire("my-test-3", 4096));
     EXPECT_TRUE(shm_hd__.valid());
-    EXPECT_EQ(shm_hd__.name(), "my-test-3");
+    EXPECT_STREQ(shm_hd__.name(), "my-test-3");
 }
 
 TEST(SHM, release) {
@@ -54,7 +54,7 @@ TEST(SHM, hello) {
 
     constexpr char hello[] = "hello!";
     std::memcpy(mem, hello, sizeof(hello));
-    EXPECT_EQ((char*)shm_hd__.get(), hello);
+    EXPECT_STREQ((char const *)shm_hd__.get(), hello);
 
     shm_hd__.release();
     EXPECT_TRUE(shm_hd__.get() == nullptr);
@@ -66,7 +66,7 @@ TEST(SHM, hello) {
     EXPECT_TRUE(memcmp(mem, buf, sizeof(buf)) == 0);
 
     std::memcpy(mem, hello, sizeof(hello));
-    EXPECT_EQ((char*)shm_hd__.get(), hello);
+    EXPECT_STREQ((char const *)shm_hd__.get(), hello);
 }
 
 TEST(SHM, mt) {
@@ -77,7 +77,7 @@ TEST(SHM, mt) {
             shm_hd__.release();
 
             constexpr char hello[] = "hello!";
-            EXPECT_EQ((char*)shm_mt.get(), hello);
+            EXPECT_STREQ((char const *)shm_mt.get(), hello);
         }
     }.join();
     EXPECT_TRUE(shm_hd__.get() == nullptr);
