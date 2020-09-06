@@ -11,7 +11,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 
 set(LIBRARY_OUTPUT_PATH    ${CMAKE_BINARY_DIR}/bin)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
-set(gtest_force_shared_crt 1)
+set(gtest_force_shared_crt ON)
 
 add_subdirectory(src)
 add_subdirectory(3rdparty/gtest)
