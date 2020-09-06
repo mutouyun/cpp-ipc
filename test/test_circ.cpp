@@ -64,10 +64,10 @@ struct test_verify<ea_t<D, P>> {
                 //    std::cout << d << " ";
                 //}
                 //std::cout << std::endl;
-                QCOMPARE(vec.size(), static_cast<std::size_t>(Loops));
+                EXPECT_EQ(vec.size(), static_cast<std::size_t>(Loops));
                 int i = 0;
                 for (int d : vec) {
-                    QCOMPARE(i, d);
+                    EXPECT_EQ(i, d);
                     ++i;
                 }
             }
@@ -90,8 +90,8 @@ struct test_verify<pc_t<Rp, ipc::relat::multi, ipc::trans::unicast>> : test_veri
                     sum += d;
                 }
             }
-            QCOMPARE(datas.size(), static_cast<std::size_t>(Loops));
-            QCOMPARE(sum, (Loops * std::uint64_t(Loops - 1)) / 2);
+            EXPECT_EQ(datas.size(), static_cast<std::size_t>(Loops));
+            EXPECT_EQ(sum, (Loops * std::uint64_t(Loops - 1)) / 2);
         }
     }
 };
@@ -191,7 +191,7 @@ struct test_cq<ipc::queue<T...>> {
 
     cn_t* connect() {
         cn_t* queue = new cn_t { "test-ipc-queue" };
-        [&] { QVERIFY(queue->connect()); } ();
+        [&] { EXPECT_TRUE(queue->connect()); } ();
         return queue;
     }
 
@@ -232,44 +232,21 @@ struct test_cq<ipc::queue<T...>> {
 
 namespace {
 
-class Unit : public TestSuite {
-    Q_OBJECT
-
-    const char* name() const {
-        return "test_circ";
-    }
-
-private slots:
-    void initTestCase();
-    void test_inst();
-    void test_prod_cons_1v1();
-    void test_prod_cons_1v3();
-    void test_prod_cons_performance();
-    void test_queue();
-//};
-} unit__;
-
-#include "test_circ.moc"
-
 constexpr int LoopCount = 1000000;
 //constexpr int LoopCount = 1000/*0000*/;
 
-void Unit::initTestCase() {
-    TestSuite::initTestCase();
-}
-
-void Unit::test_inst() {
-    std::cout << "cq_t::head_size  = " << cq_t::head_size  << std::endl;
-    std::cout << "cq_t::data_size  = " << cq_t::data_size  << std::endl;
-    std::cout << "cq_t::elem_size  = " << cq_t::elem_size  << std::endl;
+TEST(Circ, init) {
+    std::cout << "cq_t::head_size  = " << cq_t::head_size << std::endl;
+    std::cout << "cq_t::data_size  = " << cq_t::data_size << std::endl;
+    std::cout << "cq_t::elem_size  = " << cq_t::elem_size << std::endl;
     std::cout << "cq_t::block_size = " << cq_t::block_size << std::endl;
 
-    QCOMPARE(static_cast<std::size_t>(cq_t::data_size), sizeof(msg_t));
+    EXPECT_EQ(static_cast<std::size_t>(cq_t::data_size), sizeof(msg_t));
 
     std::cout << "sizeof(ea_t<sizeof(msg_t)>) = " << sizeof(cq_t) << std::endl;
 }
 
-void Unit::test_prod_cons_1v1() {
+TEST(Circ, prod_cons_1v1) {
     ea_t<
         sizeof(msg_t),
         pc_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast>
@@ -307,7 +284,7 @@ void Unit::test_prod_cons_1v1() {
     benchmark_prod_cons<2, 1, LoopCount, void>(&el_arr_mmb);
 }
 
-void Unit::test_prod_cons_1v3() {
+TEST(Circ, prod_cons_1v3) {
     ea_t<
         sizeof(msg_t),
         pc_t<ipc::relat::single, ipc::relat::multi, ipc::trans::unicast>
@@ -337,7 +314,7 @@ void Unit::test_prod_cons_1v3() {
     benchmark_prod_cons<1, 3, LoopCount, void>(&el_arr_mmb);
 }
 
-void Unit::test_prod_cons_performance() {
+TEST(Circ, prod_cons_performance) {
     ea_t<
         sizeof(msg_t),
         pc_t<ipc::relat::single, ipc::relat::multi, ipc::trans::unicast>
@@ -387,18 +364,18 @@ void Unit::test_prod_cons_performance() {
     });
 }
 
-void Unit::test_queue() {
+TEST(Circ, queue) {
     using queue_t = ipc::queue<msg_t, ipc::policy::choose<
             ipc::circ::elem_array,
             ipc::wr<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast>
     >>;
     queue_t queue;
 
-    QVERIFY(!queue.push(msg_t { 1, 2 }));
+    EXPECT_TRUE(!queue.push(msg_t { 1, 2 }));
     msg_t msg {};
-    QVERIFY(!queue.pop(msg));
-    QCOMPARE(msg, (msg_t {}));
-    QVERIFY(sizeof(decltype(queue)::elems_t) <= sizeof(cq_t));
+    EXPECT_TRUE(!queue.pop(msg));
+    EXPECT_EQ(msg, (msg_t {}));
+    EXPECT_TRUE(sizeof(decltype(queue)::elems_t) <= sizeof(cq_t));
 
     ipc::detail::static_for<16>([](auto index) {
         benchmark_prod_cons<1, decltype(index)::value + 1, LoopCount>((queue_t*)nullptr);

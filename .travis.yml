@@ -8,31 +8,22 @@ addons:
       - ubuntu-toolchain-r-test
     packages:
       - g++-8
-      - qtbase5-dev
 
 matrix:
   include:
     - compiler: gcc
       env:
-        - MATRIX_EVAL="USING_CMAKE=0 CC=gcc-8 && CXX=g++-8"
+        - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
     - compiler: clang
-    - compiler: clang
-      env:
-        - MATRIX_EVAL="USING_CMAKE=1"
 
 before_install:
   - eval "${MATRIX_EVAL}"
-  - qmake -v
 
 script:
-  - cd ./build
-  - if [ $USING_CMAKE -eq 1 ]; then
-      cmake -DCMAKE_BUILD_TYPE=Release CMakeLists.txt;
-    else
-      qmake -o Makefile cpp-ipc.pro QMAKE_CC=$CC QMAKE_CXX=$CXX QMAKE_LINK=$CXX QMAKE_CXXFLAGS+=-std=gnu++1z;
-    fi
-  - make -j`getconf _NPROCESSORS_ONLN`
-  - export LD_LIBRARY_PATH=../output:$LD_LIBRARY_PATH && ../output/test-ipc
+  - mkdir -p ./build && cd ./build
+  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - make -j`nproc`
+  - export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH && ./bin/test-ipc
 
 notifications:
   slack:

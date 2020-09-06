@@ -1,7 +1,5 @@
 #pragma once
 
-#include <QtTest>
-
 #include <iostream>
 #include <atomic>
 #include <thread>
@@ -14,22 +12,10 @@
 #   include <cxxabi.h>  // abi::__cxa_demangle
 #endif/*__GNUC__*/
 
+#include "gtest/gtest.h"
+
 #include "capo/stopwatch.hpp"
 #include "capo/spin_lock.hpp"
-
-class TestSuite : public QObject
-{
-    Q_OBJECT
-
-public:
-    explicit TestSuite();
-
-protected:
-    virtual const char* name() const;
-
-protected slots:
-    virtual void initTestCase();
-};
 
 struct test_stopwatch {
     capo::stopwatch<> sw_;

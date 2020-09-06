@@ -15,24 +15,6 @@
 
 namespace {
 
-class Unit : public TestSuite {
-    Q_OBJECT
-
-    const char* name() const {
-        return "test_mem";
-    }
-
-private slots:
-    void initTestCase();
-
-    void test_static_alloc();
-    void test_pool_alloc();
-    void test_tc_alloc();
-};
-// } unit__;
-
-#include "test_mem.moc"
-
 constexpr int DataMin   = 4;
 constexpr int DataMax   = 256;
 constexpr int LoopCount = 4194304;
@@ -100,14 +82,14 @@ struct alloc_random : alloc_ix_t<alloc_random<N>> {
     }
 };
 
-void Unit::initTestCase() {
-    TestSuite::initTestCase();
-
-    capo::random<> rdm { DataMin, DataMax };
-    for (int i = 0; i < LoopCount; ++i) {
-        sizes__.emplace_back(static_cast<std::size_t>(rdm()));
+struct Init {
+    Init() {
+        capo::random<> rdm{ DataMin, DataMax };
+        for (int i = 0; i < LoopCount; ++i) {
+            sizes__.emplace_back(static_cast<std::size_t>(rdm()));
+        }
     }
-}
+} init__;
 
 template <typename AllocT, int ThreadsN>
 void benchmark_alloc() {
@@ -234,14 +216,14 @@ struct test_performance<AllocT, dummy, 1> {
 //    }
 // };
 
-void Unit::test_static_alloc() {
+TEST(Memory, static_alloc) {
     // test_performance<ipc::mem::static_alloc, dummy       , 128>::start();
     // test_performance<ipc::mem::static_alloc, alloc_FIFO  , 128>::start();
     // test_performance<ipc::mem::static_alloc, alloc_LIFO  , 128>::start();
     // test_performance<ipc::mem::static_alloc, alloc_random, 128>::start();
 }
 
-void Unit::test_pool_alloc() {
+TEST(Memory, pool_alloc) {
     test_performance<ipc::mem::async_pool_alloc, dummy       , 128>::start();
     test_performance<ipc::mem::async_pool_alloc, alloc_FIFO  , 128>::start();
 
@@ -251,7 +233,7 @@ void Unit::test_pool_alloc() {
     test_performance<ipc::mem::async_pool_alloc, alloc_random, 128>::start();
 }
 
-void Unit::test_tc_alloc() {
+TEST(Memory, tc_alloc) {
     // test_performance<tc_alloc, dummy       , 128>::start();
     // test_performance<tc_alloc, alloc_FIFO  , 128>::start();
     // test_performance<tc_alloc, alloc_LIFO  , 128>::start();

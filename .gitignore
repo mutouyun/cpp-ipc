@@ -43,4 +43,4 @@ target_wrapper.*
 CMakeLists.txt.user*
 
 # My output files
-output
+build

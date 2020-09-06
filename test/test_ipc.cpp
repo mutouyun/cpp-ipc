@@ -51,10 +51,10 @@ struct test_verify {
     void verify(int /*N*/, int /*Loops*/) {
         std::cout << "verifying..." << std::endl;
         for (auto& c_dats : list_) {
-            QCOMPARE(datas__.size(), c_dats.size());
+            EXPECT_EQ(datas__.size(), c_dats.size());
             std::size_t i = 0;
             for (auto& d : c_dats) {
-                QCOMPARE(datas__[i++], d);
+                EXPECT_EQ(datas__[i++], d);
             }
         }
     }
@@ -87,7 +87,7 @@ struct test_cq<ipc::route> {
         do {
             auto msg = cn.recv();
             if (msg.size() < 2) {
-                QCOMPARE(msg, ipc::buff_t('\0'));
+                EXPECT_EQ(msg, ipc::buff_t('\0'));
                 return;
             }
             proc(std::move(msg));
@@ -101,9 +101,9 @@ struct test_cq<ipc::route> {
     void send(cn_t& cn, const std::array<int, 2>& info) {
         int n = info[1];
         if (n < 0) {
-            /*QVERIFY*/(cn.send(ipc::buff_t('\0')));
+            /*EXPECT_TRUE*/(cn.send(ipc::buff_t('\0')));
         }
-        else /*QVERIFY*/(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
+        else /*EXPECT_TRUE*/(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
     }
 };
 
@@ -133,7 +133,7 @@ struct test_cq<ipc::channel> {
         do {
             auto msg = cn.recv();
             if (msg.size() < 2) {
-                QCOMPARE(msg, ipc::buff_t('\0'));
+                EXPECT_EQ(msg, ipc::buff_t('\0'));
                 return;
             }
             proc(std::move(msg));
@@ -153,64 +153,37 @@ struct test_cq<ipc::channel> {
         } _(cn, m_);
         int n = info[1];
         if (n < 0) {
-            /*QVERIFY*/(cn.send(ipc::buff_t('\0')));
+            /*EXPECT_TRUE*/(cn.send(ipc::buff_t('\0')));
         }
-        else /*QVERIFY*/(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
+        else /*EXPECT_TRUE*/(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
     }
 };
 
 namespace {
 
-class Unit : public TestSuite {
-    Q_OBJECT
+struct Init {
+    Init() {
+        capo::random<> rdm { DataMin, DataMax };
+        capo::random<> bit { 0, (std::numeric_limits<ipc::byte_t>::max)() };
 
-    const char* name() const {
-        return "test_ipc";
-    }
-
-private slots:
-    void initTestCase();
-    void cleanupTestCase();
-
-    void test_rw_lock();
-    void test_route();
-    void test_route_rtt();
-    void test_route_performance();
-    void test_channel();
-    void test_channel_rtt();
-    void test_channel_performance();
-// };
-} unit__;
-
-#include "test_ipc.moc"
-
-void Unit::initTestCase() {
-    TestSuite::initTestCase();
-
-    capo::random<> rdm { DataMin, DataMax };
-    capo::random<> bit { 0, (std::numeric_limits<ipc::byte_t>::max)() };
-
-    for (int i = 0; i < LoopCount; ++i) {
-        std::size_t n = static_cast<std::size_t>(rdm());
-        ipc::buff_t buff {
-            new ipc::byte_t[n], n,
-            [](void* p, std::size_t) {
-                delete [] static_cast<ipc::byte_t*>(p);
+        for (int i = 0; i < LoopCount; ++i) {
+            std::size_t n = static_cast<std::size_t>(rdm());
+            ipc::buff_t buff {
+                new ipc::byte_t[n], n,
+                [](void* p, std::size_t) {
+                    delete [] static_cast<ipc::byte_t*>(p);
+                }
+            };
+            for (std::size_t k = 0; k < buff.size(); ++k) {
+                static_cast<ipc::byte_t*>(buff.data())[k] = static_cast<ipc::byte_t>(bit());
             }
-        };
-        for (std::size_t k = 0; k < buff.size(); ++k) {
-            static_cast<ipc::byte_t*>(buff.data())[k] = static_cast<ipc::byte_t>(bit());
+            datas__.emplace_back(std::move(buff));
         }
-        datas__.emplace_back(std::move(buff));
     }
-}
-
-void Unit::cleanupTestCase() {
-    datas__.clear();
-}
+} init__;
 
 template <typename T>
-constexpr T acc(T b, T e) {
+constexpr T acc(T b, T e) noexcept {
     return (e + b) * (e - b + 1) / 2;
 }
 
@@ -241,7 +214,7 @@ void benchmark_lc() {
                 int x = -1;
                 {
                     std::shared_lock<Lc> guard { lc };
-//                    QVERIFY(!wf);
+//                    EXPECT_TRUE(!wf);
                     if (cnt < datas.size()) {
                         x = datas[cnt];
                     }
@@ -259,7 +232,7 @@ void benchmark_lc() {
             }
             std::uint64_t sum = 0;
             for (int i : seq) sum += static_cast<std::uint64_t>(i);
-            QCOMPARE(sum, acc<std::uint64_t>(1, Loops) * W);
+            EXPECT_EQ(sum, acc<std::uint64_t>(1, Loops) * W);
         });
     }
 
@@ -300,7 +273,7 @@ void test_lock_performance() {
     benchmark_lc<std::shared_timed_mutex    , W, R>();
 }
 
-void Unit::test_rw_lock() {
+TEST(IPC, rw_lock) {
 //    test_lock_performance<1, 1>();
 //    test_lock_performance<4, 4>();
 //    test_lock_performance<1, 8>();
@@ -312,7 +285,7 @@ void test_prod_cons() {
     benchmark_prod_cons<N, M, Loops, std::conditional_t<V, T, void>>((T*)nullptr);
 }
 
-void Unit::test_route() {
+TEST(IPC, route) {
     // return;
     std::vector<char const *> const datas = {
         "hello!",
@@ -330,8 +303,8 @@ void Unit::test_route() {
         for (std::size_t i = 0; i < datas.size(); ++i) {
             ipc::buff_t dd = cc.recv();
             std::cout << "recv: " << (char*)dd.data() << std::endl;
-            QCOMPARE(dd.size(), std::strlen(datas[i]) + 1);
-            QVERIFY(std::memcmp(dd.data(), datas[i], dd.size()) == 0);
+            EXPECT_EQ(dd.size(), std::strlen(datas[i]) + 1);
+            EXPECT_TRUE(std::memcmp(dd.data(), datas[i], dd.size()) == 0);
         }
     }};
 
@@ -342,7 +315,7 @@ void Unit::test_route() {
         }
         for (std::size_t i = 0; i < datas.size(); ++i) {
             std::cout << "sending: " << datas[i] << std::endl;
-            QVERIFY(cc.send(datas[i]));
+            EXPECT_TRUE(cc.send(datas[i]));
         }
     }};
 
@@ -352,7 +325,7 @@ void Unit::test_route() {
     test_prod_cons<ipc::route, 1, 1>(); // test & verify
 }
 
-void Unit::test_route_rtt() {
+TEST(IPC, route_rtt) {
     // return;
     test_stopwatch sw;
 
@@ -381,7 +354,7 @@ void Unit::test_route_rtt() {
             //std::cout << "sent: " << i << "-[" << datas__[i].size() << "]" << std::endl;
             /*auto dd = */cr.recv();
 //            if (dd.size() != 1 || dd[0] != 'a') {
-//                QVERIFY(false);
+//                EXPECT_TRUE(false);
 //            }
         }
         cc.send(ipc::buff_t('\0'));
@@ -392,7 +365,7 @@ void Unit::test_route_rtt() {
     t2.join();
 }
 
-void Unit::test_route_performance() {
+TEST(IPC, route_performance) {
     // return;
     ipc::detail::static_for<8>([](auto index) {
         test_prod_cons<ipc::route, 1, decltype(index)::value + 1, false>();
@@ -400,7 +373,7 @@ void Unit::test_route_performance() {
     // test_prod_cons<ipc::route, 1, 8>(); // test & verify
 }
 
-void Unit::test_channel() {
+TEST(IPC, channel) {
     // return;
     int fail_v = 0;
 
@@ -436,10 +409,10 @@ void Unit::test_channel() {
 
     t2.join();
 
-    QCOMPARE(fail_v, 0);
+    EXPECT_EQ(fail_v, 0);
 }
 
-void Unit::test_channel_rtt() {
+TEST(IPC, channel_rtt) {
     // return;
     test_stopwatch sw;
 
@@ -471,7 +444,7 @@ void Unit::test_channel_rtt() {
             /*auto dd = */cc.recv();
             //if (dd.size() != 1 || dd.data<char>()[0] != 'a') {
             //    std::cout << "recv ack fail: " << i << "-[" << dd.size() << "]" << std::endl;
-            //    QVERIFY(false);
+            //    EXPECT_TRUE(false);
             //}
         }
         cc.send(ipc::buff_t('\0'));
@@ -482,7 +455,7 @@ void Unit::test_channel_rtt() {
     t2.join();
 }
 
-void Unit::test_channel_performance() {
+TEST(IPC, channel_performance) {
     // return;
     ipc::detail::static_for<8>([](auto index) {
         test_prod_cons<ipc::channel, 1, decltype(index)::value + 1, false>();
