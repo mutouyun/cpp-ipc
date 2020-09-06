@@ -224,13 +224,13 @@ TEST(Memory, static_alloc) {
 }
 
 TEST(Memory, pool_alloc) {
-    test_performance<ipc::mem::async_pool_alloc, dummy       , 128>::start();
-    test_performance<ipc::mem::async_pool_alloc, alloc_FIFO  , 128>::start();
+    //test_performance<ipc::mem::async_pool_alloc, dummy       , 128>::start();
+    //test_performance<ipc::mem::async_pool_alloc, alloc_FIFO  , 128>::start();
 
-    test_performance<ipc::mem::async_pool_alloc, dummy       , 128>::start();
-    test_performance<ipc::mem::async_pool_alloc, alloc_FIFO  , 128>::start();
-    test_performance<ipc::mem::async_pool_alloc, alloc_LIFO  , 128>::start();
-    test_performance<ipc::mem::async_pool_alloc, alloc_random, 128>::start();
+    //test_performance<ipc::mem::async_pool_alloc, dummy       , 128>::start();
+    //test_performance<ipc::mem::async_pool_alloc, alloc_FIFO  , 128>::start();
+    //test_performance<ipc::mem::async_pool_alloc, alloc_LIFO  , 128>::start();
+    //test_performance<ipc::mem::async_pool_alloc, alloc_random, 128>::start();
 }
 
 TEST(Memory, tc_alloc) {
