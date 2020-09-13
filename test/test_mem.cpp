@@ -19,7 +19,7 @@ namespace {
 constexpr int DataMin   = 4;
 constexpr int DataMax   = 256;
 constexpr int LoopCount = 8388608;
-constexpr int ThreadMax = 16;
+constexpr int ThreadMax = 8;
 
 // constexpr int DataMin   = 256;
 // constexpr int DataMax   = 512;
