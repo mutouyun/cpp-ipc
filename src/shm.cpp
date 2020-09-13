@@ -1,10 +1,11 @@
-#include "shm.h"
 
 #include <string>
 #include <utility>
 
-#include "pimpl.h"
-#include "memory/resource.h"
+#include "libipc/shm.h"
+
+#include "libipc/utility/pimpl.h"
+#include "libipc/memory/resource.h"
 
 namespace ipc {
 namespace shm {

@@ -6,10 +6,10 @@
 #include <vector>
 #include <unordered_map>
 
-#include "prod_cons.h"
-#include "policy.h"
-#include "circ/elem_array.h"
-#include "queue.h"
+#include "libipc/prod_cons.h"
+#include "libipc/policy.h"
+#include "libipc/circ/elem_array.h"
+#include "libipc/queue.h"
 
 #include "test.h"
 

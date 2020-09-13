@@ -10,8 +10,8 @@
 #include "capo/spin_lock.hpp"
 #include "capo/type_name.hpp"
 
-#include "rw_lock.h"
-#include "tls_pointer.h"
+#include "libipc/rw_lock.h"
+#include "libipc/tls_pointer.h"
 
 #include "test.h"
 #include "thread_pool.h"

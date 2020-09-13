@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <thread>
 
-#include "shm.h"
+#include "libipc/shm.h"
 #include "test.h"
 
 using namespace ipc::shm;

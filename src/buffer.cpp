@@ -1,5 +1,5 @@
-#include "buffer.h"
-#include "pimpl.h"
+#include "libipc/buffer.h"
+#include "libipc/utility/pimpl.h"
 
 #include <cstring>
 

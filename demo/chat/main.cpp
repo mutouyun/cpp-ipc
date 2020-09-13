@@ -4,7 +4,7 @@
 #include <regex>
 #include <atomic>
 
-#include "ipc.h"
+#include "libipc/ipc.h"
 
 namespace {
 

@@ -6,8 +6,8 @@
 
 #include "capo/random.hpp"
 
-#include "memory/resource.h"
-#include "pool_alloc.h"
+#include "libipc/memory/resource.h"
+#include "libipc/pool_alloc.h"
 
 // #include "gperftools/tcmalloc.h"
 

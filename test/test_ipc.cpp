@@ -3,9 +3,9 @@
 #include <iostream>
 #include <cstring>
 
-#include "ipc.h"
-#include "buffer.h"
-#include "memory/resource.h"
+#include "libipc/ipc.h"
+#include "libipc/buffer.h"
+#include "libipc/memory/resource.h"
 
 #include "test.h"
 #include "thread_pool.h"

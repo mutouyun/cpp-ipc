@@ -1,9 +1,10 @@
-#include "waiter.h"
 
 #include <string>
 
-#include "pimpl.h"
-#include "platform/waiter_wrapper.h"
+#include "libipc/waiter.h"
+
+#include "libipc/utility/pimpl.h"
+#include "libipc/platform/waiter_wrapper.h"
 
 #undef IPC_PP_CAT_
 #undef IPC_PP_JOIN_T__
@@ -23,7 +24,7 @@ namespace ipc {
 #define IPC_OBJECT_TYPE_OPEN_PARS_
 #define IPC_OBJECT_TYPE_OPEN_ARGS_
 
-#include "waiter_template.inc"
+#include "libipc/waiter_template.inc"
 
 bool mutex::lock() {
     return impl(p_)->h_.lock();
@@ -41,7 +42,7 @@ bool mutex::unlock() {
 #define IPC_OBJECT_TYPE_OPEN_PARS_ , long count
 #define IPC_OBJECT_TYPE_OPEN_ARGS_ , count
 
-#include "waiter_template.inc"
+#include "libipc/waiter_template.inc"
 
 bool semaphore::wait(std::size_t tm) {
     return impl(p_)->h_.wait(tm);
@@ -59,7 +60,7 @@ bool semaphore::post(long count) {
 #define IPC_OBJECT_TYPE_OPEN_PARS_
 #define IPC_OBJECT_TYPE_OPEN_ARGS_
 
-#include "waiter_template.inc"
+#include "libipc/waiter_template.inc"
 
 bool condition::wait(mutex& mtx, std::size_t tm) {
     return impl(p_)->h_.wait(impl(mtx.p_)->h_, tm);

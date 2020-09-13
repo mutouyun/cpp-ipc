@@ -1,4 +1,3 @@
-#include "ipc.h"
 
 #include <type_traits>
 #include <cstring>
@@ -10,22 +9,24 @@
 #include <vector>
 #include <array>
 
-#include "def.h"
-#include "shm.h"
-#include "tls_pointer.h"
-#include "pool_alloc.h"
-#include "queue.h"
-#include "policy.h"
-#include "rw_lock.h"
-#include "log.h"
-#include "id_pool.h"
+#include "libipc/ipc.h"
+#include "libipc/def.h"
+#include "libipc/shm.h"
+#include "libipc/tls_pointer.h"
+#include "libipc/pool_alloc.h"
+#include "libipc/queue.h"
+#include "libipc/policy.h"
+#include "libipc/rw_lock.h"
 
-#include "memory/resource.h"
+#include "libipc/utility/log.h"
+#include "libipc/utility/id_pool.h"
 
-#include "platform/detail.h"
-#include "platform/waiter_wrapper.h"
+#include "libipc/memory/resource.h"
 
-#include "circ/elem_array.h"
+#include "libipc/platform/detail.h"
+#include "libipc/platform/waiter_wrapper.h"
+
+#include "libipc/circ/elem_array.h"
 
 namespace {
 
