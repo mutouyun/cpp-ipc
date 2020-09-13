@@ -19,7 +19,7 @@ namespace {
 class rand_buf : public buffer {
 public:
     rand_buf() {
-        int size = capo::random{1, 65536}();
+        int size = capo::random<>{1, 65536}();
         *this = buffer(new char[size], size, [](void * p, std::size_t) {
             delete [] static_cast<char *>(p);
         });
