@@ -193,7 +193,7 @@ struct test_performance<AllocT, void, 1> {
 //        tc_free_sized(p, size);
 //    }
 // };
-
+/*
 TEST(Memory, static_alloc) {
     test_performance<ipc::mem::static_alloc, void        , ThreadMax>::start("alloc-free");
     test_performance<ipc::mem::static_alloc, alloc_FIFO  , ThreadMax>::start("alloc-FIFO");
@@ -207,7 +207,7 @@ TEST(Memory, pool_alloc) {
     test_performance<ipc::mem::async_pool_alloc, alloc_LIFO  , ThreadMax>::start("alloc-LIFO");
     test_performance<ipc::mem::async_pool_alloc, alloc_Random, ThreadMax>::start("alloc-Rand");
 }
-
+*/
 // TEST(Memory, tc_alloc) {
 //     test_performance<tc_alloc, void       , ThreadMax>::start();
 //     test_performance<tc_alloc, alloc_FIFO  , ThreadMax>::start();
