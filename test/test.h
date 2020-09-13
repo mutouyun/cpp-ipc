@@ -8,14 +8,40 @@
 #include <mutex>
 #include <utility>
 
-#if defined(__GNUC__)
-#   include <cxxabi.h>  // abi::__cxa_demangle
-#endif/*__GNUC__*/
-
 #include "gtest/gtest.h"
 
 #include "capo/stopwatch.hpp"
-#include "capo/spin_lock.hpp"
+
+#include "thread_pool.h"
+
+namespace ipc_ut {
+
+template <typename Dur>
+struct unit;
+
+template <> struct unit<std::chrono::nanoseconds> {
+    constexpr static char const * str() noexcept {
+        return "ns";
+    }
+};
+
+template <> struct unit<std::chrono::microseconds> {
+    constexpr static char const * str() noexcept {
+        return "us";
+    }
+};
+
+template <> struct unit<std::chrono::milliseconds> {
+    constexpr static char const * str() noexcept {
+        return "ms";
+    }
+};
+
+template <> struct unit<std::chrono::seconds> {
+    constexpr static char const * str() noexcept {
+        return "sec";
+    }
+};
 
 struct test_stopwatch {
     capo::stopwatch<> sw_;
@@ -27,115 +53,34 @@ struct test_stopwatch {
         }
     }
 
-    template <int Factor, typename ToDur = std::chrono::microseconds>
-    void print_elapsed(int N, int M, int Loops, const char * unit = " us/d") {
+    template <typename ToDur = std::chrono::nanoseconds>
+    void print_elapsed(int N, int Loops, char const * message = "") {
         auto ts = sw_.elapsed<ToDur>();
-        std::cout << "[" << N << ":" << M << ", " << Loops << "] "
-                  << (double(ts) / double(Factor ? (Loops * Factor) : (Loops * N))) << unit << std::endl;
+        std::cout << "[" << N << ", \t" << Loops << "] " << message << "\t"
+                  << (double(ts) / double(Loops)) << " " << unit<ToDur>::str() << std::endl;
     }
 
-    void print_elapsed(int N, int M, int Loops) {
-        print_elapsed<0>(N, M, Loops);
+    template <int Factor, typename ToDur = std::chrono::nanoseconds>
+    void print_elapsed(int N, int M, int Loops, char const * message = "") {
+        auto ts = sw_.elapsed<ToDur>();
+        std::cout << "[" << N << "-" << M << ", \t" << Loops << "] " << message << "\t"
+                  << (double(ts) / double(Factor ? (Loops * Factor) : (Loops * N))) << " " << unit<ToDur>::str() << std::endl;
+    }
+
+    template <typename ToDur = std::chrono::nanoseconds>
+    void print_elapsed(int N, int M, int Loops, char const * message = "") {
+        print_elapsed<0, ToDur>(N, M, Loops, message);
     }
 };
 
-template <typename V>
-struct test_verify;
-
-template <>
-struct test_verify<void> {
-    test_verify   (int)      {}
-    void prepare  (void*)    {}
-    void verify   (int, int) {}
-
-    template <typename U>
-    void push_data(int, U&&) {}
-};
-
-template <typename T>
-struct test_cq;
-
-template <typename T>
-std::string type_name() {
-#if defined(__GNUC__)
-    const char* typeid_name = typeid(T).name();
-    const char* real_name = abi::__cxa_demangle(typeid_name, nullptr, nullptr, nullptr);
-    std::unique_ptr<void, decltype(::free)*> guard { (void*)real_name, ::free };
-    if (real_name == nullptr) real_name = typeid_name;
-    return real_name;
-#else
-    return typeid(T).name();
-#endif/*__GNUC__*/
+inline static thread_pool & sender() {
+    static thread_pool pool;
+    return pool;
 }
 
-template <int N, int M, int Loops, typename V = void, typename T>
-void benchmark_prod_cons(T* cq) {
-    std::cout << "benchmark_prod_cons " << type_name<T>() << " [" << N << ":" << M << ", " << Loops << "]" << std::endl;
-    test_cq<T> tcq { cq };
-
-    std::thread producers[N];
-    std::thread consumers[M];
-    std::atomic_int fini_p { 0 }, fini_c { 0 };
-
-    test_stopwatch sw;
-    test_verify<V> vf { M };
-
-//    capo::spin_lock lc;
-
-    int cid = 0;
-    for (auto& t : consumers) {
-        t = std::thread{[&, cid] {
-            vf.prepare(&t);
-            auto cn = tcq.connect();
-            int i = 0;
-            tcq.recv(cn, [&](auto&& msg) {
-//                if (i % ((Loops * N) / 10) == 0) {
-//                    std::unique_lock<capo::spin_lock> guard { lc };
-//                    std::cout << cid << "-recving: " << (i * 100) / (Loops * N) << "%" << std::endl;
-//                }
-                vf.push_data(cid, std::forward<decltype(msg)>(msg));
-                ++i;
-            });
-//            {
-//                std::unique_lock<capo::spin_lock> guard { lc };
-//                std::cout << cid << "-consumer-disconnect" << std::endl;
-//            }
-            tcq.disconnect(cn);
-            if ((fini_c.fetch_add(1, std::memory_order_relaxed) + 1) != M) {
-//                std::unique_lock<capo::spin_lock> guard { lc };
-//                std::cout << cid << "-consumer-end" << std::endl;
-                return;
-            }
-            sw.print_elapsed(N, M, Loops);
-            vf.verify(N, Loops);
-        }};
-        ++cid;
-    }
-
-    tcq.wait_start(M);
-
-    std::cout << "start producers..." << std::endl;
-    int pid = 0;
-    for (auto& t : producers) {
-        t = std::thread{[&, pid] {
-            auto cn = tcq.connect_send();
-            sw.start();
-            for (int i = 0; i < Loops; ++i) {
-//                if (i % (Loops / 10) == 0) {
-//                    std::unique_lock<capo::spin_lock> guard { lc };
-//                    std::cout << pid << "-sending: " << (i * 100 / Loops) << "%" << std::endl;
-//                }
-                tcq.send(cn, { pid, i });
-            }
-            if ((fini_p.fetch_add(1, std::memory_order_relaxed) + 1) != N) {
-                return;
-            }
-            // quit
-            tcq.send(cn, { -1, -1 });
-            tcq.disconnect(cn);
-        }};
-        ++pid;
-    }
-    for (auto& t : producers) t.join();
-    for (auto& t : consumers) t.join();
+inline static thread_pool & reader() {
+    static thread_pool pool;
+    return pool;
 }
+
+} // namespace ipc_ut

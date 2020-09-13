@@ -166,7 +166,7 @@ public:
     template <typename ... P>
     async_wrapper(P ... pars) {
         get_alloc_ = [this, pars ...]()->ref_t {
-            return *tls_.create(this, pars ...);
+            return *tls_.create_once(this, pars ...);
         };
     }
 
@@ -229,8 +229,8 @@ struct default_mapping_policy {
     };
 
     template <typename F, typename ... P>
-    IPC_CONSTEXPR_ static void foreach(F f, P ... params) {
-        for (std::size_t i = 0; i < classes_size; ++i) f(i, params...);
+    IPC_CONSTEXPR_ static void foreach(F && f, P && ... params) {
+        for (std::size_t i = 0; i < classes_size; ++i) f(i, std::forward<P>(params)...);
     }
 
     IPC_CONSTEXPR_ static std::size_t block_size(std::size_t id) noexcept {
@@ -238,9 +238,9 @@ struct default_mapping_policy {
     }
 
     template <typename F, typename D, typename ... P>
-    IPC_CONSTEXPR_ static auto classify(F f, D d, std::size_t size, P ... params) {
+    IPC_CONSTEXPR_ static auto classify(F && f, D && d, std::size_t size, P && ... params) {
         std::size_t id = (size - base_size - 1) / iter_size;
-        return (id < classes_size) ? f(id, size, params...) : d(size, params...);
+        return (id < classes_size) ? f(id, size, std::forward<P>(params)...) : d(size, std::forward<P>(params)...);
     }
 };
 
@@ -251,41 +251,49 @@ class variable_wrapper {
 
     struct initiator {
 
-        std::aligned_storage_t< sizeof(FixedAlloc), 
-                               alignof(FixedAlloc)> arr_[MappingP::classes_size];
+        using falc_t = std::aligned_storage_t<sizeof(FixedAlloc), alignof(FixedAlloc)>;
+        falc_t arr_[MappingP::classes_size];
 
         initiator() {
-            MappingP::foreach([](std::size_t id, initiator* t) {
-                ::new (&(t->arr_[id])) FixedAlloc(MappingP::block_size(id));
-            }, this);
+            MappingP::foreach([](std::size_t id, falc_t * a) {
+                ::new (&(a[id])) FixedAlloc(MappingP::block_size(id));
+            }, arr_);
         }
 
-        FixedAlloc& at(std::size_t id) {
-            return reinterpret_cast<FixedAlloc&>(arr_[id]);
+        ~initiator() {
+            MappingP::foreach([](std::size_t id, falc_t * a) {
+                initiator::at(a, id).~FixedAlloc();
+            }, arr_);
+        }
+
+        static FixedAlloc & at(falc_t * arr, std::size_t id) noexcept {
+            return reinterpret_cast<FixedAlloc&>(arr[id]);
         }
     } init_;
 
+    using falc_t = typename initiator::falc_t;
+
 public:
     void swap(variable_wrapper & other) {
-        MappingP::foreach([](std::size_t id, initiator* t, initiator* o) {
-            t->at(id).swap(o->at(id));
-        }, &init_, &other.init_);
+        MappingP::foreach([](std::size_t id, falc_t * in, falc_t * ot) {
+            initiator::at(in, id).swap(initiator::at(ot, id));
+        }, init_.arr_, other.init_.arr_);
     }
 
     void* alloc(std::size_t size) {
-        return MappingP::classify([](std::size_t id, std::size_t size, initiator* t) {
-            return t->at(id).alloc(size);
-        }, [](std::size_t size, initiator*) {
+        return MappingP::classify([](std::size_t id, std::size_t size, falc_t * a) {
+            return initiator::at(a, id).alloc(size);
+        }, [](std::size_t size, falc_t *) {
             return DefaultAlloc::alloc(size);
-        }, size, &init_);
+        }, size, init_.arr_);
     }
 
     void free(void* p, std::size_t size) {
-        MappingP::classify([](std::size_t id, std::size_t size, void* p, initiator* t) {
-            t->at(id).free(p, size);
-        }, [](std::size_t size, void* p, initiator*) {
+        MappingP::classify([](std::size_t id, std::size_t size, void* p, falc_t * a) {
+            initiator::at(a, id).free(p, size);
+        }, [](std::size_t size, void* p, falc_t *) {
             DefaultAlloc::free(p, size);
-        }, size, p, &init_);
+        }, size, p, init_.arr_);
     }
 };
 

@@ -9,6 +9,7 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <cassert>  // assert
 
 #include "def.h"
 #include "shm.h"
@@ -103,6 +104,12 @@ public:
         elems_ = open<elems_t>(name);
     }
 
+    explicit queue_base(elems_t * elems)
+        : queue_base() {
+        assert(elems != nullptr);
+        elems_ = elems;
+    }
+
     /* not virtual */ ~queue_base() {
         base_t::close();
     }
@@ -136,7 +143,7 @@ public:
     }
 
     template <typename T, typename... P>
-    auto push(P&&... params) {
+    bool push(P&&... params) {
         if (elems_ == nullptr) return false;
         return elems_->push(this, [&](void* p) {
             ::new (p) T(std::forward<P>(params)...);
@@ -144,7 +151,7 @@ public:
     }
 
     template <typename T, typename F, typename... P>
-    auto force_push(F&& prep, P&&... params) {
+    bool force_push(F&& prep, P&&... params) {
         if (elems_ == nullptr) return false;
         return elems_->force_push(this, [&](void* p) {
             if (prep(p)) ::new (p) T(std::forward<P>(params)...);
@@ -174,12 +181,12 @@ public:
     using base_t::base_t;
 
     template <typename... P>
-    auto push(P&&... params) {
+    bool push(P&&... params) {
         return base_t::template push<T>(std::forward<P>(params)...);
     }
 
     template <typename... P>
-    auto force_push(P&&... params) {
+    bool force_push(P&&... params) {
         return base_t::template force_push<T>(std::forward<P>(params)...);
     }
 

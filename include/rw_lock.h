@@ -63,8 +63,10 @@ inline void yield(K& k) noexcept {
     if (k < 4)  { /* Do nothing */ }
     else
     if (k < 16) { IPC_LOCK_PAUSE_(); }
+    else
+    if (k < 32) { std::this_thread::yield(); }
     else {
-        std::this_thread::yield();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         return;
     }
     ++k;

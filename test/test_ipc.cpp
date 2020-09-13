@@ -1,472 +1,150 @@
-#include <thread>
-#include <vector>
-#include <type_traits>
-#include <iostream>
-#include <shared_mutex>
-#include <mutex>
-#include <typeinfo>
-#include <memory>
-#include <string>
-#include <cstring>
-#include <algorithm>
-#include <array>
-#include <limits>
-#include <utility>
 
-#include "capo/stopwatch.hpp"
-#include "capo/spin_lock.hpp"
-#include "capo/random.hpp"
+#include <vector>
+#include <iostream>
+#include <cstring>
 
 #include "ipc.h"
-#include "rw_lock.h"
+#include "buffer.h"
 #include "memory/resource.h"
 
 #include "test.h"
+#include "thread_pool.h"
+
+#include "capo/random.hpp"
+
+using namespace ipc;
 
 namespace {
 
-std::vector<ipc::buff_t> datas__;
-
-constexpr int DataMin   = 2;
-constexpr int DataMax   = 256;
-constexpr int LoopCount = 100000;
-// constexpr int LoopCount = 1000;
-
-} // internal-linkage
-
-template <typename T>
-struct test_verify {
-    std::vector<std::vector<ipc::buff_t>> list_;
-
-    test_verify(int M)
-        : list_(static_cast<std::size_t>(M))
-    {}
-
-    void prepare(void* /*pt*/) {}
-
-    void push_data(int cid, ipc::buff_t && msg) {
-        list_[cid].emplace_back(std::move(msg));
-    }
-
-    void verify(int /*N*/, int /*Loops*/) {
-        std::cout << "verifying..." << std::endl;
-        for (auto& c_dats : list_) {
-            EXPECT_EQ(datas__.size(), c_dats.size());
-            std::size_t i = 0;
-            for (auto& d : c_dats) {
-                EXPECT_EQ(datas__[i++], d);
-            }
-        }
-    }
-};
-
-template <>
-struct test_cq<ipc::route> {
-    using cn_t = ipc::route;
-
-    std::string conn_name_;
-
-    test_cq(void*)
-        : conn_name_("test-ipc-route") {
-    }
-
-    cn_t connect() {
-        return cn_t { conn_name_.c_str() };
-    }
-
-    void disconnect(cn_t& cn) {
-        cn.disconnect();
-    }
-
-    void wait_start(int M) {
-        cn_t::wait_for_recv(conn_name_.c_str(), static_cast<std::size_t>(M));
-    }
-
-    template <typename F>
-    void recv(cn_t& cn, F&& proc) {
-        do {
-            auto msg = cn.recv();
-            if (msg.size() < 2) {
-                EXPECT_EQ(msg, ipc::buff_t('\0'));
-                return;
-            }
-            proc(std::move(msg));
-        } while(1);
-    }
-
-    cn_t connect_send() {
-        return connect();
-    }
-
-    void send(cn_t& cn, const std::array<int, 2>& info) {
-        int n = info[1];
-        if (n < 0) {
-            /*EXPECT_TRUE*/(cn.send(ipc::buff_t('\0')));
-        }
-        else /*EXPECT_TRUE*/(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
-    }
-};
-
-template <>
-struct test_cq<ipc::channel> {
-    using cn_t = ipc::channel;
-
-    std::string conn_name_;
-    int m_ = 0;
-
-    test_cq(void*)
-        : conn_name_("test-ipc-channel") {
-    }
-
-    cn_t connect() {
-        return cn_t { conn_name_.c_str() };
-    }
-
-    void disconnect(cn_t& cn) {
-        cn.disconnect();
-    }
-
-    void wait_start(int M) { m_ = M; }
-
-    template <typename F>
-    void recv(cn_t& cn, F&& proc) {
-        do {
-            auto msg = cn.recv();
-            if (msg.size() < 2) {
-                EXPECT_EQ(msg, ipc::buff_t('\0'));
-                return;
-            }
-            proc(std::move(msg));
-        } while(1);
-    }
-
-    cn_t connect_send() {
-        return connect();
-    }
-
-    void send(cn_t& cn, const std::array<int, 2>& info) {
-        thread_local struct s_dummy {
-            s_dummy(cn_t& cn, int m) {
-                cn.wait_for_recv(static_cast<std::size_t>(m));
-//                std::printf("start to send: %d.\n", m);
-            }
-        } _(cn, m_);
-        int n = info[1];
-        if (n < 0) {
-            /*EXPECT_TRUE*/(cn.send(ipc::buff_t('\0')));
-        }
-        else /*EXPECT_TRUE*/(cn.send(datas__[static_cast<decltype(datas__)::size_type>(n)]));
-    }
-};
-
-namespace {
-
-struct Init {
-    Init() {
-        capo::random<> rdm { DataMin, DataMax };
-        capo::random<> bit { 0, (std::numeric_limits<ipc::byte_t>::max)() };
-
-        for (int i = 0; i < LoopCount; ++i) {
-            std::size_t n = static_cast<std::size_t>(rdm());
-            ipc::buff_t buff {
-                new ipc::byte_t[n], n,
-                [](void* p, std::size_t) {
-                    delete [] static_cast<ipc::byte_t*>(p);
-                }
-            };
-            for (std::size_t k = 0; k < buff.size(); ++k) {
-                static_cast<ipc::byte_t*>(buff.data())[k] = static_cast<ipc::byte_t>(bit());
-            }
-            datas__.emplace_back(std::move(buff));
-        }
-    }
-} init__;
-
-template <typename T>
-constexpr T acc(T b, T e) noexcept {
-    return (e + b) * (e - b + 1) / 2;
-}
-
-template <typename Mutex>
-struct lc_wrapper : Mutex {
-    void lock_shared  () { Mutex::lock  (); }
-    void unlock_shared() { Mutex::unlock(); }
-};
-
-template <typename Lc, int W, int R, int Loops = LoopCount>
-void benchmark_lc() {
-    std::thread w_trd[W];
-    std::thread r_trd[R];
-    std::atomic_int fini { 0 };
-//    std::atomic_bool wf { false };
-
-    std::vector<int> datas;
-    Lc lc;
-
-    test_stopwatch sw;
-    std::cout << std::endl << type_name<Lc>() << std::endl;
-
-    for (auto& t : r_trd) {
-        t = std::thread([&] {
-            std::vector<int> seq;
-            std::size_t cnt = 0;
-            while (1) {
-                int x = -1;
-                {
-                    std::shared_lock<Lc> guard { lc };
-//                    EXPECT_TRUE(!wf);
-                    if (cnt < datas.size()) {
-                        x = datas[cnt];
-                    }
-//                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-                    if (x ==  0) break; // quit
-                    if (x != -1) {
-                        seq.push_back(x);
-                        ++cnt;
-                    }
-                }
-                std::this_thread::yield();
-            }
-            if ((fini.fetch_add(1, std::memory_order_relaxed) + 1) == R) {
-                sw.print_elapsed(W, R, Loops);
-            }
-            std::uint64_t sum = 0;
-            for (int i : seq) sum += static_cast<std::uint64_t>(i);
-            EXPECT_EQ(sum, acc<std::uint64_t>(1, Loops) * W);
+class rand_buf : public buffer {
+public:
+    rand_buf() {
+        int size = capo::random{1, 65536}();
+        *this = buffer(new char[size], size, [](void * p, std::size_t) {
+            delete [] static_cast<char *>(p);
         });
     }
 
-    for (auto& t : w_trd) {
-        t = std::thread([&] {
+    rand_buf(rand_buf &&) = default;
+    rand_buf(rand_buf const & rhs) {
+        if (rhs.empty()) return;
+        void * mem = new char[rhs.size()];
+        std::memcpy(mem, rhs.data(), rhs.size());
+        *this = buffer(mem, rhs.size(), [](void * p, std::size_t) {
+            delete [] static_cast<char *>(p);
+        });
+    }
+
+    rand_buf(buffer && rhs)
+        : buffer(std::move(rhs)) {
+    }
+
+    void set_id(int k) noexcept {
+        *get<char *>() = static_cast<char>(k);
+    }
+
+    int get_id() const noexcept {
+        return static_cast<int>(*get<char *>());
+    }
+
+    using buffer::operator=;
+};
+
+template <relat Rp, relat Rc, trans Ts>
+void test_basic(char const * name) {
+    using que_t = chan<wr<Rp, Rc, Ts>>;
+    rand_buf test1, test2;
+
+    que_t que1 { name };
+    EXPECT_FALSE(que1.send(test1));
+    EXPECT_FALSE(que1.try_send(test2));
+
+    que_t que2 { que1.name(), ipc::receiver };
+    EXPECT_TRUE(que1.send(test1));
+    EXPECT_TRUE(que1.try_send(test2));
+
+    EXPECT_EQ(que2.recv(), test1);
+    EXPECT_EQ(que2.recv(), test2);
+}
+
+template <relat Rp, relat Rc, trans Ts>
+void test_sr(char const * name, int size, int s_cnt, int r_cnt) {
+    using que_t = chan<wr<Rp, Rc, Ts>>;
+
+    ipc_ut::sender().start(static_cast<std::size_t>(s_cnt));
+    ipc_ut::reader().start(static_cast<std::size_t>(r_cnt));
+    ipc_ut::test_stopwatch sw;
+    std::vector<rand_buf> tests(size);
+
+    for (int k = 0; k < s_cnt; ++k) {
+        ipc_ut::sender() << [name, &tests, &sw, r_cnt, k] {
+            que_t que1 { name };
+            EXPECT_TRUE(que1.wait_for_recv(r_cnt));
             sw.start();
-            for (int i = 1; i <= Loops; ++i) {
-                {
-                    std::unique_lock<Lc> guard { lc };
-//                    wf = true;
-                    datas.push_back(i);
-//                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-//                    wf = false;
-                }
-                std::this_thread::yield();
+            for (auto & buf : tests) {
+                rand_buf data { buf };
+                data.set_id(k);
+                EXPECT_TRUE(que1.send(data));
             }
-        });
+        };
     }
 
-    for (auto& t : w_trd) t.join();
-    lc.lock();
-    datas.push_back(0);
-    lc.unlock();
-    for (auto& t : r_trd) t.join();
-}
-
-template <int W, int R>
-void test_lock_performance() {
-
-    std::cout << std::endl
-              << "test_lock_performance: [" << W << ":" << R << "]"
-              << std::endl;
-
-    benchmark_lc<ipc::rw_lock               , W, R>();
-    benchmark_lc<lc_wrapper< ipc::spin_lock>, W, R>();
-    benchmark_lc<lc_wrapper<capo::spin_lock>, W, R>();
-    benchmark_lc<lc_wrapper<std::mutex>     , W, R>();
-    benchmark_lc<std::shared_timed_mutex    , W, R>();
-}
-
-TEST(IPC, rw_lock) {
-//    test_lock_performance<1, 1>();
-//    test_lock_performance<4, 4>();
-//    test_lock_performance<1, 8>();
-//    test_lock_performance<8, 1>();
-}
-
-template <typename T, int N, int M, bool V = true, int Loops = LoopCount>
-void test_prod_cons() {
-    benchmark_prod_cons<N, M, Loops, std::conditional_t<V, T, void>>((T*)nullptr);
-}
-
-TEST(IPC, route) {
-    // return;
-    std::vector<char const *> const datas = {
-        "hello!",
-        "foo",
-        "bar",
-        "ISO/IEC",
-        "14882:2011",
-        "ISO/IEC 14882:2017 Information technology - Programming languages - C++",
-        "ISO/IEC 14882:2020",
-        "Modern C++ Design: Generic Programming and Design Patterns Applied"
-    };
-
-    std::thread t1 {[&] {
-        ipc::route cc { "my-ipc-route" };
-        for (std::size_t i = 0; i < datas.size(); ++i) {
-            ipc::buff_t dd = cc.recv();
-            std::cout << "recv: " << (char*)dd.data() << std::endl;
-            EXPECT_EQ(dd.size(), std::strlen(datas[i]) + 1);
-            EXPECT_TRUE(std::memcmp(dd.data(), datas[i], dd.size()) == 0);
-        }
-    }};
-
-    std::thread t2 {[&] {
-        ipc::route cc { "my-ipc-route" };
-        while (cc.recv_count() == 0) {
-            std::this_thread::yield();
-        }
-        for (std::size_t i = 0; i < datas.size(); ++i) {
-            std::cout << "sending: " << datas[i] << std::endl;
-            EXPECT_TRUE(cc.send(datas[i]));
-        }
-    }};
-
-    t1.join();
-    t2.join();
-
-    test_prod_cons<ipc::route, 1, 1>(); // test & verify
-}
-
-TEST(IPC, route_rtt) {
-    // return;
-    test_stopwatch sw;
-
-    std::thread t1 {[&] {
-        ipc::route cc { "my-ipc-route-1" };
-        ipc::route cr { "my-ipc-route-2" };
-        for (std::size_t i = 0;; ++i) {
-            auto dd = cc.recv();
-            if (dd.size() < 2) return;
-            //std::cout << "recv: " << i << "-[" << dd.size() << "]" << std::endl;
-            while (!cr.send(ipc::buff_t('a'))) {
-                std::this_thread::yield();
+    for (int k = 0; k < r_cnt; ++k) {
+        ipc_ut::reader() << [name, &tests, s_cnt] {
+            que_t que2 { name, ipc::receiver };
+            std::vector<int> cursors(s_cnt);
+            for (;;) {
+                rand_buf got { que2.recv() };
+                ASSERT_FALSE(got.empty());
+                int & cur = cursors.at(got.get_id());
+                ASSERT_TRUE((cur >= 0) && (cur < static_cast<int>(tests.size())));
+                rand_buf buf { tests.at(cur++) };
+                buf.set_id(got.get_id());
+                EXPECT_EQ(got, buf);
+                int n = 0;
+                for (; n < static_cast<int>(cursors.size()); ++n) {
+                    if (cursors[n] < static_cast<int>(tests.size())) break;
+                }
+                if (n == static_cast<int>(cursors.size())) break;
             }
-        }
-    }};
+        };
+    }
 
-    std::thread t2 {[&] {
-        ipc::route cc { "my-ipc-route-1" };
-        ipc::route cr { "my-ipc-route-2" };
-        while (cc.recv_count() == 0) {
-            std::this_thread::yield();
-        }
-        sw.start();
-        for (std::size_t i = 0; i < LoopCount; ++i) {
-            cc.send(datas__[i]);
-            //std::cout << "sent: " << i << "-[" << datas__[i].size() << "]" << std::endl;
-            /*auto dd = */cr.recv();
-//            if (dd.size() != 1 || dd[0] != 'a') {
-//                EXPECT_TRUE(false);
-//            }
-        }
-        cc.send(ipc::buff_t('\0'));
-        t1.join();
-        sw.print_elapsed(1, 1, LoopCount);
-    }};
-
-    t2.join();
+    ipc_ut::sender().wait_for_done();
+    ipc_ut::reader().wait_for_done();
+    sw.print_elapsed<std::chrono::microseconds>(s_cnt, r_cnt, size, name);
 }
 
-TEST(IPC, route_performance) {
-    // return;
-    ipc::detail::static_for<8>([](auto index) {
-        test_prod_cons<ipc::route, 1, decltype(index)::value + 1, false>();
-    });
-    // test_prod_cons<ipc::route, 1, 8>(); // test & verify
-}
-
-TEST(IPC, channel) {
-    // return;
-    int fail_v = 0;
-
-    std::thread t1 {[&] {
-        ipc::channel cc { "my-ipc-channel" };
-        for (std::size_t i = 0;; ++i) {
-            ipc::buff_t dd = cc.recv();
-            if (dd.size() < 2) return;
-            if (dd != datas__[i]) {
-                std::printf("fail recv: %zd-[%zd, %zd]\n", i, dd.size(), datas__[i].size());
-                // for (std::size_t k = 0; k < dd.size(); ++k) {
-                //     if (dd.data<ipc::byte_t>()[k] != datas__[i].data<ipc::byte_t>()[k]) {
-                //         std::printf("fail check: %zd-%zd, %02x != %02x\n", 
-                //                     i, k, (unsigned)dd        .data<ipc::byte_t>()[k], 
-                //                           (unsigned)datas__[i].data<ipc::byte_t>()[k]);
-                //     }
-                // }
-                ++fail_v;
-            }
-        }
-    }};
-
-    std::thread t2 {[&] {
-        ipc::channel cc { "my-ipc-channel" };
-        cc.wait_for_recv(1);
-        for (std::size_t i = 0; i < static_cast<std::size_t>((std::min)(100, LoopCount)); ++i) {
-            std::printf("sending: %zd-[%zd]\n", i, datas__[i].size());
-            cc.send(datas__[i]);
-        }
-        cc.send(ipc::buff_t('\0'));
-        t1.join();
-    }};
-
-    t2.join();
-
-    EXPECT_EQ(fail_v, 0);
-}
-
-TEST(IPC, channel_rtt) {
-    // return;
-    test_stopwatch sw;
-
-    std::thread t1 {[&] {
-        ipc::channel cc { "my-ipc-channel" };
-        bool recv_2 = false;
-        for (std::size_t i = 0;; ++i) {
-            auto dd = cc.recv();
-            if (dd.size() < 2) return;
-            //if (i % 1000 == 0) {
-            //    std::cout << "recv: " << i << "-[" << dd.size() << "]" << std::endl;
-            //}
-            while (!recv_2) {
-                recv_2 = cc.wait_for_recv(2);
-            }
-            cc.send(ipc::buff_t('a'));
-        }
-    }};
-
-    std::thread t2 {[&] {
-        ipc::channel cc { "my-ipc-channel" };
-        cc.wait_for_recv(1);
-        sw.start();
-        for (std::size_t i = 0; i < LoopCount; ++i) {
-            //if (i % 1000 == 0) {
-            //    std::cout << "send: " << i << "-[" << datas__[i].size() << "]" << std::endl;
-            //}
-            cc.send(datas__[i]);
-            /*auto dd = */cc.recv();
-            //if (dd.size() != 1 || dd.data<char>()[0] != 'a') {
-            //    std::cout << "recv ack fail: " << i << "-[" << dd.size() << "]" << std::endl;
-            //    EXPECT_TRUE(false);
-            //}
-        }
-        cc.send(ipc::buff_t('\0'));
-        t1.join();
-        sw.print_elapsed(1, 1, LoopCount);
-    }};
-
-    t2.join();
-}
-
-TEST(IPC, channel_performance) {
-    // return;
-    ipc::detail::static_for<8>([](auto index) {
-        test_prod_cons<ipc::channel, 1, decltype(index)::value + 1, false>();
-    });
-    ipc::detail::static_for<8>([](auto index) {
-        test_prod_cons<ipc::channel, decltype(index)::value + 1, 1, false>();
-    });
-    ipc::detail::static_for<8>([](auto index) {
-        test_prod_cons<ipc::channel, decltype(index)::value + 1,
-                                     decltype(index)::value + 1, false>();
-    });
-}
+constexpr int LoopCount = 10000;
+constexpr int MultiMax  = 8;
 
 } // internal-linkage
+
+TEST(IPC, basic) {
+    test_basic<relat::single, relat::single, trans::unicast  >("ssu");
+    test_basic<relat::single, relat::multi , trans::unicast  >("smu");
+    test_basic<relat::multi , relat::multi , trans::unicast  >("mmu");
+    test_basic<relat::single, relat::multi , trans::broadcast>("smb");
+    test_basic<relat::multi , relat::multi , trans::broadcast>("mmb");
+}
+
+TEST(IPC, 1v1) {
+    test_sr<relat::single, relat::single, trans::unicast  >("ssu", LoopCount, 1, 1);
+    test_sr<relat::single, relat::multi , trans::unicast  >("smu", LoopCount, 1, 1);
+    test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", LoopCount, 1, 1);
+    test_sr<relat::single, relat::multi , trans::broadcast>("smb", LoopCount, 1, 1);
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", LoopCount, 1, 1);
+}
+
+TEST(IPC, 1vN) {
+    test_sr<relat::single, relat::multi , trans::broadcast>("smb", LoopCount, 1, MultiMax);
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", LoopCount, 1, MultiMax);
+}
+
+TEST(IPC, Nv1) {
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", LoopCount, MultiMax, 1);
+}
+
+TEST(IPC, NvN) {
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", LoopCount, MultiMax, MultiMax);
+}
