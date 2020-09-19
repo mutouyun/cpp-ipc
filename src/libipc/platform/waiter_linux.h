@@ -9,10 +9,12 @@
 
 #include <atomic>
 #include <tuple>
+#include <utility>
 
 #include "libipc/def.h"
 
 #include "libipc/utility/log.h"
+#include "libipc/utility/scope_guard.h"
 #include "libipc/platform/detail.h"
 #include "libipc/memory/resource.h"
 
@@ -280,20 +282,22 @@ public:
     template <typename F>
     bool wait_if(handle_t const & h, F&& pred, std::size_t tm = invalid_value) {
         waiting_.fetch_add(1, std::memory_order_release);
+        auto finally = ipc::guard([this] {
+            waiting_->fetch_sub(1, std::memory_order_release);
+        });
         {
             IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
             if (!std::forward<F>(pred)()) return true;
             ++ counter_;
         }
         bool ret = sem_helper::wait(std::get<1>(h), tm);
-        waiting_.fetch_sub(1, std::memory_order_release);
+        finally.do_exit();
         ret = sem_helper::post(std::get<2>(h)) && ret;
         return ret;
     }
 
     bool notify(handle_t const & h) {
-        std::atomic_thread_fence(std::memory_order_acq_rel);
-        if (waiting_.load(std::memory_order_relaxed) == 0) {
+        if (waiting_.load(std::memory_order_acquire) == 0) {
             return true;
         }
         bool ret = true;
@@ -307,8 +311,7 @@ public:
     }
 
     bool broadcast(handle_t const & h) {
-        std::atomic_thread_fence(std::memory_order_acq_rel);
-        if (waiting_.load(std::memory_order_relaxed) == 0) {
+        if (waiting_.load(std::memory_order_acquire) == 0) {
             return true;
         }
         bool ret = true;

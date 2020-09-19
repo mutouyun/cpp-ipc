@@ -23,6 +23,7 @@ using semaphore_impl = ipc::detail::semaphore;
 class condition_impl : public ipc::detail::condition {
 
     ipc::shm::handle wait_h_, cnt_h_;
+    std::atomic<bool> enabled_ { false };
 
 public:
     static void remove(char const * name) {
@@ -35,6 +36,7 @@ public:
     bool open(ipc::string const & name) {
         if (wait_h_.acquire((name + "__COND_WAIT__").c_str(), sizeof(std::atomic<unsigned>)) &&
             cnt_h_ .acquire((name + "__COND_CNT__" ).c_str(), sizeof(long))) {
+            enabled_.store(true, std::memory_order_release);
             return ipc::detail::condition::open(name,
                                                 static_cast<std::atomic<unsigned> *>(wait_h_.get()),
                                                 static_cast<long *>(cnt_h_.get()));
@@ -43,13 +45,15 @@ public:
     }
 
     void close() {
+        enabled_.store(false, std::memory_order_release);
+        ipc::detail::condition::emit_destruction();
         ipc::detail::condition::close();
         cnt_h_ .release();
         wait_h_.release();
     }
 
     bool wait(mutex_impl& mtx, std::size_t tm = invalid_value) {
-        return ipc::detail::condition::wait_if(mtx, [] { return true; }, tm);
+        return ipc::detail::condition::wait_if(mtx, enabled_, [] { return true; }, tm);
     }
 };
 
@@ -194,6 +198,7 @@ public:
 private:
     waiter_t* w_ = nullptr;
     waiter_t::handle_t h_ = waiter_t::invalid();
+    std::atomic<bool> enabled_ { true };
 
 public:
     waiter_wrapper() = default;
@@ -228,10 +233,17 @@ public:
         h_ = waiter_t::invalid();
     }
 
+    void set_enabled(bool e) {
+        if (enabled_.exchange(e, std::memory_order_acq_rel) == e) {
+            return;
+        }
+        if (!e) w_->emit_destruction(h_);
+    }
+
     template <typename F>
     bool wait_if(F&& pred, std::size_t tm = invalid_value) {
         if (!valid()) return false;
-        return w_->wait_if(h_, std::forward<F>(pred), tm);
+        return w_->wait_if(h_, enabled_, std::forward<F>(pred), tm);
     }
 
     bool notify() {

@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <cassert>
 
 #include "libipc/ipc.h"
 #include "libipc/def.h"
@@ -279,6 +280,12 @@ struct conn_info_head {
         , acc_h_    (("__AC_CONN__" + name_).c_str(), sizeof(acc_t)) {
     }
 
+    void enable(bool e) {
+        cc_waiter_.set_enabled(e);
+        wt_waiter_.set_enabled(e);
+        rd_waiter_.set_enabled(e);
+    }
+
     auto acc() {
         return static_cast<acc_t*>(acc_h_.get());
     }
@@ -295,10 +302,9 @@ bool wait_for(W& waiter, F&& pred, std::size_t tm) {
         bool loop = true, ret = true;
         ipc::sleep(k, [&k, &loop, &ret, &waiter, &pred, tm] {
             ret = waiter.wait_if([&loop, &pred] {
-                return loop = pred();
-            }, tm);
+                    return loop = pred();
+                }, tm);
             k = 0;
-            return true;
         });
         if (!ret ) return false; // timeout or fail
         if (!loop) break;
@@ -341,18 +347,22 @@ constexpr static queue_t* queue_of(ipc::handle_t h) {
 
 /* API implementations */
 
-static ipc::handle_t connect(char const * name, bool start) {
-    auto h = mem::alloc<conn_info_t>(name);
-    auto que = queue_of(h);
-    if (que == nullptr) {
-        return nullptr;
+static bool connect(handle_t * ph, char const * name, bool start) {
+    assert(ph != nullptr);
+    if (*ph == nullptr) {
+        *ph = mem::alloc<conn_info_t>(name);
     }
+    auto que = queue_of(*ph);
+    if (que == nullptr) {
+        return false;
+    }
+    info_of(*ph)->enable(true);
     if (start) {
         if (que->connect()) { // wouldn't connect twice
-            info_of(h)->cc_waiter_.broadcast();
+            info_of(*ph)->cc_waiter_.broadcast();
         }
     }
-    return h;
+    return true;
 }
 
 static void disconnect(ipc::handle_t h) {
@@ -360,9 +370,15 @@ static void disconnect(ipc::handle_t h) {
     if (que == nullptr) {
         return;
     }
-    if (que->disconnect()) {
-        info_of(h)->cc_waiter_.broadcast();
+    bool dis = que->disconnect();
+    info_of(h)->enable(false);
+    if (dis) {
+        info_of(h)->recv_cache().clear();
     }
+}
+
+static void destroy(ipc::handle_t h) {
+    disconnect(h);
     mem::free(info_of(h));
 }
 
@@ -485,14 +501,16 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
         ipc::error("fail: recv, queue_of(h) == nullptr\n");
         return {};
     }
-    if (que->connect()) { // wouldn't connect twice
-        info_of(h)->cc_waiter_.broadcast();
+    if (!que->connected()) {
+        // hasn't connected yet, just return.
+        return {};
     }
     auto& rc = info_of(h)->recv_cache();
     while (1) {
         // pop a new message
         typename queue_t::value_t msg;
         if (!wait_for(info_of(h)->rd_waiter_, [que, &msg] { return !que->pop(msg); }, tm)) {
+            // pop failed, just return.
             return {};
         }
         info_of(h)->wt_waiter_.broadcast();
@@ -562,13 +580,18 @@ using policy_t = policy::choose<circ::elem_array, Flag>;
 namespace ipc {
 
 template <typename Flag>
-ipc::handle_t chan_impl<Flag>::connect(char const * name, unsigned mode) {
-    return detail_impl<policy_t<Flag>>::connect(name, mode & receiver);
+bool chan_impl<Flag>::connect(handle_t * ph, char const * name, unsigned mode) {
+    return detail_impl<policy_t<Flag>>::connect(ph, name, mode & receiver);
 }
 
 template <typename Flag>
 void chan_impl<Flag>::disconnect(ipc::handle_t h) {
     detail_impl<policy_t<Flag>>::disconnect(h);
+}
+
+template <typename Flag>
+void chan_impl<Flag>::destroy(handle_t h) {
+    detail_impl<policy_t<Flag>>::destroy(h);
 }
 
 template <typename Flag>

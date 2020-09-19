@@ -19,8 +19,9 @@ enum : unsigned {
 
 template <typename Flag>
 struct IPC_EXPORT chan_impl {
-    static handle_t connect   (char const * name, unsigned mode);
-    static void     disconnect(handle_t h);
+    static bool connect   (handle_t * ph, char const * name, unsigned mode);
+    static void disconnect(handle_t h);
+    static void destroy   (handle_t h);
 
     static char const * name(handle_t h);
 
@@ -54,7 +55,7 @@ public:
     }
 
     ~chan_wrapper() {
-        disconnect();
+        detail_t::destroy(h_);
     }
 
     void swap(chan_wrapper& rhs) noexcept {
@@ -89,14 +90,13 @@ public:
     bool connect(char const * name, unsigned mode = ipc::sender | ipc::receiver) {
         if (name == nullptr || name[0] == '\0') return false;
         this->disconnect();
-        h_ = detail_t::connect(name, mode_ = mode);
+        detail_t::connect(&h_, name, mode_ = mode);
         return valid();
     }
 
     void disconnect() {
         if (!valid()) return;
         detail_t::disconnect(h_);
-        h_ = nullptr;
     }
 
     std::size_t recv_count() const {
@@ -111,13 +111,25 @@ public:
         return chan_wrapper(name).wait_for_recv(r_count, tm);
     }
 
-    bool send    (void        const * data, std::size_t size, std::size_t tm = default_timeout) { return detail_t::send(h_, data, size, tm)             ; }
-    bool send    (buff_t      const & buff                  , std::size_t tm = default_timeout) { return     this->send(buff.data(), buff.size(), tm)   ; }
-    bool send    (std::string const & str                   , std::size_t tm = default_timeout) { return     this->send(str.c_str(), str.size() + 1, tm); }
+    bool send(void const * data, std::size_t size, std::size_t tm = default_timeout) {
+        return detail_t::send(h_, data, size, tm);
+    }
+    bool send(buff_t const & buff, std::size_t tm = default_timeout) {
+        return this->send(buff.data(), buff.size(), tm);
+    }
+    bool send(std::string const & str, std::size_t tm = default_timeout) {
+        return this->send(str.c_str(), str.size() + 1, tm);
+    }
 
-    bool try_send(void        const * data, std::size_t size, std::size_t tm = default_timeout) { return detail_t::try_send(h_, data, size, tm)             ; }
-    bool try_send(buff_t      const & buff                  , std::size_t tm = default_timeout) { return     this->try_send(buff.data(), buff.size(), tm)   ; }
-    bool try_send(std::string const & str                   , std::size_t tm = default_timeout) { return     this->try_send(str.c_str(), str.size() + 1, tm); }
+    bool try_send(void const * data, std::size_t size, std::size_t tm = default_timeout) {
+        return detail_t::try_send(h_, data, size, tm);
+    }
+    bool try_send(buff_t const & buff, std::size_t tm = default_timeout) {
+        return this->try_send(buff.data(), buff.size(), tm);
+    }
+    bool try_send(std::string const & str, std::size_t tm = default_timeout) {
+        return this->try_send(str.c_str(), str.size() + 1, tm);
+    }
 
     buff_t recv(std::size_t tm = invalid_value) {
         return detail_t::recv(h_, tm);

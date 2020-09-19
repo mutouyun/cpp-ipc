@@ -77,11 +77,8 @@ inline void sleep(K& k, F&& f) {
     if (k < static_cast<K>(N)) {
         std::this_thread::yield();
     }
-    else if (std::forward<F>(f)()) {
-        return;
-    }
     else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        static_cast<void>(std::forward<F>(f)());
         return;
     }
     ++k;
@@ -89,7 +86,9 @@ inline void sleep(K& k, F&& f) {
 
 template <std::size_t N = 4096, typename K>
 inline void sleep(K& k) {
-    sleep<N>(k, [] { return false; });
+    sleep<N>(k, [] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    });
 }
 
 } // namespace ipc

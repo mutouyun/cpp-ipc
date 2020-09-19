@@ -3,13 +3,15 @@
 #include <Windows.h>
 
 #include <atomic>
-#include <tuple>
+#include <utility>
+#include <limits>
 
 #include "libipc/rw_lock.h"
 #include "libipc/pool_alloc.h"
 #include "libipc/shm.h"
 
 #include "libipc/utility/log.h"
+#include "libipc/utility/scope_guard.h"
 #include "libipc/platform/to_tchar.h"
 #include "libipc/platform/get_sa.h"
 #include "libipc/platform/detail.h"
@@ -79,6 +81,11 @@ class condition {
     std::atomic<unsigned> * waiting_ = nullptr;
     long                  * counter_ = nullptr;
 
+    enum : unsigned {
+        destruct_mask = (std::numeric_limits<unsigned>::max)() >> 1,
+        destruct_flag = ~destruct_mask
+    };
+
 public:
     friend bool operator==(condition const & c1, condition const & c2) {
         return (c1.waiting_ == c2.waiting_) && (c1.counter_ == c2.counter_);
@@ -112,24 +119,35 @@ public:
     }
 
     template <typename Mutex, typename F>
-    bool wait_if(Mutex& mtx, F&& pred, std::size_t tm = invalid_value) {
+    bool wait_if(Mutex & mtx, std::atomic<bool> const & enabled, F && pred, std::size_t tm = invalid_value) {
+        if (!enabled.load(std::memory_order_acquire)) {
+            return false;
+        }
         waiting_->fetch_add(1, std::memory_order_release);
+        auto finally = ipc::guard([this] {
+            waiting_->fetch_sub(1, std::memory_order_release);
+        });
         {
             IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
             if (!std::forward<F>(pred)()) return true;
             ++ *counter_;
         }
         mtx.unlock();
-        bool ret = sema_.wait(tm);
-        waiting_->fetch_sub(1, std::memory_order_release);
+        bool ret = false;
+        do {
+            if (!enabled.load(std::memory_order_acquire)) {
+                break;
+            }
+            ret = sema_.wait(tm);
+        } while (waiting_->load(std::memory_order_acquire) & destruct_flag);
+        finally.do_exit();
         ret = handshake_.post() && ret;
         mtx.lock();
         return ret;
     }
 
     bool notify() {
-        std::atomic_thread_fence(std::memory_order_acq_rel);
-        if (waiting_->load(std::memory_order_relaxed) == 0) {
+        if ((waiting_->load(std::memory_order_acquire) & destruct_mask) == 0) {
             return true;
         }
         bool ret = true;
@@ -143,12 +161,31 @@ public:
     }
 
     bool broadcast() {
-        std::atomic_thread_fence(std::memory_order_acq_rel);
-        if (waiting_->load(std::memory_order_relaxed) == 0) {
+        if ((waiting_->load(std::memory_order_acquire) & destruct_mask) == 0) {
             return true;
         }
         bool ret = true;
         IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+        if (*counter_ > 0) {
+            ret = sema_.post(*counter_);
+            do {
+                -- *counter_;
+                ret = ret && handshake_.wait(default_timeout);
+            } while (*counter_ > 0);
+        }
+        return ret;
+    }
+
+    bool emit_destruction() {
+        if ((waiting_->load(std::memory_order_acquire) & destruct_mask) == 0) {
+            return true;
+        }
+        bool ret = true;
+        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+        waiting_->fetch_or(destruct_flag, std::memory_order_relaxed);
+        IPC_UNUSED_ auto finally = ipc::guard([this] {
+            waiting_->fetch_and(destruct_mask, std::memory_order_relaxed);
+        });
         if (*counter_ > 0) {
             ret = sema_.post(*counter_);
             do {
@@ -189,7 +226,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t& h, F&& pred, std::size_t tm = invalid_value) {
+    bool wait_if(handle_t& h, std::atomic<bool> const & enabled, F&& pred, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
 
         class non_mutex {
@@ -198,17 +235,22 @@ public:
             void unlock() noexcept {}
         } nm;
 
-        return h.wait_if(nm, std::forward<F>(pred), tm);
+        return h.wait_if(nm, enabled, std::forward<F>(pred), tm);
     }
 
-    void notify(handle_t& h) {
-        if (h == invalid()) return;
-        h.notify();
+    bool notify(handle_t& h) {
+        if (h == invalid()) return false;
+        return h.notify();
     }
 
-    void broadcast(handle_t& h) {
-        if (h == invalid()) return;
-        h.broadcast();
+    bool broadcast(handle_t& h) {
+        if (h == invalid()) return false;
+        return h.broadcast();
+    }
+
+    bool emit_destruction(handle_t& h) {
+        if (h == invalid()) return false;
+        return h.emit_destruction();
     }
 };
 
