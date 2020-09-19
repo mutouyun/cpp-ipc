@@ -241,7 +241,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(F&& pred, std::size_t tm = invalid_value) {
+    bool wait_if(F && pred, std::size_t tm = invalid_value) {
         if (!valid()) return false;
         return w_->wait_if(h_, enabled_, std::forward<F>(pred), tm);
     }

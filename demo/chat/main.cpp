@@ -50,20 +50,18 @@ int main() {
             }
             std::cout << dat << std::endl;
         }
+        std::cout << id << " receiver is quit..." << std::endl;
     }};
 
     for (/*int i = 1*/;; /*++i*/) {
         std::cin >> buf;
-        if (buf.empty()) break;
+        if (buf.empty() || (buf == quit__)) break;
 //        std::cout << "[" << i << "]" << std::endl;
         sender__.send(id + "> " + buf);
-        if (buf == quit__) {
-            receiver__.disconnect();
-            break;
-        }
     }
 
+    receiver__.disconnect();
     r.join();
-    std::cout << id << " is quit..." << std::endl;
+    std::cout << id << " sender is quit..." << std::endl;
     return 0;
 }
