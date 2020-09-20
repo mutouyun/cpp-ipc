@@ -78,20 +78,23 @@ public:
 };
 
 class condition {
+    using wait_flags   = waiter_helper::wait_flags;
+    using wait_counter = waiter_helper::wait_counter;
+
     mutex     lock_;
     semaphore sema_, handshake_;
-    waiter_helper::wait_counter * cnt_ = nullptr;
+    wait_counter * cnt_ = nullptr;
 
     struct contrl {
         condition * me_;
-        waiter_helper::wait_flags * flags_;
+        wait_flags * flags_;
 
-        waiter_helper::wait_flags & flags() noexcept {
+        wait_flags & flags() noexcept {
             assert(flags_ != nullptr);
             return *flags_;
         }
 
-        waiter_helper::wait_counter & counter() noexcept {
+        wait_counter & counter() noexcept {
             assert(me_->cnt_ != nullptr);
             return *(me_->cnt_);
         }
@@ -118,8 +121,6 @@ class condition {
     };
 
 public:
-    using wait_flags = waiter_helper::wait_flags;
-
     friend bool operator==(condition const & c1, condition const & c2) {
         return c1.cnt_ == c2.cnt_;
     }
@@ -134,7 +135,7 @@ public:
         mutex    ::remove((ipc::string{ "__COND_MTX__" } + name).c_str());
     }
 
-    bool open(ipc::string const & name, waiter_helper::wait_counter * cnt) {
+    bool open(ipc::string const & name, wait_counter * cnt) {
         if (lock_     .open("__COND_MTX__" + name) &&
             sema_     .open("__COND_SEM__" + name) &&
             handshake_.open("__COND_HAN__" + name)) {
@@ -201,7 +202,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t& h, handle_t::wait_flags * flags, F&& pred, std::size_t tm = invalid_value) {
+    bool wait_if(handle_t& h, waiter_helper::wait_flags * flags, F&& pred, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
 
         class non_mutex {
@@ -223,7 +224,7 @@ public:
         return h.broadcast();
     }
 
-    bool quit_waiting(handle_t& h, handle_t::wait_flags * flags) {
+    bool quit_waiting(handle_t& h, waiter_helper::wait_flags * flags) {
         if (h == invalid()) return false;
         return h.quit_waiting(flags);
     }

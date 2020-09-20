@@ -258,20 +258,23 @@ public:
     }
 
 private:
+    using wait_flags   = waiter_helper::wait_flags;
+    using wait_counter = waiter_helper::wait_counter;
+
     mutex lock_;
-    waiter_helper::wait_counter cnt_;
+    wait_counter cnt_;
 
     struct contrl {
         waiter_holder * me_;
-        waiter_helper::wait_flags * flags_;
+        wait_flags * flags_;
         handle_t const & h_;
 
-        waiter_helper::wait_flags & flags() noexcept {
+        wait_flags & flags() noexcept {
             assert(flags_ != nullptr);
             return *flags_;
         }
 
-        waiter_helper::wait_counter & counter() noexcept {
+        wait_counter & counter() noexcept {
             return me_->cnt_;
         }
 
@@ -297,8 +300,6 @@ private:
     };
 
 public:
-    using wait_flags = waiter_helper::wait_flags;
-
     handle_t open_h(ipc::string && name) {
         auto sem = sem_helper::open(("__WAITER_HELPER_SEM__" + name).c_str(), 0);
         if (sem == sem_helper::invalid()) {
@@ -334,7 +335,14 @@ public:
     bool wait_if(handle_t const & h, wait_flags * flags, F&& pred, std::size_t tm = invalid_value) {
         assert(flags != nullptr);
         contrl ctrl { this, flags, h };
-        return waiter_helper::wait_if(ctrl, mtx, std::forward<F>(pred), tm);
+
+        class non_mutex {
+        public:
+            void lock  () noexcept {}
+            void unlock() noexcept {}
+        } nm;
+
+        return waiter_helper::wait_if(ctrl, nm, std::forward<F>(pred), tm);
     }
 
     bool notify(handle_t const & h) {
@@ -385,7 +393,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t h, waiter_holder::wait_flags * flags, F && pred, std::size_t tm = invalid_value) {
+    bool wait_if(handle_t h, waiter_helper::wait_flags * flags, F && pred, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
         return helper_.wait_if(h, flags, std::forward<F>(pred), tm);
     }
@@ -400,7 +408,7 @@ public:
         return helper_.broadcast(h);
     }
 
-    bool quit_waiting(handle_t h, waiter_holder::wait_flags * flags) {
+    bool quit_waiting(handle_t h, waiter_helper::wait_flags * flags) {
         if (h == invalid()) return false;
         return helper_.quit_waiting(h, flags);
     }

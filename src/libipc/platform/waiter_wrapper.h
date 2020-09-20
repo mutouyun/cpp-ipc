@@ -24,7 +24,7 @@ class condition_impl : public ipc::detail::condition {
     using base_t = ipc::detail::condition;
 
     ipc::shm::handle cnt_h_;
-    base_t::wait_flags flags_;
+    waiter_helper::wait_flags flags_;
 
 public:
     static void remove(char const * name) {
@@ -192,7 +192,7 @@ public:
 private:
     waiter_t* w_ = nullptr;
     waiter_t::handle_t h_ = waiter_t::invalid();
-    waiter_t::handle_t::wait_flags flags_;
+    waiter_helper::wait_flags flags_;
 
 public:
     waiter_wrapper() = default;
