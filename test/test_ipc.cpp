@@ -52,7 +52,7 @@ public:
 
 template <relat Rp, relat Rc, trans Ts>
 void test_basic(char const * name) {
-    using que_t = chan<wr<Rp, Rc, Ts>>;
+    using que_t = chan<Rp, Rc, Ts>;
     rand_buf test1, test2;
 
     que_t que1 { name };
@@ -69,7 +69,7 @@ void test_basic(char const * name) {
 
 template <relat Rp, relat Rc, trans Ts>
 void test_sr(char const * name, int size, int s_cnt, int r_cnt) {
-    using que_t = chan<wr<Rp, Rc, Ts>>;
+    using que_t = chan<Rp, Rc, Ts>;
 
     ipc_ut::sender().start(static_cast<std::size_t>(s_cnt));
     ipc_ut::reader().start(static_cast<std::size_t>(r_cnt));

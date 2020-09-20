@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <cassert>
 
 #include "libipc/ipc.h"
 #include "libipc/def.h"
@@ -29,8 +30,6 @@
 #include "libipc/circ/elem_array.h"
 
 namespace {
-
-using namespace ipc;
 
 using msg_id_t = std::uint32_t;
 using acc_t    = std::atomic<msg_id_t>;
@@ -64,54 +63,54 @@ struct msg_t : msg_t<0, AlignSize> {
 };
 
 template <typename T>
-buff_t make_cache(T& data, std::size_t size) {
-    auto ptr = mem::alloc(size);
+ipc::buff_t make_cache(T& data, std::size_t size) {
+    auto ptr = ipc::mem::alloc(size);
     std::memcpy(ptr, &data, (ipc::detail::min)(sizeof(data), size));
-    return { ptr, size, mem::free };
+    return { ptr, size, ipc::mem::free };
 }
 
 struct cache_t {
     std::size_t fill_;
-    buff_t      buff_;
+    ipc::buff_t buff_;
 
-    cache_t(std::size_t f, buff_t&& b)
+    cache_t(std::size_t f, ipc::buff_t && b)
         : fill_(f), buff_(std::move(b))
     {}
 
     void append(void const * data, std::size_t size) {
         if (fill_ >= buff_.size() || data == nullptr || size == 0) return;
         auto new_fill = (ipc::detail::min)(fill_ + size, buff_.size());
-        std::memcpy(static_cast<byte_t*>(buff_.data()) + fill_, data, new_fill - fill_);
+        std::memcpy(static_cast<ipc::byte_t*>(buff_.data()) + fill_, data, new_fill - fill_);
         fill_ = new_fill;
     }
 };
 
 auto cc_acc() {
-    static shm::handle acc_h("__CA_CONN__", sizeof(acc_t));
+    static ipc::shm::handle acc_h("__CA_CONN__", sizeof(acc_t));
     return static_cast<acc_t*>(acc_h.get());
 }
 
 auto& cls_storages() {
     struct cls_t {
-        shm::handle id_info_;
-        std::array<shm::handle, id_pool<>::max_count> mems_;
+        ipc::shm::handle id_info_;
+        std::array<ipc::shm::handle, ipc::id_pool<>::max_count> mems_;
     };
     static ipc::unordered_map<std::size_t, cls_t> cls_s;
     return cls_s;
 }
 
 auto& cls_lock() {
-    static spin_lock cls_l;
+    static ipc::spin_lock cls_l;
     return cls_l;
 }
 
 struct cls_info_t {
-    id_pool<> pool_;
-    spin_lock lock_;
+    ipc::id_pool<> pool_;
+    ipc::spin_lock lock_;
 };
 
 constexpr std::size_t calc_cls_size(std::size_t size) noexcept {
-    return (((size - 1) / large_msg_limit) + 1) * large_msg_limit;
+    return (((size - 1) / ipc::large_msg_limit) + 1) * ipc::large_msg_limit;
 }
 
 auto& cls_storage(std::size_t cls_size) {
@@ -135,8 +134,8 @@ cls_info_t* cls_storage_info(const char* func, T& cls_shm, std::size_t cls_size)
 }
 
 template <typename T>
-byte_t* cls_storage_mem(const char* func, T& cls_shm, std::size_t cls_size, std::size_t id) {
-    if (id == invalid_value) {
+ipc::byte_t* cls_storage_mem(const char* func, T& cls_shm, std::size_t cls_size, std::size_t id) {
+    if (id == ipc::invalid_value) {
         return nullptr;
     }
     if (!cls_shm.mems_[id].valid() &&
@@ -147,7 +146,7 @@ byte_t* cls_storage_mem(const char* func, T& cls_shm, std::size_t cls_size, std:
         return nullptr;
     }
 
-    byte_t* ptr = static_cast<byte_t*>(cls_shm.mems_[id].get());
+    auto ptr = static_cast<ipc::byte_t *>(cls_shm.mems_[id].get());
     if (ptr == nullptr) {
         ipc::error("[%s] cls_shm.mems_[id].get failed: id = %zd, cls_size = %zd\n", func, id, cls_size);
         return nullptr;
@@ -190,7 +189,7 @@ void* find_storage(std::size_t id, std::size_t size) {
 }
 
 void recycle_storage(std::size_t id, std::size_t size) {
-    if (id == invalid_value) {
+    if (id == ipc::invalid_value) {
         ipc::error("[recycle_storage] id is invalid: id = %zd, size = %zd\n", id, size);
         return;
     }
@@ -202,7 +201,7 @@ void recycle_storage(std::size_t id, std::size_t size) {
         ipc::error("[recycle_storage] should find storage first: id = %zd, cls_size = %zd\n", id, cls_size);
         return;
     }
-    byte_t* ptr = static_cast<byte_t*>(cls_shm.mems_[id].get());
+    auto ptr = static_cast<ipc::byte_t*>(cls_shm.mems_[id].get());
     if (ptr == nullptr) {
         ipc::error("[recycle_storage] cls_shm.mems_[id].get failed: id = %zd, cls_size = %zd\n", id, cls_size);
         return;
@@ -221,7 +220,7 @@ void recycle_storage(std::size_t id, std::size_t size) {
 }
 
 void clear_storage(std::size_t id, std::size_t size) {
-    if (id == invalid_value) {
+    if (id == ipc::invalid_value) {
         ipc::error("[clear_storage] id is invalid: id = %zd, size = %zd\n", id, size);
         return;
     }
@@ -254,8 +253,8 @@ struct conn_info_head {
 
     ipc::string name_;
     msg_id_t    cc_id_; // connection-info id
-    waiter      cc_waiter_, wt_waiter_, rd_waiter_;
-    shm::handle acc_h_;
+    ipc::waiter cc_waiter_, wt_waiter_, rd_waiter_;
+    ipc::shm::handle acc_h_;
 
     /*
      * <Remarks> thread_local may have some bugs.
@@ -268,7 +267,7 @@ struct conn_info_head {
      * - https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
      * - https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
     */
-    tls::pointer<ipc::unordered_map<msg_id_t, cache_t>> recv_cache_;
+    ipc::tls::pointer<ipc::unordered_map<msg_id_t, cache_t>> recv_cache_;
 
     conn_info_head(char const * name)
         : name_     (name)
@@ -277,6 +276,12 @@ struct conn_info_head {
         , wt_waiter_(("__WT_CONN__" + name_).c_str())
         , rd_waiter_(("__RD_CONN__" + name_).c_str())
         , acc_h_    (("__AC_CONN__" + name_).c_str(), sizeof(acc_t)) {
+    }
+
+    void quit_waiting() {
+        cc_waiter_.quit_waiting();
+        wt_waiter_.quit_waiting();
+        rd_waiter_.quit_waiting();
     }
 
     auto acc() {
@@ -295,10 +300,9 @@ bool wait_for(W& waiter, F&& pred, std::size_t tm) {
         bool loop = true, ret = true;
         ipc::sleep(k, [&k, &loop, &ret, &waiter, &pred, tm] {
             ret = waiter.wait_if([&loop, &pred] {
-                return loop = pred();
-            }, tm);
+                    return loop = pred();
+                }, tm);
             k = 0;
-            return true;
         });
         if (!ret ) return false; // timeout or fail
         if (!loop) break;
@@ -307,7 +311,7 @@ bool wait_for(W& waiter, F&& pred, std::size_t tm) {
 }
 
 template <typename Policy,
-          std::size_t DataSize  = data_length,
+          std::size_t DataSize  = ipc::data_length,
           std::size_t AlignSize = (ipc::detail::min)(DataSize, alignof(std::max_align_t))>
 struct queue_generator {
 
@@ -341,35 +345,54 @@ constexpr static queue_t* queue_of(ipc::handle_t h) {
 
 /* API implementations */
 
-static ipc::handle_t connect(char const * name, bool start) {
-    auto h = mem::alloc<conn_info_t>(name);
-    auto que = queue_of(h);
-    if (que == nullptr) {
-        return nullptr;
-    }
-    if (start) {
-        if (que->connect()) { // wouldn't connect twice
-            info_of(h)->cc_waiter_.broadcast();
-        }
-    }
-    return h;
-}
-
 static void disconnect(ipc::handle_t h) {
     auto que = queue_of(h);
     if (que == nullptr) {
         return;
     }
-    if (que->disconnect()) {
-        info_of(h)->cc_waiter_.broadcast();
+    bool dis = que->disconnect();
+    info_of(h)->quit_waiting();
+    if (dis) {
+        info_of(h)->recv_cache().clear();
     }
-    mem::free(info_of(h));
+}
+
+static bool reconnect(ipc::handle_t * ph, bool start) {
+    assert(ph != nullptr);
+    assert(*ph != nullptr);
+    auto que = queue_of(*ph);
+    if (que == nullptr) {
+        return false;
+    }
+    if (start) {
+        if (que->connect()) { // wouldn't connect twice
+            info_of(*ph)->cc_waiter_.broadcast();
+        }
+    }
+    // start == false
+    else if (que->connected()) {
+        disconnect(*ph);
+    }
+    return true;
+}
+
+static bool connect(ipc::handle_t * ph, char const * name, bool start) {
+    assert(ph != nullptr);
+    if (*ph == nullptr) {
+        *ph = ipc::mem::alloc<conn_info_t>(name);
+    }
+    return reconnect(ph, start);
+}
+
+static void destroy(ipc::handle_t h) {
+    disconnect(h);
+    ipc::mem::free(info_of(h));
 }
 
 static std::size_t recv_count(ipc::handle_t h) {
     auto que = queue_of(h);
     if (que == nullptr) {
-        return invalid_value;
+        return ipc::invalid_value;
     }
     return que->conn_count();
 }
@@ -411,30 +434,31 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
     }
     auto msg_id   = acc->fetch_add(1, std::memory_order_relaxed);
     auto try_push = std::forward<F>(gen_push)(info_of(h), que, msg_id);
-    if (size > large_msg_limit) {
+    if (size > ipc::large_msg_limit) {
         auto   dat = apply_storage(que->conn_count(), size);
         void * buf = dat.second;
         if (buf != nullptr) {
             std::memcpy(buf, data, size);
             return try_push(static_cast<std::int32_t>(size) - 
-                            static_cast<std::int32_t>(data_length), &(dat.first), 0);
+                            static_cast<std::int32_t>(ipc::data_length), &(dat.first), 0);
         }
         // try using message fragment
         // ipc::log("fail: shm::handle for big message. msg_id: %zd, size: %zd\n", msg_id, size);
     }
     // push message fragment
     std::int32_t offset = 0;
-    for (int i = 0; i < static_cast<int>(size / data_length); ++i, offset += data_length) {
-        if (!try_push(static_cast<std::int32_t>(size) - offset - static_cast<std::int32_t>(data_length),
-                      static_cast<byte_t const *>(data) + offset, data_length)) {
+    for (int i = 0; i < static_cast<int>(size / ipc::data_length); ++i, offset += ipc::data_length) {
+        if (!try_push(static_cast<std::int32_t>(size) - offset - static_cast<std::int32_t>(ipc::data_length),
+                      static_cast<ipc::byte_t const *>(data) + offset, ipc::data_length)) {
             return false;
         }
     }
     // if remain > 0, this is the last message fragment
     std::int32_t remain = static_cast<std::int32_t>(size) - offset;
     if (remain > 0) {
-        if (!try_push(remain - static_cast<std::int32_t>(data_length),
-                      static_cast<byte_t const *>(data) + offset, static_cast<std::size_t>(remain))) {
+        if (!try_push(remain - static_cast<std::int32_t>(ipc::data_length),
+                      static_cast<ipc::byte_t const *>(data) + offset, 
+                      static_cast<std::size_t>(remain))) {
             return false;
         }
     }
@@ -451,8 +475,9 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size, std::size
                 if (!que->force_push([](void* p) {
                         auto tmp_msg = static_cast<typename queue_t::value_t*>(p);
                         if (tmp_msg->storage_) {
-                            clear_storage(*reinterpret_cast<std::size_t*>(&tmp_msg->data_), 
-                                        static_cast<std::int32_t>(data_length) + tmp_msg->remain_);
+                            clear_storage(
+                                *reinterpret_cast<std::size_t*>(&tmp_msg->data_), 
+                                static_cast<std::int32_t>(ipc::data_length) + tmp_msg->remain_);
                         }
                         return true;
                     }, info->cc_id_, msg_id, remain, data, size)) {
@@ -479,20 +504,22 @@ static bool try_send(ipc::handle_t h, void const * data, std::size_t size, std::
     }, h, data, size);
 }
 
-static buff_t recv(ipc::handle_t h, std::size_t tm) {
+static ipc::buff_t recv(ipc::handle_t h, std::size_t tm) {
     auto que = queue_of(h);
     if (que == nullptr) {
         ipc::error("fail: recv, queue_of(h) == nullptr\n");
         return {};
     }
-    if (que->connect()) { // wouldn't connect twice
-        info_of(h)->cc_waiter_.broadcast();
+    if (!que->connected()) {
+        // hasn't connected yet, just return.
+        return {};
     }
     auto& rc = info_of(h)->recv_cache();
     while (1) {
         // pop a new message
         typename queue_t::value_t msg;
         if (!wait_for(info_of(h)->rd_waiter_, [que, &msg] { return !que->pop(msg); }, tm)) {
+            // pop failed, just return.
             return {};
         }
         info_of(h)->wt_waiter_.broadcast();
@@ -500,18 +527,18 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
             continue; // ignore message to self
         }
         // msg.remain_ may minus & abs(msg.remain_) < data_length
-        std::size_t remain = static_cast<std::int32_t>(data_length) + msg.remain_;
+        std::size_t remain = static_cast<std::int32_t>(ipc::data_length) + msg.remain_;
         // find cache with msg.id_
         auto cac_it = rc.find(msg.id_);
         if (cac_it == rc.end()) {
-            if (remain <= data_length) {
+            if (remain <= ipc::data_length) {
                 return make_cache(msg.data_, remain);
             }
             if (msg.storage_) {
                 std::size_t buf_id = *reinterpret_cast<std::size_t*>(&msg.data_);
                 void      * buf    = find_storage(buf_id, remain);
                 if (buf != nullptr) {
-                    return buff_t { buf, remain, [](void* ptr, std::size_t size) {
+                    return ipc::buff_t { buf, remain, [](void* ptr, std::size_t size) {
                         recycle_storage(reinterpret_cast<std::size_t>(ptr) - 1, size);
                     }, reinterpret_cast<void*>(buf_id + 1) };
                 }
@@ -529,7 +556,7 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
                 for (auto id : need_del) rc.erase(id);
             }
             // cache the first message fragment
-            rc.emplace(msg.id_, cache_t { data_length, make_cache(msg.data_, remain) });
+            rc.emplace(msg.id_, cache_t { ipc::data_length, make_cache(msg.data_, remain) });
         }
         // has cached before this message
         else {
@@ -543,32 +570,42 @@ static buff_t recv(ipc::handle_t h, std::size_t tm) {
                 return buff;
             }
             // there are remain datas after this message
-            cac.append(&(msg.data_), data_length);
+            cac.append(&(msg.data_), ipc::data_length);
         }
     }
 }
 
-static buff_t try_recv(ipc::handle_t h) {
+static ipc::buff_t try_recv(ipc::handle_t h) {
     return recv(h, 0);
 }
 
 }; // detail_impl<Policy>
 
 template <typename Flag>
-using policy_t = policy::choose<circ::elem_array, Flag>;
+using policy_t = ipc::policy::choose<ipc::circ::elem_array, Flag>;
 
 } // internal-linkage
 
 namespace ipc {
 
 template <typename Flag>
-ipc::handle_t chan_impl<Flag>::connect(char const * name, unsigned mode) {
-    return detail_impl<policy_t<Flag>>::connect(name, mode & receiver);
+bool chan_impl<Flag>::connect(ipc::handle_t * ph, char const * name, unsigned mode) {
+    return detail_impl<policy_t<Flag>>::connect(ph, name, mode & receiver);
+}
+
+template <typename Flag>
+bool chan_impl<Flag>::reconnect(ipc::handle_t * ph, unsigned mode) {
+    return detail_impl<policy_t<Flag>>::reconnect(ph, mode & receiver);
 }
 
 template <typename Flag>
 void chan_impl<Flag>::disconnect(ipc::handle_t h) {
     detail_impl<policy_t<Flag>>::disconnect(h);
+}
+
+template <typename Flag>
+void chan_impl<Flag>::destroy(ipc::handle_t h) {
+    detail_impl<policy_t<Flag>>::destroy(h);
 }
 
 template <typename Flag>

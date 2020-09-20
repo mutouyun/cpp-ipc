@@ -7,8 +7,8 @@ namespace ipc {
 namespace detail {
 
 template <typename O>
-void print(O out, char const * fmt) {
-    std::fprintf(out, "%s", fmt);
+void print(O out, char const * str) {
+    std::fprintf(out, "%s", str);
 }
 
 template <typename O, typename P1, typename... P>
@@ -27,8 +27,8 @@ void log(char const * fmt, P1&& p1, P&&... params) {
     ipc::detail::print(stdout, fmt, std::forward<P1>(p1), std::forward<P>(params)...);
 }
 
-inline void error(char const * fmt) {
-    ipc::detail::print(stderr, fmt);
+inline void error(char const * str) {
+    ipc::detail::print(stderr, str);
 }
 
 template <typename P1, typename... P>

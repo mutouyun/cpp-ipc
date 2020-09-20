@@ -19,6 +19,7 @@ aux_source_directory(${CMAKE_SOURCE_DIR}/src SRC_FILES)
 
 file(GLOB HEAD_FILES
   ${CMAKE_SOURCE_DIR}/include/libipc/*.h
+  ${CMAKE_SOURCE_DIR}/src/libipc/*.h
   ${CMAKE_SOURCE_DIR}/src/libipc/*.inc
   ${CMAKE_SOURCE_DIR}/src/libipc/circ/*.h
   ${CMAKE_SOURCE_DIR}/src/libipc/memory/*.h
