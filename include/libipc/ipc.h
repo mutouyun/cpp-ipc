@@ -19,20 +19,20 @@ enum : unsigned {
 
 template <typename Flag>
 struct IPC_EXPORT chan_impl {
-    static bool connect   (handle_t * ph, char const * name, unsigned mode);
-    static void disconnect(handle_t h);
-    static void destroy   (handle_t h);
+    static bool connect   (ipc::handle_t * ph, char const * name, unsigned mode);
+    static void disconnect(ipc::handle_t h);
+    static void destroy   (ipc::handle_t h);
 
-    static char const * name(handle_t h);
+    static char const * name(ipc::handle_t h);
 
-    static std::size_t recv_count(handle_t h);
-    static bool wait_for_recv(handle_t h, std::size_t r_count, std::size_t tm);
+    static std::size_t recv_count(ipc::handle_t h);
+    static bool wait_for_recv(ipc::handle_t h, std::size_t r_count, std::size_t tm);
 
-    static bool   send(handle_t h, void const * data, std::size_t size, std::size_t tm);
-    static buff_t recv(handle_t h, std::size_t tm);
+    static bool   send(ipc::handle_t h, void const * data, std::size_t size, std::size_t tm);
+    static buff_t recv(ipc::handle_t h, std::size_t tm);
 
-    static bool   try_send(handle_t h, void const * data, std::size_t size, std::size_t tm);
-    static buff_t try_recv(handle_t h);
+    static bool   try_send(ipc::handle_t h, void const * data, std::size_t size, std::size_t tm);
+    static buff_t try_recv(ipc::handle_t h);
 };
 
 template <typename Flag>
@@ -40,7 +40,7 @@ class chan_wrapper {
 private:
     using detail_t = chan_impl<Flag>;
 
-    handle_t h_    = nullptr;
+    ipc::handle_t h_    = nullptr;
     unsigned mode_ = ipc::sender;
 
 public:
@@ -71,7 +71,7 @@ public:
         return detail_t::name(h_);
     }
 
-    handle_t handle() const noexcept {
+    ipc::handle_t handle() const noexcept {
         return h_;
     }
 
