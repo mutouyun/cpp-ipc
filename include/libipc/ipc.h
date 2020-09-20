@@ -140,8 +140,8 @@ public:
     }
 };
 
-template <typename Flag>
-using chan = chan_wrapper<Flag>;
+template <relat Rp, relat Rc, trans Ts>
+using chan = chan_wrapper<ipc::wr<Rp, Rc, Ts>>;
 
 /*
  * class route
@@ -154,7 +154,7 @@ using chan = chan_wrapper<Flag>;
  * (one producer/writer to multi consumers/readers)
 */
 
-using route = chan<ipc::wr<relat::single, relat::multi, trans::broadcast>>;
+using route = chan<relat::single, relat::multi, trans::broadcast>;
 
 /*
  * class channel
@@ -164,6 +164,6 @@ using route = chan<ipc::wr<relat::single, relat::multi, trans::broadcast>>;
  * would receive your sent messages.
 */
 
-using channel = chan<ipc::wr<relat::multi, relat::multi, trans::broadcast>>;
+using channel = chan<relat::multi, relat::multi, trans::broadcast>;
 
 } // namespace ipc

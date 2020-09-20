@@ -13,7 +13,6 @@
 #include "libipc/waiter_helper.h"
 
 #include "libipc/utility/log.h"
-#include "libipc/utility/scope_guard.h"
 #include "libipc/platform/to_tchar.h"
 #include "libipc/platform/get_sa.h"
 #include "libipc/platform/detail.h"
