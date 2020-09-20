@@ -40,7 +40,7 @@ inline std::string str_of_size(std::size_t sz) noexcept {
 }
 
 inline std::string speed_of(std::size_t sz) noexcept {
-    return str_of_size(sz) + " /s";
+    return str_of_size(sz) + "/s";
 }
 
 void do_counting() {
