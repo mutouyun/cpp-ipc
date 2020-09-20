@@ -20,6 +20,7 @@ enum : unsigned {
 template <typename Flag>
 struct IPC_EXPORT chan_impl {
     static bool connect   (ipc::handle_t * ph, char const * name, unsigned mode);
+    static bool reconnect (ipc::handle_t * ph, unsigned mode);
     static void disconnect(ipc::handle_t h);
     static void destroy   (ipc::handle_t h);
 
@@ -90,8 +91,13 @@ public:
     bool connect(char const * name, unsigned mode = ipc::sender | ipc::receiver) {
         if (name == nullptr || name[0] == '\0') return false;
         this->disconnect();
-        detail_t::connect(&h_, name, mode_ = mode);
-        return valid();
+        return detail_t::connect(&h_, name, mode_ = mode);
+    }
+
+    bool reconnect(unsigned mode) {
+        if (!valid()) return false;
+        if (mode_ == mode) return true;
+        return detail_t::reconnect(&h_, mode_ = mode);
     }
 
     void disconnect() {

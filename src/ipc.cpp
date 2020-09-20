@@ -345,23 +345,6 @@ constexpr static queue_t* queue_of(ipc::handle_t h) {
 
 /* API implementations */
 
-static bool connect(ipc::handle_t * ph, char const * name, bool start) {
-    assert(ph != nullptr);
-    if (*ph == nullptr) {
-        *ph = ipc::mem::alloc<conn_info_t>(name);
-    }
-    auto que = queue_of(*ph);
-    if (que == nullptr) {
-        return false;
-    }
-    if (start) {
-        if (que->connect()) { // wouldn't connect twice
-            info_of(*ph)->cc_waiter_.broadcast();
-        }
-    }
-    return true;
-}
-
 static void disconnect(ipc::handle_t h) {
     auto que = queue_of(h);
     if (que == nullptr) {
@@ -372,6 +355,33 @@ static void disconnect(ipc::handle_t h) {
     if (dis) {
         info_of(h)->recv_cache().clear();
     }
+}
+
+static bool reconnect(ipc::handle_t * ph, bool start) {
+    assert(ph != nullptr);
+    assert(*ph != nullptr);
+    auto que = queue_of(*ph);
+    if (que == nullptr) {
+        return false;
+    }
+    if (start) {
+        if (que->connect()) { // wouldn't connect twice
+            info_of(*ph)->cc_waiter_.broadcast();
+        }
+    }
+    // start == false
+    else if (que->connected()) {
+        disconnect(*ph);
+    }
+    return true;
+}
+
+static bool connect(ipc::handle_t * ph, char const * name, bool start) {
+    assert(ph != nullptr);
+    if (*ph == nullptr) {
+        *ph = ipc::mem::alloc<conn_info_t>(name);
+    }
+    return reconnect(ph, start);
 }
 
 static void destroy(ipc::handle_t h) {
@@ -581,6 +591,11 @@ namespace ipc {
 template <typename Flag>
 bool chan_impl<Flag>::connect(ipc::handle_t * ph, char const * name, unsigned mode) {
     return detail_impl<policy_t<Flag>>::connect(ph, name, mode & receiver);
+}
+
+template <typename Flag>
+bool chan_impl<Flag>::reconnect(ipc::handle_t * ph, unsigned mode) {
+    return detail_impl<policy_t<Flag>>::reconnect(ph, mode & receiver);
 }
 
 template <typename Flag>

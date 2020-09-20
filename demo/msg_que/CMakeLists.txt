@@ -1,5 +1,8 @@
 project(msg_que)
 
+include_directories(
+    ${CMAKE_SOURCE_DIR}/3rdparty)
+
 file(GLOB SRC_FILES ./*.cpp)
 file(GLOB HEAD_FILES ./*.h)
 
