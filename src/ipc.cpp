@@ -280,10 +280,10 @@ struct conn_info_head {
         , acc_h_    (("__AC_CONN__" + name_).c_str(), sizeof(acc_t)) {
     }
 
-    void enable(bool e) {
-        cc_waiter_.set_enabled(e);
-        wt_waiter_.set_enabled(e);
-        rd_waiter_.set_enabled(e);
+    void quit_waiting() {
+        cc_waiter_.quit_waiting();
+        wt_waiter_.quit_waiting();
+        rd_waiter_.quit_waiting();
     }
 
     auto acc() {
@@ -356,7 +356,6 @@ static bool connect(handle_t * ph, char const * name, bool start) {
     if (que == nullptr) {
         return false;
     }
-    info_of(*ph)->enable(true);
     if (start) {
         if (que->connect()) { // wouldn't connect twice
             info_of(*ph)->cc_waiter_.broadcast();
@@ -371,7 +370,7 @@ static void disconnect(ipc::handle_t h) {
         return;
     }
     bool dis = que->disconnect();
-    info_of(h)->enable(false);
+    info_of(h)->quit_waiting();
     if (dis) {
         info_of(h)->recv_cache().clear();
     }

@@ -21,39 +21,39 @@ using mutex_impl     = ipc::detail::mutex;
 using semaphore_impl = ipc::detail::semaphore;
 
 class condition_impl : public ipc::detail::condition {
+    using base_t = ipc::detail::condition;
 
-    ipc::shm::handle wait_h_, cnt_h_;
-    std::atomic<bool> enabled_ { false };
+    ipc::shm::handle cnt_h_;
+    base_t::wait_flags flags_;
 
 public:
     static void remove(char const * name) {
-        ipc::detail::condition::remove(name);
+        base_t::remove(name);
         ipc::string n = name;
         ipc::shm::remove((n + "__COND_CNT__" ).c_str());
         ipc::shm::remove((n + "__COND_WAIT__").c_str());
     }
 
-    bool open(ipc::string const & name) {
-        if (wait_h_.acquire((name + "__COND_WAIT__").c_str(), sizeof(std::atomic<unsigned>)) &&
-            cnt_h_ .acquire((name + "__COND_CNT__" ).c_str(), sizeof(long))) {
-            enabled_.store(true, std::memory_order_release);
-            return ipc::detail::condition::open(name,
-                                                static_cast<std::atomic<unsigned> *>(wait_h_.get()),
-                                                static_cast<long *>(cnt_h_.get()));
+    bool open(char const * name) {
+        if (cnt_h_ .acquire(
+                (ipc::string { name } + "__COND_CNT__" ).c_str(), 
+                sizeof(waiter_helper::wait_counter))) {
+            flags_.is_closed_.store(false, std::memory_order_release);
+            return base_t::open(name, 
+                static_cast<waiter_helper::wait_counter *>(cnt_h_.get()));
         }
         return false;
     }
 
     void close() {
-        enabled_.store(false, std::memory_order_release);
-        ipc::detail::condition::emit_destruction();
-        ipc::detail::condition::close();
-        cnt_h_ .release();
-        wait_h_.release();
+        flags_.is_closed_.store(true, std::memory_order_release);
+        base_t::quit_waiting(&flags_);
+        base_t::close();
+        cnt_h_.release();
     }
 
     bool wait(mutex_impl& mtx, std::size_t tm = invalid_value) {
-        return ipc::detail::condition::wait_if(mtx, enabled_, [] { return true; }, tm);
+        return base_t::wait_if(mtx, &flags_, [] { return true; }, tm);
     }
 };
 
@@ -169,17 +169,11 @@ public:
     }
 
     bool wait(std::size_t tm = invalid_value) {
-        if (h_ == sem_helper::invalid()) return false;
         return sem_helper::wait(h_, tm);
     }
 
     bool post(long count) {
-        if (h_ == sem_helper::invalid()) return false;
-        bool ret = true;
-        for (long i = 0; i < count; ++i) {
-            ret = ret && sem_helper::post(h_);
-        }
-        return ret;
+        return sem_helper::post(h_, count);
     }
 };
 
@@ -198,7 +192,7 @@ public:
 private:
     waiter_t* w_ = nullptr;
     waiter_t::handle_t h_ = waiter_t::invalid();
-    std::atomic<bool> enabled_ { true };
+    waiter_t::handle_t::wait_flags flags_;
 
 public:
     waiter_wrapper() = default;
@@ -223,27 +217,27 @@ public:
     bool open(char const * name) {
         if (w_ == nullptr) return false;
         close();
+        flags_.is_closed_.store(false, std::memory_order_release);
         h_ = w_->open(name);
         return valid();
     }
 
     void close() {
         if (!valid()) return;
+        flags_.is_closed_.store(true, std::memory_order_release);
+        quit_waiting();
         w_->close(h_);
         h_ = waiter_t::invalid();
     }
 
-    void set_enabled(bool e) {
-        if (enabled_.exchange(e, std::memory_order_acq_rel) == e) {
-            return;
-        }
-        if (!e) w_->emit_destruction(h_);
+    void quit_waiting() {
+        w_->quit_waiting(h_, &flags_);
     }
 
     template <typename F>
     bool wait_if(F && pred, std::size_t tm = invalid_value) {
         if (!valid()) return false;
-        return w_->wait_if(h_, enabled_, std::forward<F>(pred), tm);
+        return w_->wait_if(h_, &flags_, std::forward<F>(pred), tm);
     }
 
     bool notify() {

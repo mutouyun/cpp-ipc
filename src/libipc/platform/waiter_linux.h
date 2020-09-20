@@ -10,8 +10,10 @@
 #include <atomic>
 #include <tuple>
 #include <utility>
+#include <cassert>
 
 #include "libipc/def.h"
+#include "libipc/waiter_helper.h"
 
 #include "libipc/utility/log.h"
 #include "libipc/utility/scope_guard.h"
@@ -178,7 +180,7 @@ public:
         return SEM_FAILED;
     }
 
-    static handle_t open(char const* name, long count) {
+    static handle_t open(char const * name, long count) {
         handle_t sem = ::sem_open(name, O_CREAT, 0666, count);
         if (sem == SEM_FAILED) {
             ipc::error("fail sem_open[%d]: %s\n", errno, name);
@@ -201,13 +203,19 @@ public:
         IPC_SEMAPHORE_FUNC_(sem_close, h);
     }
 
-    static bool destroy(char const* name) {
+    static bool destroy(char const * name) {
         IPC_SEMAPHORE_FUNC_(sem_unlink, name);
     }
 
-    static bool post(handle_t h) {
+    static bool post(handle_t h, long count) {
         if (h == invalid()) return false;
-        IPC_SEMAPHORE_FUNC_(sem_post, h);
+        auto spost = [](handle_t h) {
+            IPC_SEMAPHORE_FUNC_(sem_post, h);
+        };
+        for (long i = 0; i < count; ++i) {
+            if (!spost(h)) return false;
+        }
+        return true;
     }
 
     static bool wait(handle_t h, std::size_t tm = invalid_value) {
@@ -235,23 +243,61 @@ public:
 #pragma pop_macro("IPC_SEMAPHORE_FUNC_")
 };
 
-class waiter_helper {
+class waiter_holder {
+public:
+    using handle_t = std::tuple<
+        ipc::string, 
+        sem_helper::handle_t /* sema */, 
+        sem_helper::handle_t /* handshake */>;
+
+    static handle_t invalid() noexcept {
+        return std::make_tuple(
+            ipc::string{}, 
+            sem_helper::invalid(), 
+            sem_helper::invalid());
+    }
+
+private:
     mutex lock_;
+    waiter_helper::wait_counter cnt_;
 
-    std::atomic<unsigned> waiting_ { 0 };
-    long counter_ = 0;
+    struct contrl {
+        waiter_holder * me_;
+        waiter_helper::wait_flags * flags_;
+        handle_t const & h_;
 
-    enum : unsigned {
-        destruct_mask = (std::numeric_limits<unsigned>::max)() >> 1,
-        destruct_flag = ~destruct_mask
+        waiter_helper::wait_flags & flags() noexcept {
+            assert(flags_ != nullptr);
+            return *flags_;
+        }
+
+        waiter_helper::wait_counter & counter() noexcept {
+            return me_->cnt_;
+        }
+
+        auto get_lock() {
+            return ipc::detail::unique_lock(me_->lock_);
+        }
+
+        bool sema_wait(std::size_t tm) {
+            return sem_helper::wait(std::get<1>(h_), tm);
+        }
+
+        bool sema_post(long count) {
+            return sem_helper::post(std::get<1>(h_), count);
+        }
+
+        bool handshake_wait(std::size_t tm) {
+            return sem_helper::wait(std::get<2>(h_), tm);
+        }
+
+        bool handshake_post(long count) {
+            return sem_helper::post(std::get<2>(h_), count);
+        }
     };
 
 public:
-    using handle_t = std::tuple<ipc::string, sem_helper::handle_t, sem_helper::handle_t>;
-
-    static handle_t invalid() noexcept {
-        return std::make_tuple(ipc::string{}, sem_helper::invalid(), sem_helper::invalid());
-    }
+    using wait_flags = waiter_helper::wait_flags;
 
     handle_t open_h(ipc::string && name) {
         auto sem = sem_helper::open(("__WAITER_HELPER_SEM__" + name).c_str(), 0);
@@ -285,95 +331,38 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t const & h, std::atomic<bool> const & enabled, F&& pred, std::size_t tm = invalid_value) {
-        if (!enabled.load(std::memory_order_acquire)) {
-            return false;
-        }
-        waiting_.fetch_add(1, std::memory_order_release);
-        auto finally = ipc::guard([this] {
-            waiting_.fetch_sub(1, std::memory_order_release);
-        });
-        {
-            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-            if (!std::forward<F>(pred)()) return true;
-            ++ counter_;
-        }
-        bool ret = false;
-        do {
-            if (!enabled.load(std::memory_order_acquire)) {
-                break;
-            }
-            ret = sem_helper::wait(std::get<1>(h), tm);
-        } while (waiting_.load(std::memory_order_acquire) & destruct_flag);
-        finally.do_exit();
-        ret = sem_helper::post(std::get<2>(h)) && ret;
-        return ret;
+    bool wait_if(handle_t const & h, wait_flags * flags, F&& pred, std::size_t tm = invalid_value) {
+        assert(flags != nullptr);
+        contrl ctrl { this, flags, h };
+        return waiter_helper::wait_if(ctrl, mtx, std::forward<F>(pred), tm);
     }
 
     bool notify(handle_t const & h) {
-        if ((waiting_.load(std::memory_order_acquire) & destruct_mask) == 0) {
-            return true;
-        }
-        bool ret = true;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        if (counter_ > 0) {
-            ret = sem_helper::post(std::get<1>(h));
-            -- counter_;
-            ret = ret && sem_helper::wait(std::get<2>(h), default_timeout);
-        }
-        return ret;
+        contrl ctrl { this, nullptr, h };
+        return waiter_helper::notify(ctrl);
     }
 
     bool broadcast(handle_t const & h) {
-        if ((waiting_.load(std::memory_order_acquire) & destruct_mask) == 0) {
-            return true;
-        }
-        bool ret = true;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        if (counter_ > 0) {
-            for (long i = 0; i < counter_; ++i) {
-                ret = ret && sem_helper::post(std::get<1>(h));
-            }
-            do {
-                -- counter_;
-                ret = ret && sem_helper::wait(std::get<2>(h), default_timeout);
-            } while (counter_ > 0);
-        }
-        return ret;
+        contrl ctrl { this, nullptr, h };
+        return waiter_helper::broadcast(ctrl);
     }
 
-    bool emit_destruction(handle_t const & h) {
-        if ((waiting_.load(std::memory_order_acquire) & destruct_mask) == 0) {
-            return true;
-        }
-        bool ret = true;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        waiting_.fetch_or(destruct_flag, std::memory_order_relaxed);
-        IPC_UNUSED_ auto finally = ipc::guard([this] {
-            waiting_.fetch_and(destruct_mask, std::memory_order_relaxed);
-        });
-        if (counter_ > 0) {
-            for (long i = 0; i < counter_; ++i) {
-                ret = ret && sem_helper::post(std::get<1>(h));
-            }
-            do {
-                -- counter_;
-                ret = ret && sem_helper::wait(std::get<2>(h), default_timeout);
-            } while (counter_ > 0);
-        }
-        return ret;
+    bool quit_waiting(handle_t const & h, wait_flags * flags) {
+        assert(flags != nullptr);
+        contrl ctrl { this, flags, h };
+        return waiter_helper::quit_waiting(ctrl);
     }
 };
 
 class waiter {
-    waiter_helper helper_;
+    waiter_holder helper_;
     std::atomic<unsigned> opened_ { 0 };
 
 public:
-    using handle_t = waiter_helper::handle_t;
+    using handle_t = waiter_holder::handle_t;
 
     static handle_t invalid() noexcept {
-        return waiter_helper::invalid();
+        return waiter_holder::invalid();
     }
 
     handle_t open(char const * name) {
@@ -396,9 +385,9 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t h, std::atomic<bool> const & enabled, F && pred, std::size_t tm = invalid_value) {
+    bool wait_if(handle_t h, waiter_holder::wait_flags * flags, F && pred, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
-        return helper_.wait_if(h, enabled, std::forward<F>(pred), tm);
+        return helper_.wait_if(h, flags, std::forward<F>(pred), tm);
     }
 
     bool notify(handle_t h) {
@@ -411,9 +400,9 @@ public:
         return helper_.broadcast(h);
     }
 
-    bool emit_destruction(handle_t h) {
+    bool quit_waiting(handle_t h, waiter_holder::wait_flags * flags) {
         if (h == invalid()) return false;
-        return helper_.emit_destruction(h);
+        return helper_.quit_waiting(h, flags);
     }
 };
 

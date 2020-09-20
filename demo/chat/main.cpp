@@ -26,10 +26,6 @@ ipc::channel receiver__ { name__, ipc::receiver };
 } // namespace
 
 int main() {
-    ::signal(SIGINT, [](int) {
-        receiver__.disconnect();
-    });
-
     std::string buf, id = id__ + std::to_string(calc_unique_id());
     std::regex  reg { "(c\\d+)> (.*)" };
 
@@ -58,6 +54,7 @@ int main() {
         if (buf.empty() || (buf == quit__)) break;
 //        std::cout << "[" << i << "]" << std::endl;
         sender__.send(id + "> " + buf);
+        buf.clear();
     }
 
     receiver__.disconnect();

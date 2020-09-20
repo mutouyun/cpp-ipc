@@ -5,10 +5,12 @@
 #include <atomic>
 #include <utility>
 #include <limits>
+#include <cassert>
 
 #include "libipc/rw_lock.h"
 #include "libipc/pool_alloc.h"
 #include "libipc/shm.h"
+#include "libipc/waiter_helper.h"
 
 #include "libipc/utility/log.h"
 #include "libipc/utility/scope_guard.h"
@@ -44,8 +46,9 @@ public:
         switch ((ret = ::WaitForSingleObject(h_, ms))) {
         case WAIT_OBJECT_0:
             return true;
-        case WAIT_ABANDONED:
         case WAIT_TIMEOUT:
+            return false;
+        case WAIT_ABANDONED:
         default:
             ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
             return false;
@@ -77,18 +80,48 @@ public:
 class condition {
     mutex     lock_;
     semaphore sema_, handshake_;
+    waiter_helper::wait_counter * cnt_ = nullptr;
 
-    std::atomic<unsigned> * waiting_ = nullptr;
-    long                  * counter_ = nullptr;
+    struct contrl {
+        condition * me_;
+        waiter_helper::wait_flags * flags_;
 
-    enum : unsigned {
-        destruct_mask = (std::numeric_limits<unsigned>::max)() >> 1,
-        destruct_flag = ~destruct_mask
+        waiter_helper::wait_flags & flags() noexcept {
+            assert(flags_ != nullptr);
+            return *flags_;
+        }
+
+        waiter_helper::wait_counter & counter() noexcept {
+            assert(me_->cnt_ != nullptr);
+            return *(me_->cnt_);
+        }
+
+        auto get_lock() {
+            return ipc::detail::unique_lock(me_->lock_);
+        }
+
+        bool sema_wait(std::size_t tm) {
+            return me_->sema_.wait(tm);
+        }
+
+        bool sema_post(long count) {
+            return me_->sema_.post(count);
+        }
+
+        bool handshake_wait(std::size_t tm) {
+            return me_->handshake_.wait(tm);
+        }
+
+        bool handshake_post(long count) {
+            return me_->handshake_.post(count);
+        }
     };
 
 public:
+    using wait_flags = waiter_helper::wait_flags;
+
     friend bool operator==(condition const & c1, condition const & c2) {
-        return (c1.waiting_ == c2.waiting_) && (c1.counter_ == c2.counter_);
+        return c1.cnt_ == c2.cnt_;
     }
 
     friend bool operator!=(condition const & c1, condition const & c2) {
@@ -101,12 +134,11 @@ public:
         mutex    ::remove((ipc::string{ "__COND_MTX__" } + name).c_str());
     }
 
-    bool open(ipc::string const & name, std::atomic<unsigned> * waiting, long * counter) {
+    bool open(ipc::string const & name, waiter_helper::wait_counter * cnt) {
         if (lock_     .open("__COND_MTX__" + name) &&
             sema_     .open("__COND_SEM__" + name) &&
             handshake_.open("__COND_HAN__" + name)) {
-            waiting_ = waiting;
-            counter_ = counter;
+            cnt_ = cnt;
             return true;
         }
         return false;
@@ -119,88 +151,31 @@ public:
     }
 
     template <typename Mutex, typename F>
-    bool wait_if(Mutex & mtx, std::atomic<bool> const & enabled, F && pred, std::size_t tm = invalid_value) {
-        if (!enabled.load(std::memory_order_acquire)) {
-            return false;
-        }
-        waiting_->fetch_add(1, std::memory_order_release);
-        auto finally = ipc::guard([this] {
-            waiting_->fetch_sub(1, std::memory_order_release);
-        });
-        {
-            IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-            if (!std::forward<F>(pred)()) return true;
-            ++ *counter_;
-        }
-        mtx.unlock();
-        bool ret = false;
-        do {
-            if (!enabled.load(std::memory_order_acquire)) {
-                break;
-            }
-            ret = sema_.wait(tm);
-        } while (waiting_->load(std::memory_order_acquire) & destruct_flag);
-        finally.do_exit();
-        ret = handshake_.post() && ret;
-        mtx.lock();
-        return ret;
+    bool wait_if(Mutex & mtx, wait_flags * flags, F && pred, std::size_t tm = invalid_value) {
+        assert(flags != nullptr);
+        contrl ctrl { this, flags };
+        return waiter_helper::wait_if(ctrl, mtx, std::forward<F>(pred), tm);
     }
 
     bool notify() {
-        if ((waiting_->load(std::memory_order_acquire) & destruct_mask) == 0) {
-            return true;
-        }
-        bool ret = true;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        if (*counter_ > 0) {
-            ret = sema_.post();
-            -- *counter_;
-            ret = ret && handshake_.wait(default_timeout);
-        }
-        return ret;
+        contrl ctrl { this, nullptr };
+        return waiter_helper::notify(ctrl);
     }
 
     bool broadcast() {
-        if ((waiting_->load(std::memory_order_acquire) & destruct_mask) == 0) {
-            return true;
-        }
-        bool ret = true;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        if (*counter_ > 0) {
-            ret = sema_.post(*counter_);
-            do {
-                -- *counter_;
-                ret = ret && handshake_.wait(default_timeout);
-            } while (*counter_ > 0);
-        }
-        return ret;
+        contrl ctrl { this, nullptr };
+        return waiter_helper::broadcast(ctrl);
     }
 
-    bool emit_destruction() {
-        if ((waiting_->load(std::memory_order_acquire) & destruct_mask) == 0) {
-            return true;
-        }
-        bool ret = true;
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
-        waiting_->fetch_or(destruct_flag, std::memory_order_relaxed);
-        IPC_UNUSED_ auto finally = ipc::guard([this] {
-            waiting_->fetch_and(destruct_mask, std::memory_order_relaxed);
-        });
-        if (*counter_ > 0) {
-            ret = sema_.post(*counter_);
-            do {
-                -- *counter_;
-                ret = ret && handshake_.wait(default_timeout);
-            } while (*counter_ > 0);
-        }
-        return ret;
+    bool quit_waiting(wait_flags * flags) {
+        assert(flags != nullptr);
+        contrl ctrl { this, flags };
+        return waiter_helper::quit_waiting(ctrl);
     }
 };
 
 class waiter {
-
-    std::atomic<unsigned> waiting_ { 0 };
-    long                  counter_ = 0;
+    waiter_helper::wait_counter cnt_;
 
 public:
     using handle_t = condition;
@@ -214,7 +189,7 @@ public:
             return invalid();
         }
         condition cond;
-        if (cond.open(name, &waiting_, &counter_)) {
+        if (cond.open(name, &cnt_)) {
             return cond;
         }
         return invalid();
@@ -226,7 +201,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t& h, std::atomic<bool> const & enabled, F&& pred, std::size_t tm = invalid_value) {
+    bool wait_if(handle_t& h, handle_t::wait_flags * flags, F&& pred, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
 
         class non_mutex {
@@ -235,7 +210,7 @@ public:
             void unlock() noexcept {}
         } nm;
 
-        return h.wait_if(nm, enabled, std::forward<F>(pred), tm);
+        return h.wait_if(nm, flags, std::forward<F>(pred), tm);
     }
 
     bool notify(handle_t& h) {
@@ -248,9 +223,9 @@ public:
         return h.broadcast();
     }
 
-    bool emit_destruction(handle_t& h) {
+    bool quit_waiting(handle_t& h, handle_t::wait_flags * flags) {
         if (h == invalid()) return false;
-        return h.emit_destruction();
+        return h.quit_waiting(flags);
     }
 };
 
