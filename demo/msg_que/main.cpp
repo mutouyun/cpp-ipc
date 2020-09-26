@@ -30,13 +30,13 @@ ipc::byte_t buff__[max_sz];
 capo::random<> rand__{ min_sz, max_sz };
 
 inline std::string str_of_size(std::size_t sz) noexcept {
-    if (sz <= 1024) {
-        return std::to_string(sz) + " bytes";
+    if (sz > 1024 * 1024) {
+        return std::to_string(sz / (1024 * 1024)) + " MB";
     }
-    if (sz <= 1024 * 1024) {
+    if (sz > 1024) {
         return std::to_string(sz / 1024) + " KB";
     }
-    return std::to_string(sz / (1024 * 1024)) + " MB";
+    return std::to_string(sz) + " bytes";
 }
 
 inline std::string speed_of(std::size_t sz) noexcept {

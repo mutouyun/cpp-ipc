@@ -26,7 +26,7 @@ inline static bool calc_wait_time(timespec& ts, std::size_t tm /*ms*/) {
     timeval now;
     int eno = ::gettimeofday(&now, NULL);
     if (eno != 0) {
-        ipc::error("fail gettimeofday[%d]\n", eno);
+        ipc::error("fail gettimeofday [%d]\n", eno);
         return false;
     }
     ts.tv_nsec = (now.tv_usec + (tm % 1000) * 1000) * 1000;
@@ -40,7 +40,7 @@ inline static bool calc_wait_time(timespec& ts, std::size_t tm /*ms*/) {
 #define IPC_PTHREAD_FUNC_(CALL, ...)                \
     int eno;                                        \
     if ((eno = ::CALL(__VA_ARGS__)) != 0) {         \
-        ipc::error("fail " #CALL "[%d]\n", eno);    \
+        ipc::error("fail " #CALL " [%d]\n", eno);   \
         return false;                               \
     }                                               \
     return true
@@ -146,7 +146,11 @@ public:
             IPC_PTHREAD_FUNC_(pthread_cond_wait, &cond_, &mtx.native());
         default: {
                 timespec ts;
-                calc_wait_time(ts, tm);
+                if (!calc_wait_time(ts, tm)) {
+                    ipc::error("fail calc_wait_time: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                               tm, ts.tv_sec, ts.tv_nsec);
+                    return false;
+                }
                 int eno;
                 if ((eno = ::pthread_cond_timedwait(&cond_, &mtx.native(), &ts)) != 0) {
                     if (eno != ETIMEDOUT) {
@@ -226,10 +230,14 @@ public:
             IPC_SEMAPHORE_FUNC_(sem_wait, h);
         default: {
                 timespec ts;
-                calc_wait_time(ts, tm);
+                if (!calc_wait_time(ts, tm)) {
+                    ipc::error("fail calc_wait_time: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                               tm, ts.tv_sec, ts.tv_nsec);
+                    return false;
+                }
                 if (::sem_timedwait(h, &ts) != 0) {
                     if (errno != ETIMEDOUT) {
-                        ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                        ipc::error("fail sem_timedwait [%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
                                    errno, tm, ts.tv_sec, ts.tv_nsec);
                     }
                     return false;
