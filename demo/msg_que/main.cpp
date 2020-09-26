@@ -27,7 +27,10 @@ using msg_que_t = ipc::chan<ipc::relat::single, ipc::relat::single, ipc::trans::
 
 msg_que_t que__{ name__ };
 ipc::byte_t buff__[max_sz];
-capo::random<> rand__{ min_sz, max_sz };
+capo::random<> rand__{ 
+    static_cast<int>(min_sz), 
+    static_cast<int>(max_sz)
+};
 
 inline std::string str_of_size(std::size_t sz) noexcept {
     if (sz > 1024 * 1024) {
