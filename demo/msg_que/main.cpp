@@ -21,7 +21,7 @@ constexpr std::size_t const min_sz = 128;
 constexpr std::size_t const max_sz = 1024 * 16;
 
 std::atomic<bool> is_quit__{ false };
-std::atomic<std::size_t> size_per_1s__{ 0 };
+std::atomic<std::size_t> size_counter__{ 0 };
 
 using msg_que_t = ipc::chan<ipc::relat::single, ipc::relat::single, ipc::trans::unicast>;
 
@@ -30,13 +30,13 @@ ipc::byte_t buff__[max_sz];
 capo::random<> rand__{ min_sz, max_sz };
 
 inline std::string str_of_size(std::size_t sz) noexcept {
-    if (sz <= 1024) {
-        return std::to_string(sz) + " bytes";
+    if (sz > 1024 * 1024) {
+        return std::to_string(sz / (1024 * 1024)) + " MB";
     }
-    if (sz <= 1024 * 1024) {
+    if (sz > 1024) {
         return std::to_string(sz / 1024) + " KB";
     }
-    return std::to_string(sz / (1024 * 1024)) + " MB";
+    return std::to_string(sz) + " bytes";
 }
 
 inline std::string speed_of(std::size_t sz) noexcept {
@@ -49,9 +49,8 @@ void do_counting() {
         if (i % 10) continue;
         i = 0;
         std::cout
-            << speed_of(size_per_1s__.load(std::memory_order_acquire))
+            << speed_of(size_counter__.exchange(0, std::memory_order_relaxed))
             << std::endl;
-        size_per_1s__.store(0, std::memory_order_release);
     }
 }
 
@@ -76,7 +75,7 @@ void do_send() {
                     break;
                 }
             }
-            size_per_1s__.fetch_add(sz, std::memory_order_release);
+            size_counter__.fetch_add(sz, std::memory_order_relaxed);
             std::this_thread::yield();
         }
         counting.join();
@@ -97,7 +96,7 @@ void do_recv() {
         while (!is_quit__.load(std::memory_order_acquire)) {
             auto msg = que__.recv();
             if (msg.empty()) break;
-            size_per_1s__.fetch_add(msg.size(), std::memory_order_release);
+            size_counter__.fetch_add(msg.size(), std::memory_order_relaxed);
         }
         counting.join();
     }
