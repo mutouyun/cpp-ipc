@@ -8,13 +8,18 @@
 
 namespace ipc {
 
+template <typename T>
+IPC_CONCEPT_(is_impl_comfortable, 
+    require<T>([](auto && t)->std::enable_if_t<(sizeof(t) <= sizeof(T*))> {})
+);
+
+template <typename T, typename R = T*>
+using IsImplComfortable = std::enable_if_t<is_impl_comfortable<T>::value, R>;
+
+template <typename T, typename R = T*>
+using IsImplUncomfortable = std::enable_if_t<!is_impl_comfortable<T>::value, R>;
+
 // pimpl small object optimization helpers
-
-template <typename T, typename R = T*>
-using IsImplComfortable = ipc::require<(sizeof(T) <= sizeof(T*)), R>;
-
-template <typename T, typename R = T*>
-using IsImplUncomfortable = ipc::require<(sizeof(T) > sizeof(T*)), R>;
 
 template <typename T, typename... P>
 constexpr auto make_impl(P&&... params) -> IsImplComfortable<T> {

@@ -27,7 +27,8 @@ namespace mem {
 
 namespace detail {
 
-IPC_CONCEPT_(is_comparable, operator<(std::declval<Type>()));
+template <typename T>
+IPC_CONCEPT_(is_comparable, require<const T>([](auto && t)->decltype(t < t) {}));
 
 } // namespace detail
 
@@ -71,8 +72,10 @@ public:
 template <typename AllocP>
 class default_recycler : public limited_recycler<AllocP> {
 
-    IPC_CONCEPT_(has_remain, remain());
-    IPC_CONCEPT_(has_empty , empty());
+    template <typename T>
+    IPC_CONCEPT_(has_remain, require<const T>([](auto && t)->decltype(t.remain()) {}));
+    template <typename T>
+    IPC_CONCEPT_(has_empty, require<const T>([](auto && t)->decltype(t.empty()) {}));
 
     template <typename A>
     void try_fill(A & alc) {
@@ -86,28 +89,28 @@ public:
 
     template <typename A = AllocP>
     auto try_replenish(alloc_policy & alc, std::size_t size)
-        -> ipc::require<detail::has_take<A>::value && has_remain<A>::value> {
+        -> std::enable_if_t<detail::has_take<A>::value && has_remain<A>::value> {
         if (alc.remain() >= size) return;
         this->try_fill(alc);
     }
 
     template <typename A = AllocP>
     auto try_replenish(alloc_policy & alc, std::size_t /*size*/)
-        -> ipc::require<detail::has_take<A>::value && !has_remain<A>::value && has_empty<A>::value> {
+        -> std::enable_if_t<detail::has_take<A>::value && !has_remain<A>::value && has_empty<A>::value> {
         if (!alc.empty()) return;
         this->try_fill(alc);
     }
 
     template <typename A = AllocP>
     auto try_replenish(alloc_policy & alc, std::size_t /*size*/)
-        -> ipc::require<!detail::has_take<A>::value && has_empty<A>::value> {
+        -> std::enable_if_t<!detail::has_take<A>::value && has_empty<A>::value> {
         if (!alc.empty()) return;
         this->try_recover(alc);
     }
 
     template <typename A = AllocP>
     IPC_CONSTEXPR_ auto try_replenish(alloc_policy & /*alc*/, std::size_t /*size*/) noexcept
-        -> ipc::require<(!detail::has_take<A>::value || !has_remain<A>::value) && !has_empty<A>::value> {
+        -> std::enable_if_t<(!detail::has_take<A>::value || !has_remain<A>::value) && !has_empty<A>::value> {
         // Do Nothing.
     }
 };

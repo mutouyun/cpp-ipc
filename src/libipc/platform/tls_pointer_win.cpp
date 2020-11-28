@@ -7,7 +7,6 @@
  * @remarks
  * Windows doesn't support a per-thread destructor with its TLS primitives.
  * So, here will build it manually by inserting a function to be called on each thread's exit.
- *
  * @see
  * - https://www.codeproject.com/Articles/8113/Thread-Local-Storage-The-C-Way
  * - https://src.chromium.org/viewvc/chrome/trunk/src/base/threading/thread_local_storage_win.cc
