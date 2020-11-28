@@ -15,19 +15,14 @@
 namespace ipc {
 namespace detail {
 
-struct has_value_type_ {
-    template <typename T> static std::true_type  check(typename T::value_type *);
-    template <typename T> static std::false_type check(...);
-};
-
-template <typename T, typename U, typename = decltype(has_value_type_::check<U>(nullptr))>
-struct is_same_char : std::is_same<T, U> {};
-
 template <typename T, typename U>
-struct is_same_char<T, U, std::true_type> : std::is_same<T, typename U::value_type> {};
+IPC_CONCEPT_(has_same_char, 
+    require([]()->std::enable_if_t<std::is_same<T, typename U::value_type>::value> {}) ||
+    require([]()->std::enable_if_t<std::is_same<T, U>::value> {})
+);
 
 template <typename T, typename S, typename R = S>
-using IsSameChar = ipc::require<is_same_char<T, S>::value, R>;
+using IsSameChar = std::enable_if_t<has_same_char<T, S>::value, R>;
 
 ////////////////////////////////////////////////////////////////
 /// to_tchar implementation

@@ -44,7 +44,8 @@ constexpr std::size_t aligned(std::size_t size, size_t alignment) noexcept {
     return ( (size - 1) & ~(alignment - 1) ) + alignment;
 }
 
-IPC_CONCEPT_(has_take, take(std::move(std::declval<Type>())));
+template <typename T>
+IPC_CONCEPT_(has_take, require<T>([](auto && t)->decltype(t.take(std::move(t))) {}));
 
 class scope_alloc_base {
 protected:
@@ -116,13 +117,13 @@ public:
     }
 
     template <typename A = AllocP>
-    auto take(scope_alloc && rhs) -> ipc::require<detail::has_take<A>::value> {
+    auto take(scope_alloc && rhs) -> std::enable_if_t<detail::has_take<A>::value> {
         base_t::take(std::move(rhs));
         alloc_.take(std::move(rhs.alloc_));
     }
 
     template <typename A = AllocP>
-    auto take(scope_alloc && rhs) -> ipc::require<!detail::has_take<A>::value> {
+    auto take(scope_alloc && rhs) -> std::enable_if_t<!detail::has_take<A>::value> {
         base_t::take(std::move(rhs));
     }
 
@@ -255,7 +256,7 @@ public:
     }
 
     template <typename A = AllocP>
-    auto take(fixed_alloc && rhs) -> ipc::require<detail::has_take<A>::value> {
+    auto take(fixed_alloc && rhs) -> std::enable_if_t<detail::has_take<A>::value> {
         base_t::take(std::move(rhs));
         alloc_.take(std::move(rhs.alloc_));
     }
@@ -394,7 +395,7 @@ public:
     }
 
     template <typename A = AllocP>
-    auto take(variable_alloc && rhs) -> ipc::require<detail::has_take<A>::value> {
+    auto take(variable_alloc && rhs) -> std::enable_if_t<detail::has_take<A>::value> {
         base_t::take(std::move(rhs));
         alloc_.take(std::move(rhs.alloc_));
     }
