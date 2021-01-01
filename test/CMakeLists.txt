@@ -15,7 +15,9 @@ include_directories(
     ${LIBIPC_PROJECT_DIR}/3rdparty
     ${LIBIPC_PROJECT_DIR}/3rdparty/gtest/include)
 
-file(GLOB SRC_FILES  ${LIBIPC_PROJECT_DIR}/test/*.cpp)
+file(GLOB SRC_FILES
+    ${LIBIPC_PROJECT_DIR}/test/*.cpp
+    ${LIBIPC_PROJECT_DIR}/test/profiler/*.cpp)
 file(GLOB HEAD_FILES ${LIBIPC_PROJECT_DIR}/test/*.h)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
