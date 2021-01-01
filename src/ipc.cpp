@@ -357,14 +357,14 @@ static void disconnect(ipc::handle_t h) {
     }
 }
 
-static bool reconnect(ipc::handle_t * ph, bool start) {
+static bool reconnect(ipc::handle_t * ph, bool start_to_recv) {
     assert(ph != nullptr);
     assert(*ph != nullptr);
     auto que = queue_of(*ph);
     if (que == nullptr) {
         return false;
     }
-    if (start) {
+    if (start_to_recv) {
         if (que->connect()) { // wouldn't connect twice
             info_of(*ph)->cc_waiter_.broadcast();
         }
@@ -376,12 +376,12 @@ static bool reconnect(ipc::handle_t * ph, bool start) {
     return true;
 }
 
-static bool connect(ipc::handle_t * ph, char const * name, bool start) {
+static bool connect(ipc::handle_t * ph, char const * name, bool start_to_recv) {
     assert(ph != nullptr);
     if (*ph == nullptr) {
         *ph = ipc::mem::alloc<conn_info_t>(name);
     }
-    return reconnect(ph, start);
+    return reconnect(ph, start_to_recv);
 }
 
 static void destroy(ipc::handle_t h) {

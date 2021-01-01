@@ -117,6 +117,9 @@ public:
         return chan_wrapper(name).wait_for_recv(r_count, tm);
     }
 
+    /**
+     * If timeout, this function would call 'force_push' to send the data forcibly.
+    */
     bool send(void const * data, std::size_t size, std::size_t tm = default_timeout) {
         return detail_t::send(h_, data, size, tm);
     }
@@ -127,6 +130,9 @@ public:
         return this->send(str.c_str(), str.size() + 1, tm);
     }
 
+    /**
+     * If timeout, this function would just return false.
+    */
     bool try_send(void const * data, std::size_t size, std::size_t tm = default_timeout) {
         return detail_t::try_send(h_, data, size, tm);
     }
@@ -149,7 +155,7 @@ public:
 template <relat Rp, relat Rc, trans Ts>
 using chan = chan_wrapper<ipc::wr<Rp, Rc, Ts>>;
 
-/*
+/**
  * class route
  *
  * You could use one producer/server/sender for sending messages to a route,
@@ -162,7 +168,7 @@ using chan = chan_wrapper<ipc::wr<Rp, Rc, Ts>>;
 
 using route = chan<relat::single, relat::multi, trans::broadcast>;
 
-/*
+/**
  * class channel
  *
  * You could use multi producers/writers for sending messages to a channel,
