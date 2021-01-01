@@ -422,6 +422,12 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
         ipc::error("fail: send, queue_of(h)->elems() == nullptr\n");
         return false;
     }
+    /**
+     * If the que hasn't connected as a receiver, the 'connected-id' must be 0,
+     * and 'connections' equals to 0 only if there are no receivers.
+     * Or if the que has connected as a receiver,
+     * 'connections' equals to 'connected-id' of this que only if there are no other receivers.
+    */
     if (que->elems()->connections(std::memory_order_relaxed) == que->connected_id()) {
         // there is no receiver on this connection
         return false;

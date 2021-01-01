@@ -23,9 +23,9 @@ constexpr u1_t index_of(u2_t c) noexcept {
 }
 
 class conn_head {
-    std::atomic<cc_t> cc_; // connections
+    std::atomic<cc_t> cc_{0}; // connections
     ipc::spin_lock lc_;
-    std::atomic<bool> constructed_;
+    std::atomic<bool> constructed_{false};
 
 public:
     void init() {
@@ -47,6 +47,10 @@ public:
         for (unsigned k = 0;;) {
             cc_t curr = cc_.load(std::memory_order_acquire);
             cc_t next = curr | (curr + 1); // find the first 0, and set it to 1.
+            if (next == 0) {
+                // connection-slot is full.
+                return 0;
+            }
             if (cc_.compare_exchange_weak(curr, next, std::memory_order_release)) {
                 return next ^ curr; // return connected id
             }

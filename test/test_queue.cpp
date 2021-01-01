@@ -127,6 +127,20 @@ TEST(Queue, check_size) {
     std::cout << "sizeof(elems_t<s, m, b>) = " << sizeof(el_t) << std::endl;
 }
 
+TEST(Queue, connection) {
+    {
+        using el_t = elems_t<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast>;
+        el_t el;
+        el.init();
+        for (std::size_t i = 0; i < (sizeof(ipc::circ::cc_t) * CHAR_BIT); ++i) {
+            EXPECT_NE(el.connect(), 0);
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_EQ(el.connect(), 0);
+        }
+    }
+}
+
 TEST(Queue, prod_cons_1v1_unicast) {
     test_sr(elems_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> {}, 1, 1, "ssu");
     test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::unicast> {}, 1, 1, "smu");
