@@ -5,6 +5,7 @@
 #include <new>
 #include <vector>
 #include <unordered_map>
+#include <climits>  // CHAR_BIT
 
 #include "libipc/prod_cons.h"
 #include "libipc/policy.h"
@@ -127,55 +128,177 @@ TEST(Queue, check_size) {
     std::cout << "sizeof(elems_t<s, m, b>) = " << sizeof(el_t) << std::endl;
 }
 
+TEST(Queue, el_connection) {
+    {
+        elems_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> el;
+        EXPECT_TRUE(el.connect_sender());
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_FALSE(el.connect_sender());
+        }
+        el.disconnect_sender();
+        EXPECT_TRUE(el.connect_sender());
+    }
+    {
+        elems_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::unicast> el;
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_TRUE(el.connect_sender());
+        }
+    }
+    {
+        elems_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> el;
+        auto cc = el.connect_receiver();
+        EXPECT_NE(cc, 0);
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_EQ(el.connect_receiver(), 0);
+        }
+        EXPECT_EQ(el.disconnect_receiver(cc), 0);
+        EXPECT_EQ(el.connect_receiver(), cc);
+    }
+    {
+        elems_t<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast> el;
+        for (std::size_t i = 0; i < (sizeof(ipc::circ::cc_t) * CHAR_BIT); ++i) {
+            EXPECT_NE(el.connect_receiver(), 0);
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_EQ(el.connect_receiver(), 0);
+        }
+    }
+}
+
+TEST(Queue, connection) {
+    {
+        elems_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> el;
+        queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
+        // sending
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_TRUE(que.ready_sending());
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
+            EXPECT_FALSE(que.ready_sending());
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            que.shut_sending();
+        }
+        {
+            queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
+            EXPECT_TRUE(que.ready_sending());
+        }
+        // receiving
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_TRUE(que.connect());
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
+            EXPECT_FALSE(que.connect());
+        }
+        EXPECT_TRUE(que.disconnect());
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_FALSE(que.disconnect());
+        }
+        {
+            queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
+            EXPECT_TRUE(que.connect());
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
+            EXPECT_FALSE(que.connect());
+        }
+    }
+    {
+        elems_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> el;
+        queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
+        // sending
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_TRUE(que.ready_sending());
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
+            EXPECT_TRUE(que.ready_sending());
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            que.shut_sending();
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
+            EXPECT_TRUE(que.ready_sending());
+        }
+        // receiving
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_TRUE(que.connect());
+        }
+        for (std::size_t i = 1; i < (sizeof(ipc::circ::cc_t) * CHAR_BIT); ++i) {
+            queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
+            EXPECT_TRUE(que.connect());
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
+            EXPECT_FALSE(que.connect());
+        }
+        EXPECT_TRUE(que.disconnect());
+        for (std::size_t i = 0; i < 10000; ++i) {
+            EXPECT_FALSE(que.disconnect());
+        }
+        {
+            queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
+            EXPECT_TRUE(que.connect());
+        }
+        for (std::size_t i = 0; i < 10000; ++i) {
+            queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
+            EXPECT_FALSE(que.connect());
+        }
+    }
+}
+
 TEST(Queue, prod_cons_1v1_unicast) {
-    test_sr(elems_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> {}, 1, 1, "ssu");
-    test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::unicast> {}, 1, 1, "smu");
-    test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast> {}, 1, 1, "mmu");
+    test_sr(elems_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast>{}, 1, 1, "ssu");
+    test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::unicast>{}, 1, 1, "smu");
+    test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast>{}, 1, 1, "mmu");
 }
 
 TEST(Queue, prod_cons_1v1_broadcast) {
-    test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::broadcast> {}, 1, 1, "smb");
-    test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast> {}, 1, 1, "mmb");
+    test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::broadcast>{}, 1, 1, "smb");
+    test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast>{}, 1, 1, "mmb");
 }
 
 TEST(Queue, prod_cons_1vN_unicast) {
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::unicast> {}, 1, i, "smu");
+        test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::unicast>{}, 1, i, "smu");
     }
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast> {}, 1, i, "mmu");
+        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast>{}, 1, i, "mmu");
     }
 }
 
 TEST(Queue, prod_cons_1vN_broadcast) {
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::broadcast> {}, 1, i, "smb");
+        test_sr(elems_t<ipc::relat::single, ipc::relat::multi , ipc::trans::broadcast>{}, 1, i, "smb");
     }
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast> {}, 1, i, "mmb");
+        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast>{}, 1, i, "mmb");
     }
 }
 
 TEST(Queue, prod_cons_NvN_unicast) {
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast> {}, 1, i, "mmu");
+        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast>{}, 1, i, "mmu");
     }
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast> {}, i, 1, "mmu");
+        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast>{}, i, 1, "mmu");
     }
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast> {}, i, i, "mmu");
+        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::unicast>{}, i, i, "mmu");
     }
 }
 
 TEST(Queue, prod_cons_NvN_broadcast) {
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast> {}, 1, i, "mmb");
+        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast>{}, 1, i, "mmb");
     }
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast> {}, i, 1, "mmb");
+        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast>{}, i, 1, "mmb");
     }
     for (int i = 1; i <= ThreadMax; ++i) {
-        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast> {}, i, i, "mmb");
+        test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast>{}, i, i, "mmb");
     }
 }

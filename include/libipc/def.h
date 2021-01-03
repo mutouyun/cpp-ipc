@@ -48,4 +48,17 @@ enum class trans { // transmission
 template <relat Rp, relat Rc, trans Ts>
 struct wr {};
 
+template <typename WR>
+struct relat_trait;
+
+template <relat Rp, relat Rc, trans Ts>
+struct relat_trait<wr<Rp, Rc, Ts>> {
+    constexpr static bool is_multi_producer = (Rp == relat::multi);
+    constexpr static bool is_multi_consumer = (Rc == relat::multi);
+    constexpr static bool is_broadcast      = (Ts == trans::broadcast);
+};
+
+template <template <typename> class Policy, typename Flag>
+struct relat_trait<Policy<Flag>> : relat_trait<Flag> {};
+
 } // namespace ipc

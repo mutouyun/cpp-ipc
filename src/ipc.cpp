@@ -270,12 +270,12 @@ struct conn_info_head {
     ipc::tls::pointer<ipc::unordered_map<msg_id_t, cache_t>> recv_cache_;
 
     conn_info_head(char const * name)
-        : name_     (name)
-        , cc_id_    ((cc_acc() == nullptr) ? 0 : cc_acc()->fetch_add(1, std::memory_order_relaxed))
-        , cc_waiter_(("__CC_CONN__" + name_).c_str())
-        , wt_waiter_(("__WT_CONN__" + name_).c_str())
-        , rd_waiter_(("__RD_CONN__" + name_).c_str())
-        , acc_h_    (("__AC_CONN__" + name_).c_str(), sizeof(acc_t)) {
+        : name_     {name}
+        , cc_id_    {(cc_acc() == nullptr) ? 0 : cc_acc()->fetch_add(1, std::memory_order_relaxed)}
+        , cc_waiter_{("__CC_CONN__" + name_).c_str()}
+        , wt_waiter_{("__WT_CONN__" + name_).c_str()}
+        , rd_waiter_{("__RD_CONN__" + name_).c_str()}
+        , acc_h_    {("__AC_CONN__" + name_).c_str(), sizeof(acc_t)} {
     }
 
     void quit_waiting() {
@@ -321,10 +321,18 @@ struct queue_generator {
         queue_t que_;
 
         conn_info_t(char const * name)
-            : conn_info_head(name)
-            , que_(("__QU_CONN__" +
-                    ipc::to_string(DataSize)  + "__" +
-                    ipc::to_string(AlignSize) + "__" + name).c_str()) {
+            : conn_info_head{name}
+            , que_{("__QU_CONN__" +
+                    ipc::to_string(DataSize) + "__" +
+                    ipc::to_string(AlignSize) + "__" + name).c_str()} {
+        }
+
+        void disconnect_receiver() {
+            bool dis = que_.disconnect();
+            this->quit_waiting();
+            if (dis) {
+                this->recv_cache().clear();
+            }
         }
     };
 };
@@ -335,11 +343,11 @@ struct detail_impl {
 using queue_t     = typename queue_generator<Policy>::queue_t;
 using conn_info_t = typename queue_generator<Policy>::conn_info_t;
 
-constexpr static conn_info_t* info_of(ipc::handle_t h) {
+constexpr static conn_info_t* info_of(ipc::handle_t h) noexcept {
     return static_cast<conn_info_t*>(h);
 }
 
-constexpr static queue_t* queue_of(ipc::handle_t h) {
+constexpr static queue_t* queue_of(ipc::handle_t h) noexcept {
     return (info_of(h) == nullptr) ? nullptr : &(info_of(h)->que_);
 }
 
@@ -350,38 +358,39 @@ static void disconnect(ipc::handle_t h) {
     if (que == nullptr) {
         return;
     }
-    bool dis = que->disconnect();
-    info_of(h)->quit_waiting();
-    if (dis) {
-        info_of(h)->recv_cache().clear();
-    }
+    que->shut_sending();
+    assert(info_of(h) != nullptr);
+    info_of(h)->disconnect_receiver();
 }
 
-static bool reconnect(ipc::handle_t * ph, bool start) {
+static bool reconnect(ipc::handle_t * ph, bool start_to_recv) {
     assert(ph != nullptr);
     assert(*ph != nullptr);
     auto que = queue_of(*ph);
     if (que == nullptr) {
         return false;
     }
-    if (start) {
+    if (start_to_recv) {
+        que->shut_sending();
         if (que->connect()) { // wouldn't connect twice
             info_of(*ph)->cc_waiter_.broadcast();
+            return true;
         }
+        return false;
     }
-    // start == false
-    else if (que->connected()) {
-        disconnect(*ph);
+    // start_to_recv == false
+    if (que->connected()) {
+        info_of(*ph)->disconnect_receiver();
     }
-    return true;
+    return que->ready_sending();
 }
 
-static bool connect(ipc::handle_t * ph, char const * name, bool start) {
+static bool connect(ipc::handle_t * ph, char const * name, bool start_to_recv) {
     assert(ph != nullptr);
     if (*ph == nullptr) {
         *ph = ipc::mem::alloc<conn_info_t>(name);
     }
-    return reconnect(ph, start);
+    return reconnect(ph, start_to_recv);
 }
 
 static void destroy(ipc::handle_t h) {
@@ -389,7 +398,7 @@ static void destroy(ipc::handle_t h) {
     ipc::mem::free(info_of(h));
 }
 
-static std::size_t recv_count(ipc::handle_t h) {
+static std::size_t recv_count(ipc::handle_t h) noexcept {
     auto que = queue_of(h);
     if (que == nullptr) {
         return ipc::invalid_value;
@@ -422,8 +431,12 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
         ipc::error("fail: send, queue_of(h)->elems() == nullptr\n");
         return false;
     }
-    if (que->elems()->connections(std::memory_order_relaxed) == que->connected_id()) {
-        // there is no receiver on this connection
+    if (!que->ready_sending()) {
+        ipc::error("fail: send, que->ready_sending() == false\n");
+        return false;
+    }
+    if (que->elems()->connections(std::memory_order_relaxed) == 0) {
+        ipc::error("fail: send, there is no receiver on this connection.\n");
         return false;
     }
     // calc a new message id
