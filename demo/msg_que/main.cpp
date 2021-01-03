@@ -111,10 +111,21 @@ void do_recv() {
 int main(int argc, char ** argv) {
     if (argc < 2) return 0;
 
-    ::signal(SIGINT, [](int) {
+    auto exit = [](int) {
         is_quit__.store(true, std::memory_order_release);
         que__.disconnect();
-    });
+    };
+    ::signal(SIGINT  , exit);
+    ::signal(SIGABRT , exit);
+    ::signal(SIGSEGV , exit);
+    ::signal(SIGTERM , exit);
+#if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
+    defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
+    defined(WINCE) || defined(_WIN32_WCE)
+    ::signal(SIGBREAK, exit);
+#else
+    ::signal(SIGHUP  , exit);
+#endif
 
     if (std::string{ argv[1] } == mode_s__) {
         do_send();

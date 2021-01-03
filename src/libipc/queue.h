@@ -2,7 +2,7 @@
 
 #include <type_traits>
 #include <new>
-#include <utility>
+#include <utility>  // [[since C++14]]: std::exchange
 #include <algorithm>
 #include <atomic>
 #include <tuple>
@@ -63,21 +63,22 @@ public:
     }
 
     template <typename Elems>
-    auto connect(Elems* elems)
-     -> std::tuple<bool, decltype(std::declval<Elems>().cursor())> {
+    auto connect(Elems* elems) noexcept
+                         /*needs 'optional' here*/
+     -> std::tuple<bool, bool, decltype(std::declval<Elems>().cursor())> {
         if (elems == nullptr) return {};
-        // if it's already connected, just return false
-        if (connected()) return {};
-        connected_ = elems->connect();
-        return std::make_tuple(connected(), elems->cursor());
+        // if it's already connected, just return
+        if (connected()) return {connected(), false, 0};
+        connected_ = elems->connect_receiver();
+        return {connected(), true, elems->cursor()};
     }
 
     template <typename Elems>
-    bool disconnect(Elems* elems) {
+    bool disconnect(Elems* elems) noexcept {
         if (elems == nullptr) return false;
         // if it's already disconnected, just return false
         if (!connected()) return false;
-        elems->disconnect(connected_);
+        elems->disconnect_receiver(std::exchange(connected_, 0));
         return true;
     }
 };
@@ -93,6 +94,7 @@ public:
 protected:
     elems_t * elems_ = nullptr;
     decltype(std::declval<elems_t>().cursor()) cursor_ = 0;
+    bool sender_flag_ = false;
 
 public:
     using base_t::base_t;
@@ -100,12 +102,12 @@ public:
     queue_base() = default;
 
     explicit queue_base(char const * name)
-        : queue_base() {
+        : queue_base{} {
         elems_ = open<elems_t>(name);
     }
 
-    explicit queue_base(elems_t * elems)
-        : queue_base() {
+    explicit queue_base(elems_t * elems) noexcept
+        : queue_base{} {
         assert(elems != nullptr);
         elems_ = elems;
     }
@@ -117,16 +119,27 @@ public:
     elems_t       * elems()       noexcept { return elems_; }
     elems_t const * elems() const noexcept { return elems_; }
 
-    bool connect() {
-        auto tp = base_t::connect(elems_);
-        if (std::get<0>(tp)) {
-            cursor_ = std::get<1>(tp);
-            return true;
-        }
-        return false;
+    bool ready_sending() noexcept {
+        if (elems_ == nullptr) return false;
+        return sender_flag_ || (sender_flag_ = elems_->connect_sender());
     }
 
-    bool disconnect() {
+    void shut_sending() noexcept {
+        if (elems_ == nullptr) return;
+        if (!sender_flag_) return;
+        elems_->disconnect_sender();
+    }
+
+    bool connect() noexcept {
+        auto tp = base_t::connect(elems_);
+        if (std::get<0>(tp) && std::get<1>(tp)) {
+            cursor_ = std::get<2>(tp);
+            return true;
+        }
+        return std::get<0>(tp);
+    }
+
+    bool disconnect() noexcept {
         return base_t::disconnect(elems_);
     }
 
@@ -172,7 +185,7 @@ public:
 } // namespace detail
 
 template <typename T, typename Policy>
-class queue : public detail::queue_base<typename Policy::template elems_t<sizeof(T), alignof(T)>> {
+class queue final : public detail::queue_base<typename Policy::template elems_t<sizeof(T), alignof(T)>> {
     using base_t = detail::queue_base<typename Policy::template elems_t<sizeof(T), alignof(T)>>;
 
 public:
