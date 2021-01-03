@@ -41,17 +41,19 @@ class chan_wrapper {
 private:
     using detail_t = chan_impl<Flag>;
 
-    ipc::handle_t h_    = nullptr;
-    unsigned mode_ = ipc::sender;
+    ipc::handle_t h_ = nullptr;
+    unsigned mode_   = ipc::sender;
+    bool connected_  = false;
 
 public:
-    chan_wrapper() = default;
+    chan_wrapper() noexcept = default;
 
-    explicit chan_wrapper(char const * name, unsigned mode = ipc::sender) {
-        this->connect(name, mode);
+    explicit chan_wrapper(char const * name, unsigned mode = ipc::sender)
+        : connected_{this->connect(name, mode)} {
     }
 
-    chan_wrapper(chan_wrapper&& rhs) noexcept {
+    chan_wrapper(chan_wrapper&& rhs) noexcept
+        : chan_wrapper{} {
         swap(rhs);
     }
 
@@ -60,15 +62,17 @@ public:
     }
 
     void swap(chan_wrapper& rhs) noexcept {
-        std::swap(h_, rhs.h_);
+        std::swap(h_        , rhs.h_);
+        std::swap(mode_     , rhs.mode_);
+        std::swap(connected_, rhs.connected_);
     }
 
-    chan_wrapper& operator=(chan_wrapper rhs) {
+    chan_wrapper& operator=(chan_wrapper rhs) noexcept {
         swap(rhs);
         return *this;
     }
 
-    char const * name() const {
+    char const * name() const noexcept {
         return detail_t::name(h_);
     }
 
@@ -88,21 +92,28 @@ public:
         return chan_wrapper { name(), mode_ };
     }
 
+    /**
+     * Building handle, then try connecting with name & mode flags.
+    */
     bool connect(char const * name, unsigned mode = ipc::sender | ipc::receiver) {
         if (name == nullptr || name[0] == '\0') return false;
-        this->disconnect();
-        return detail_t::connect(&h_, name, mode_ = mode);
+        detail_t::disconnect(h_); // clear old connection
+        return connected_ = detail_t::connect(&h_, name, mode_ = mode);
     }
 
+    /**
+     * Try connecting with new mode flags.
+    */
     bool reconnect(unsigned mode) {
         if (!valid()) return false;
-        if (mode_ == mode) return true;
-        return detail_t::reconnect(&h_, mode_ = mode);
+        if (connected_ && (mode_ == mode)) return true;
+        return connected_ = detail_t::reconnect(&h_, mode_ = mode);
     }
 
     void disconnect() {
         if (!valid()) return;
         detail_t::disconnect(h_);
+        connected_ = false;
     }
 
     std::size_t recv_count() const {

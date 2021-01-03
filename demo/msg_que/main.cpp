@@ -111,10 +111,13 @@ void do_recv() {
 int main(int argc, char ** argv) {
     if (argc < 2) return 0;
 
-    ::signal(SIGINT, [](int) {
+    auto exit = [](int) {
         is_quit__.store(true, std::memory_order_release);
         que__.disconnect();
-    });
+    };
+    ::signal(SIGINT  , exit);
+    ::signal(SIGBREAK, exit);
+    ::signal(SIGTERM , exit);
 
     if (std::string{ argv[1] } == mode_s__) {
         do_send();
