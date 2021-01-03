@@ -435,6 +435,10 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
         ipc::error("fail: send, que->ready_sending() == false\n");
         return false;
     }
+    if (que->elems()->connections(std::memory_order_relaxed) == 0) {
+        ipc::error("fail: send, there is no receiver on this connection.\n");
+        return false;
+    }
     // calc a new message id
     auto acc = info_of(h)->acc();
     if (acc == nullptr) {
