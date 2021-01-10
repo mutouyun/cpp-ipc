@@ -55,7 +55,7 @@ struct waiter_helper {
             }
             else if (flags.need_dest_.exchange(false, std::memory_order_release)) {
                 ret = false;
-                ctrl.sema_wait(tm);
+                ctrl.sema_wait(default_timeout);
                 break;
             }
             else {
@@ -100,12 +100,13 @@ struct waiter_helper {
                 ret = ret && ctrl.handshake_wait(default_timeout);
             } while (counter.counter_ > 0);
         }
-        return ret;
+       return ret;
     }
 
     template <typename Ctrl>
     static bool quit_waiting(Ctrl & ctrl) {
         auto & flags = ctrl.flags();
+        flags.need_dest_.store(true, std::memory_order_relaxed);
         if (!flags.is_waiting_.exchange(false, std::memory_order_release)) {
             return true;
         }
@@ -116,7 +117,6 @@ struct waiter_helper {
         bool ret = true;
         IPC_UNUSED_ auto guard = ctrl.get_lock();
         if (counter.counter_ > 0) {
-            flags.need_dest_.store(true, std::memory_order_relaxed);
             ret = ctrl.sema_post(counter.counter_);
             counter.counter_ -= 1;
             ret = ret && ctrl.handshake_wait(default_timeout);
