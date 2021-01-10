@@ -376,9 +376,14 @@ struct prod_cons_impl<wr<relat::multi, relat::multi, trans::broadcast>> {
             }
             // just compare & exchange
             if (el->rc_.compare_exchange_weak(
-                        cur_rc, inc_mask(epoch | (cur_rc & ep_mask)) | static_cast<rc_t>(cc), std::memory_order_relaxed) &&
-                epoch_.compare_exchange_weak(epoch, epoch, std::memory_order_acq_rel)) {
-                break;
+                        cur_rc, inc_mask(epoch | (cur_rc & ep_mask)) | static_cast<rc_t>(cc), std::memory_order_relaxed)) {
+                if (epoch == epoch_.load(std::memory_order_acquire)) {
+                    break;
+                }
+                else if (push(wrapper, std::forward<F>(f), elems)) {
+                    return true;
+                }
+                epoch = epoch_.fetch_add(ep_incr, std::memory_order_release) + ep_incr;
             }
             ipc::yield(k);
         }
