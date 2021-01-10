@@ -100,7 +100,7 @@ struct waiter_helper {
                 ret = ret && ctrl.handshake_wait(default_timeout);
             } while (counter.counter_ > 0);
         }
-       return ret;
+        return ret;
     }
 
     template <typename Ctrl>
