@@ -555,7 +555,7 @@ static ipc::buff_t recv(ipc::handle_t h, std::size_t tm) {
                         recycle_storage(reinterpret_cast<std::size_t>(ptr) - 1, size);
                     }, reinterpret_cast<void*>(buf_id + 1) };
                 }
-                else ipc::log("fail: shm::handle for big message. msg_id: %zd, size: %zd\n", msg.id_, remain);
+                else ipc::log("fail: shm::handle for big message. msg_id: %zd, buf_id: %zd, size: %zd\n", msg.id_, buf_id, remain);
             }
             // gc
             if (rc.size() > 1024) {
