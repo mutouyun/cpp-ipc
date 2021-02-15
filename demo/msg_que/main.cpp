@@ -18,7 +18,7 @@ constexpr char const mode_s__[] = "s";
 constexpr char const mode_r__[] = "r";
 
 constexpr std::size_t const min_sz = 128;
-constexpr std::size_t const max_sz = 1024 * 16;
+constexpr std::size_t const max_sz = 1024 * 1024 * 512;
 
 std::atomic<bool> is_quit__{ false };
 std::atomic<std::size_t> size_counter__{ 0 };
@@ -57,10 +57,11 @@ void do_counting() {
     }
 }
 
-void do_send() {
+void do_send(std::size_t sz) {
     std::cout 
         << __func__ << ": start [" 
-        << str_of_size(min_sz) << " - " << str_of_size(max_sz) 
+        // << str_of_size(min_sz) << " - " << str_of_size(max_sz) 
+        << str_of_size(sz) 
         << "]...\n";
     if (!que__.reconnect(ipc::sender)) {
         std::cerr << __func__ << ": connect failed.\n";
@@ -68,7 +69,7 @@ void do_send() {
     else {
         std::thread counting{ do_counting };
         while (!is_quit__.load(std::memory_order_acquire)) {
-            std::size_t sz = static_cast<std::size_t>(rand__());
+            // std::size_t sz = static_cast<std::size_t>(rand__());
             if (!que__.send(ipc::buff_t(buff__, sz))) {
                 std::cerr << __func__ << ": send failed.\n";
                 std::cout << __func__ << ": waiting for receiver...\n";
@@ -128,7 +129,12 @@ int main(int argc, char ** argv) {
 #endif
 
     if (std::string{ argv[1] } == mode_s__) {
-        do_send();
+        if (argc < 3) {
+            std::cout << "Require indicating size.\n";
+            return 0;
+        }
+        int sz = std::stoi(std::string{ argv[2] });
+        do_send(sz);
     }
     else if (std::string{ argv[1] } == mode_r__) {
         do_recv();
