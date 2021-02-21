@@ -6,18 +6,20 @@ spec:
   containers:
   - name: server
     image: cheneyyu/shm-demo
-    env:
-      - name: ROLE
-        value: s
+    resources:
+      limits:
+        cpu: "1"
+        memory: "1G"
     volumeMounts:
     - name: cache-volume
       mountPath: /dev/shm
 
   - name: function-1
     image: cheneyyu/shm-demo
-    env:
-      - name: ROLE
-        value: c
+    resources:
+      limits:
+        cpu: "1"
+        memory: "1G"
     volumeMounts:
     - name: cache-volume
       mountPath: /dev/shm
