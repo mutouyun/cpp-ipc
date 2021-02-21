@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shm-demo
+spec:
+  containers:
+  # - args:
+  #   - infinity
+  #   command:
+  #   - sleep
+  #   image: centos:7
+  #   name: centos
+  #   volumeMounts:
+  #   - mountPath: /dev/shm
+  #     name: cache-volume
+  - name: function-1
+    image: nginx
+    env:
+      - name: ROLE
+        value: s
+    volumeMounts:
+    - name: cache-volume
+      mountPath: /dev/shm
+
+  - name: function-2
+    image: debian
+    env:
+      - name: ROLE
+        value: c
+    volumeMounts:
+    - name: cache-volume
+      mountPath: /dev/shm
+  volumes:
+  - emptyDir:
+      medium: Memory
+      sizeLimit: 1024Mi
+    name: cache-volume
