@@ -4,17 +4,8 @@ metadata:
   name: shm-demo
 spec:
   containers:
-  # - args:
-  #   - infinity
-  #   command:
-  #   - sleep
-  #   image: centos:7
-  #   name: centos
-  #   volumeMounts:
-  #   - mountPath: /dev/shm
-  #     name: cache-volume
   - name: function-1
-    image: nginx
+    image: cheneyyu/shm-demo
     env:
       - name: ROLE
         value: s
@@ -23,7 +14,7 @@ spec:
       mountPath: /dev/shm
 
   - name: function-2
-    image: debian
+    image: cheneyyu/shm-demo
     env:
       - name: ROLE
         value: c
