@@ -5,6 +5,7 @@ ENV DEMO_HOME /shm-demo
 WORKDIR /
 # start from project home dir
 COPY . $DEMO_HOME
+RUN rm -rf $DEMO_HOME/build
 RUN mkdir $DEMO_HOME/build
 WORKDIR /$DEMO_HOME/build
 
