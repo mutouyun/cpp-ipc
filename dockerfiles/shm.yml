@@ -4,7 +4,7 @@ metadata:
   name: shm-demo
 spec:
   containers:
-  - name: function-1
+  - name: server
     image: cheneyyu/shm-demo
     env:
       - name: ROLE
@@ -13,7 +13,7 @@ spec:
     - name: cache-volume
       mountPath: /dev/shm
 
-  - name: function-2
+  - name: function-1
     image: cheneyyu/shm-demo
     env:
       - name: ROLE

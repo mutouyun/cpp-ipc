@@ -12,4 +12,4 @@ WORKDIR /$DEMO_HOME/build
 RUN cmake .. && make
 
 COPY dockerfiles/start-demo.sh /
-CMD bash start-demo.sh
+CMD bash /start-demo.sh
