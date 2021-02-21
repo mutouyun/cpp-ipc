@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: non-shm-demo
+spec:
+  containers:
+  - name: server
+    image: cheneyyu/shm-demo
+    env:
+      - name: ROLE
+        value: s
+  - name: function-1
+    image: cheneyyu/shm-demo
+    env:
+      - name: ROLE
+        value: c
