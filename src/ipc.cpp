@@ -104,6 +104,7 @@ struct chunk_info_t {
     }
 
     ipc::byte_t *at(std::size_t chunk_size, std::size_t id) noexcept {
+        if (id == ipc::invalid_value) return nullptr;
         return reinterpret_cast<ipc::byte_t *>(this + 1) + (chunks_elem_size(chunk_size) * id);
     }
 };
@@ -168,6 +169,11 @@ std::pair<std::size_t, void*> apply_storage(std::size_t conn_count, std::size_t 
 }
 
 void *find_storage(std::size_t id, std::size_t size) {
+    if (id == ipc::invalid_value) {
+        ipc::error("[find_storage] id is invalid: id = %zd, size = %zd\n", id, size);
+        return nullptr;
+    }
+
     std::size_t chunk_size = calc_chunk_size(size);
     auto &      chunk_shm  = chunk_storage(chunk_size);
 
