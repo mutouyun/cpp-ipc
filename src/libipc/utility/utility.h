@@ -53,4 +53,9 @@ T horrible_cast(U val) {
     return u.out;
 }
 
+IPC_CONSTEXPR_ std::size_t make_align(std::size_t align, std::size_t size) {
+    // align must be 2^n
+    return (size + align - 1) & ~(align - 1);
+}
+
 } // namespace ipc
