@@ -20,3 +20,8 @@ add_subdirectory(test)
 
 add_subdirectory(demo/chat)
 add_subdirectory(demo/msg_que)
+
+install(
+  DIRECTORY "include/"
+  DESTINATION "include"
+)

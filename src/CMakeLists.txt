@@ -32,3 +32,8 @@ if(NOT MSVC)
       pthread
       $<$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>>:rt>)
 endif()
+
+install(
+  TARGETS ${PROJECT_NAME}
+  DESTINATION "lib"
+)
