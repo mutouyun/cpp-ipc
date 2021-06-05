@@ -21,7 +21,7 @@ before_install:
 
 script:
   - mkdir -p ./build && cd ./build
-  - cmake -DCMAKE_BUILD_TYPE=Release ..
+  - cmake -DCMAKE_BUILD_TYPE=Release -DLIBIPC_BUILD_TESTS=ON ..
   - make -j`nproc`
   - export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH && ./bin/test-ipc
 

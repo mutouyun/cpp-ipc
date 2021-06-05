@@ -7,24 +7,24 @@ if(NOT MSVC)
 endif()
 
 include_directories(
-    ${CMAKE_SOURCE_DIR}/include 
-    ${CMAKE_SOURCE_DIR}/src)
+    ${LIBIPC_PROJECT_DIR}/include 
+    ${LIBIPC_PROJECT_DIR}/src)
 
 if(UNIX)
-  file(GLOB SRC_FILES ${CMAKE_SOURCE_DIR}/src/libipc/platform/*_linux.cpp)
+  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_linux.cpp)
 else()
-  file(GLOB SRC_FILES ${CMAKE_SOURCE_DIR}/src/libipc/platform/*_win.cpp)
+  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_win.cpp)
 endif()
-aux_source_directory(${CMAKE_SOURCE_DIR}/src SRC_FILES)
+aux_source_directory(${LIBIPC_PROJECT_DIR}/src SRC_FILES)
 
 file(GLOB HEAD_FILES
-  ${CMAKE_SOURCE_DIR}/include/libipc/*.h
-  ${CMAKE_SOURCE_DIR}/src/libipc/*.h
-  ${CMAKE_SOURCE_DIR}/src/libipc/*.inc
-  ${CMAKE_SOURCE_DIR}/src/libipc/circ/*.h
-  ${CMAKE_SOURCE_DIR}/src/libipc/memory/*.h
-  ${CMAKE_SOURCE_DIR}/src/libipc/platform/*.h
-  ${CMAKE_SOURCE_DIR}/src/libipc/utility/*.h)
+  ${LIBIPC_PROJECT_DIR}/include/libipc/*.h
+  ${LIBIPC_PROJECT_DIR}/src/libipc/*.h
+  ${LIBIPC_PROJECT_DIR}/src/libipc/*.inc
+  ${LIBIPC_PROJECT_DIR}/src/libipc/circ/*.h
+  ${LIBIPC_PROJECT_DIR}/src/libipc/memory/*.h
+  ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*.h
+  ${LIBIPC_PROJECT_DIR}/src/libipc/utility/*.h)
 
 add_library(${PROJECT_NAME} SHARED ${SRC_FILES} ${HEAD_FILES})
 if(NOT MSVC)
