@@ -1,9 +1,10 @@
 
 #include <thread>
+#include <iostream>
 
 #include "test.h"
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__linux)
 #include <pthread.h>
 #include <time.h>
 
@@ -21,8 +22,6 @@ TEST(PThread, Robust) {
 
     struct timespec tout;
     clock_gettime(CLOCK_REALTIME, &tout);
-    struct tm *tmp = localtime(&tout.tv_sec);
-    tout.tv_sec += 1;   /* 1 seconds from now */
     int r = pthread_mutex_timedlock(&mutex, &tout);
     EXPECT_EQ(r, EOWNERDEAD);
 
@@ -30,4 +29,21 @@ TEST(PThread, Robust) {
     pthread_mutex_unlock(&mutex);
     pthread_mutex_destroy(&mutex);
 }
-#endif // __linux__
+#elif defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
+      defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#include <Windows.h>
+#include <tchar.h>
+
+TEST(PThread, Robust) {
+    HANDLE lock = CreateMutex(NULL, FALSE, _T("test-robust"));
+    std::thread{[] {
+        HANDLE lock = CreateMutex(NULL, FALSE, _T("test-robust"));
+        WaitForSingleObject(lock, 0);
+    }}.join();
+
+    DWORD r = WaitForSingleObject(lock, 0);
+    EXPECT_EQ(r, WAIT_ABANDONED);
+
+    CloseHandle(lock);
+}
+#endif // !__linux__
