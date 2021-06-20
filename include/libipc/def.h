@@ -25,13 +25,16 @@ using uint_t = typename uint<N>::type;
 
 // constants
 
+enum : std::uint32_t {
+    invalid_value   = (std::numeric_limits<std::uint32_t>::max)(),
+    default_timeout = 100, // ms
+};
+
 enum : std::size_t {
-    invalid_value   = (std::numeric_limits<std::size_t>::max)(),
     data_length     = 64,
     large_msg_limit = data_length,
     large_msg_align = 512,
     large_msg_cache = 32,
-    default_timeout = 100 // ms
 };
 
 enum class relat { // multiplicity of the relationship

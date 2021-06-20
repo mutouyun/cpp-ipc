@@ -291,7 +291,7 @@ struct conn_info_head {
 };
 
 template <typename W, typename F>
-bool wait_for(W& waiter, F&& pred, std::size_t tm) {
+bool wait_for(W& waiter, F&& pred, std::uint64_t tm) {
     if (tm == 0) return !pred();
     for (unsigned k = 0; pred();) {
         bool loop = true, ret = true;
@@ -403,7 +403,7 @@ static std::size_t recv_count(ipc::handle_t h) noexcept {
     return que->conn_count();
 }
 
-static bool wait_for_recv(ipc::handle_t h, std::size_t r_count, std::size_t tm) {
+static bool wait_for_recv(ipc::handle_t h, std::size_t r_count, std::uint64_t tm) {
     auto que = queue_of(h);
     if (que == nullptr) {
         return false;
@@ -475,7 +475,7 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
     return true;
 }
 
-static bool send(ipc::handle_t h, void const * data, std::size_t size, std::size_t tm) {
+static bool send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm) {
     return send([tm](auto info, auto que, auto msg_id) {
         return [tm, info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
@@ -500,7 +500,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size, std::size
     }, h, data, size);
 }
 
-static bool try_send(ipc::handle_t h, void const * data, std::size_t size, std::size_t tm) {
+static bool try_send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm) {
     return send([tm](auto info, auto que, auto msg_id) {
         return [tm, info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
@@ -514,7 +514,7 @@ static bool try_send(ipc::handle_t h, void const * data, std::size_t size, std::
     }, h, data, size);
 }
 
-static ipc::buff_t recv(ipc::handle_t h, std::size_t tm) {
+static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
     auto que = queue_of(h);
     if (que == nullptr) {
         ipc::error("fail: recv, queue_of(h) == nullptr\n");
@@ -630,22 +630,22 @@ std::size_t chan_impl<Flag>::recv_count(ipc::handle_t h) {
 }
 
 template <typename Flag>
-bool chan_impl<Flag>::wait_for_recv(ipc::handle_t h, std::size_t r_count, std::size_t tm) {
+bool chan_impl<Flag>::wait_for_recv(ipc::handle_t h, std::size_t r_count, std::uint64_t tm) {
     return detail_impl<policy_t<Flag>>::wait_for_recv(h, r_count, tm);
 }
 
 template <typename Flag>
-bool chan_impl<Flag>::send(ipc::handle_t h, void const * data, std::size_t size, std::size_t tm) {
+bool chan_impl<Flag>::send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm) {
     return detail_impl<policy_t<Flag>>::send(h, data, size, tm);
 }
 
 template <typename Flag>
-buff_t chan_impl<Flag>::recv(ipc::handle_t h, std::size_t tm) {
+buff_t chan_impl<Flag>::recv(ipc::handle_t h, std::uint64_t tm) {
     return detail_impl<policy_t<Flag>>::recv(h, tm);
 }
 
 template <typename Flag>
-bool chan_impl<Flag>::try_send(ipc::handle_t h, void const * data, std::size_t size, std::size_t tm) {
+bool chan_impl<Flag>::try_send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm) {
     return detail_impl<policy_t<Flag>>::try_send(h, data, size, tm);
 }
 
