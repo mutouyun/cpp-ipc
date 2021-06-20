@@ -6,7 +6,8 @@
 
 #include "test.h"
 
-#if defined(__linux__) || defined(__linux)
+#include "libipc/platform/detail.h"
+#if defined(IPC_OS_LINUX_)
 #include <pthread.h>
 #include <time.h>
 
@@ -31,8 +32,7 @@ TEST(PThread, Robust) {
     pthread_mutex_unlock(&mutex);
     pthread_mutex_destroy(&mutex);
 }
-#elif defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
-      defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#elif defined(IPC_OS_WINDOWS_)
 #include <Windows.h>
 #include <tchar.h>
 
@@ -48,7 +48,7 @@ TEST(PThread, Robust) {
 
     CloseHandle(lock);
 }
-#endif // !__linux__
+#endif // OS
 
 #include "libipc/mutex.h"
 
