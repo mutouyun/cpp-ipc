@@ -37,15 +37,15 @@ public:
     }
 
     bool valid() const noexcept {
-        static const tmp[sizeof pthread_mutex_t] {};
+        static const tmp[sizeof(pthread_mutex_t)] {};
         return shm_.valid()
             && (mutex_ != nullptr)
-            && (std::memcmp(tmp, mutex_, sizeof pthread_mutex_t) != 0);
+            && (std::memcmp(tmp, mutex_, sizeof(pthread_mutex_t)) != 0);
     }
 
     bool open(char const *name) noexcept {
         close();
-        if (!shm_.acquire(name, sizeof pthread_mutex_t)) {
+        if (!shm_.acquire(name, sizeof(pthread_mutex_t))) {
             ipc::error("fail shm.acquire: %s\n", name);
             return false;
         }
@@ -93,27 +93,29 @@ public:
 
     bool lock(std::uint64_t tm) noexcept {
         for (;;) {
+            auto ts = detail::make_timespec(tm);
             int eno = (tm == invalid_value) 
                 ? ::pthread_mutex_lock(mutex_) 
-                : ::pthread_mutex_timedlock(mutex_, detail::make_timespec(tm));
+                : ::pthread_mutex_timedlock(mutex_, &ts);
             switch (eno) {
             case 0:
                 return true;
             case ETIMEDOUT:
                 return false;
-            case EOWNERDEAD:
-                if (shm_.ref() > 1) {
-                    shm_.sub_ref();
-                }
-                int eno2 = ::pthread_mutex_consistent(mutex_);
-                if (eno2 != 0) {
-                    ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
-                    return false;
-                }
-                int eno3 = ::pthread_mutex_unlock(mutex_);
-                if (eno3 != 0) {
-                    ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
-                    return false;
+            case EOWNERDEAD: {
+                    if (shm_.ref() > 1) {
+                        shm_.sub_ref();
+                    }
+                    int eno2 = ::pthread_mutex_consistent(mutex_);
+                    if (eno2 != 0) {
+                        ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
+                        return false;
+                    }
+                    int eno3 = ::pthread_mutex_unlock(mutex_);
+                    if (eno3 != 0) {
+                        ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
+                        return false;
+                    }
                 }
                 break; // loop again
             default:
@@ -124,25 +126,27 @@ public:
     }
 
     bool try_lock() noexcept(false) {
-        int eno = ::pthread_mutex_timedlock(mutex_, detail::make_timespec(0));
+        auto ts = detail::make_timespec(0);
+        int eno = ::pthread_mutex_timedlock(mutex_, &ts);
         switch (eno) {
         case 0:
             return true;
         case ETIMEDOUT:
             return false;
-        case EOWNERDEAD:
-            if (shm_.ref() > 1) {
-                shm_.sub_ref();
-            }
-            int eno2 = ::pthread_mutex_consistent(mutex_);
-            if (eno2 != 0) {
-                ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
-                break;
-            }
-            int eno3 = ::pthread_mutex_unlock(mutex_);
-            if (eno3 != 0) {
-                ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
-                break;
+        case EOWNERDEAD: {
+                if (shm_.ref() > 1) {
+                    shm_.sub_ref();
+                }
+                int eno2 = ::pthread_mutex_consistent(mutex_);
+                if (eno2 != 0) {
+                    ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
+                    break;
+                }
+                int eno3 = ::pthread_mutex_unlock(mutex_);
+                if (eno3 != 0) {
+                    ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
+                    break;
+                }
             }
             break;
         default:
