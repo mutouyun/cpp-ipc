@@ -44,7 +44,7 @@ bool mutex::unlock() {
 
 #include "libipc/waiter_template.inc"
 
-bool semaphore::wait(std::size_t tm) {
+bool semaphore::wait(std::uint64_t tm) {
     return impl(p_)->h_.wait(tm);
 }
 
@@ -62,7 +62,7 @@ bool semaphore::post(long count) {
 
 #include "libipc/waiter_template.inc"
 
-bool condition::wait(mutex& mtx, std::size_t tm) {
+bool condition::wait(mutex& mtx, std::uint64_t tm) {
     return impl(p_)->h_.wait(impl(mtx.p_)->h_, tm);
 }
 

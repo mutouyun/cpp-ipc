@@ -40,7 +40,7 @@ public:
         ::CloseHandle(h_);
     }
 
-    bool wait(std::size_t tm = invalid_value) {
+    bool wait(std::uint64_t tm = invalid_value) {
         DWORD ret, ms = (tm == invalid_value) ? INFINITE : static_cast<DWORD>(tm);
         switch ((ret = ::WaitForSingleObject(h_, ms))) {
         case WAIT_OBJECT_0:
@@ -102,7 +102,7 @@ class condition {
             return ipc::detail::unique_lock(me_->lock_);
         }
 
-        bool sema_wait(std::size_t tm) {
+        bool sema_wait(std::uint64_t tm) {
             return me_->sema_.wait(tm);
         }
 
@@ -110,7 +110,7 @@ class condition {
             return me_->sema_.post(count);
         }
 
-        bool handshake_wait(std::size_t tm) {
+        bool handshake_wait(std::uint64_t tm) {
             return me_->handshake_.wait(tm);
         }
 
@@ -151,7 +151,7 @@ public:
     }
 
     template <typename Mutex, typename F>
-    bool wait_if(Mutex & mtx, wait_flags * flags, F && pred, std::size_t tm = invalid_value) {
+    bool wait_if(Mutex & mtx, wait_flags * flags, F && pred, std::uint64_t tm = invalid_value) {
         assert(flags != nullptr);
         contrl ctrl { this, flags };
         return waiter_helper::wait_if(ctrl, mtx, std::forward<F>(pred), tm);
@@ -201,7 +201,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t& h, waiter_helper::wait_flags * flags, F&& pred, std::size_t tm = invalid_value) {
+    bool wait_if(handle_t& h, waiter_helper::wait_flags * flags, F&& pred, std::uint64_t tm = invalid_value) {
         if (h == invalid()) return false;
 
         class non_mutex {

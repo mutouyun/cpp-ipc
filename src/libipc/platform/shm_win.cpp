@@ -58,6 +58,14 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     return ii;
 }
 
+std::uint32_t get_ref(id_t) {
+    return 0;
+}
+
+void sub_ref(id_t) {
+    // Do Nothing.
+}
+
 void * get_mem(id_t id, std::size_t * size) {
     if (id == nullptr) {
         ipc::error("fail get_mem: invalid id (null)\n");

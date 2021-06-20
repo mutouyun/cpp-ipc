@@ -47,16 +47,24 @@ handle& handle::operator=(handle rhs) {
     return *this;
 }
 
-bool handle::valid() const {
+bool handle::valid() const noexcept {
     return impl(p_)->m_ != nullptr;
 }
 
-std::size_t handle::size() const {
+std::size_t handle::size() const noexcept {
     return impl(p_)->s_;
 }
 
-char const * handle::name() const {
+char const * handle::name() const noexcept {
     return impl(p_)->n_.c_str();
+}
+
+std::uint32_t handle::ref() const noexcept {
+    return shm::get_ref(impl(p_)->id_);
+}
+
+void handle::sub_ref() noexcept {
+    shm::sub_ref(impl(p_)->id_);
 }
 
 bool handle::acquire(char const * name, std::size_t size, unsigned mode) {

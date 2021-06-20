@@ -24,7 +24,7 @@ struct waiter_helper {
     };
 
     template <typename Mutex, typename Ctrl, typename F>
-    static bool wait_if(Ctrl & ctrl, Mutex & mtx, F && pred, std::size_t tm) {
+    static bool wait_if(Ctrl & ctrl, Mutex & mtx, F && pred, std::uint64_t tm) {
         auto & flags = ctrl.flags();
         if (flags.is_closed_.load(std::memory_order_acquire)) {
             return false;
