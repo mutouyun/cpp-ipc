@@ -21,12 +21,12 @@ class mutex {
     pthread_mutex_t *mutex_ = nullptr;
 
 public:
-    mutex() noexcept = default;
+    mutex() = default;
     explicit mutex(char const *name) noexcept {
         open(name);
     }
 
-    ~mutex() noexcept = default;
+    ~mutex() = default;
 
     pthread_mutex_t const *native() const noexcept {
         return mutex_;
