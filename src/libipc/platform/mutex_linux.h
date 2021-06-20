@@ -37,7 +37,7 @@ public:
     }
 
     bool valid() const noexcept {
-        static const tmp[sizeof(pthread_mutex_t)] {};
+        static const char tmp[sizeof(pthread_mutex_t)] {};
         return shm_.valid()
             && (mutex_ != nullptr)
             && (std::memcmp(tmp, mutex_, sizeof(pthread_mutex_t)) != 0);

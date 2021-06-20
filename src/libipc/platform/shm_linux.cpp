@@ -90,7 +90,7 @@ std::uint32_t get_ref(id_t id) {
     if (ii->mem_ == nullptr || ii->size_ == 0) {
         return 0;
     }
-    return acc_of(mem, ii->size_).load(std::memory_order_acquire);
+    return acc_of(ii->mem_, ii->size_).load(std::memory_order_acquire);
 }
 
 void sub_ref(id_t id) {
