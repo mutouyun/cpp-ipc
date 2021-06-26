@@ -23,7 +23,7 @@ constexpr std::size_t const max_sz = 1024 * 16;
 std::atomic<bool> is_quit__{ false };
 std::atomic<std::size_t> size_counter__{ 0 };
 
-using msg_que_t = ipc::chan<ipc::relat::single, ipc::relat::single, ipc::trans::unicast>;
+using msg_que_t = ipc::chan<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast>;
 
 msg_que_t que__{ name__ };
 ipc::byte_t buff__[max_sz];

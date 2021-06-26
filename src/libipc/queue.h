@@ -155,11 +155,11 @@ public:
         return !valid() || (cursor_ == elems_->cursor());
     }
 
-    template <typename T, typename... P>
-    bool push(P&&... params) {
+    template <typename T, typename F, typename... P>
+    bool push(F&& prep, P&&... params) {
         if (elems_ == nullptr) return false;
         return elems_->push(this, [&](void* p) {
-            ::new (p) T(std::forward<P>(params)...);
+            if (prep(p)) ::new (p) T(std::forward<P>(params)...);
         });
     }
 
