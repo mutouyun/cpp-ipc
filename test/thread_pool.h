@@ -9,6 +9,8 @@
 #include <cstddef>            // std::size_t
 #include <cassert>            // assert
 
+#include "capo/scope_guard.hpp"
+
 namespace ipc_ut {
 
 class thread_pool final {
@@ -32,6 +34,9 @@ class thread_pool final {
         if (pool->quit_) return;
         if (pool->jobs_.empty()) {
           pool->waiting_cnt_ += 1;
+          CAPO_SCOPE_GUARD_ = [pool] {
+              pool->waiting_cnt_ -= 1;
+          };
 
           if (pool->waiting_cnt_ == pool->workers_.size()) {
             pool->cv_empty_.notify_all();
@@ -41,8 +46,6 @@ class thread_pool final {
             pool->cv_jobs_.wait(guard);
             if (pool->quit_) return;
           } while (pool->jobs_.empty());
-
-          pool->waiting_cnt_ -= 1;
         }
         assert(!pool->jobs_.empty());
         job = std::move(pool->jobs_.front());
@@ -71,6 +74,7 @@ public:
   }
 
   void start(std::size_t n) {
+    std::unique_lock<std::mutex> guard { lock_ };
     if (n <= workers_.size()) return;
     for (std::size_t i = workers_.size(); i < n; ++i) {
       workers_.push_back(std::thread { &thread_pool::proc, this });
