@@ -32,8 +32,8 @@
 
 namespace {
 
-using msg_id_t   = std::uint32_t;
-using acc_t      = std::atomic<msg_id_t>;
+using msg_id_t = std::uint32_t;
+using acc_t    = std::atomic<msg_id_t>;
 
 template <std::size_t DataSize, std::size_t AlignSize>
 struct msg_t;
@@ -505,8 +505,8 @@ static ipc::buff_t recv(ipc::handle_t h, std::size_t tm) {
             if (buf != nullptr) {
                 if (recycled) {
                     return ipc::buff_t{buf, msg_size, [](void* pmid, std::size_t size) {
-                        release_storage(reinterpret_cast<ipc::storage_id_t>(pmid) - 1, size);
-                    }, reinterpret_cast<void*>(buf_id + 1)};
+                        release_storage(ipc::detail::horrible_cast<ipc::storage_id_t>(pmid) - 1, size);
+                    }, ipc::detail::horrible_cast<void*>(buf_id + 1)};
                 } else {
                     return ipc::buff_t{buf, msg_size}; // no recycle
                 }
