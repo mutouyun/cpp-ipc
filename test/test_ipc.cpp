@@ -1,6 +1,8 @@
 
 #include <vector>
 #include <iostream>
+#include <mutex>
+#include <atomic>
 #include <cstring>
 
 #include "libipc/ipc.h"
@@ -16,12 +18,25 @@ using namespace ipc;
 
 namespace {
 
+constexpr int LoopCount = 10000;
+constexpr int MultiMax  = 8;
+
+struct msg_head {
+    int id_;
+};
+
 class rand_buf : public buffer {
 public:
     rand_buf() {
-        int size = capo::random<>{1, 65536}();
+        int size = capo::random<>{sizeof(msg_head), 65536}();
         *this = buffer(new char[size], size, [](void * p, std::size_t) {
             delete [] static_cast<char *>(p);
+        });
+    }
+
+    rand_buf(msg_head const &msg) {
+        *this = buffer(new msg_head{msg}, sizeof(msg), [](void * p, std::size_t) {
+            delete static_cast<msg_head *>(p);
         });
     }
 
@@ -40,11 +55,11 @@ public:
     }
 
     void set_id(int k) noexcept {
-        *get<char *>() = static_cast<char>(k);
+        get<msg_head *>()->id_ = k;
     }
 
     int get_id() const noexcept {
-        return static_cast<int>(*get<char *>());
+        return get<msg_head *>()->id_;
     }
 
     using buffer::operator=;
@@ -67,56 +82,66 @@ void test_basic(char const * name) {
     EXPECT_EQ(que2.recv(), test2);
 }
 
-template <relat Rp, relat Rc, trans Ts>
-void test_sr(char const * name, int size, int s_cnt, int r_cnt) {
-    using que_t = chan<Rp, Rc, Ts>;
+class data_set {
+    std::vector<rand_buf> datas_;
 
+public:
+    data_set() {
+        datas_.resize(LoopCount);
+        for (int i = 0; i < LoopCount; ++i) {
+            datas_[i].set_id(i);
+        }
+    }
+
+    std::vector<rand_buf> const &get() const noexcept {
+        return datas_;
+    }
+} const data_set__;
+
+template <relat Rp, relat Rc, trans Ts, typename Que = chan<Rp, Rc, Ts>>
+void test_sr(char const * name, int s_cnt, int r_cnt) {
     ipc_ut::sender().start(static_cast<std::size_t>(s_cnt));
     ipc_ut::reader().start(static_cast<std::size_t>(r_cnt));
+
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     ipc_ut::test_stopwatch sw;
-    std::vector<rand_buf> tests(size);
 
     for (int k = 0; k < s_cnt; ++k) {
-        ipc_ut::sender() << [name, &tests, &sw, r_cnt, k] {
-            que_t que1 { name };
-            EXPECT_TRUE(que1.wait_for_recv(r_cnt));
+        ipc_ut::sender() << [name, &sw, r_cnt, k] {
+            Que que { name, ipc::sender };
+            EXPECT_TRUE(que.wait_for_recv(r_cnt));
             sw.start();
-            for (auto & buf : tests) {
-                rand_buf data { buf };
-                data.set_id(k);
-                EXPECT_TRUE(que1.send(data));
+            for (int i = 0; i < (int)data_set__.get().size(); ++i) {
+                EXPECT_TRUE(que.send(data_set__.get()[i]));
             }
         };
     }
 
     for (int k = 0; k < r_cnt; ++k) {
-        ipc_ut::reader() << [name, &tests, s_cnt] {
-            que_t que2 { name, ipc::receiver };
-            std::vector<int> cursors(s_cnt);
+        ipc_ut::reader() << [name] {
+            Que que { name, ipc::receiver };
             for (;;) {
-                rand_buf got { que2.recv() };
+                rand_buf got { que.recv() };
                 ASSERT_FALSE(got.empty());
-                int & cur = cursors.at(got.get_id());
-                ASSERT_TRUE((cur >= 0) && (cur < static_cast<int>(tests.size())));
-                rand_buf buf { tests.at(cur++) };
-                buf.set_id(got.get_id());
-                EXPECT_EQ(got, buf);
-                int n = 0;
-                for (; n < static_cast<int>(cursors.size()); ++n) {
-                    if (cursors[n] < static_cast<int>(tests.size())) break;
+                int i = got.get_id();
+                if (i == -1) {
+                    return;
                 }
-                if (n == static_cast<int>(cursors.size())) break;
+                ASSERT_TRUE((i >= 0) && (i < (int)data_set__.get().size()));
+                EXPECT_EQ(data_set__.get()[i], got);
             }
         };
     }
 
     ipc_ut::sender().wait_for_done();
+    Que que { name };
+    EXPECT_TRUE(que.wait_for_recv(r_cnt));
+    for (int k = 0; k < r_cnt; ++k) {
+        que.send(rand_buf{msg_head{-1}});
+    }
     ipc_ut::reader().wait_for_done();
-    sw.print_elapsed<std::chrono::microseconds>(s_cnt, r_cnt, size, name);
+    sw.print_elapsed<std::chrono::microseconds>(s_cnt, r_cnt, (int)data_set__.get().size(), name);
 }
-
-constexpr int LoopCount = 10000;
-constexpr int MultiMax  = 8;
 
 } // internal-linkage
 
@@ -129,22 +154,26 @@ TEST(IPC, basic) {
 }
 
 TEST(IPC, 1v1) {
-    test_sr<relat::single, relat::single, trans::unicast  >("ssu", LoopCount, 1, 1);
-    test_sr<relat::single, relat::multi , trans::unicast  >("smu", LoopCount, 1, 1);
-    test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", LoopCount, 1, 1);
-    test_sr<relat::single, relat::multi , trans::broadcast>("smb", LoopCount, 1, 1);
-    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", LoopCount, 1, 1);
+    test_sr<relat::single, relat::single, trans::unicast  >("ssu", 1, 1);
+    test_sr<relat::single, relat::multi , trans::unicast  >("smu", 1, 1);
+    test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", 1, 1);
+    test_sr<relat::single, relat::multi , trans::broadcast>("smb", 1, 1);
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", 1, 1);
 }
 
 TEST(IPC, 1vN) {
-    test_sr<relat::single, relat::multi , trans::broadcast>("smb", LoopCount, 1, MultiMax);
-    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", LoopCount, 1, MultiMax);
+    //test_sr<relat::single, relat::multi , trans::unicast  >("smu", 1, MultiMax);
+    //test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", 1, MultiMax);
+    test_sr<relat::single, relat::multi , trans::broadcast>("smb", 1, MultiMax);
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", 1, MultiMax);
 }
 
 TEST(IPC, Nv1) {
-    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", LoopCount, MultiMax, 1);
+    //test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", MultiMax, 1);
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", MultiMax, 1);
 }
 
 TEST(IPC, NvN) {
-    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", LoopCount, MultiMax, MultiMax);
+    //test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", MultiMax, MultiMax);
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", MultiMax, MultiMax);
 }
