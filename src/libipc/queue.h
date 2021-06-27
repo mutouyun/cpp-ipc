@@ -171,14 +171,14 @@ public:
         });
     }
 
-    template <typename T>
-    bool pop(T& item) {
+    template <typename T, typename F>
+    bool pop(T& item, F&& out) {
         if (elems_ == nullptr) {
             return false;
         }
         return elems_->pop(this, &(this->cursor_), [&item](void* p) {
             ::new (&item) T(std::move(*static_cast<T*>(p)));
-        });
+        }, std::forward<F>(out));
     }
 };
 
@@ -204,7 +204,12 @@ public:
     }
 
     bool pop(T& item) {
-        return base_t::pop(item);
+        return base_t::pop(item, [](bool) {});
+    }
+
+    template <typename F>
+    bool pop(T& item, F&& out) {
+        return base_t::pop(item, std::forward<F>(out));
     }
 };
 

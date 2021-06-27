@@ -32,8 +32,8 @@
 
 namespace {
 
-using msg_id_t = std::uint32_t;
-using acc_t    = std::atomic<msg_id_t>;
+using msg_id_t   = std::uint32_t;
+using acc_t      = std::atomic<msg_id_t>;
 
 template <std::size_t DataSize, std::size_t AlignSize>
 struct msg_t;
@@ -92,6 +92,14 @@ auto cc_acc() {
     return static_cast<acc_t*>(acc_h.get());
 }
 
+IPC_CONSTEXPR_ std::size_t align_chunk_size(std::size_t size) noexcept {
+    return (((size - 1) / ipc::large_msg_align) + 1) * ipc::large_msg_align;
+}
+
+IPC_CONSTEXPR_ std::size_t calc_chunk_size(std::size_t size) noexcept {
+    return ipc::make_align(alignof(std::max_align_t), align_chunk_size(size));
+}
+
 struct chunk_info_t {
     ipc::id_pool<> pool_;
     ipc::spin_lock lock_;
@@ -100,9 +108,13 @@ struct chunk_info_t {
         return ipc::id_pool<>::max_count * chunk_size;
     }
 
-    ipc::byte_t *at(std::size_t chunk_size, ipc::storage_id_t id) noexcept {
-        if (id < 0) return nullptr;
-        return reinterpret_cast<ipc::byte_t *>(this + 1) + (chunk_size * id);
+    ipc::byte_t* chunks_mem() noexcept {
+        return reinterpret_cast<ipc::byte_t*>(this + 1);
+    }
+
+    ipc::byte_t* at(std::size_t chunk_size, ipc::storage_id_t id) noexcept {
+        assert(id >= 0);
+        return chunks_mem() + (chunk_size * id);
     }
 };
 
@@ -130,16 +142,11 @@ auto& chunk_storages() {
     return chunk_s;
 }
 
-IPC_CONSTEXPR_ std::size_t calc_chunk_size(std::size_t size) noexcept {
-    return ipc::make_align(alignof(std::max_align_t), 
-                          (((size - 1) / ipc::large_msg_align) + 1) * ipc::large_msg_align);
-}
-
 chunk_info_t *chunk_storage_info(std::size_t chunk_size) {
     return chunk_storages()[chunk_size].get_info(chunk_size);
 }
 
-std::pair<ipc::storage_id_t, void*> apply_storage(std::size_t size) {
+std::pair<ipc::storage_id_t, void*> acquire_storage(std::size_t size) {
     std::size_t chunk_size = calc_chunk_size(size);
     auto info = chunk_storage_info(chunk_size);
     if (info == nullptr) return {};
@@ -166,14 +173,12 @@ void *find_storage(ipc::storage_id_t id, std::size_t size) {
 
 void release_storage(ipc::storage_id_t id, std::size_t size) {
     if (id < 0) {
-        ipc::error("[clear_storage] id is invalid: id = %ld, size = %zd\n", (long)id, size);
+        ipc::error("[release_storage] id is invalid: id = %ld, size = %zd\n", (long)id, size);
         return;
     }
-
     std::size_t chunk_size = calc_chunk_size(size);
     auto info = chunk_storage_info(chunk_size);
     if (info == nullptr) return;
-
     info->lock_.lock();
     info->pool_.release(id);
     info->lock_.unlock();
@@ -394,7 +399,7 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
     auto msg_id   = acc->fetch_add(1, std::memory_order_relaxed);
     auto try_push = std::forward<F>(gen_push)(info_of(h), que, msg_id);
     if (size > ipc::large_msg_limit) {
-        auto   dat = apply_storage(size);
+        auto   dat = acquire_storage(size);
         void * buf = dat.second;
         if (buf != nullptr) {
             std::memcpy(buf, data, size);
@@ -429,7 +434,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size, std::size
         return [tm, info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(
-                        recycle_message<typename queue_t::value_t>, 
+                        [](void*) { return true; },
                         info->cc_id_, msg_id, remain, data, size);
                 }, tm)) {
                 ipc::log("force_push: msg_id = %zd, remain = %d, size = %zd\n", msg_id, remain, size);
@@ -450,7 +455,7 @@ static bool try_send(ipc::handle_t h, void const * data, std::size_t size, std::
         return [tm, info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(
-                        recycle_message<typename queue_t::value_t>, 
+                        [](void*) { return true; },
                         info->cc_id_, msg_id, remain, data, size);
                 }, tm)) {
                 return false;
@@ -475,7 +480,10 @@ static ipc::buff_t recv(ipc::handle_t h, std::size_t tm) {
     for (;;) {
         // pop a new message
         typename queue_t::value_t msg;
-        if (!wait_for(info_of(h)->rd_waiter_, [que, &msg] { return !que->pop(msg); }, tm)) {
+        bool recycled = false;
+        if (!wait_for(info_of(h)->rd_waiter_, [que, &msg, &recycled] {
+                return !que->pop(msg, [&recycled](bool r) { recycled = r; });
+            }, tm)) {
             // pop failed, just return.
             return {};
         }
@@ -490,22 +498,28 @@ static ipc::buff_t recv(ipc::handle_t h, std::size_t tm) {
             return {};
         }
         std::size_t msg_size = static_cast<std::size_t>(r_size);
+        // large message
+        if (msg.storage_) {
+            ipc::storage_id_t buf_id = *reinterpret_cast<ipc::storage_id_t*>(&msg.data_);
+            void* buf = find_storage(buf_id, msg_size);
+            if (buf != nullptr) {
+                if (recycled) {
+                    return ipc::buff_t{buf, msg_size, [](void* pmid, std::size_t size) {
+                        release_storage(reinterpret_cast<ipc::storage_id_t>(pmid) - 1, size);
+                    }, reinterpret_cast<void*>(buf_id + 1)};
+                } else {
+                    return ipc::buff_t{buf, msg_size}; // no recycle
+                }
+            } else {
+                ipc::log("fail: shm::handle for large message. msg_id: %zd, buf_id: %zd, size: %zd\n", msg.id_, buf_id, msg_size);
+                continue;
+            }
+        }
         // find cache with msg.id_
         auto cac_it = rc.find(msg.id_);
         if (cac_it == rc.end()) {
             if (msg_size <= ipc::data_length) {
                 return make_cache(msg.data_, msg_size);
-            }
-            if (msg.storage_) {
-                std::size_t buf_id = *reinterpret_cast<std::size_t*>(&msg.data_);
-                void      * buf    = find_storage(buf_id, msg_size);
-                if (buf != nullptr) {
-                    return ipc::buff_t{buf, msg_size};
-                }
-                else {
-                    ipc::log("fail: shm::handle for big message. msg_id: %zd, buf_id: %zd, size: %zd\n", msg.id_, buf_id, msg_size);
-                    continue;
-                }
             }
             // gc
             if (rc.size() > 1024) {
