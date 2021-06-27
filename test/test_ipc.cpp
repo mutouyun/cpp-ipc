@@ -75,8 +75,8 @@ void test_basic(char const * name) {
     EXPECT_FALSE(que1.try_send(test2));
 
     que_t que2 { que1.name(), ipc::receiver };
-    EXPECT_TRUE(que1.send(test1));
-    EXPECT_TRUE(que1.try_send(test2));
+    ASSERT_TRUE(que1.send(test1));
+    ASSERT_TRUE(que1.try_send(test2));
 
     EXPECT_EQ(que2.recv(), test1);
     EXPECT_EQ(que2.recv(), test2);
@@ -128,7 +128,11 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
                     return;
                 }
                 ASSERT_TRUE((i >= 0) && (i < (int)data_set__.get().size()));
-                EXPECT_EQ(data_set__.get()[i], got);
+                if (data_set__.get()[i] != got) {
+                    printf("data_set__.get()[%d] != got, size = %zd/%zd\n", 
+                            i, data_set__.get()[i].size(), got.size());
+                    EXPECT_TRUE(false);
+                }
             }
         };
     }
