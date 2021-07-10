@@ -1,6 +1,6 @@
 project(ipc)
 
-add_compile_options(-D__IPC_LIBRARY__)
+option(LIBIPC_BUILD_SHARED_LIBS "Build shared libraries (DLLs)." OFF)
 
 if(NOT MSVC)
   add_compile_options(-fPIC)
@@ -26,11 +26,21 @@ file(GLOB HEAD_FILES
   ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*.h
   ${LIBIPC_PROJECT_DIR}/src/libipc/utility/*.h)
 
-add_library(${PROJECT_NAME} SHARED ${SRC_FILES} ${HEAD_FILES})
+if (LIBIPC_BUILD_SHARED_LIBS)
+  add_library(${PROJECT_NAME} SHARED ${SRC_FILES} ${HEAD_FILES})
+  target_compile_definitions(${PROJECT_NAME}
+    INTERFACE
+      LIBIPC_LIBRARY_SHARED_USING__
+    PRIVATE
+      LIBIPC_LIBRARY_SHARED_BUILDING__)
+else()
+  add_library(${PROJECT_NAME} STATIC ${SRC_FILES} ${HEAD_FILES})
+endif()
+
 if(NOT MSVC)
   target_link_libraries(${PROJECT_NAME} PUBLIC
-      pthread
-      $<$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>>:rt>)
+    pthread
+    $<$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>>:rt>)
 endif()
 
 install(
