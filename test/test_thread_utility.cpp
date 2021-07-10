@@ -11,7 +11,6 @@
 #include "capo/type_name.hpp"
 
 #include "libipc/rw_lock.h"
-#include "libipc/tls_pointer.h"
 
 #include "test.h"
 #include "thread_pool.h"
@@ -89,6 +88,7 @@ void test_lock_performance(int w, int r) {
 //    for (int i = 2; i <= ThreadMax; ++i) test_lock_performance(i, i);
 //}
 
+#if 0 // disable ipc::tls
 TEST(Thread, tls_main_thread) {
     ipc::tls::pointer<int> p;
     EXPECT_FALSE(p);
@@ -200,3 +200,4 @@ TEST(Thread, tls_benchmark) {
     benchmark_tls<std_tls, Str>("std_tls: Str");
     benchmark_tls<ipc_tls, Str>("ipc_tls: Str");
 }
+#endif
