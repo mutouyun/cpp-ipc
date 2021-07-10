@@ -13,7 +13,6 @@
 #include "libipc/ipc.h"
 #include "libipc/def.h"
 #include "libipc/shm.h"
-#include "libipc/tls_pointer.h"
 #include "libipc/pool_alloc.h"
 #include "libipc/queue.h"
 #include "libipc/policy.h"
@@ -253,19 +252,6 @@ struct conn_info_head {
     ipc::waiter cc_waiter_, wt_waiter_, rd_waiter_;
     ipc::shm::handle acc_h_;
 
-    /*
-     * <Remarks> thread_local may have some bugs.
-     *
-     * <Reference>
-     * - https://sourceforge.net/p/mingw-w64/bugs/727/
-     * - https://sourceforge.net/p/mingw-w64/bugs/527/
-     * - https://github.com/Alexpux/MINGW-packages/issues/2519
-     * - https://github.com/ChaiScript/ChaiScript/issues/402
-     * - https://developercommunity.visualstudio.com/content/problem/124121/thread-local-variables-fail-to-be-initialized-when.html
-     * - https://software.intel.com/en-us/forums/intel-c-compiler/topic/684827
-    */
-    ipc::tls::pointer<ipc::unordered_map<msg_id_t, cache_t>> recv_cache_;
-
     conn_info_head(char const * name)
         : name_     {name}
         , cc_id_    {(cc_acc() == nullptr) ? 0 : cc_acc()->fetch_add(1, std::memory_order_relaxed)}
@@ -286,7 +272,8 @@ struct conn_info_head {
     }
 
     auto& recv_cache() {
-        return *recv_cache_.create_once();
+        thread_local ipc::unordered_map<msg_id_t, cache_t> tls;
+        return tls;
     }
 };
 
