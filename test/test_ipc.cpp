@@ -128,9 +128,10 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
                     return;
                 }
                 ASSERT_TRUE((i >= 0) && (i < (int)data_set__.get().size()));
-                if (data_set__.get()[i] != got) {
+                auto const &data_set = data_set__.get()[i];
+                if (data_set != got) {
                     printf("data_set__.get()[%d] != got, size = %zd/%zd\n", 
-                            i, data_set__.get()[i].size(), got.size());
+                            i, data_set.size(), got.size());
                     EXPECT_TRUE(false);
                 }
             }
@@ -169,7 +170,7 @@ TEST(IPC, 1vN) {
     //test_sr<relat::single, relat::multi , trans::unicast  >("smu", 1, MultiMax);
     //test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", 1, MultiMax);
     test_sr<relat::single, relat::multi , trans::broadcast>("smb", 1, MultiMax);
-    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", 1, MultiMax);
+    //test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", 1, MultiMax);
 }
 
 TEST(IPC, Nv1) {

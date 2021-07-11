@@ -112,7 +112,7 @@ struct chunk_info_t {
     }
 
     ipc::byte_t* at(std::size_t chunk_size, ipc::storage_id_t id) noexcept {
-        assert(id >= 0);
+        if (id < 0) return nullptr;
         return chunks_mem() + (chunk_size * id);
     }
 };
@@ -137,13 +137,11 @@ auto& chunk_storages() {
             return info;
         }
     };
-    static ipc::unordered_map<std::size_t, chunk_t> chunk_s;
+    thread_local ipc::unordered_map<std::size_t, chunk_t> chunk_s;
     return chunk_s;
 }
 
 chunk_info_t *chunk_storage_info(std::size_t chunk_size) {
-    static std::mutex lock;
-    IPC_UNUSED_ std::lock_guard<std::mutex> guard {lock};
     return chunk_storages()[chunk_size].get_info(chunk_size);
 }
 
