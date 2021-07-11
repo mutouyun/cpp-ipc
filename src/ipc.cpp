@@ -131,7 +131,7 @@ struct chunk_info_t {
 };
 
 auto& chunk_storages() {
-    class chunk_t {
+    class chunk_handle_t {
         ipc::shm::handle handle_;
 
     public:
@@ -150,12 +150,24 @@ auto& chunk_storages() {
             return info;
         }
     };
-    thread_local ipc::unordered_map<std::size_t, chunk_t> chunk_s;
-    return chunk_s;
+    static ipc::map<std::size_t, chunk_handle_t> chunk_hs;
+    return chunk_hs;
 }
 
 chunk_info_t *chunk_storage_info(std::size_t chunk_size) {
-    return chunk_storages()[chunk_size].get_info(chunk_size);
+    auto &storages = chunk_storages();
+    std::decay_t<decltype(storages)>::iterator it;
+    {
+        static ipc::rw_lock lock;
+        IPC_UNUSED_ std::shared_lock<ipc::rw_lock> guard {lock};
+        if ((it = storages.find(chunk_size)) == storages.end()) {
+            using chunk_handle_t = std::decay_t<decltype(storages)>::value_type::second_type;
+            guard.unlock();
+            IPC_UNUSED_ std::lock_guard<ipc::rw_lock> guard {lock};
+            it = storages.emplace(chunk_size, chunk_handle_t{}).first;
+        }
+    }
+    return it->second.get_info(chunk_size);
 }
 
 std::pair<ipc::storage_id_t, void*> acquire_storage(std::size_t size, ipc::circ::cc_t conns) {
