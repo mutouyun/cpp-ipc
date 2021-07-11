@@ -170,7 +170,7 @@ TEST(IPC, 1vN) {
     //test_sr<relat::single, relat::multi , trans::unicast  >("smu", 1, MultiMax);
     //test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", 1, MultiMax);
     test_sr<relat::single, relat::multi , trans::broadcast>("smb", 1, MultiMax);
-    //test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", 1, MultiMax);
+    test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", 1, MultiMax);
 }
 
 TEST(IPC, Nv1) {
