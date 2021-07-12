@@ -2,14 +2,6 @@ project(ipc)
 
 option(LIBIPC_BUILD_SHARED_LIBS "Build shared libraries (DLLs)." OFF)
 
-if(NOT MSVC)
-  add_compile_options(-fPIC)
-endif()
-
-include_directories(
-    ${LIBIPC_PROJECT_DIR}/include 
-    ${LIBIPC_PROJECT_DIR}/src)
-
 if(UNIX)
   file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_linux.cpp)
 else()
@@ -36,6 +28,11 @@ if (LIBIPC_BUILD_SHARED_LIBS)
 else()
   add_library(${PROJECT_NAME} STATIC ${SRC_FILES} ${HEAD_FILES})
 endif()
+
+target_include_directories(${PROJECT_NAME}
+  PUBLIC  ${LIBIPC_PROJECT_DIR}/include
+  PRIVATE ${LIBIPC_PROJECT_DIR}/src
+)
 
 if(NOT MSVC)
   target_link_libraries(${PROJECT_NAME} PUBLIC
