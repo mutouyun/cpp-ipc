@@ -130,10 +130,10 @@ public:
         return head_.force_push(que, std::forward<F>(f), block_);
     }
 
-    template <typename Q, typename F>
-    bool pop(Q* que, cursor_t* cur, F&& f) {
+    template <typename Q, typename F, typename R>
+    bool pop(Q* que, cursor_t* cur, F&& f, R&& out) {
         if (cur == nullptr) return false;
-        return head_.pop(que, *cur, std::forward<F>(f), block_);
+        return head_.pop(que, *cur, std::forward<F>(f), std::forward<R>(out), block_);
     }
 };
 

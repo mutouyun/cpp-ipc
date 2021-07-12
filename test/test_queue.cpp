@@ -44,7 +44,7 @@ constexpr int ThreadMax = 8;
 
 template <typename Que>
 void push(Que & que, int p, int d) {
-    for (int n = 0; !que.push(p, d); ++n) {
+    for (int n = 0; !que.push([](void*) { return true; }, p, d); ++n) {
         ASSERT_NE(n, PushRetry);
         std::this_thread::yield();
     }
