@@ -3,6 +3,7 @@ project(cpp-ipc)
 
 option(LIBIPC_BUILD_TESTS "Build all of libipc's own tests." OFF)
 option(LIBIPC_BUILD_DEMOS "Build all of libipc's own demos." OFF)
+option(USE_STATIC_CRT "Set to ON to build with static CRT on Windows (/MT)." OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -13,7 +14,12 @@ endif()
 
 set(LIBRARY_OUTPUT_PATH    ${CMAKE_BINARY_DIR}/bin)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
+
 set(LIBIPC_PROJECT_DIR     ${PROJECT_SOURCE_DIR})
+
+
+# Unicode Support
+add_definitions(-DUNICODE -D_UNICODE)
 
 add_subdirectory(src)
 
