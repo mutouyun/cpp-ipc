@@ -2,6 +2,20 @@ project(ipc)
 
 option(LIBIPC_BUILD_SHARED_LIBS "Build shared libraries (DLLs)." OFF)
 
+if (MSVC AND USE_STATIC_CRT)
+    set(CompilerFlags
+        CMAKE_CXX_FLAGS
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_C_FLAGS
+        CMAKE_C_FLAGS_DEBUG
+        CMAKE_C_FLAGS_RELEASE
+        )
+    foreach(CompilerFlag ${CompilerFlags})
+        string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+    endforeach()
+endif()
+
 if(UNIX)
   file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_linux.cpp)
 else()
@@ -29,6 +43,13 @@ else()
   add_library(${PROJECT_NAME} STATIC ${SRC_FILES} ${HEAD_FILES})
 endif()
 
+# Set output directory
+set_target_properties(${PROJECT_NAME}
+	PROPERTIES
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+
 target_include_directories(${PROJECT_NAME}
   PUBLIC  ${LIBIPC_PROJECT_DIR}/include
   PRIVATE ${LIBIPC_PROJECT_DIR}/src
@@ -42,5 +63,7 @@ endif()
 
 install(
   TARGETS ${PROJECT_NAME}
-  DESTINATION "lib"
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
 )
