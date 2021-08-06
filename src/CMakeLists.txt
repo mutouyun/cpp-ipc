@@ -16,6 +16,8 @@ if (MSVC AND USE_STATIC_CRT)
     endforeach()
 endif()
 
+add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
+
 if(UNIX)
   file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_linux.cpp)
 else()
