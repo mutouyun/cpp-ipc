@@ -52,51 +52,21 @@ auto to_tchar(ipc::string &&external) -> IsSameChar<T, ipc::wstring> {
     if (external.empty()) {
         return {}; // noconv
     }
-#if 0 // backup
-    auto &fcodecvt = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(std::locale());
-    std::mbstate_t mb {};
-    ipc::wstring internal(external.size(), '\0');
-    char const *first = &external[0], *last = &external[external.size()];
-    std::size_t len   = 0;
-    while (first != last) {
-        wchar_t *start = &internal[len], *end = &internal[internal.size()], *to_next;
-        auto ret = fcodecvt.in(mb, first, last, first,
-                                   start, end , to_next);
-        switch (ret) {
-        // no conversion, just copy code values
-        case std::codecvt_base::noconv:
-            internal.resize(len);
-            for (; first != last; ++first) {
-                internal.push_back((wchar_t)(unsigned char)*first);
-            }
-            break;
-        // conversion completed
-        case std::codecvt_base::ok:
-            len += static_cast<size_t>(to_next - start);
-            internal.resize(len);
-            break;
-        // not enough space in the output buffer or unexpected end of source buffer
-        case std::codecvt_base::partial:
-            if (to_next <= start) {
-                throw std::range_error{"[to_tchar] bad conversion"};
-            }
-            len += static_cast<size_t>(to_next - start);
-            internal.resize(internal.size() + external.size());
-            break;
-        // encountered a character that could not be converted
-        default: // error
-            throw std::range_error{"[to_tchar] bad conversion"};
-        }
-    }
-#else
-    // CP_ACP: The system default Windows ANSI code page.
-    int size_needed = ::MultiByteToWideChar(CP_ACP, 0, &external[0], (int)external.size(), NULL, 0);
+    /**
+     * CP_ACP       : The system default Windows ANSI code page.
+     * CP_MACCP     : The current system Macintosh code page.
+     * CP_OEMCP     : The current system OEM code page.
+     * CP_SYMBOL    : Symbol code page (42).
+     * CP_THREAD_ACP: The Windows ANSI code page for the current thread.
+     * CP_UTF7      : UTF-7. Use this value only when forced by a 7-bit transport mechanism. Use of UTF-8 is preferred.
+     * CP_UTF8      : UTF-8.
+    */
+    int size_needed = ::MultiByteToWideChar(CP_UTF8, 0, &external[0], (int)external.size(), NULL, 0);
     if (size_needed <= 0) {
         return {};
     }
     ipc::wstring internal(size_needed, L'\0');
-    ::MultiByteToWideChar(CP_ACP, 0, &external[0], (int)external.size(), &internal[0], size_needed);
-#endif
+    ::MultiByteToWideChar(CP_UTF8, 0, &external[0], (int)external.size(), &internal[0], size_needed);
     return internal;
 }
 
