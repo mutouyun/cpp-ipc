@@ -10,21 +10,18 @@
 #include "libipc/platform/to_tchar.h"
 
 TEST(Platform, to_tchar) {
-    unsigned char const utf8[] = {
-        0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x2c, 0x20, 0xe6, 0xb5, 0xa3,
-        0xe7, 0x8a, 0xb2, 0xe3, 0x82, 0xbd, 0xe9, 0x94, 0x9b, 0xe5, 0xb1, 0xbb, 0xe4, 0xba, 0xbe, 0xe9,
-        0x8a, 0x88, 0xe6, 0x92, 0xb1, 0xe4, 0xbc, 0x80, 0xe9, 0x8a, 0x87, 0xc2, 0xb0, 0xe4, 0xbc, 0x85,
-        0x00,
-    };
-    char    const *sstr = reinterpret_cast<char    const *>(utf8);
-    wchar_t const *wstr = reinterpret_cast<wchar_t const *>(u"hello world, 你好，こんにちは");
+    char const *utf8 = "hello world, "
+                       "\xE6\xB5\xA3\xE7\x8A\xB2\xE3\x82\xBD\xE9\x94\x9B\xE5\xB1\xBB\xE4"
+                       "\xBA\xBE\xE9\x8A\x88\xE6\x92\xB1\xE4\xBC\x80\xE9\x8A\x87\xC2\xB0"
+                       "\xE4\xBC\x85";
+    wchar_t const *utf16 = L"hello world, \x6D63\x72B2\x30BD\x951B\x5C7B\x4EBE\x9288\x64B1\x4F00\x9287\xB0\x4F05";
     {
-        ipc::string str = ipc::detail::to_tchar<char>(sstr);
-        EXPECT_STREQ(str.c_str(), sstr);
+        ipc::string str = ipc::detail::to_tchar<char>(utf8);
+        EXPECT_STREQ(str.c_str(), utf8);
     }
     {
-        ipc::wstring wtr = ipc::detail::to_tchar<wchar_t>(sstr);
-        EXPECT_STREQ(wtr.c_str(), wstr);
+        ipc::wstring wtr = ipc::detail::to_tchar<wchar_t>(utf8);
+        EXPECT_STREQ(wtr.c_str(), utf16);
     }
 }
 
