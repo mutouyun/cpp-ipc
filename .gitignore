@@ -44,3 +44,7 @@ CMakeLists.txt.user*
 
 # My output files
 build
+
+# vs
+.vs
+.vscode
