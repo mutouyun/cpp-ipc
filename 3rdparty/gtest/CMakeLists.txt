@@ -13,7 +13,7 @@
 option(
   gtest_force_shared_crt
   "Use shared (DLL) run-time lib even when Google Test is built as static lib."
-  ON)
+  OFF)
 
 option(gtest_build_tests "Build all of gtest's own tests." OFF)
 
@@ -58,6 +58,10 @@ cmake_minimum_required(VERSION 2.6.4)
 if (POLICY CMP0063) # Visibility
   cmake_policy(SET CMP0063 NEW)
 endif (POLICY CMP0063)
+
+if (POLICY CMP0077) # Visibility
+  cmake_policy(SET CMP0077 NEW)
+endif (POLICY CMP0077)
 
 if (COMMAND set_up_hermetic_build)
   set_up_hermetic_build()
