@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.10)
 project(cpp-ipc)
 
 option(LIBIPC_BUILD_TESTS       "Build all of libipc's own tests."                      OFF)

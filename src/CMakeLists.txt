@@ -1,4 +1,4 @@
-project(ipc VERSION 1.0.0 LANGUAGES CXX)
+project(ipc)
 
 if(UNIX)
   file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_linux.cpp)
@@ -33,6 +33,12 @@ set_target_properties(${PROJECT_NAME}
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+
+# set version
+set_target_properties(${PROJECT_NAME}
+    PROPERTIES
+    VERSION 1.0.0
+    SOVERSION 1)
 
 target_include_directories(${PROJECT_NAME}
   PUBLIC  ${LIBIPC_PROJECT_DIR}/include

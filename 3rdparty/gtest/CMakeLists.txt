@@ -8,6 +8,10 @@
 # ctest.  You can select which tests to run using 'ctest -R regex'.
 # For more options, run 'ctest --help'.
 
+if (POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
+endif (POLICY CMP0077)
+
 # When other libraries are using a shared version of runtime libraries,
 # Google Test also has to use one.
 option(
@@ -58,10 +62,6 @@ cmake_minimum_required(VERSION 2.6.4)
 if (POLICY CMP0063) # Visibility
   cmake_policy(SET CMP0063 NEW)
 endif (POLICY CMP0063)
-
-if (POLICY CMP0077) # Visibility
-  cmake_policy(SET CMP0077 NEW)
-endif (POLICY CMP0077)
 
 if (COMMAND set_up_hermetic_build)
   set_up_hermetic_build()
