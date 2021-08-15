@@ -10,7 +10,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 if(NOT MSVC)
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 endif()
 
 if (MSVC AND LIBIPC_USE_STATIC_CRT)
@@ -37,18 +37,19 @@ add_definitions(-DUNICODE -D_UNICODE)
 add_subdirectory(src)
 
 if (LIBIPC_BUILD_TESTS)
-  set(GOOGLETEST_VERSION 1.10.0)
-  set(gtest_force_shared_crt $<NOT:$<BOOL:${LIBIPC_USE_STATIC_CRT}>>)
-  add_subdirectory(3rdparty/gtest)
-  add_subdirectory(test)
+    set(GOOGLETEST_VERSION 1.10.0)
+    set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+    set(gtest_force_shared_crt $<NOT:$<BOOL:${LIBIPC_USE_STATIC_CRT}>>)
+    add_subdirectory(3rdparty/gtest)
+    add_subdirectory(test)
 endif()
 
 if (LIBIPC_BUILD_DEMOS)
-  add_subdirectory(demo/chat)
-  add_subdirectory(demo/msg_que)
+    add_subdirectory(demo/chat)
+    add_subdirectory(demo/msg_que)
 endif()
 
 install(
-  DIRECTORY "include/"
-  DESTINATION "include"
+    DIRECTORY "include/"
+    DESTINATION "include"
 )
