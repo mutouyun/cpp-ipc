@@ -94,6 +94,7 @@ inline void free(void* p, std::size_t size) {
 
 template <typename T>
 void free(T* p) {
+    if (p == nullptr) return;
     destruct(p);
     pool_alloc::free(p, sizeof(T));
 }
