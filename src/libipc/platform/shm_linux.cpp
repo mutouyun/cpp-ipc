@@ -83,7 +83,6 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
 
 std::uint32_t get_ref(id_t id) {
     if (id == nullptr) {
-        ipc::error("fail get_ref: invalid id (null)\n");
         return 0;
     }
     auto ii = static_cast<id_info_t*>(id);
