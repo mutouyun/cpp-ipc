@@ -22,7 +22,7 @@
 namespace {
 
 struct info_t {
-    std::atomic_size_t acc_;
+    std::atomic<std::uint32_t> acc_;
 };
 
 struct id_info_t {
@@ -81,6 +81,31 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     return ii;
 }
 
+std::uint32_t get_ref(id_t id) {
+    if (id == nullptr) {
+        ipc::error("fail get_ref: invalid id (null)\n");
+        return 0;
+    }
+    auto ii = static_cast<id_info_t*>(id);
+    if (ii->mem_ == nullptr || ii->size_ == 0) {
+        return 0;
+    }
+    return acc_of(ii->mem_, ii->size_).load(std::memory_order_acquire);
+}
+
+void sub_ref(id_t id) {
+    if (id == nullptr) {
+        ipc::error("fail sub_ref: invalid id (null)\n");
+        return;
+    }
+    auto ii = static_cast<id_info_t*>(id);
+    if (ii->mem_ == nullptr || ii->size_ == 0) {
+        ipc::error("fail sub_ref: invalid id (mem = %p, size = %zd)\n", ii->mem_, ii->size_);
+        return;
+    }
+    acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel);
+}
+
 void * get_mem(id_t id, std::size_t * size) {
     if (id == nullptr) {
         ipc::error("fail get_mem: invalid id (null)\n");
@@ -137,7 +162,7 @@ void release(id_t id) {
     if (ii->mem_ == nullptr || ii->size_ == 0) {
         ipc::error("fail release: invalid id (mem = %p, size = %zd)\n", ii->mem_, ii->size_);
     }
-    else if (acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acquire) == 1) {
+    else if (acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel) == 1) {
         ::munmap(ii->mem_, ii->size_);
         if (!ii->name_.empty()) {
             ::shm_unlink(ii->name_.c_str());

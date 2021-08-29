@@ -22,7 +22,7 @@
 namespace ipc {
 namespace detail {
 
-inline static bool calc_wait_time(timespec& ts, std::size_t tm /*ms*/) {
+inline static bool calc_wait_time(timespec& ts, std::uint64_t tm /*ms*/) {
     timeval now;
     int eno = ::gettimeofday(&now, NULL);
     if (eno != 0) {
@@ -89,8 +89,7 @@ public:
                 return true;
             case EOWNERDEAD:
                 if (::pthread_mutex_consistent(&mutex_) == 0) {
-                    ::pthread_mutex_unlock(&mutex_);
-                    break;
+                    return true;
                 }
                 IPC_FALLTHROUGH_;
             case ENOTRECOVERABLE:
@@ -138,7 +137,7 @@ public:
         IPC_PTHREAD_FUNC_(pthread_cond_destroy, &cond_);
     }
 
-    bool wait(mutex& mtx, std::size_t tm = invalid_value) {
+    bool wait(mutex& mtx, std::uint64_t tm = invalid_value) {
         switch (tm) {
         case 0:
             return true;
@@ -221,7 +220,7 @@ public:
         return true;
     }
 
-    static bool wait(handle_t h, std::size_t tm = invalid_value) {
+    static bool wait(handle_t h, std::uint64_t tm = invalid_value) {
         if (h == invalid()) return false;
         switch (tm) {
         case 0:
@@ -289,7 +288,7 @@ private:
             return ipc::detail::unique_lock(me_->lock_);
         }
 
-        bool sema_wait(std::size_t tm) {
+        bool sema_wait(std::uint64_t tm) {
             return sem_helper::wait(std::get<1>(h_), tm);
         }
 
@@ -297,7 +296,7 @@ private:
             return sem_helper::post(std::get<1>(h_), count);
         }
 
-        bool handshake_wait(std::size_t tm) {
+        bool handshake_wait(std::uint64_t tm) {
             return sem_helper::wait(std::get<2>(h_), tm);
         }
 
@@ -339,7 +338,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t const & h, wait_flags * flags, F&& pred, std::size_t tm = invalid_value) {
+    bool wait_if(handle_t const & h, wait_flags * flags, F&& pred, std::uint64_t tm = invalid_value) {
         assert(flags != nullptr);
         contrl ctrl { this, flags, h };
 
@@ -400,7 +399,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(handle_t h, waiter_helper::wait_flags * flags, F && pred, std::size_t tm = invalid_value) {
+    bool wait_if(handle_t h, waiter_helper::wait_flags * flags, F && pred, std::uint64_t tm = invalid_value) {
         if (h == invalid()) return false;
         return helper_.wait_if(h, flags, std::forward<F>(pred), tm);
     }

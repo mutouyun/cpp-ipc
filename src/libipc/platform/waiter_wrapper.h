@@ -8,9 +8,7 @@
 
 #include "libipc/memory/resource.h"
 #include "libipc/platform/detail.h"
-#if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
-    defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
-    defined(WINCE) || defined(_WIN32_WCE)
+#if defined(IPC_OS_WINDOWS_)
 
 #include "libipc/platform/waiter_win.h"
 
@@ -52,7 +50,7 @@ public:
         cnt_h_.release();
     }
 
-    bool wait(mutex_impl& mtx, std::size_t tm = invalid_value) {
+    bool wait(mutex_impl& mtx, std::uint64_t tm = invalid_value) {
         return base_t::wait_if(mtx, &flags_, [] { return true; }, tm);
     }
 };
@@ -60,7 +58,7 @@ public:
 } // namespace detail
 } // namespace ipc
 
-#else /*!WIN*/
+#elif defined(IPC_OS_LINUX_)
 
 #include "libipc/platform/waiter_linux.h"
 
@@ -123,7 +121,7 @@ public:
 
 class condition_impl : public object_impl<ipc::detail::condition> {
 public:
-    bool wait(mutex_impl& mtx, std::size_t tm = invalid_value) {
+    bool wait(mutex_impl& mtx, std::uint64_t tm = invalid_value) {
         return object().wait(mtx.object(), tm);
     }
 
@@ -168,7 +166,7 @@ public:
         opened_.release();
     }
 
-    bool wait(std::size_t tm = invalid_value) {
+    bool wait(std::uint64_t tm = invalid_value) {
         return sem_helper::wait(h_, tm);
     }
 
@@ -179,8 +177,9 @@ public:
 
 } // namespace detail
 } // namespace ipc
-
-#endif/*!WIN*/
+#else/*linux*/
+#   error "Unsupported platform."
+#endif
 
 namespace ipc {
 namespace detail {
@@ -235,7 +234,7 @@ public:
     }
 
     template <typename F>
-    bool wait_if(F && pred, std::size_t tm = invalid_value) {
+    bool wait_if(F && pred, std::uint64_t tm = invalid_value) {
         if (!valid()) return false;
         return w_->wait_if(h_, &flags_, std::forward<F>(pred), tm);
     }

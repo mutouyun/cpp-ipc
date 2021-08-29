@@ -22,6 +22,18 @@
 #   error "IPC_CONSTEXPR_ has been defined."
 #endif
 
+// detect platform
+
+#if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
+    defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
+    defined(WINCE) || defined(_WIN32_WCE)
+#   define IPC_OS_WINDOWS_
+#endif/*WIN*/
+
+#if defined(__linux__) || defined(__linux)
+#   define IPC_OS_LINUX_
+#endif/*linux*/
+
 #if __cplusplus >= 201703L
 
 #define IPC_UNUSED_      [[maybe_unused]]

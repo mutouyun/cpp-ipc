@@ -54,7 +54,7 @@ public:
     bool open (char const * name, long count = 0);
     void close();
 
-    bool wait(std::size_t tm = invalid_value);
+    bool wait(std::uint64_t tm = invalid_value);
     bool post(long count = 1);
 
 private:
@@ -81,7 +81,7 @@ public:
     bool open (char const * name);
     void close();
 
-    bool wait(mutex&, std::size_t tm = invalid_value);
+    bool wait(mutex&, std::uint64_t tm = invalid_value);
     bool notify();
     bool broadcast();
 
