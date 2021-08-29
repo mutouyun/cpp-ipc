@@ -123,5 +123,17 @@ constexpr const T& (min)(const T& a, const T& b) {
 
 #endif/*__cplusplus < 201703L*/
 
+template <typename T, typename U>
+auto horrible_cast(U rhs) noexcept
+    -> typename std::enable_if<std::is_trivially_copyable<T>::value
+                            && std::is_trivially_copyable<U>::value, T>::type {
+    union {
+        T t;
+        U u;
+    } r = {};
+    r.u = rhs;
+    return r.t;
+}
+
 } // namespace detail
 } // namespace ipc

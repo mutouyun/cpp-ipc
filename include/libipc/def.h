@@ -33,7 +33,7 @@ enum : std::uint32_t {
 enum : std::size_t {
     data_length     = 64,
     large_msg_limit = data_length,
-    large_msg_align = 512,
+    large_msg_align = 1024,
     large_msg_cache = 32,
 };
 

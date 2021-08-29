@@ -16,7 +16,7 @@ namespace circ {
 using u1_t = ipc::uint_t<8>;
 using u2_t = ipc::uint_t<32>;
 
-/** only supports max 32 connections */
+/** only supports max 32 connections in broadcast mode */
 using cc_t = u2_t;
 
 constexpr u1_t index_of(u2_t c) noexcept {

@@ -5,6 +5,7 @@
 #include <utility>
 #include <functional>
 #include <unordered_map>
+#include <map>
 #include <string>
 #include <cstdio>
 
@@ -47,6 +48,11 @@ constexpr char const * pf(long double)        { return "%Lf" ; }
 template <typename Key, typename T>
 using unordered_map = std::unordered_map<
     Key, T, std::hash<Key>, std::equal_to<Key>, ipc::mem::allocator<std::pair<const Key, T>>
+>;
+
+template <typename Key, typename T>
+using map = std::map<
+    Key, T, std::less<Key>, ipc::mem::allocator<std::pair<const Key, T>>
 >;
 
 template <typename Char>

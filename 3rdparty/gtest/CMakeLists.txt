@@ -8,12 +8,16 @@
 # ctest.  You can select which tests to run using 'ctest -R regex'.
 # For more options, run 'ctest --help'.
 
+if (POLICY CMP0077)
+  cmake_policy(SET CMP0077 NEW)
+endif (POLICY CMP0077)
+
 # When other libraries are using a shared version of runtime libraries,
 # Google Test also has to use one.
 option(
   gtest_force_shared_crt
   "Use shared (DLL) run-time lib even when Google Test is built as static lib."
-  ON)
+  OFF)
 
 option(gtest_build_tests "Build all of gtest's own tests." OFF)
 

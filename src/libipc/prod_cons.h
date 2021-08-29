@@ -58,13 +58,14 @@ struct prod_cons_impl<wr<relat::single, relat::single, trans::unicast>> {
         return false;
     }
 
-    template <typename W, typename F, typename E>
-    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E* elems) {
+    template <typename W, typename F, typename R, typename E>
+    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, R&& out, E* elems) {
         auto cur_rd = circ::index_of(rd_.load(std::memory_order_relaxed));
         if (cur_rd == circ::index_of(wt_.load(std::memory_order_acquire))) {
             return false; // empty
         }
         std::forward<F>(f)(&(elems[cur_rd].data_));
+        std::forward<R>(out)(true);
         rd_.fetch_add(1, std::memory_order_release);
         return true;
     }
@@ -80,8 +81,9 @@ struct prod_cons_impl<wr<relat::single, relat::multi , trans::unicast>>
         return false;
     }
 
-    template <typename W, typename F, template <std::size_t, std::size_t> class E, std::size_t DS, std::size_t AS>
-    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DS, AS>* elems) {
+    template <typename W, typename F, typename R, 
+              template <std::size_t, std::size_t> class E, std::size_t DS, std::size_t AS>
+    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, R&& out, E<DS, AS>* elems) {
         byte_t buff[DS];
         for (unsigned k = 0;;) {
             auto cur_rd = rd_.load(std::memory_order_relaxed);
@@ -92,6 +94,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi , trans::unicast>>
             std::memcpy(buff, &(elems[circ::index_of(cur_rd)].data_), sizeof(buff));
             if (rd_.compare_exchange_weak(cur_rd, cur_rd + 1, std::memory_order_release)) {
                 std::forward<F>(f)(buff);
+                std::forward<R>(out)(true);
                 return true;
             }
             ipc::yield(k);
@@ -156,8 +159,9 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
         return false;
     }
 
-    template <typename W, typename F, template <std::size_t, std::size_t> class E, std::size_t DS, std::size_t AS>
-    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, E<DS, AS>* elems) {
+    template <typename W, typename F, typename R, 
+              template <std::size_t, std::size_t> class E, std::size_t DS, std::size_t AS>
+    bool pop(W* /*wrapper*/, circ::u2_t& /*cur*/, F&& f, R&& out, E<DS, AS>* elems) {
         byte_t buff[DS];
         for (unsigned k = 0;;) {
             auto cur_rd = rd_.load(std::memory_order_relaxed);
@@ -179,6 +183,7 @@ struct prod_cons_impl<wr<relat::multi , relat::multi, trans::unicast>>
                 std::memcpy(buff, &(elems[circ::index_of(cur_rd)].data_), sizeof(buff));
                 if (rd_.compare_exchange_weak(cur_rd, cur_rd + 1, std::memory_order_release)) {
                     std::forward<F>(f)(buff);
+                    std::forward<R>(out)(true);
                     return true;
                 }
                 ipc::yield(k);
@@ -263,20 +268,20 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
         return true;
     }
 
-    template <typename W, typename F, typename E>
-    bool pop(W* wrapper, circ::u2_t& cur, F&& f, E* elems) {
+    template <typename W, typename F, typename R, typename E>
+    bool pop(W* wrapper, circ::u2_t& cur, F&& f, R&& out, E* elems) {
         if (cur == cursor()) return false; // acquire
         auto* el = elems + circ::index_of(cur++);
         std::forward<F>(f)(&(el->data_));
         for (unsigned k = 0;;) {
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
-            circ::cc_t rem_cc = cur_rc & ep_mask;
-            if (rem_cc == 0) {
+            if ((cur_rc & ep_mask) == 0) {
+                std::forward<R>(out)(true);
                 return true;
             }
-            if (el->rc_.compare_exchange_weak(cur_rc,
-                        cur_rc & ~static_cast<rc_t>(wrapper->connected_id()),
-                        std::memory_order_release)) {
+            auto nxt_rc = cur_rc & ~static_cast<rc_t>(wrapper->connected_id());
+            if (el->rc_.compare_exchange_weak(cur_rc, nxt_rc, std::memory_order_release)) {
+                std::forward<R>(out)((nxt_rc & ep_mask) == 0);
                 return true;
             }
             ipc::yield(k);
@@ -395,8 +400,8 @@ struct prod_cons_impl<wr<relat::multi, relat::multi, trans::broadcast>> {
         return true;
     }
 
-    template <typename W, typename F, typename E, std::size_t N>
-    bool pop(W* wrapper, circ::u2_t& cur, F&& f, E(& elems)[N]) {
+    template <typename W, typename F, typename R, typename E, std::size_t N>
+    bool pop(W* wrapper, circ::u2_t& cur, F&& f, R&& out, E(& elems)[N]) {
         auto* el = elems + circ::index_of(cur);
         auto cur_fl = el->f_ct_.load(std::memory_order_acquire);
         if (cur_fl != ~static_cast<flag_t>(cur)) {
@@ -406,17 +411,18 @@ struct prod_cons_impl<wr<relat::multi, relat::multi, trans::broadcast>> {
         std::forward<F>(f)(&(el->data_));
         for (unsigned k = 0;;) {
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
-            circ::cc_t rem_cc = cur_rc & rc_mask;
-            if (rem_cc == 0) {
+            if ((cur_rc & rc_mask) == 0) {
+                std::forward<R>(out)(true);
                 el->f_ct_.store(cur + N - 1, std::memory_order_release);
                 return true;
             }
-            if ((rem_cc & ~wrapper->connected_id()) == 0) {
+            auto nxt_rc = inc_rc(cur_rc) & ~static_cast<rc_t>(wrapper->connected_id());
+            bool last_one = false;
+            if ((last_one = (nxt_rc & rc_mask) == 0)) {
                 el->f_ct_.store(cur + N - 1, std::memory_order_release);
             }
-            if (el->rc_.compare_exchange_weak(cur_rc,
-                        inc_rc(cur_rc) & ~static_cast<rc_t>(wrapper->connected_id()),
-                        std::memory_order_release)) {
+            if (el->rc_.compare_exchange_weak(cur_rc, nxt_rc, std::memory_order_release)) {
+                std::forward<R>(out)(last_one);
                 return true;
             }
             ipc::yield(k);

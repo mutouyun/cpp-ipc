@@ -44,9 +44,11 @@
 */
 
 #ifndef IPC_EXPORT
-#if defined(__IPC_LIBRARY__)
+#if defined(LIBIPC_LIBRARY_SHARED_BUILDING__)
 #  define IPC_EXPORT IPC_DECL_EXPORT
-#else
+#elif defined(LIBIPC_LIBRARY_SHARED_USING__)
 #  define IPC_EXPORT IPC_DECL_IMPORT
+#else
+#  define IPC_EXPORT
 #endif
 #endif /*IPC_EXPORT*/

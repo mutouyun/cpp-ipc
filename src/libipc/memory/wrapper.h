@@ -11,7 +11,6 @@
 
 #include "libipc/def.h"
 #include "libipc/rw_lock.h"
-#include "libipc/tls_pointer.h"
 #include "libipc/pool_alloc.h"
 
 #include "libipc/utility/concept.h"
@@ -155,18 +154,16 @@ private:
     };
 
     friend class alloc_proxy;
-
     using ref_t = alloc_proxy&;
-    using tls_t = tls::pointer<alloc_proxy>;
 
-    tls_t tls_;
     std::function<ref_t()> get_alloc_;
 
 public:
     template <typename ... P>
     async_wrapper(P ... pars) {
         get_alloc_ = [this, pars ...]()->ref_t {
-            return *tls_.create_once(this, pars ...);
+            thread_local alloc_proxy tls(pars ...);
+            return tls;
         };
     }
 
