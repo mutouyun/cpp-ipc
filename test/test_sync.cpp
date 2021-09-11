@@ -14,6 +14,7 @@
 TEST(PThread, Robust) {
     pthread_mutexattr_t ma;
     pthread_mutexattr_init(&ma);
+    pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_SHARED);
     pthread_mutexattr_setrobust(&ma, PTHREAD_MUTEX_ROBUST);
     pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_init(&mutex, &ma);
@@ -55,7 +56,6 @@ TEST(PThread, Robust) {
 TEST(Sync, Mutex) {
     ipc::sync::mutex lock;
     EXPECT_TRUE(lock.open("test-mutex-robust"));
-
     std::thread{[] {
         ipc::sync::mutex lock{"test-mutex-robust"};
         EXPECT_TRUE(lock.valid());

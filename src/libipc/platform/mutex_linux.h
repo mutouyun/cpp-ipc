@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cassert>
 #include <system_error>
+#include <mutex>
 
 #include <pthread.h>
 
@@ -10,6 +11,7 @@
 #include "libipc/platform/detail.h"
 #include "libipc/utility/log.h"
 #include "libipc/utility/scope_guard.h"
+#include "libipc/memory/resource.h"
 #include "libipc/shm.h"
 
 namespace ipc {
@@ -19,6 +21,32 @@ namespace sync {
 class mutex {
     ipc::shm::handle shm_;
     pthread_mutex_t *mutex_ = nullptr;
+
+    pthread_mutex_t *acquire_mutex(char const *name) {
+        if (!shm_.acquire(name, sizeof(pthread_mutex_t))) {
+            ipc::error("fail shm.acquire: %s\n", name);
+            return nullptr;
+        }
+        return static_cast<pthread_mutex_t *>(shm_.get());
+    }
+
+    pthread_mutex_t *get_mutex(char const *name) {
+        if (name == nullptr) {
+            return nullptr;
+        }
+        static ipc::map<ipc::string, pthread_mutex_t *> mutex_handles;
+        static std::mutex lock;
+        IPC_UNUSED_ std::lock_guard<std::mutex> guard {lock};
+        auto it = mutex_handles.find(name);
+        if (it == mutex_handles.end()) {
+            auto ptr = acquire_mutex(name);
+            if (ptr != nullptr) {
+                mutex_handles.emplace(name, ptr);
+            }
+            return ptr;
+        }
+        return it->second;
+    }
 
 public:
     mutex() = default;
@@ -38,45 +66,41 @@ public:
 
     bool valid() const noexcept {
         static const char tmp[sizeof(pthread_mutex_t)] {};
-        return shm_.valid()
-            && (mutex_ != nullptr)
+        return (mutex_ != nullptr)
             && (std::memcmp(tmp, mutex_, sizeof(pthread_mutex_t)) != 0);
     }
 
     bool open(char const *name) noexcept {
         close();
-        if (!shm_.acquire(name, sizeof(pthread_mutex_t))) {
-            ipc::error("fail shm.acquire: %s\n", name);
+        if ((mutex_ = get_mutex(name)) == nullptr) {
             return false;
         }
-        mutex_ = static_cast<pthread_mutex_t *>(shm_.get());
-        assert(mutex_ != nullptr);
-        if ((shm_.ref() == 1) && valid()/*it means mutex has been inited*/) {
+        if (shm_.ref() == 1) {
             ::pthread_mutex_destroy(mutex_);
+            auto finally = ipc::guard([this] { close(); }); // close when failed
+            // init mutex
+            int eno;
+            pthread_mutexattr_t mutex_attr;
+            if ((eno = ::pthread_mutexattr_init(&mutex_attr)) != 0) {
+                ipc::error("fail pthread_mutexattr_init[%d]\n", eno);
+                return false;
+            }
+            IPC_UNUSED_ auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
+            if ((eno = ::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)) != 0) {
+                ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
+                return false;
+            }
+            if ((eno = ::pthread_mutexattr_setrobust(&mutex_attr, PTHREAD_MUTEX_ROBUST)) != 0) {
+                ipc::error("fail pthread_mutexattr_setrobust[%d]\n", eno);
+                return false;
+            }
+            *mutex_ = PTHREAD_MUTEX_INITIALIZER;
+            if ((eno = ::pthread_mutex_init(mutex_, &mutex_attr)) != 0) {
+                ipc::error("fail pthread_mutex_init[%d]\n", eno);
+                return false;
+            }
+            finally.dismiss();
         }
-        auto finally = ipc::guard([this] { close(); }); // close when failed
-        // init mutex
-        int eno;
-        pthread_mutexattr_t mutex_attr;
-        if ((eno = ::pthread_mutexattr_init(&mutex_attr)) != 0) {
-            ipc::error("fail pthread_mutexattr_init[%d]\n", eno);
-            return false;
-        }
-        IPC_UNUSED_ auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
-        if ((eno = ::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)) != 0) {
-            ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
-            return false;
-        }
-        if ((eno = ::pthread_mutexattr_setrobust(&mutex_attr, PTHREAD_MUTEX_ROBUST)) != 0) {
-            ipc::error("fail pthread_mutexattr_setrobust[%d]\n", eno);
-            return false;
-        }
-        *mutex_ = PTHREAD_MUTEX_INITIALIZER;
-        if ((eno = ::pthread_mutex_init(mutex_, &mutex_attr)) != 0) {
-            ipc::error("fail pthread_mutex_init[%d]\n", eno);
-            return false;
-        }
-        finally.dismiss();
         return valid();
     }
 
