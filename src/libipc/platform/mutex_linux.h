@@ -24,7 +24,7 @@ class mutex {
 
     pthread_mutex_t *acquire_mutex(char const *name) {
         if (!shm_.acquire(name, sizeof(pthread_mutex_t))) {
-            ipc::error("fail shm.acquire: %s\n", name);
+            ipc::error("[acquire_mutex] fail shm.acquire: %s\n", name);
             return nullptr;
         }
         return static_cast<pthread_mutex_t *>(shm_.get());
