@@ -60,7 +60,7 @@ public:
     }
 
     bool wait(std::uint64_t tm) noexcept {
-        if (h == invalid()) return false;
+        if (!valid()) return false;
         switch (tm) {
         case 0:
             return true;
@@ -72,7 +72,7 @@ public:
             return true;
         default: {
                 auto ts = detail::make_timespec(tm);
-                if (::sem_timedwait(h, &ts) != 0) {
+                if (::sem_timedwait(h_, &ts) != 0) {
                     if (errno != ETIMEDOUT) {
                         ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
                                    errno, tm, ts.tv_sec, ts.tv_nsec);
@@ -85,7 +85,7 @@ public:
     }
 
     bool post(std::uint32_t count) noexcept {
-        if (h_ == invalid()) return false;
+        if (!valid()) return false;
         for (std::uint32_t i = 0; i < count; ++i) {
             if (::sem_post(h_) != 0) {
                 ipc::error("fail sem_post[%d]: %s\n", errno);
