@@ -20,7 +20,7 @@ class semaphore {
     sem_t *h_ = SEM_FAILED;
 
 public:
-    semaphore() noexcept = default;
+    semaphore() = default;
     ~semaphore() noexcept = default;
 
     sem_t *native() const noexcept {
