@@ -19,10 +19,6 @@ class mutex {
 
 public:
     mutex() noexcept = default;
-    explicit mutex(char const *name) noexcept {
-        open(name);
-    }
-
     ~mutex() noexcept = default;
 
     HANDLE native() const noexcept {

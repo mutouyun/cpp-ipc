@@ -18,10 +18,6 @@ class semaphore {
 
 public:
     semaphore() noexcept = default;
-    explicit semaphore(char const *name, std::uint32_t count, std::uint32_t limit) noexcept {
-        open(name, count, limit);
-    }
-
     ~semaphore() noexcept = default;
 
     HANDLE native() const noexcept {
@@ -32,11 +28,10 @@ public:
         return h_ != NULL;
     }
 
-    bool open(char const *name, std::uint32_t count, std::uint32_t limit) noexcept {
+    bool open(char const *name, std::uint32_t count) noexcept {
         close();
         h_ = ::CreateSemaphore(detail::get_sa(), 
-                               static_cast<LONG>(count), 
-                               (limit == invalid_value) ? LONG_MAX : static_cast<LONG>(limit), 
+                               static_cast<LONG>(count), LONG_MAX, 
                                ipc::detail::to_tchar(name).c_str());
         if (h_ == NULL) {
             ipc::error("fail CreateSemaphore[%lu]: %s\n", ::GetLastError(), name);

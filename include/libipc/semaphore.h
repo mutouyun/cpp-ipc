@@ -14,7 +14,7 @@ class IPC_EXPORT semaphore {
 
 public:
     semaphore();
-    explicit semaphore(char const *name, std::uint32_t count = 0, std::uint32_t limit = ipc::invalid_value);
+    explicit semaphore(char const *name, std::uint32_t count = 0);
     ~semaphore();
 
     void const *native() const noexcept;
@@ -22,7 +22,7 @@ public:
 
     bool valid() const noexcept;
 
-    bool open(char const *name, std::uint32_t count = 0, std::uint32_t limit = ipc::invalid_value) noexcept;
+    bool open(char const *name, std::uint32_t count = 0) noexcept;
     void close() noexcept;
 
     bool wait(std::uint64_t tm = ipc::invalid_value) noexcept;

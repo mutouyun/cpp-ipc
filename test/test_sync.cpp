@@ -81,3 +81,19 @@ TEST(Sync, Mutex) {
     t2.join();
     EXPECT_EQ(i, 200);
 }
+
+#include "libipc/semaphore.h"
+
+TEST(Sync, Semaphore) {
+    ipc::sync::semaphore sem;
+    EXPECT_TRUE(sem.open("test-sem"));
+    std::thread{[] {
+        ipc::sync::semaphore sem{"test-sem"};
+        EXPECT_TRUE(sem.post(10));
+    }}.join();
+
+    for (int i = 0; i < 10; ++i) {
+        EXPECT_TRUE(sem.wait(0));
+    }
+    EXPECT_FALSE(sem.wait(0));
+}

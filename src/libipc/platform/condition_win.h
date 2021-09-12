@@ -16,10 +16,6 @@ class condition {
 
 public:
     condition() noexcept = default;
-    explicit condition(char const *name) noexcept {
-        open(name);
-    }
-
     ~condition() noexcept = default;
 
     HANDLE native() const noexcept {

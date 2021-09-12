@@ -50,10 +50,6 @@ class mutex {
 
 public:
     mutex() = default;
-    explicit mutex(char const *name) noexcept {
-        open(name);
-    }
-
     ~mutex() = default;
 
     pthread_mutex_t const *native() const noexcept {

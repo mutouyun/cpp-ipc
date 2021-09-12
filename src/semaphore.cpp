@@ -24,9 +24,9 @@ semaphore::semaphore()
     : p_(p_->make()) {
 }
 
-semaphore::semaphore(char const * name, std::uint32_t count, std::uint32_t limit)
+semaphore::semaphore(char const * name, std::uint32_t count)
     : semaphore() {
-    open(name, count, limit);
+    open(name, count);
 }
 
 semaphore::~semaphore() {
@@ -46,8 +46,8 @@ bool semaphore::valid() const noexcept {
     return impl(p_)->sem_.valid();
 }
 
-bool semaphore::open(char const *name, std::uint32_t count, std::uint32_t limit) noexcept {
-    return impl(p_)->sem_.open(name, count, limit);
+bool semaphore::open(char const *name, std::uint32_t count) noexcept {
+    return impl(p_)->sem_.open(name, count);
 }
 
 void semaphore::close() noexcept {

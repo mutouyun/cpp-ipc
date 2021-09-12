@@ -26,10 +26,6 @@ class condition {
 
 public:
     condition() = default;
-    explicit condition(char const *name) noexcept {
-        open(name);
-    }
-
     ~condition() = default;
 
     pthread_cond_t const *native() const noexcept {
