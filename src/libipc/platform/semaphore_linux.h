@@ -33,7 +33,7 @@ public:
 
     bool open(char const *name, std::uint32_t count) noexcept {
         close();
-        if (!shm_.acquire(name, 0)) {
+        if (!shm_.acquire(name, 1)) {
             ipc::error("[open_semaphore] fail shm.acquire: %s\n", name);
             return false;
         }
@@ -61,27 +61,22 @@ public:
 
     bool wait(std::uint64_t tm) noexcept {
         if (!valid()) return false;
-        switch (tm) {
-        case 0:
-            return true;
-        case invalid_value:
+        if (tm == invalid_value) {
             if (::sem_wait(h_) != 0) {
                 ipc::error("fail sem_wait[%d]: %s\n", errno);
                 return false;
             }
-            return true;
-        default: {
-                auto ts = detail::make_timespec(tm);
-                if (::sem_timedwait(h_, &ts) != 0) {
-                    if (errno != ETIMEDOUT) {
-                        ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                                   errno, tm, ts.tv_sec, ts.tv_nsec);
-                    }
-                    return false;
+        } else {
+            auto ts = detail::make_timespec(tm);
+            if (::sem_timedwait(h_, &ts) != 0) {
+                if (errno != ETIMEDOUT) {
+                    ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                                errno, tm, ts.tv_sec, ts.tv_nsec);
                 }
+                return false;
             }
-            return true;
         }
+        return true;
     }
 
     bool post(std::uint32_t count) noexcept {

@@ -117,7 +117,7 @@ void * get_mem(id_t id, std::size_t * size) {
     }
     int fd = ii->fd_;
     if (fd == -1) {
-        ipc::error("fail to_mem: invalid id (fd = -1)\n");
+        ipc::error("fail get_mem: invalid id (fd = -1)\n");
         return nullptr;
     }
     if (ii->size_ == 0) {
@@ -128,7 +128,7 @@ void * get_mem(id_t id, std::size_t * size) {
         }
         ii->size_ = static_cast<std::size_t>(st.st_size);
         if ((ii->size_ <= sizeof(info_t)) || (ii->size_ % sizeof(info_t))) {
-            ipc::error("fail to_mem: %s, invalid size = %zd\n", ii->name_.c_str(), ii->size_);
+            ipc::error("fail get_mem: %s, invalid size = %zd\n", ii->name_.c_str(), ii->size_);
             return nullptr;
         }
     }
