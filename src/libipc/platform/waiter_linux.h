@@ -224,8 +224,6 @@ public:
     static bool wait(handle_t h, std::size_t tm = invalid_value) {
         if (h == invalid()) return false;
         switch (tm) {
-        case 0:
-            return true;
         case invalid_value:
             IPC_SEMAPHORE_FUNC_(sem_wait, h);
         default: {
