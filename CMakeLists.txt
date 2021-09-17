@@ -13,7 +13,7 @@ if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 endif()
 
-if (MSVC AND LIBIPC_USE_STATIC_CRT)
+if (MSVC)
     set(CompilerFlags
         CMAKE_CXX_FLAGS
         CMAKE_CXX_FLAGS_DEBUG
@@ -22,9 +22,17 @@ if (MSVC AND LIBIPC_USE_STATIC_CRT)
         CMAKE_C_FLAGS_DEBUG
         CMAKE_C_FLAGS_RELEASE
         )
-    foreach(CompilerFlag ${CompilerFlags})
-        string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-    endforeach()
+    if (LIBIPC_USE_STATIC_CRT)
+        foreach(CompilerFlag ${CompilerFlags})
+            string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+            string(REPLACE "/MDd" "/MTd" ${CompilerFlag} "${${CompilerFlag}}")
+        endforeach()
+    else()
+        foreach(CompilerFlag ${CompilerFlags})
+            string(REPLACE "/MT" "/MD" ${CompilerFlag} "${${CompilerFlag}}")
+            string(REPLACE "/MTd" "/MDd" ${CompilerFlag} "${${CompilerFlag}}")
+        endforeach()
+    endif()
 endif()
 
 set(LIBRARY_OUTPUT_PATH    ${CMAKE_BINARY_DIR}/bin)
@@ -50,6 +58,7 @@ endif()
 if (LIBIPC_BUILD_DEMOS)
     add_subdirectory(demo/chat)
     add_subdirectory(demo/msg_que)
+    add_subdirectory(demo/send_recv)
 endif()
 
 install(

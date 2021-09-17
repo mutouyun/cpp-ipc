@@ -34,7 +34,11 @@ struct waiter_helper {
         counter.waiting_.fetch_add(1, std::memory_order_release);
         flags.is_waiting_.store(true, std::memory_order_relaxed);
         auto finally = ipc::guard([&counter, &flags] {
-            counter.waiting_.fetch_sub(1, std::memory_order_release);
+            for (auto curr_wait = counter.waiting_.load(std::memory_order_acquire); curr_wait > 0;) {
+                if (counter.waiting_.compare_exchange_weak(curr_wait, curr_wait - 1, std::memory_order_release)) {
+                    break;
+                }
+            }
             flags.is_waiting_.store(false, std::memory_order_relaxed);
         });
         {
@@ -107,6 +111,7 @@ struct waiter_helper {
                 counter.counter_ -= 1;
                 ret = ret && ctrl.handshake_wait(tm);
             } while (counter.counter_ > 0);
+            counter.waiting_.store(0, std::memory_order_release);
         }
         return ret;
     }
