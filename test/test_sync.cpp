@@ -4,6 +4,7 @@
 #include <mutex>
 #include <chrono>
 #include <deque>
+#include <array>
 #include <cstdio>
 
 #include "test.h"
@@ -129,8 +130,10 @@ TEST(Sync, Condition) {
             std::printf("test-cond-%d: %d\n", num, val);
         }
     };
-    std::thread test_cond1 {job, 1};
-    std::thread test_cond2 {job, 2};
+    std::array<std::thread, 10> test_conds;
+    for (int i = 0; i < (int)test_conds.size(); ++i) {
+        test_conds[i] = std::thread{job, i};
+    }
 
     for (int i = 1; i < 100; ++i) {
         {
@@ -150,11 +153,11 @@ TEST(Sync, Condition) {
     }
     {
         std::lock_guard<ipc::sync::mutex> guard {lock};
-        que.push_back(0);
-        que.push_back(0);
+        for (int i = 0; i < (int)test_conds.size(); ++i) {
+            que.push_back(0);
+        }
     }
     cond.broadcast();
 
-    test_cond1.join();
-    test_cond2.join();
+    for (auto &t : test_conds) t.join();
 }
