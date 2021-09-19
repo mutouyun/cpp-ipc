@@ -34,7 +34,6 @@ struct waiter_helper {
         counter.waiting_.fetch_add(1, std::memory_order_release);
         flags.is_waiting_.store(true, std::memory_order_relaxed);
         auto finally = ipc::guard([&ctrl, &counter, &flags] {
-            ctrl.get_lock(); // barrier
             for (auto curr_wait = counter.waiting_.load(std::memory_order_relaxed); curr_wait > 0;) {
                 if (counter.waiting_.compare_exchange_weak(curr_wait, curr_wait - 1, std::memory_order_acq_rel)) {
                     break;
