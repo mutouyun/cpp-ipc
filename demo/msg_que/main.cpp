@@ -127,10 +127,10 @@ int main(int argc, char ** argv) {
     ::signal(SIGHUP  , exit);
 #endif
 
-    if (std::string{ argv[1] } == mode_s__) {
+    std::string mode {argv[1]};
+    if (mode == mode_s__) {
         do_send();
-    }
-    else if (std::string{ argv[1] } == mode_r__) {
+    } else if (mode == mode_r__) {
         do_recv();
     }
     return 0;

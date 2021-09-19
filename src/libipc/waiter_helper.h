@@ -13,7 +13,7 @@ namespace detail {
 struct waiter_helper {
 
     struct wait_counter {
-        std::atomic<unsigned> waiting_ { 0 };
+        std::atomic<long> waiting_ { 0 };
         long counter_ = 0;
     };
 
@@ -33,14 +33,18 @@ struct waiter_helper {
         auto & counter = ctrl.counter();
         counter.waiting_.fetch_add(1, std::memory_order_release);
         flags.is_waiting_.store(true, std::memory_order_relaxed);
-        auto finally = ipc::guard([&counter, &flags] {
-            counter.waiting_.fetch_sub(1, std::memory_order_release);
+        auto finally = ipc::guard([&ctrl, &counter, &flags] {
+            for (auto curr_wait = counter.waiting_.load(std::memory_order_relaxed); curr_wait > 0;) {
+                if (counter.waiting_.compare_exchange_weak(curr_wait, curr_wait - 1, std::memory_order_acq_rel)) {
+                    break;
+                }
+            }
             flags.is_waiting_.store(false, std::memory_order_relaxed);
         });
         {
             IPC_UNUSED_ auto guard = ctrl.get_lock();
             if (!std::forward<F>(pred)()) return true;
-            counter.counter_ += 1;
+            counter.counter_ = counter.waiting_.load(std::memory_order_relaxed);
         }
         mtx.unlock();
 
@@ -70,6 +74,11 @@ struct waiter_helper {
     }
 
     template <typename Ctrl>
+    static void clear_handshake(Ctrl & ctrl) {
+        while (ctrl.handshake_wait(0)) ;
+    }
+
+    template <typename Ctrl>
     static bool notify(Ctrl & ctrl) {
         auto & counter = ctrl.counter();
         if ((counter.waiting_.load(std::memory_order_acquire)) == 0) {
@@ -77,6 +86,7 @@ struct waiter_helper {
         }
         bool ret = true;
         IPC_UNUSED_ auto guard = ctrl.get_lock();
+        clear_handshake(ctrl);
         if (counter.counter_ > 0) {
             ret = ctrl.sema_post(1);
             counter.counter_ -= 1;
@@ -93,12 +103,15 @@ struct waiter_helper {
         }
         bool ret = true;
         IPC_UNUSED_ auto guard = ctrl.get_lock();
+        clear_handshake(ctrl);
         if (counter.counter_ > 0) {
             ret = ctrl.sema_post(counter.counter_);
+            auto tm = default_timeout / counter.counter_;
             do {
                 counter.counter_ -= 1;
-                ret = ret && ctrl.handshake_wait(default_timeout);
+                ret = ret && ctrl.handshake_wait(tm);
             } while (counter.counter_ > 0);
+            counter.waiting_.store(0, std::memory_order_release);
         }
         return ret;
     }
@@ -116,6 +129,7 @@ struct waiter_helper {
         }
         bool ret = true;
         IPC_UNUSED_ auto guard = ctrl.get_lock();
+        clear_handshake(ctrl);
         if (counter.counter_ > 0) {
             ret = ctrl.sema_post(counter.counter_);
             counter.counter_ -= 1;
