@@ -1,12 +1,15 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 
 #include <pthread.h>
 
-#include "libipc/utility/log.h"
 #include "libipc/platform/get_wait_time.h"
+#include "libipc/utility/log.h"
+#include "libipc/utility/scope_guard.h"
 #include "libipc/mutex.h"
+#include "libipc/shm.h"
 
 namespace ipc {
 namespace detail {
@@ -89,7 +92,7 @@ public:
             return true;
         case invalid_value: {
                 int eno;
-                if ((eno = ::pthread_cond_wait(cond_, mtx.native())) != 0) {
+                if ((eno = ::pthread_cond_wait(cond_, static_cast<pthread_mutex_t *>(mtx.native()))) != 0) {
                     ipc::error("fail pthread_cond_wait[%d]\n", eno);
                     return false;
                 }
@@ -98,7 +101,7 @@ public:
         default: {
                 auto ts = detail::make_timespec(tm);
                 int eno;
-                if ((eno = ::pthread_cond_timedwait(cond_, mtx.native(), &ts)) != 0) {
+                if ((eno = ::pthread_cond_timedwait(cond_, static_cast<pthread_mutex_t *>(mtx.native()), &ts)) != 0) {
                     if (eno != ETIMEDOUT) {
                         ipc::error("fail pthread_cond_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
                                    eno, tm, ts.tv_sec, ts.tv_nsec);

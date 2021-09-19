@@ -99,22 +99,6 @@ public:
     }
 } const data_set__;
 
-#define IPC_ASSERT_TRUE(condition) \
-    do { \
-        bool check = !!(condition); \
-        GTEST_TEST_BOOLEAN_(check, #condition, false, true, \
-                            GTEST_NONFATAL_FAILURE_); \
-        if (!check) return; \
-    } while (0)
-
-#define IPC_ASSERT_FALSE(condition) \
-    do { \
-        bool check = !!(condition); \
-        GTEST_TEST_BOOLEAN_(!check, #condition, true, false, \
-                            GTEST_NONFATAL_FAILURE_); \
-        if (check) return; \
-    } while (0)
-
 template <relat Rp, relat Rc, trans Ts, typename Que = chan<Rp, Rc, Ts>>
 void test_sr(char const * name, int s_cnt, int r_cnt) {
     ipc_ut::sender().start(static_cast<std::size_t>(s_cnt));
@@ -126,10 +110,10 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
     for (int k = 0; k < s_cnt; ++k) {
         ipc_ut::sender() << [name, &sw, r_cnt, k] {
             Que que { name, ipc::sender };
-            IPC_ASSERT_TRUE(que.wait_for_recv(r_cnt));
+            ASSERT_TRUE(que.wait_for_recv(r_cnt));
             sw.start();
             for (int i = 0; i < (int)data_set__.get().size(); ++i) {
-                IPC_ASSERT_TRUE(que.send(data_set__.get()[i]));
+                ASSERT_TRUE(que.send(data_set__.get()[i]));
             }
         };
     }
@@ -139,17 +123,17 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
             Que que { name, ipc::receiver };
             for (;;) {
                 rand_buf got { que.recv() };
-                IPC_ASSERT_FALSE(got.empty());
+                ASSERT_FALSE(got.empty());
                 int i = got.get_id();
                 if (i == -1) {
                     return;
                 }
-                IPC_ASSERT_TRUE((i >= 0) && (i < (int)data_set__.get().size()));
+                ASSERT_TRUE((i >= 0) && (i < (int)data_set__.get().size()));
                 auto const &data_set = data_set__.get()[i];
                 if (data_set != got) {
                     printf("data_set__.get()[%d] != got, size = %zd/%zd\n", 
                             i, data_set.size(), got.size());
-                    IPC_ASSERT_TRUE(false);
+                    ASSERT_TRUE(false);
                 }
             }
         };
@@ -157,7 +141,7 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
 
     ipc_ut::sender().wait_for_done();
     Que que { name };
-    IPC_ASSERT_TRUE(que.wait_for_recv(r_cnt));
+    ASSERT_TRUE(que.wait_for_recv(r_cnt));
     for (int k = 0; k < r_cnt; ++k) {
         que.send(rand_buf{msg_head{-1}});
     }

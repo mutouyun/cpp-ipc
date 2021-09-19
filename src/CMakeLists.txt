@@ -5,7 +5,8 @@ if(UNIX)
 else()
   file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_win.cpp)
 endif()
-aux_source_directory(${LIBIPC_PROJECT_DIR}/src SRC_FILES)
+aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc SRC_FILES)
+aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/sync SRC_FILES)
 
 file(GLOB HEAD_FILES
   ${LIBIPC_PROJECT_DIR}/include/libipc/*.h
@@ -37,8 +38,8 @@ set_target_properties(${PROJECT_NAME}
 # set version
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-    VERSION 1.0.0
-    SOVERSION 1)
+    VERSION 1.1.0
+    SOVERSION 2)
 
 target_include_directories(${PROJECT_NAME}
   PUBLIC  ${LIBIPC_PROJECT_DIR}/include
