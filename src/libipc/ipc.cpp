@@ -17,6 +17,7 @@
 #include "libipc/queue.h"
 #include "libipc/policy.h"
 #include "libipc/rw_lock.h"
+#include "libipc/waiter.h"
 
 #include "libipc/utility/log.h"
 #include "libipc/utility/id_pool.h"
@@ -24,10 +25,7 @@
 #include "libipc/utility/utility.h"
 
 #include "libipc/memory/resource.h"
-
 #include "libipc/platform/detail.h"
-#include "libipc/platform/waiter_wrapper.h"
-
 #include "libipc/circ/elem_array.h"
 
 namespace {
@@ -271,7 +269,7 @@ struct conn_info_head {
 
     ipc::string name_;
     msg_id_t    cc_id_; // connection-info id
-    ipc::waiter cc_waiter_, wt_waiter_, rd_waiter_;
+    ipc::detail::waiter cc_waiter_, wt_waiter_, rd_waiter_;
     ipc::shm::handle acc_h_;
 
     conn_info_head(char const * name)
@@ -284,9 +282,9 @@ struct conn_info_head {
     }
 
     void quit_waiting() {
-        cc_waiter_.quit_waiting();
-        wt_waiter_.quit_waiting();
-        rd_waiter_.quit_waiting();
+        // cc_waiter_.quit_waiting();
+        // wt_waiter_.quit_waiting();
+        // rd_waiter_.quit_waiting();
     }
 
     auto acc() {

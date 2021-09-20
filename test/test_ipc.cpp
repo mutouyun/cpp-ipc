@@ -29,7 +29,7 @@ struct msg_head {
 class rand_buf : public buffer {
 public:
     rand_buf() {
-        int size = capo::random<>{sizeof(msg_head), TestBuffMax}();
+        int size = capo::random<>{(int)sizeof(msg_head), TestBuffMax}();
         *this = buffer(new char[size], size, [](void * p, std::size_t) {
             delete [] static_cast<char *>(p);
         });

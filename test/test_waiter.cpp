@@ -1,33 +1,34 @@
 #include <thread>
 #include <iostream>
 
-#include "libipc/platform/waiter_wrapper.h"
+#include "libipc/waiter.h"
 #include "test.h"
 
 namespace {
 
 TEST(Waiter, broadcast) {
-    ipc::detail::waiter w;
+    ipc::detail::waiter waiter;
     std::thread ts[10];
 
+    int k = 0;
     for (auto& t : ts) {
-        t = std::thread([&w] {
-            ipc::detail::waiter_wrapper wp { &w };
-            EXPECT_TRUE(wp.open("test-ipc-waiter"));
-            EXPECT_TRUE(wp.wait_if([] { return true; }));
-            wp.close();
+        t = std::thread([&k] {
+            ipc::detail::waiter waiter {"test-ipc-waiter"};
+            EXPECT_TRUE(waiter.valid());
+            for (int i = 0; i < 99; ++i) {
+                ASSERT_TRUE(waiter.wait_if([&k, &i] { return k == i; }));
+            }
         });
     }
 
-    ipc::detail::waiter_wrapper wp { &w };
-    EXPECT_TRUE(wp.open("test-ipc-waiter"));
-
+    EXPECT_TRUE(waiter.open("test-ipc-waiter"));
     std::cout << "waiting for broadcast...\n";
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_TRUE(wp.broadcast());
-
+    for (k = 1; k < 100; ++k) {
+        std::cout << "broadcast: " << k << "\n";
+        ASSERT_TRUE(waiter.broadcast());
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
     for (auto& t : ts) t.join();
-    wp.close();
 }
 
 } // internal-linkage
