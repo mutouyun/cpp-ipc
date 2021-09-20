@@ -161,3 +161,32 @@ TEST(Sync, Condition) {
 
     for (auto &t : test_conds) t.join();
 }
+
+TEST(Sync, ConditionRobust) {
+    printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 1\n");
+    ipc::sync::condition cond {"test-cond"};
+    printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 2\n");
+    ipc::sync::mutex lock {"test-mutex"};
+    printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 3\n");
+    lock.lock();
+    std::thread unlock {[] {
+        printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 1\n");
+        ipc::sync::condition cond {"test-cond"};
+        printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 2\n");
+        ipc::sync::mutex lock {"test-mutex"};
+        printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 3\n");
+        {
+            std::lock_guard<ipc::sync::mutex> guard {lock};
+        }
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 4\n");
+        cond.notify();
+        printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 5\n");
+    }};
+    printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 4\n");
+    cond.wait(lock);
+    printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 5\n");
+    lock.unlock();
+    printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 6\n");
+    unlock.join();
+}
