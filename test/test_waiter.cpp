@@ -35,6 +35,34 @@ TEST(Waiter, broadcast) {
 }
 
 TEST(Waiter, quit_waiting) {
+    ipc::detail::waiter waiter;
+    EXPECT_TRUE(waiter.open("test-ipc-waiter"));
+
+    std::thread t1 {
+        [&waiter] {
+            EXPECT_TRUE(waiter.wait_if([] { return true; }));
+        }
+    };
+
+    bool quit = false;
+    std::thread t2 {
+        [&quit] {
+            ipc::detail::waiter waiter {"test-ipc-waiter"};
+            EXPECT_TRUE(waiter.wait_if([&quit] { return !quit; }));
+        }
+    };
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    EXPECT_TRUE(waiter.quit_waiting());
+    t1.join();
+    ASSERT_TRUE(t2.joinable());
+
+    EXPECT_TRUE(waiter.open("test-ipc-waiter"));
+    std::cout << "nofify quit...\n";
+    quit = true;
+    EXPECT_TRUE(waiter.notify());
+    t2.join();
+    std::cout << "quit... \n";
 }
 
 } // internal-linkage

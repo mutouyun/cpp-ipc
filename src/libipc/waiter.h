@@ -3,6 +3,7 @@
 #include <utility>
 #include <string>
 #include <mutex>
+#include <atomic>
 
 #include "libipc/def.h"
 #include "libipc/mutex.h"
@@ -15,6 +16,7 @@ namespace detail {
 class waiter {
     ipc::sync::condition cond_;
     ipc::sync::mutex     lock_;
+    std::atomic<bool>    quit_ {false};
 
 public:
     waiter() = default;
@@ -31,6 +33,7 @@ public:
     }
 
     bool open(char const *name) noexcept {
+        quit_.store(false, std::memory_order_relaxed);
         if (!cond_.open((std::string{"_waiter_cond_"} + name).c_str())) {
             return false;
         }
@@ -49,7 +52,10 @@ public:
     template <typename F>
     bool wait_if(F &&pred, std::uint64_t tm = ipc::invalid_value) noexcept {
         IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> guard {lock_};
-        while (std::forward<F>(pred)()) {
+        while ([this, &pred] {
+                    return !quit_.load(std::memory_order_relaxed)
+                        && std::forward<F>(pred)();
+                }()) {
             if (!cond_.wait(lock_, tm)) return false;
         }
         return true;
@@ -65,7 +71,9 @@ public:
         return cond_.broadcast();
     }
 
-    void quit_waiting() {
+    bool quit_waiting() {
+        quit_.store(true, std::memory_order_release);
+        return broadcast();
     }
 };
 

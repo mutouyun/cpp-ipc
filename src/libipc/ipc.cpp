@@ -282,9 +282,9 @@ struct conn_info_head {
     }
 
     void quit_waiting() {
-        // cc_waiter_.quit_waiting();
-        // wt_waiter_.quit_waiting();
-        // rd_waiter_.quit_waiting();
+        cc_waiter_.quit_waiting();
+        wt_waiter_.quit_waiting();
+        rd_waiter_.quit_waiting();
     }
 
     auto acc() {
