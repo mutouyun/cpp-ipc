@@ -42,8 +42,8 @@ public:
     }
 
     void close() noexcept {
-        // cond_.close();
-        // lock_.close();
+        cond_.close();
+        lock_.close();
     }
 
     template <typename F>
@@ -63,6 +63,9 @@ public:
     bool broadcast() noexcept {
         std::lock_guard<ipc::sync::mutex>{lock_}; // barrier
         return cond_.broadcast();
+    }
+
+    void quit_waiting() {
     }
 };
 

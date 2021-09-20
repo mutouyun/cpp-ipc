@@ -34,4 +34,7 @@ TEST(Waiter, broadcast) {
     }
 }
 
+TEST(Waiter, quit_waiting) {
+}
+
 } // internal-linkage
