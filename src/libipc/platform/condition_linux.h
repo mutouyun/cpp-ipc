@@ -50,33 +50,34 @@ public:
         if ((cond_ = acquire_cond(name)) == nullptr) {
             return false;
         }
-        if (shm_.ref() == 1) {
-            ::pthread_cond_destroy(cond_);
-            auto finally = ipc::guard([this] { close(); }); // close when failed
-            // init condition
-            int eno;
-            pthread_condattr_t cond_attr;
-            if ((eno = ::pthread_condattr_init(&cond_attr)) != 0) {
-                ipc::error("fail pthread_condattr_init[%d]\n", eno);
-                return false;
-            }
-            IPC_UNUSED_ auto guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
-            if ((eno = ::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED)) != 0) {
-                ipc::error("fail pthread_condattr_setpshared[%d]\n", eno);
-                return false;
-            }
-            *cond_ = PTHREAD_COND_INITIALIZER;
-            if ((eno = ::pthread_cond_init(cond_, &cond_attr)) != 0) {
-                ipc::error("fail pthread_cond_init[%d]\n", eno);
-                return false;
-            }
-            finally.dismiss();
+        if (shm_.ref() > 1) {
+            return valid();
         }
+        ::pthread_cond_destroy(cond_);
+        auto finally = ipc::guard([this] { close(); }); // close when failed
+        // init condition
+        int eno;
+        pthread_condattr_t cond_attr;
+        if ((eno = ::pthread_condattr_init(&cond_attr)) != 0) {
+            ipc::error("fail pthread_condattr_init[%d]\n", eno);
+            return false;
+        }
+        IPC_UNUSED_ auto guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
+        if ((eno = ::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED)) != 0) {
+            ipc::error("fail pthread_condattr_setpshared[%d]\n", eno);
+            return false;
+        }
+        *cond_ = PTHREAD_COND_INITIALIZER;
+        if ((eno = ::pthread_cond_init(cond_, &cond_attr)) != 0) {
+            ipc::error("fail pthread_cond_init[%d]\n", eno);
+            return false;
+        }
+        finally.dismiss();
         return valid();
     }
 
     void close() noexcept {
-        if (shm_.ref() == 1) {
+        if ((shm_.ref() <= 1) && cond_ != nullptr) {
             int eno;
             if ((eno = ::pthread_cond_destroy(cond_)) != 0) {
                 ipc::error("fail pthread_cond_destroy[%d]\n", eno);
@@ -87,9 +88,8 @@ public:
     }
 
     bool wait(ipc::sync::mutex &mtx, std::uint64_t tm) noexcept {
+        if (!valid()) return false;
         switch (tm) {
-        case 0:
-            return true;
         case invalid_value: {
                 int eno;
                 if ((eno = ::pthread_cond_wait(cond_, static_cast<pthread_mutex_t *>(mtx.native()))) != 0) {
@@ -115,6 +115,7 @@ public:
     }
 
     bool notify() noexcept {
+        if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_signal(cond_)) != 0) {
             ipc::error("fail pthread_cond_signal[%d]\n", eno);
@@ -124,6 +125,7 @@ public:
     }
 
     bool broadcast() noexcept {
+        if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_broadcast(cond_)) != 0) {
             ipc::error("fail pthread_cond_broadcast[%d]\n", eno);

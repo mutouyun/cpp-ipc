@@ -42,8 +42,8 @@ public:
     }
 
     void close() noexcept {
-        cond_.close();
-        lock_.close();
+        // cond_.close();
+        // lock_.close();
     }
 
     template <typename F>

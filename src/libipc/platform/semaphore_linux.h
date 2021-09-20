@@ -50,13 +50,15 @@ public:
         if (::sem_close(h_) != 0) {
             ipc::error("fail sem_close[%d]: %s\n", errno);
         }
-        if (shm_.ref() == 1) {
-            if (::sem_unlink(shm_.name()) != 0) {
-                ipc::error("fail sem_unlink[%d]: %s\n", errno);
+        h_ = SEM_FAILED;
+        if (shm_.name() != nullptr) {
+            std::string name = shm_.name();
+            if (shm_.release() <= 1) {
+                if (::sem_unlink(name.c_str()) != 0) {
+                    ipc::error("fail sem_unlink[%d]: %s, name: %s\n", errno, name.c_str());
+                }
             }
         }
-        shm_.release();
-        h_ = SEM_FAILED;
     }
 
     bool wait(std::uint64_t tm) noexcept {

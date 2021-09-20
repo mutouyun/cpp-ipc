@@ -59,7 +59,7 @@ char const * handle::name() const noexcept {
     return impl(p_)->n_.c_str();
 }
 
-std::uint32_t handle::ref() const noexcept {
+std::int32_t handle::ref() const noexcept {
     return shm::get_ref(impl(p_)->id_);
 }
 
@@ -74,9 +74,9 @@ bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
     return valid();
 }
 
-void handle::release() {
-    if (impl(p_)->id_ == nullptr) return;
-    shm::release(detach());
+std::int32_t handle::release() {
+    if (impl(p_)->id_ == nullptr) return -1;
+    return shm::release(detach());
 }
 
 void* handle::get() const {

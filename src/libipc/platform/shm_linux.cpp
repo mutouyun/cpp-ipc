@@ -22,7 +22,7 @@
 namespace {
 
 struct info_t {
-    std::atomic<std::uint32_t> acc_;
+    std::atomic<std::int32_t> acc_;
 };
 
 struct id_info_t {
@@ -81,7 +81,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     return ii;
 }
 
-std::uint32_t get_ref(id_t id) {
+std::int32_t get_ref(id_t id) {
     if (id == nullptr) {
         return 0;
     }
@@ -152,16 +152,17 @@ void * get_mem(id_t id, std::size_t * size) {
     return mem;
 }
 
-void release(id_t id) {
+std::int32_t release(id_t id) {
     if (id == nullptr) {
         ipc::error("fail release: invalid id (null)\n");
-        return;
+        return -1;
     }
+    std::int32_t ret = -1;
     auto ii = static_cast<id_info_t*>(id);
     if (ii->mem_ == nullptr || ii->size_ == 0) {
         ipc::error("fail release: invalid id (mem = %p, size = %zd)\n", ii->mem_, ii->size_);
     }
-    else if (acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel) == 1) {
+    else if ((ret = acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel)) <= 1) {
         ::munmap(ii->mem_, ii->size_);
         if (!ii->name_.empty()) {
             ::shm_unlink(ii->name_.c_str());
@@ -169,6 +170,7 @@ void release(id_t id) {
     }
     else ::munmap(ii->mem_, ii->size_);
     mem::free(ii);
+    return ret;
 }
 
 void remove(id_t id) {

@@ -58,7 +58,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     return ii;
 }
 
-std::uint32_t get_ref(id_t) {
+std::int32_t get_ref(id_t) {
     return 0;
 }
 
@@ -96,10 +96,10 @@ void * get_mem(id_t id, std::size_t * size) {
     return static_cast<void *>(mem);
 }
 
-void release(id_t id) {
+std::int32_t release(id_t id) {
     if (id == nullptr) {
         ipc::error("fail release: invalid id (null)\n");
-        return;
+        return -1;
     }
     auto ii = static_cast<id_info_t*>(id);
     if (ii->mem_ == nullptr || ii->size_ == 0) {
@@ -111,6 +111,7 @@ void release(id_t id) {
     }
     else ::CloseHandle(ii->h_);
     mem::free(ii);
+    return 0;
 }
 
 void remove(id_t id) {
