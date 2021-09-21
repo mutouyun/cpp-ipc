@@ -20,8 +20,8 @@ constexpr char const mode_r__[] = "r";
 constexpr std::size_t const min_sz = 128;
 constexpr std::size_t const max_sz = 1024 * 16;
 
-std::atomic<bool> is_quit__{ false };
-std::atomic<std::size_t> size_counter__{ 0 };
+std::atomic<bool> is_quit__ {false};
+std::atomic<std::size_t> size_counter__ {0};
 
 using msg_que_t = ipc::chan<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast>;
 
@@ -127,10 +127,10 @@ int main(int argc, char ** argv) {
     ::signal(SIGHUP  , exit);
 #endif
 
-    if (std::string{ argv[1] } == mode_s__) {
+    std::string mode {argv[1]};
+    if (mode == mode_s__) {
         do_send();
-    }
-    else if (std::string{ argv[1] } == mode_r__) {
+    } else if (mode == mode_r__) {
         do_recv();
     }
     return 0;

@@ -72,7 +72,7 @@ inline void yield(K& k) noexcept {
     ++k;
 }
 
-template <std::size_t N = 4096, typename K, typename F>
+template <std::size_t N = 32, typename K, typename F>
 inline void sleep(K& k, F&& f) {
     if (k < static_cast<K>(N)) {
         std::this_thread::yield();
@@ -84,7 +84,7 @@ inline void sleep(K& k, F&& f) {
     ++k;
 }
 
-template <std::size_t N = 4096, typename K>
+template <std::size_t N = 32, typename K>
 inline void sleep(K& k) {
     sleep<N>(k, [] {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

@@ -18,8 +18,9 @@ using namespace ipc;
 
 namespace {
 
-constexpr int LoopCount = 10000;
-constexpr int MultiMax  = 8;
+constexpr int LoopCount   = 10000;
+constexpr int MultiMax    = 8;
+constexpr int TestBuffMax = 65536;
 
 struct msg_head {
     int id_;
@@ -28,7 +29,7 @@ struct msg_head {
 class rand_buf : public buffer {
 public:
     rand_buf() {
-        int size = capo::random<>{sizeof(msg_head), 65536}();
+        int size = capo::random<>{(int)sizeof(msg_head), TestBuffMax}();
         *this = buffer(new char[size], size, [](void * p, std::size_t) {
             delete [] static_cast<char *>(p);
         });
@@ -109,10 +110,10 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
     for (int k = 0; k < s_cnt; ++k) {
         ipc_ut::sender() << [name, &sw, r_cnt, k] {
             Que que { name, ipc::sender };
-            EXPECT_TRUE(que.wait_for_recv(r_cnt));
+            ASSERT_TRUE(que.wait_for_recv(r_cnt));
             sw.start();
             for (int i = 0; i < (int)data_set__.get().size(); ++i) {
-                EXPECT_TRUE(que.send(data_set__.get()[i]));
+                ASSERT_TRUE(que.send(data_set__.get()[i]));
             }
         };
     }
@@ -132,7 +133,7 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
                 if (data_set != got) {
                     printf("data_set__.get()[%d] != got, size = %zd/%zd\n", 
                             i, data_set.size(), got.size());
-                    EXPECT_TRUE(false);
+                    ASSERT_TRUE(false);
                 }
             }
         };
@@ -140,7 +141,7 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
 
     ipc_ut::sender().wait_for_done();
     Que que { name };
-    EXPECT_TRUE(que.wait_for_recv(r_cnt));
+    ASSERT_TRUE(que.wait_for_recv(r_cnt));
     for (int k = 0; k < r_cnt; ++k) {
         que.send(rand_buf{msg_head{-1}});
     }

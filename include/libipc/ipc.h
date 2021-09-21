@@ -27,12 +27,12 @@ struct IPC_EXPORT chan_impl {
     static char const * name(ipc::handle_t h);
 
     static std::size_t recv_count(ipc::handle_t h);
-    static bool wait_for_recv(ipc::handle_t h, std::size_t r_count, std::size_t tm);
+    static bool wait_for_recv(ipc::handle_t h, std::size_t r_count, std::uint64_t tm);
 
-    static bool   send(ipc::handle_t h, void const * data, std::size_t size, std::size_t tm);
-    static buff_t recv(ipc::handle_t h, std::size_t tm);
+    static bool   send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm);
+    static buff_t recv(ipc::handle_t h, std::uint64_t tm);
 
-    static bool   try_send(ipc::handle_t h, void const * data, std::size_t size, std::size_t tm);
+    static bool   try_send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm);
     static buff_t try_recv(ipc::handle_t h);
 };
 
@@ -120,41 +120,41 @@ public:
         return detail_t::recv_count(h_);
     }
 
-    bool wait_for_recv(std::size_t r_count, std::size_t tm = invalid_value) const {
+    bool wait_for_recv(std::size_t r_count, std::uint64_t tm = invalid_value) const {
         return detail_t::wait_for_recv(h_, r_count, tm);
     }
 
-    static bool wait_for_recv(char const * name, std::size_t r_count, std::size_t tm = invalid_value) {
+    static bool wait_for_recv(char const * name, std::size_t r_count, std::uint64_t tm = invalid_value) {
         return chan_wrapper(name).wait_for_recv(r_count, tm);
     }
 
     /**
      * If timeout, this function would call 'force_push' to send the data forcibly.
     */
-    bool send(void const * data, std::size_t size, std::size_t tm = default_timeout) {
+    bool send(void const * data, std::size_t size, std::uint64_t tm = default_timeout) {
         return detail_t::send(h_, data, size, tm);
     }
-    bool send(buff_t const & buff, std::size_t tm = default_timeout) {
+    bool send(buff_t const & buff, std::uint64_t tm = default_timeout) {
         return this->send(buff.data(), buff.size(), tm);
     }
-    bool send(std::string const & str, std::size_t tm = default_timeout) {
+    bool send(std::string const & str, std::uint64_t tm = default_timeout) {
         return this->send(str.c_str(), str.size() + 1, tm);
     }
 
     /**
      * If timeout, this function would just return false.
     */
-    bool try_send(void const * data, std::size_t size, std::size_t tm = default_timeout) {
+    bool try_send(void const * data, std::size_t size, std::uint64_t tm = default_timeout) {
         return detail_t::try_send(h_, data, size, tm);
     }
-    bool try_send(buff_t const & buff, std::size_t tm = default_timeout) {
+    bool try_send(buff_t const & buff, std::uint64_t tm = default_timeout) {
         return this->try_send(buff.data(), buff.size(), tm);
     }
-    bool try_send(std::string const & str, std::size_t tm = default_timeout) {
+    bool try_send(std::string const & str, std::uint64_t tm = default_timeout) {
         return this->try_send(str.c_str(), str.size() + 1, tm);
     }
 
-    buff_t recv(std::size_t tm = invalid_value) {
+    buff_t recv(std::uint64_t tm = invalid_value) {
         return detail_t::recv(h_, tm);
     }
 

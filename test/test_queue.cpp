@@ -103,7 +103,7 @@ void test_sr(elems_t<Rp, Rc, Ts> && elems, int s_cnt, int r_cnt, char const * me
             queue_t<Rp, Rc, Ts> que { &elems };
             ASSERT_TRUE(que.connect());
             while (pop(que).pid_ >= 0) ;
-            EXPECT_TRUE(que.disconnect());
+            ASSERT_TRUE(que.disconnect());
         };
     }
 
@@ -133,7 +133,7 @@ TEST(Queue, el_connection) {
         elems_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> el;
         EXPECT_TRUE(el.connect_sender());
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_FALSE(el.connect_sender());
+            ASSERT_FALSE(el.connect_sender());
         }
         el.disconnect_sender();
         EXPECT_TRUE(el.connect_sender());
@@ -141,7 +141,7 @@ TEST(Queue, el_connection) {
     {
         elems_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::unicast> el;
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_TRUE(el.connect_sender());
+            ASSERT_TRUE(el.connect_sender());
         }
     }
     {
@@ -149,7 +149,7 @@ TEST(Queue, el_connection) {
         auto cc = el.connect_receiver();
         EXPECT_NE(cc, 0);
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_EQ(el.connect_receiver(), 0);
+            ASSERT_EQ(el.connect_receiver(), 0);
         }
         EXPECT_EQ(el.disconnect_receiver(cc), 0);
         EXPECT_EQ(el.connect_receiver(), cc);
@@ -157,10 +157,10 @@ TEST(Queue, el_connection) {
     {
         elems_t<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast> el;
         for (std::size_t i = 0; i < (sizeof(ipc::circ::cc_t) * CHAR_BIT); ++i) {
-            EXPECT_NE(el.connect_receiver(), 0);
+            ASSERT_NE(el.connect_receiver(), 0);
         }
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_EQ(el.connect_receiver(), 0);
+            ASSERT_EQ(el.connect_receiver(), 0);
         }
     }
 }
@@ -171,11 +171,11 @@ TEST(Queue, connection) {
         queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
         // sending
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_TRUE(que.ready_sending());
+            ASSERT_TRUE(que.ready_sending());
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
-            EXPECT_FALSE(que.ready_sending());
+            ASSERT_FALSE(que.ready_sending());
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             que.shut_sending();
@@ -186,15 +186,15 @@ TEST(Queue, connection) {
         }
         // receiving
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_TRUE(que.connect());
+            ASSERT_TRUE(que.connect());
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
-            EXPECT_FALSE(que.connect());
+            ASSERT_FALSE(que.connect());
         }
         EXPECT_TRUE(que.disconnect());
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_FALSE(que.disconnect());
+            ASSERT_FALSE(que.disconnect());
         }
         {
             queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
@@ -202,7 +202,7 @@ TEST(Queue, connection) {
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{&el};
-            EXPECT_FALSE(que.connect());
+            ASSERT_FALSE(que.connect());
         }
     }
     {
@@ -210,42 +210,42 @@ TEST(Queue, connection) {
         queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
         // sending
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_TRUE(que.ready_sending());
+            ASSERT_TRUE(que.ready_sending());
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            EXPECT_TRUE(que.ready_sending());
+            ASSERT_TRUE(que.ready_sending());
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             que.shut_sending();
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            EXPECT_TRUE(que.ready_sending());
+            ASSERT_TRUE(que.ready_sending());
         }
         // receiving
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_TRUE(que.connect());
+            ASSERT_TRUE(que.connect());
         }
         for (std::size_t i = 1; i < (sizeof(ipc::circ::cc_t) * CHAR_BIT); ++i) {
             queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            EXPECT_TRUE(que.connect());
+            ASSERT_TRUE(que.connect());
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            EXPECT_FALSE(que.connect());
+            ASSERT_FALSE(que.connect());
         }
-        EXPECT_TRUE(que.disconnect());
+        ASSERT_TRUE(que.disconnect());
         for (std::size_t i = 0; i < 10000; ++i) {
-            EXPECT_FALSE(que.disconnect());
+            ASSERT_FALSE(que.disconnect());
         }
         {
             queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            EXPECT_TRUE(que.connect());
+            ASSERT_TRUE(que.connect());
         }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            EXPECT_FALSE(que.connect());
+            ASSERT_FALSE(que.connect());
         }
     }
 }

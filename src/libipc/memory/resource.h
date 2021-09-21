@@ -45,14 +45,17 @@ constexpr char const * pf(long double)        { return "%Lf" ; }
 
 } // internal-linkage
 
+template <typename T>
+struct hash : public std::hash<T> {};
+
 template <typename Key, typename T>
 using unordered_map = std::unordered_map<
-    Key, T, std::hash<Key>, std::equal_to<Key>, ipc::mem::allocator<std::pair<const Key, T>>
+    Key, T, ipc::hash<Key>, std::equal_to<Key>, ipc::mem::allocator<std::pair<Key const, T>>
 >;
 
 template <typename Key, typename T>
 using map = std::map<
-    Key, T, std::less<Key>, ipc::mem::allocator<std::pair<const Key, T>>
+    Key, T, std::less<Key>, ipc::mem::allocator<std::pair<Key const, T>>
 >;
 
 template <typename Char>
@@ -62,6 +65,18 @@ using basic_string = std::basic_string<
 
 using string  = basic_string<char>;
 using wstring = basic_string<wchar_t>;
+
+template <> struct hash<string> {
+    std::size_t operator()(string const &val) const noexcept {
+        return std::hash<char const *>{}(val.c_str());
+    }
+};
+
+template <> struct hash<wstring> {
+    std::size_t operator()(wstring const &val) const noexcept {
+        return std::hash<wchar_t const *>{}(val.c_str());
+    }
+};
 
 template <typename T>
 ipc::string to_string(T val) {

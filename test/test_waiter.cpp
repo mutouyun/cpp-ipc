@@ -1,33 +1,68 @@
 #include <thread>
 #include <iostream>
 
-#include "libipc/platform/waiter_wrapper.h"
+#include "libipc/waiter.h"
 #include "test.h"
 
 namespace {
 
 TEST(Waiter, broadcast) {
-    ipc::detail::waiter w;
-    std::thread ts[10];
+    for (int i = 0; i < 10; ++i) {
+        ipc::detail::waiter waiter;
+        std::thread ts[10];
 
-    for (auto& t : ts) {
-        t = std::thread([&w] {
-            ipc::detail::waiter_wrapper wp { &w };
-            EXPECT_TRUE(wp.open("test-ipc-waiter"));
-            EXPECT_TRUE(wp.wait_if([] { return true; }));
-            wp.close();
-        });
+        int k = 0;
+        for (auto& t : ts) {
+            t = std::thread([&k] {
+                ipc::detail::waiter waiter {"test-ipc-waiter"};
+                EXPECT_TRUE(waiter.valid());
+                for (int i = 0; i < 9; ++i) {
+                    while (!waiter.wait_if([&k, &i] { return k == i; })) ;
+                }
+            });
+        }
+
+        EXPECT_TRUE(waiter.open("test-ipc-waiter"));
+        std::cout << "waiting for broadcast...\n";
+        for (k = 1; k < 10; ++k) {
+            std::cout << "broadcast: " << k << "\n";
+            ASSERT_TRUE(waiter.broadcast());
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        for (auto& t : ts) t.join();
+        std::cout << "quit... " << i << "\n";
     }
+}
 
-    ipc::detail::waiter_wrapper wp { &w };
-    EXPECT_TRUE(wp.open("test-ipc-waiter"));
+TEST(Waiter, quit_waiting) {
+    ipc::detail::waiter waiter;
+    EXPECT_TRUE(waiter.open("test-ipc-waiter"));
 
-    std::cout << "waiting for broadcast...\n";
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_TRUE(wp.broadcast());
+    std::thread t1 {
+        [&waiter] {
+            EXPECT_TRUE(waiter.wait_if([] { return true; }));
+        }
+    };
 
-    for (auto& t : ts) t.join();
-    wp.close();
+    bool quit = false;
+    std::thread t2 {
+        [&quit] {
+            ipc::detail::waiter waiter {"test-ipc-waiter"};
+            EXPECT_TRUE(waiter.wait_if([&quit] { return !quit; }));
+        }
+    };
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    EXPECT_TRUE(waiter.quit_waiting());
+    t1.join();
+    ASSERT_TRUE(t2.joinable());
+
+    EXPECT_TRUE(waiter.open("test-ipc-waiter"));
+    std::cout << "nofify quit...\n";
+    quit = true;
+    EXPECT_TRUE(waiter.notify());
+    t2.join();
+    std::cout << "quit... \n";
 }
 
 } // internal-linkage
