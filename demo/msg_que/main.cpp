@@ -20,8 +20,8 @@ constexpr char const mode_r__[] = "r";
 constexpr std::size_t const min_sz = 128;
 constexpr std::size_t const max_sz = 1024 * 16;
 
-std::atomic<bool> is_quit__{ false };
-std::atomic<std::size_t> size_counter__{ 0 };
+std::atomic<bool> is_quit__ {false};
+std::atomic<std::size_t> size_counter__ {0};
 
 using msg_que_t = ipc::chan<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast>;
 

@@ -301,15 +301,13 @@ template <typename W, typename F>
 bool wait_for(W& waiter, F&& pred, std::uint64_t tm) {
     if (tm == 0) return !pred();
     for (unsigned k = 0; pred();) {
-        bool loop = true, ret = true;
-        ipc::sleep(k, [&k, &loop, &ret, &waiter, &pred, tm] {
-            ret = waiter.wait_if([&loop, &pred] {
-                    return loop = pred();
-                }, tm);
-            k = 0;
+        bool ret = true;
+        ipc::sleep(k, [&k, &ret, &waiter, &pred, tm] {
+            ret = waiter.wait_if(std::forward<F>(pred), tm);
+            k   = 0;
         });
-        if (!ret ) return false; // timeout or fail
-        if (!loop) break;
+        if (!ret) return false; // timeout or fail
+        if (k == 0) break; // k has been reset
     }
     return true;
 }

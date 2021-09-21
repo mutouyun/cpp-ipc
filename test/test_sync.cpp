@@ -162,6 +162,9 @@ TEST(Sync, Condition) {
     for (auto &t : test_conds) t.join();
 }
 
+/**
+ * https://stackoverflow.com/questions/51730660/is-this-a-bug-in-glibc-pthread
+*/
 TEST(Sync, ConditionRobust) {
     printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 1\n");
     ipc::sync::condition cond {"test-cond"};
@@ -180,7 +183,7 @@ TEST(Sync, ConditionRobust) {
         }
         std::this_thread::sleep_for(std::chrono::seconds(1));
         printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 4\n");
-        cond.notify();
+        cond.broadcast();
         printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 5\n");
     }};
     printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 4\n");
