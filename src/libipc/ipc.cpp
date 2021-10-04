@@ -268,17 +268,17 @@ bool clear_message(void* p) {
 struct conn_info_head {
 
     ipc::string name_;
+    ipc::shm::handle acc_h_;
     msg_id_t    cc_id_; // connection-info id
     ipc::detail::waiter cc_waiter_, wt_waiter_, rd_waiter_;
-    ipc::shm::handle acc_h_;
 
     conn_info_head(char const * name)
         : name_     {name}
-        , cc_id_    {(cc_acc() == nullptr) ? 0 : cc_acc()->fetch_add(1, std::memory_order_relaxed)}
+        , acc_h_    {("__AC_CONN__" + name_).c_str(), sizeof(acc_t)}
+        , cc_id_    {(static_cast<acc_t*>(acc_h_.get()) == nullptr) ? 0 : static_cast<acc_t*>(acc_h_.get())->fetch_add(1, std::memory_order_relaxed)}
         , cc_waiter_{("__CC_CONN__" + name_).c_str()}
         , wt_waiter_{("__WT_CONN__" + name_).c_str()}
-        , rd_waiter_{("__RD_CONN__" + name_).c_str()}
-        , acc_h_    {("__AC_CONN__" + name_).c_str(), sizeof(acc_t)} {
+        , rd_waiter_{("__RD_CONN__" + name_).c_str()} {
     }
 
     void quit_waiting() {
@@ -400,6 +400,7 @@ static bool connect(ipc::handle_t * ph, char const * name, bool start_to_recv) {
 static void destroy(ipc::handle_t h) {
     disconnect(h);
     ipc::mem::free(info_of(h));
+    chunk_storages().clear();
 }
 
 static std::size_t recv_count(ipc::handle_t h) noexcept {
