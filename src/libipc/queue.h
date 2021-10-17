@@ -144,7 +144,7 @@ public:
     }
 
     std::size_t conn_count() const noexcept {
-        return (elems_ == nullptr) ? invalid_value : elems_->conn_count();
+        return (elems_ == nullptr) ? static_cast<std::size_t>(invalid_value) : elems_->conn_count();
     }
 
     bool valid() const noexcept {
