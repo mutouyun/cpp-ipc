@@ -115,7 +115,7 @@ public:
         return true;
     }
 
-    bool notify() noexcept {
+    bool notify(ipc::sync::mutex &) noexcept {
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_signal(cond_)) != 0) {
@@ -125,7 +125,7 @@ public:
         return true;
     }
 
-    bool broadcast() noexcept {
+    bool broadcast(ipc::sync::mutex &) noexcept {
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_broadcast(cond_)) != 0) {

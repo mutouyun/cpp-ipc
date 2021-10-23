@@ -58,12 +58,12 @@ bool condition::wait(ipc::sync::mutex &mtx, std::uint64_t tm) noexcept {
     return impl(p_)->cond_.wait(mtx, tm);
 }
 
-bool condition::notify() noexcept {
-    return impl(p_)->cond_.notify();
+bool condition::notify(ipc::sync::mutex &mtx) noexcept {
+    return impl(p_)->cond_.notify(mtx);
 }
 
-bool condition::broadcast() noexcept {
-    return impl(p_)->cond_.broadcast();
+bool condition::broadcast(ipc::sync::mutex &mtx) noexcept {
+    return impl(p_)->cond_.broadcast(mtx);
 }
 
 } // namespace sync

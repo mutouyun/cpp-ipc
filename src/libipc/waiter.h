@@ -63,12 +63,12 @@ public:
 
     bool notify() noexcept {
         std::lock_guard<ipc::sync::mutex>{lock_}; // barrier
-        return cond_.notify();
+        return cond_.notify(lock_);
     }
 
     bool broadcast() noexcept {
         std::lock_guard<ipc::sync::mutex>{lock_}; // barrier
-        return cond_.broadcast();
+        return cond_.broadcast(lock_);
     }
 
     bool quit_waiting() {
