@@ -9,9 +9,10 @@
 #include "libipc/pool_alloc.h"
 
 #include "libipc/utility/log.h"
-#include "libipc/platform/to_tchar.h"
-#include "libipc/platform/get_sa.h"
 #include "libipc/memory/resource.h"
+
+#include "to_tchar.h"
+#include "get_sa.h"
 
 namespace {
 

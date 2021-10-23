@@ -1,9 +1,9 @@
 project(ipc)
 
 if(UNIX)
-  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_linux.cpp)
+  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux/*.cpp)
 else()
-  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*_win.cpp)
+  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/win/*.cpp)
 endif()
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc SRC_FILES)
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/sync SRC_FILES)

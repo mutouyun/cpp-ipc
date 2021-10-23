@@ -9,12 +9,13 @@
 
 #include <pthread.h>
 
-#include "libipc/platform/get_wait_time.h"
 #include "libipc/platform/detail.h"
 #include "libipc/utility/log.h"
 #include "libipc/utility/scope_guard.h"
 #include "libipc/memory/resource.h"
 #include "libipc/shm.h"
+
+#include "get_wait_time.h"
 
 namespace ipc {
 namespace detail {

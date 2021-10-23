@@ -5,9 +5,9 @@
 #include "libipc/memory/resource.h"
 #include "libipc/platform/detail.h"
 #if defined(IPC_OS_WINDOWS_)
-#include "libipc/platform/mutex_win.h"
+#include "libipc/platform/win/mutex.h"
 #elif defined(IPC_OS_LINUX_)
-#include "libipc/platform/mutex_linux.h"
+#include "libipc/platform/linux/mutex.h"
 #else/*linux*/
 #   error "Unsupported platform."
 #endif

@@ -5,11 +5,12 @@
 
 #include <pthread.h>
 
-#include "libipc/platform/get_wait_time.h"
 #include "libipc/utility/log.h"
 #include "libipc/utility/scope_guard.h"
 #include "libipc/mutex.h"
 #include "libipc/shm.h"
+
+#include "get_wait_time.h"
 
 namespace ipc {
 namespace detail {

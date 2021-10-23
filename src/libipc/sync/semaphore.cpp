@@ -5,9 +5,9 @@
 #include "libipc/memory/resource.h"
 #include "libipc/platform/detail.h"
 #if defined(IPC_OS_WINDOWS_)
-#include "libipc/platform/semaphore_win.h"
+#include "libipc/platform/win/semaphore.h"
 #elif defined(IPC_OS_LINUX_)
-#include "libipc/platform/semaphore_linux.h"
+#include "libipc/platform/linux/semaphore.h"
 #else/*linux*/
 #   error "Unsupported platform."
 #endif
