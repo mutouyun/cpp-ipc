@@ -1,7 +1,8 @@
 project(ipc)
 
 if(UNIX)
-  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux/*.cpp)
+  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux/*.cpp
+                      ${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux/a0/*.c)
 else()
   file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/win/*.cpp)
 endif()
@@ -33,18 +34,18 @@ set_target_properties(${PROJECT_NAME}
 	PROPERTIES
 	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin" )
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 # set version
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-    VERSION 1.1.0
-    SOVERSION 2)
+    VERSION 1.2.0
+    SOVERSION 3)
 
 target_include_directories(${PROJECT_NAME}
   PUBLIC  ${LIBIPC_PROJECT_DIR}/include
   PRIVATE ${LIBIPC_PROJECT_DIR}/src
-)
+          $<$<BOOL:UNIX>:${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux>)
 
 if(NOT MSVC)
   target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -56,5 +57,4 @@ install(
   TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
-)
+  ARCHIVE DESTINATION lib)

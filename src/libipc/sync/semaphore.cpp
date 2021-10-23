@@ -7,7 +7,7 @@
 #if defined(IPC_OS_WINDOWS_)
 #include "libipc/platform/win/semaphore.h"
 #elif defined(IPC_OS_LINUX_)
-#include "libipc/platform/linux/semaphore.h"
+#include "libipc/platform/linux/semaphore_impl.h"
 #else/*linux*/
 #   error "Unsupported platform."
 #endif

@@ -1,27 +1,34 @@
 #pragma once
 
 #include <cstdint>
+#include <cinttypes>
 #include <system_error>
 
-#include <sys/time.h>
-#include <time.h>
-#include <errno.h>
-
 #include "libipc/utility/log.h"
+
+#include "a0/time.h"
+#include "a0/err_macro.h"
 
 namespace ipc {
 namespace detail {
 
 inline bool calc_wait_time(timespec &ts, std::uint64_t tm /*ms*/) noexcept {
-    timeval now;
-    int eno = ::gettimeofday(&now, NULL);
-    if (eno != 0) {
-        ipc::error("fail gettimeofday [%d]\n", eno);
+    std::int64_t add_ns = static_cast<std::int64_t>(tm * 1000000ull);
+    if (add_ns < 0) {
+        ipc::error("invalid time = " PRIu64 "\n", tm);
         return false;
     }
-    ts.tv_nsec = (now.tv_usec + (tm % 1000) * 1000) * 1000;
-    ts.tv_sec  =  now.tv_sec  + (tm / 1000) + (ts.tv_nsec / 1000000000l);
-    ts.tv_nsec %= 1000000000l;
+    a0_time_mono_t now;
+    int eno = A0_SYSERR(a0_time_mono_now(&now));
+    if (eno != 0) {
+        ipc::error("fail get time[%d]\n", eno);
+        return false;
+    }
+    a0_time_mono_t *target = reinterpret_cast<a0_time_mono_t *>(&ts);
+    if ((eno = A0_SYSERR(a0_time_mono_add(now, add_ns, target))) != 0) {
+        ipc::error("fail get time[%d]\n", eno);
+        return false;
+    }
     return true;
 }
 

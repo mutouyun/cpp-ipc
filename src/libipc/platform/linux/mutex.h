@@ -1,42 +1,112 @@
 #pragma once
 
-#include <cstring>
-#include <cassert>
 #include <cstdint>
 #include <system_error>
 #include <mutex>
 #include <atomic>
 
-#include <pthread.h>
-
 #include "libipc/platform/detail.h"
 #include "libipc/utility/log.h"
-#include "libipc/utility/scope_guard.h"
 #include "libipc/memory/resource.h"
 #include "libipc/shm.h"
 
 #include "get_wait_time.h"
+#include "sync_obj_impl.h"
+
+#include "a0/err_macro.h"
+#include "a0/mtx.h"
 
 namespace ipc {
 namespace detail {
 namespace sync {
 
+class robust_mutex : public sync::obj_impl<a0_mtx_t> {
+public:
+    bool lock(std::uint64_t tm) noexcept {
+        if (!valid()) return false;
+        for (;;) {
+            auto ts = detail::make_timespec(tm);
+            int eno = A0_SYSERR(
+                (tm == invalid_value) ? a0_mtx_lock(native()) 
+                                      : a0_mtx_timedlock(native(), {ts}));
+            switch (eno) {
+            case 0:
+                return true;
+            case ETIMEDOUT:
+                return false;
+            case EOWNERDEAD: {
+                    int eno2 = A0_SYSERR(a0_mtx_consistent(native()));
+                    if (eno2 != 0) {
+                        ipc::error("fail mutex lock[%d] -> consistent[%d]\n", eno, eno2);
+                        return false;
+                    }
+                    int eno3 = A0_SYSERR(a0_mtx_unlock(native()));
+                    if (eno3 != 0) {
+                        ipc::error("fail mutex lock[%d] -> unlock[%d]\n", eno, eno3);
+                        return false;
+                    }
+                }
+                break; // loop again
+            default:
+                ipc::error("fail mutex lock[%d]\n", eno);
+                return false;
+            }
+        }
+    }
+
+    bool try_lock() noexcept(false) {
+        if (!valid()) return false;
+        int eno = A0_SYSERR(a0_mtx_timedlock(native(), {detail::make_timespec(0)}));
+        switch (eno) {
+        case 0:
+            return true;
+        case ETIMEDOUT:
+            return false;
+        case EOWNERDEAD: {
+                int eno2 = A0_SYSERR(a0_mtx_consistent(native()));
+                if (eno2 != 0) {
+                    ipc::error("fail mutex try_lock[%d] -> consistent[%d]\n", eno, eno2);
+                    break;
+                }
+                int eno3 = A0_SYSERR(a0_mtx_unlock(native()));
+                if (eno3 != 0) {
+                    ipc::error("fail mutex try_lock[%d] -> unlock[%d]\n", eno, eno3);
+                    break;
+                }
+            }
+            break;
+        default:
+            ipc::error("fail mutex try_lock[%d]\n", eno);
+            break;
+        }
+        throw std::system_error{eno, std::system_category()};
+    }
+
+    bool unlock() noexcept {
+        if (!valid()) return false;
+        int eno = A0_SYSERR(a0_mtx_unlock(native()));
+        if (eno != 0) {
+            ipc::error("fail mutex unlock[%d]\n", eno);
+            return false;
+        }
+        return true;
+    }
+};
+
 class mutex {
-    ipc::shm::handle *shm_ = nullptr;
+    robust_mutex *mutex_ = nullptr;
     std::atomic<std::int32_t> *ref_ = nullptr;
-    pthread_mutex_t *mutex_ = nullptr;
 
     struct curr_prog {
         struct shm_data {
-            ipc::shm::handle shm;
+            robust_mutex mtx;
             std::atomic<std::int32_t> ref;
 
             struct init {
                 char const *name;
-                std::size_t size;
             };
             shm_data(init arg)
-                : shm{arg.name, arg.size}, ref{0} {}
+                : mtx{}, ref{0} { mtx.open(arg.name); }
         };
         ipc::map<ipc::string, shm_data> mutex_handles;
         std::mutex lock;
@@ -47,23 +117,19 @@ class mutex {
         }
     };
 
-    pthread_mutex_t *acquire_mutex(char const *name) {
+    void acquire_mutex(char const *name) {
         if (name == nullptr) {
-            return nullptr;
+            return;
         }
         auto &info = curr_prog::get();
         IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
             it = curr_prog::get().mutex_handles.emplace(name, 
-                              curr_prog::shm_data::init{name, sizeof(pthread_mutex_t)}).first;
+                              curr_prog::shm_data::init{name}).first;
         }
-        shm_ = &it->second.shm;
-        ref_ = &it->second.ref;
-        if (shm_ == nullptr) {
-            return nullptr;
-        }
-        return static_cast<pthread_mutex_t *>(shm_->get());
+        mutex_ = &it->second.mtx;
+        ref_   = &it->second.ref;
     }
 
     template <typename F>
@@ -83,152 +149,53 @@ public:
     mutex() = default;
     ~mutex() = default;
 
-    pthread_mutex_t const *native() const noexcept {
-        return mutex_;
+    a0_mtx_t const *native() const noexcept {
+        return valid() ? mutex_->native() : nullptr;
     }
 
-    pthread_mutex_t *native() noexcept {
-        return mutex_;
+    a0_mtx_t *native() noexcept {
+        return valid() ? mutex_->native() : nullptr;
     }
 
     bool valid() const noexcept {
-        static const char tmp[sizeof(pthread_mutex_t)] {};
-        return (shm_ != nullptr) && (ref_ != nullptr) && (mutex_ != nullptr)
-            && (std::memcmp(tmp, mutex_, sizeof(pthread_mutex_t)) != 0);
+        return (mutex_ != nullptr) && (ref_ != nullptr) && mutex_->valid();
     }
 
     bool open(char const *name) noexcept {
         close();
-        if ((mutex_ = acquire_mutex(name)) == nullptr) {
+        acquire_mutex(name);
+        if (!valid()) {
             return false;
         }
-        auto self_ref = ref_->fetch_add(1, std::memory_order_relaxed);
-        if (shm_->ref() > 1 || self_ref > 0) {
-            return valid();
-        }
-        ::pthread_mutex_destroy(mutex_);
-        auto finally = ipc::guard([this] { close(); }); // close when failed
-        // init mutex
-        int eno;
-        pthread_mutexattr_t mutex_attr;
-        if ((eno = ::pthread_mutexattr_init(&mutex_attr)) != 0) {
-            ipc::error("fail pthread_mutexattr_init[%d]\n", eno);
-            return false;
-        }
-        IPC_UNUSED_ auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
-        if ((eno = ::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)) != 0) {
-            ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
-            return false;
-        }
-        if ((eno = ::pthread_mutexattr_setrobust(&mutex_attr, PTHREAD_MUTEX_ROBUST)) != 0) {
-            ipc::error("fail pthread_mutexattr_setrobust[%d]\n", eno);
-            return false;
-        }
-        *mutex_ = PTHREAD_MUTEX_INITIALIZER;
-        if ((eno = ::pthread_mutex_init(mutex_, &mutex_attr)) != 0) {
-            ipc::error("fail pthread_mutex_init[%d]\n", eno);
-            return false;
-        }
-        finally.dismiss();
-        return valid();
+        ref_->fetch_add(1, std::memory_order_relaxed);
+        return true;
     }
 
     void close() noexcept {
-        if ((ref_ != nullptr) && (shm_ != nullptr) && (mutex_ != nullptr)) {
-            if (shm_->name() != nullptr) {
-                release_mutex(shm_->name(), [this] {
-                    auto self_ref = ref_->fetch_sub(1, std::memory_order_relaxed);
-                    if ((shm_->ref() <= 1) && (self_ref <= 1)) {
-                        int eno;
-                        if ((eno = ::pthread_mutex_destroy(mutex_)) != 0) {
-                            ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
-                        }
-                        return true;
-                    }
-                    return false;
+        if ((mutex_ != nullptr) && (ref_ != nullptr)) {
+            if (mutex_->name() != nullptr) {
+                release_mutex(mutex_->name(), [this] {
+                    return ref_->fetch_sub(1, std::memory_order_relaxed) <= 1;
                 });
-            } else shm_->release();
+            } else mutex_->close();
         }
-        shm_   = nullptr;
-        ref_   = nullptr;
         mutex_ = nullptr;
+        ref_   = nullptr;
     }
 
     bool lock(std::uint64_t tm) noexcept {
         if (!valid()) return false;
-        for (;;) {
-            auto ts = detail::make_timespec(tm);
-            int eno = (tm == invalid_value) 
-                ? ::pthread_mutex_lock(mutex_) 
-                : ::pthread_mutex_timedlock(mutex_, &ts);
-            switch (eno) {
-            case 0:
-                return true;
-            case ETIMEDOUT:
-                return false;
-            case EOWNERDEAD: {
-                    if (shm_->ref() > 1) {
-                        shm_->sub_ref();
-                    }
-                    int eno2 = ::pthread_mutex_consistent(mutex_);
-                    if (eno2 != 0) {
-                        ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
-                        return false;
-                    }
-                    int eno3 = ::pthread_mutex_unlock(mutex_);
-                    if (eno3 != 0) {
-                        ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
-                        return false;
-                    }
-                }
-                break; // loop again
-            default:
-                ipc::error("fail pthread_mutex_lock[%d]\n", eno);
-                return false;
-            }
-        }
+        return mutex_->lock(tm);
     }
 
     bool try_lock() noexcept(false) {
         if (!valid()) return false;
-        auto ts = detail::make_timespec(0);
-        int eno = ::pthread_mutex_timedlock(mutex_, &ts);
-        switch (eno) {
-        case 0:
-            return true;
-        case ETIMEDOUT:
-            return false;
-        case EOWNERDEAD: {
-                if (shm_->ref() > 1) {
-                    shm_->sub_ref();
-                }
-                int eno2 = ::pthread_mutex_consistent(mutex_);
-                if (eno2 != 0) {
-                    ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
-                    break;
-                }
-                int eno3 = ::pthread_mutex_unlock(mutex_);
-                if (eno3 != 0) {
-                    ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
-                    break;
-                }
-            }
-            break;
-        default:
-            ipc::error("fail pthread_mutex_timedlock[%d]\n", eno);
-            break;
-        }
-        throw std::system_error{eno, std::system_category()};
+        return mutex_->try_lock();
     }
 
     bool unlock() noexcept {
         if (!valid()) return false;
-        int eno;
-        if ((eno = ::pthread_mutex_unlock(mutex_)) != 0) {
-            ipc::error("fail pthread_mutex_unlock[%d]\n", eno);
-            return false;
-        }
-        return true;
+        return mutex_->unlock();
     }
 };
 
