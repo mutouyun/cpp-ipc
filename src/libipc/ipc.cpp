@@ -687,8 +687,8 @@ buff_t chan_impl<Flag>::try_recv(ipc::handle_t h) {
 }
 
 template struct chan_impl<ipc::wr<relat::single, relat::single, trans::unicast  >>;
-template struct chan_impl<ipc::wr<relat::single, relat::multi , trans::unicast  >>;
-template struct chan_impl<ipc::wr<relat::multi , relat::multi , trans::unicast  >>;
+// template struct chan_impl<ipc::wr<relat::single, relat::multi , trans::unicast  >>; // TBD
+// template struct chan_impl<ipc::wr<relat::multi , relat::multi , trans::unicast  >>; // TBD
 template struct chan_impl<ipc::wr<relat::single, relat::multi , trans::broadcast>>;
 template struct chan_impl<ipc::wr<relat::multi , relat::multi , trans::broadcast>>;
 
