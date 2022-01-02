@@ -1,4 +1,22 @@
-#pragma once
+#ifndef LIBIPC_SRC_PLATFORM_DETAIL_H_
+#define LIBIPC_SRC_PLATFORM_DETAIL_H_
+
+// detect platform
+
+#if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
+    defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
+    defined(WINCE) || defined(_WIN32_WCE)
+#   define IPC_OS_WINDOWS_
+#elif defined(__linux__) || defined(__linux)
+#   define IPC_OS_LINUX_
+#elif defined(__QNX__)
+#   define IPC_OS_QNX_
+#elif defined(__APPLE__)
+#elif defined(__ANDROID__)
+// TBD
+#endif
+
+#if defined(__cplusplus)
 
 #include <memory>
 #include <mutex>
@@ -21,18 +39,6 @@
 #ifdef IPC_CONSTEXPR_
 #   error "IPC_CONSTEXPR_ has been defined."
 #endif
-
-// detect platform
-
-#if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
-    defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
-    defined(WINCE) || defined(_WIN32_WCE)
-#   define IPC_OS_WINDOWS_
-#endif/*WIN*/
-
-#if defined(__linux__) || defined(__linux)
-#   define IPC_OS_LINUX_
-#endif/*linux*/
 
 #if __cplusplus >= 201703L
 
@@ -123,17 +129,8 @@ constexpr const T& (min)(const T& a, const T& b) {
 
 #endif/*__cplusplus < 201703L*/
 
-template <typename T, typename U>
-auto horrible_cast(U rhs) noexcept
-    -> typename std::enable_if<std::is_trivially_copyable<T>::value
-                            && std::is_trivially_copyable<U>::value, T>::type {
-    union {
-        T t;
-        U u;
-    } r = {};
-    r.u = rhs;
-    return r.t;
-}
-
 } // namespace detail
 } // namespace ipc
+
+#endif // defined(__cplusplus)
+#endif // LIBIPC_SRC_PLATFORM_DETAIL_H_

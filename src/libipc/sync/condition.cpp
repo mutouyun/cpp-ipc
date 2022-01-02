@@ -8,7 +8,9 @@
 #include "libipc/platform/win/condition.h"
 #elif defined(IPC_OS_LINUX_)
 #include "libipc/platform/linux/condition.h"
-#else/*linux*/
+#elif defined(IPC_OS_QNX_)
+#include "libipc/platform/posix/condition.h"
+#else/*IPC_OS*/
 #   error "Unsupported platform."
 #endif
 

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <utility>  // std::forward, std::integer_sequence
-#include <cstddef>  // std::size_t
-#include <new>      // std::hardware_destructive_interference_size
+#include <utility>      // std::forward, std::integer_sequence
+#include <cstddef>      // std::size_t
+#include <new>          // std::hardware_destructive_interference_size
+#include <type_traits>  // std::is_trivially_copyable
 
 #include "libipc/platform/detail.h"
 
@@ -44,13 +45,15 @@ enum {
 };
 
 template <typename T, typename U>
-T horrible_cast(U val) {
+auto horrible_cast(U rhs) noexcept
+    -> typename std::enable_if<std::is_trivially_copyable<T>::value
+                            && std::is_trivially_copyable<U>::value, T>::type {
     union {
-        T out;
-        U in;
-    } u;
-    u.in = val;
-    return u.out;
+        T t;
+        U u;
+    } r = {};
+    r.u = rhs;
+    return r.t;
 }
 
 IPC_CONSTEXPR_ std::size_t make_align(std::size_t align, std::size_t size) {

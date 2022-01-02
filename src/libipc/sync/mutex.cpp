@@ -8,7 +8,9 @@
 #include "libipc/platform/win/mutex.h"
 #elif defined(IPC_OS_LINUX_)
 #include "libipc/platform/linux/mutex.h"
-#else/*linux*/
+#elif defined(IPC_OS_QNX_)
+#include "libipc/platform/posix/mutex.h"
+#else/*IPC_OS*/
 #   error "Unsupported platform."
 #endif
 

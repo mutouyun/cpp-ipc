@@ -1,13 +1,8 @@
 project(ipc)
 
-if(UNIX)
-  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux/*.cpp
-                      ${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux/a0/*.c)
-else()
-  file(GLOB SRC_FILES ${LIBIPC_PROJECT_DIR}/src/libipc/platform/win/*.cpp)
-endif()
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc SRC_FILES)
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/sync SRC_FILES)
+aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/platform SRC_FILES)
 
 file(GLOB HEAD_FILES
   ${LIBIPC_PROJECT_DIR}/include/libipc/*.h
@@ -39,7 +34,7 @@ set_target_properties(${PROJECT_NAME}
 # set version
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-    VERSION 1.2.0
+    VERSION 1.1.2
     SOVERSION 3)
 
 target_include_directories(${PROJECT_NAME}
@@ -49,7 +44,7 @@ target_include_directories(${PROJECT_NAME}
 
 if(NOT MSVC)
   target_link_libraries(${PROJECT_NAME} PUBLIC
-    pthread
+    $<$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},QNX>>:pthread>
     $<$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>>:rt>)
 endif()
 
