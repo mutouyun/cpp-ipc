@@ -9,12 +9,13 @@
 
 #include <pthread.h>
 
-#include "libipc/platform/get_wait_time.h"
 #include "libipc/platform/detail.h"
 #include "libipc/utility/log.h"
 #include "libipc/utility/scope_guard.h"
 #include "libipc/memory/resource.h"
 #include "libipc/shm.h"
+
+#include "get_wait_time.h"
 
 namespace ipc {
 namespace detail {
@@ -114,7 +115,7 @@ public:
             ipc::error("fail pthread_mutexattr_init[%d]\n", eno);
             return false;
         }
-        IPC_UNUSED_ auto guard_mutex_attr = unique_ptr(&mutex_attr, ::pthread_mutexattr_destroy);
+        IPC_UNUSED_ auto guard_mutex_attr = guard([&mutex_attr] { ::pthread_mutexattr_destroy(&mutex_attr); };
         if ((eno = ::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)) != 0) {
             ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
             return false;
