@@ -27,8 +27,8 @@ public:
     void close() noexcept;
 
     bool wait(ipc::sync::mutex &mtx, std::uint64_t tm = ipc::invalid_value) noexcept;
-    bool notify() noexcept;
-    bool broadcast() noexcept;
+    bool notify(ipc::sync::mutex &mtx) noexcept;
+    bool broadcast(ipc::sync::mutex &mtx) noexcept;
 
 private:
     class condition_;

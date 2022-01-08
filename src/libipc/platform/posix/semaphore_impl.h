@@ -8,8 +8,9 @@
 #include <errno.h>
 
 #include "libipc/utility/log.h"
-#include "libipc/platform/get_wait_time.h"
 #include "libipc/shm.h"
+
+#include "get_wait_time.h"
 
 namespace ipc {
 namespace detail {

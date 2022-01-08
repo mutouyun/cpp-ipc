@@ -67,22 +67,22 @@ TEST(Sync, Mutex) {
 
     EXPECT_THROW(lock.try_lock(), std::system_error);
 
-    int i = 0;
-    EXPECT_TRUE(lock.lock());
-    i = 100;
-    auto t2 = std::thread{[&i] {
-        ipc::sync::mutex lock {"test-mutex-robust"};
-        EXPECT_TRUE(lock.valid());
-        EXPECT_FALSE(lock.try_lock());
-        EXPECT_TRUE(lock.lock());
-        i += i;
-        EXPECT_TRUE(lock.unlock());
-    }};
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    EXPECT_EQ(i, 100);
-    EXPECT_TRUE(lock.unlock());
-    t2.join();
-    EXPECT_EQ(i, 200);
+    // int i = 0;
+    // EXPECT_TRUE(lock.lock());
+    // i = 100;
+    // auto t2 = std::thread{[&i] {
+    //     ipc::sync::mutex lock {"test-mutex-robust"};
+    //     EXPECT_TRUE(lock.valid());
+    //     EXPECT_FALSE(lock.try_lock());
+    //     EXPECT_TRUE(lock.lock());
+    //     i += i;
+    //     EXPECT_TRUE(lock.unlock());
+    // }};
+    // std::this_thread::sleep_for(std::chrono::seconds(1));
+    // EXPECT_EQ(i, 100);
+    // EXPECT_TRUE(lock.unlock());
+    // t2.join();
+    // EXPECT_EQ(i, 200);
 }
 
 #include "libipc/semaphore.h"
@@ -113,12 +113,25 @@ TEST(Sync, Condition) {
     auto job = [&que](int num) {
         ipc::sync::condition cond {"test-cond"};
         ipc::sync::mutex lock {"test-mutex"};
-        for (;;) {
+        for (int i = 0; i < 10; ++i) {
             int val = 0;
             {
                 std::lock_guard<ipc::sync::mutex> guard {lock};
                 while (que.empty()) {
                     ASSERT_TRUE(cond.wait(lock));
+                }
+                val = que.front();
+                que.pop_front();
+            }
+            EXPECT_NE(val, 0);
+            std::printf("test-cond-%d: %d\n", num, val);
+        }
+        for (;;) {
+            int val = 0;
+            {
+                std::lock_guard<ipc::sync::mutex> guard {lock};
+                while (que.empty()) {
+                    EXPECT_TRUE(cond.wait(lock, 1000));
                 }
                 val = que.front();
                 que.pop_front();
@@ -139,16 +152,16 @@ TEST(Sync, Condition) {
         {
             std::lock_guard<ipc::sync::mutex> guard {lock};
             que.push_back(i);
+            ASSERT_TRUE(cond.notify(lock));
         }
-        cond.notify();
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     for (int i = 1; i < 100; ++i) {
         {
             std::lock_guard<ipc::sync::mutex> guard {lock};
             que.push_back(i);
+            ASSERT_TRUE(cond.broadcast(lock));
         }
-        cond.broadcast();
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     {
@@ -156,8 +169,8 @@ TEST(Sync, Condition) {
         for (int i = 0; i < (int)test_conds.size(); ++i) {
             que.push_back(0);
         }
+        ASSERT_TRUE(cond.broadcast(lock));
     }
-    cond.broadcast();
 
     for (auto &t : test_conds) t.join();
 }
@@ -171,7 +184,7 @@ TEST(Sync, ConditionRobust) {
     printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 2\n");
     ipc::sync::mutex lock {"test-mutex"};
     printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 3\n");
-    lock.lock();
+    ASSERT_TRUE(lock.lock());
     std::thread unlock {[] {
         printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 1\n");
         ipc::sync::condition cond {"test-cond"};
@@ -183,13 +196,13 @@ TEST(Sync, ConditionRobust) {
         }
         std::this_thread::sleep_for(std::chrono::seconds(1));
         printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 4\n");
-        cond.broadcast();
+        ASSERT_TRUE(cond.broadcast(lock));
         printf("WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW 5\n");
     }};
     printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 4\n");
-    cond.wait(lock);
+    ASSERT_TRUE(cond.wait(lock));
     printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 5\n");
-    lock.unlock();
+    ASSERT_TRUE(lock.unlock());
     printf("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX 6\n");
     unlock.join();
 }

@@ -153,16 +153,16 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
 
 TEST(IPC, basic) {
     test_basic<relat::single, relat::single, trans::unicast  >("ssu");
-    test_basic<relat::single, relat::multi , trans::unicast  >("smu");
-    test_basic<relat::multi , relat::multi , trans::unicast  >("mmu");
+    //test_basic<relat::single, relat::multi , trans::unicast  >("smu");
+    //test_basic<relat::multi , relat::multi , trans::unicast  >("mmu");
     test_basic<relat::single, relat::multi , trans::broadcast>("smb");
     test_basic<relat::multi , relat::multi , trans::broadcast>("mmb");
 }
 
 TEST(IPC, 1v1) {
     test_sr<relat::single, relat::single, trans::unicast  >("ssu", 1, 1);
-    test_sr<relat::single, relat::multi , trans::unicast  >("smu", 1, 1);
-    test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", 1, 1);
+    //test_sr<relat::single, relat::multi , trans::unicast  >("smu", 1, 1);
+    //test_sr<relat::multi , relat::multi , trans::unicast  >("mmu", 1, 1);
     test_sr<relat::single, relat::multi , trans::broadcast>("smb", 1, 1);
     test_sr<relat::multi , relat::multi , trans::broadcast>("mmb", 1, 1);
 }

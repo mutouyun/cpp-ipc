@@ -5,11 +5,12 @@
 
 #include <pthread.h>
 
-#include "libipc/platform/get_wait_time.h"
 #include "libipc/utility/log.h"
 #include "libipc/utility/scope_guard.h"
 #include "libipc/mutex.h"
 #include "libipc/shm.h"
+
+#include "get_wait_time.h"
 
 namespace ipc {
 namespace detail {
@@ -62,7 +63,7 @@ public:
             ipc::error("fail pthread_condattr_init[%d]\n", eno);
             return false;
         }
-        IPC_UNUSED_ auto guard_cond_attr = unique_ptr(&cond_attr, ::pthread_condattr_destroy);
+        IPC_UNUSED_ auto guard_cond_attr = guard([&cond_attr] { ::pthread_condattr_destroy(&cond_attr); });
         if ((eno = ::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED)) != 0) {
             ipc::error("fail pthread_condattr_setpshared[%d]\n", eno);
             return false;
@@ -114,7 +115,7 @@ public:
         return true;
     }
 
-    bool notify() noexcept {
+    bool notify(ipc::sync::mutex &) noexcept {
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_signal(cond_)) != 0) {
@@ -124,7 +125,7 @@ public:
         return true;
     }
 
-    bool broadcast() noexcept {
+    bool broadcast(ipc::sync::mutex &) noexcept {
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_broadcast(cond_)) != 0) {

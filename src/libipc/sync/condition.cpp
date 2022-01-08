@@ -5,10 +5,12 @@
 #include "libipc/memory/resource.h"
 #include "libipc/platform/detail.h"
 #if defined(IPC_OS_WINDOWS_)
-#include "libipc/platform/condition_win.h"
+#include "libipc/platform/win/condition.h"
 #elif defined(IPC_OS_LINUX_)
-#include "libipc/platform/condition_linux.h"
-#else/*linux*/
+#include "libipc/platform/linux/condition.h"
+#elif defined(IPC_OS_QNX_)
+#include "libipc/platform/posix/condition.h"
+#else/*IPC_OS*/
 #   error "Unsupported platform."
 #endif
 
@@ -58,12 +60,12 @@ bool condition::wait(ipc::sync::mutex &mtx, std::uint64_t tm) noexcept {
     return impl(p_)->cond_.wait(mtx, tm);
 }
 
-bool condition::notify() noexcept {
-    return impl(p_)->cond_.notify();
+bool condition::notify(ipc::sync::mutex &mtx) noexcept {
+    return impl(p_)->cond_.notify(mtx);
 }
 
-bool condition::broadcast() noexcept {
-    return impl(p_)->cond_.broadcast();
+bool condition::broadcast(ipc::sync::mutex &mtx) noexcept {
+    return impl(p_)->cond_.broadcast(mtx);
 }
 
 } // namespace sync

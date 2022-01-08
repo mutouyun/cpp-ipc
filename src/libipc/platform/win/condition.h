@@ -89,7 +89,7 @@ public:
         return rs && rl;
     }
 
-    bool notify() noexcept {
+    bool notify(ipc::sync::mutex &) noexcept {
         if (!valid()) return false;
         auto &cnt = counter();
         if (!lock_.lock()) return false;
@@ -101,7 +101,7 @@ public:
         return lock_.unlock() && ret;
     }
 
-    bool broadcast() noexcept {
+    bool broadcast(ipc::sync::mutex &) noexcept {
         if (!valid()) return false;
         auto &cnt = counter();
         if (!lock_.lock()) return false;
