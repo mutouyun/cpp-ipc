@@ -34,7 +34,7 @@ set_target_properties(${PROJECT_NAME}
 # set version
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-    VERSION 1.1.2
+    VERSION 1.2.0
     SOVERSION 3)
 
 target_include_directories(${PROJECT_NAME}
