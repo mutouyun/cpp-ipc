@@ -115,7 +115,7 @@ public:
             ipc::error("fail pthread_mutexattr_init[%d]\n", eno);
             return false;
         }
-        IPC_UNUSED_ auto guard_mutex_attr = guard([&mutex_attr] { ::pthread_mutexattr_destroy(&mutex_attr); };
+        IPC_UNUSED_ auto guard_mutex_attr = guard([&mutex_attr] { ::pthread_mutexattr_destroy(&mutex_attr); });
         if ((eno = ::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)) != 0) {
             ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
             return false;
