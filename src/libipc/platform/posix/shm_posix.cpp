@@ -120,19 +120,18 @@ void * get_mem(id_t id, std::size_t * size) {
         ipc::error("fail get_mem: invalid id (fd = -1)\n");
         return nullptr;
     }
-    struct stat st;
-    if (::fstat(fd, &st) != 0) {
-        ipc::error("fail fstat[%s]: name = %s, size = %zd\n", curr_error(), ii->name_.c_str(), ii->size_);
-        return nullptr;
-    }
     if (ii->size_ == 0) {
+        struct stat st;
+        if (::fstat(fd, &st) != 0) {
+            ipc::error("fail fstat[%s]: name = %s, size = %zd\n", curr_error(), ii->name_.c_str(), ii->size_);
+            return nullptr;
+        }
         ii->size_ = static_cast<std::size_t>(st.st_size);
         if ((ii->size_ <= sizeof(info_t)) || (ii->size_ % sizeof(info_t))) {
             ipc::error("fail get_mem: %s, invalid size = %zd\n", ii->name_.c_str(), ii->size_);
             return nullptr;
         }
-    }
-    else {
+    } else {
         ii->size_ = calc_size(ii->size_);
         if (::ftruncate(fd, static_cast<off_t>(ii->size_)) != 0) {
             ipc::error("fail ftruncate[%s]: name = %s, size = %zd\n", curr_error(), ii->name_.c_str(), ii->size_);
