@@ -11,6 +11,7 @@
 #include "libipc/shm.h"
 
 #include "get_wait_time.h"
+#include "get_error.h"
 
 namespace ipc {
 namespace detail {
@@ -40,7 +41,7 @@ public:
         }
         h_ = ::sem_open(name, O_CREAT, 0666, static_cast<unsigned>(count));
         if (h_ == SEM_FAILED) {
-            ipc::error("fail sem_open[%d]: %s\n", errno, name);
+            ipc::error("fail sem_open[%s]: name = %s\n", curr_error(), name);
             return false;
         }
         return true;
@@ -49,14 +50,14 @@ public:
     void close() noexcept {
         if (!valid()) return;
         if (::sem_close(h_) != 0) {
-            ipc::error("fail sem_close[%d]: %s\n", errno);
+            ipc::error("fail sem_close[%s]\n", curr_error());
         }
         h_ = SEM_FAILED;
         if (shm_.name() != nullptr) {
             std::string name = shm_.name();
             if (shm_.release() <= 1) {
                 if (::sem_unlink(name.c_str()) != 0) {
-                    ipc::error("fail sem_unlink[%d]: %s, name: %s\n", errno, name.c_str());
+                    ipc::error("fail sem_unlink[%s]: name = %s\n", curr_error(), name.c_str());
                 }
             }
         }
@@ -66,15 +67,15 @@ public:
         if (!valid()) return false;
         if (tm == invalid_value) {
             if (::sem_wait(h_) != 0) {
-                ipc::error("fail sem_wait[%d]: %s\n", errno);
+                ipc::error("fail sem_wait[%s]\n", curr_error());
                 return false;
             }
         } else {
             auto ts = detail::make_timespec(tm);
             if (::sem_timedwait(h_, &ts) != 0) {
                 if (errno != ETIMEDOUT) {
-                    ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                                errno, tm, ts.tv_sec, ts.tv_nsec);
+                    ipc::error("fail sem_timedwait[%s]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
+                                curr_error(), tm, ts.tv_sec, ts.tv_nsec);
                 }
                 return false;
             }
@@ -86,7 +87,7 @@ public:
         if (!valid()) return false;
         for (std::uint32_t i = 0; i < count; ++i) {
             if (::sem_post(h_) != 0) {
-                ipc::error("fail sem_post[%d]: %s\n", errno);
+                ipc::error("fail sem_post[%s]\n", curr_error());
                 return false;
             }
         }

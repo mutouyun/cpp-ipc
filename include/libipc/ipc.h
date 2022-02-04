@@ -89,7 +89,7 @@ public:
     }
 
     chan_wrapper clone() const {
-        return chan_wrapper { name(), mode_ };
+        return chan_wrapper {name(), mode_};
     }
 
     /**

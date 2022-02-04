@@ -62,12 +62,12 @@ public:
     }
 
     bool notify() noexcept {
-        { IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> guard{lock_}; } // barrier
+        { IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> guard {lock_}; } // barrier
         return cond_.notify(lock_);
     }
 
     bool broadcast() noexcept {
-        { IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> guard{lock_}; } // barrier
+        { IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> guard {lock_}; } // barrier
         return cond_.broadcast(lock_);
     }
 

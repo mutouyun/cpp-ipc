@@ -4,7 +4,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <errno.h>
 
 #include <atomic>
 #include <string>
@@ -17,6 +16,8 @@
 
 #include "libipc/utility/log.h"
 #include "libipc/memory/resource.h"
+
+#include "get_error.h"
 
 namespace {
 
@@ -70,7 +71,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
                                                S_IRGRP | S_IWGRP |
                                                S_IROTH | S_IWOTH);
     if (fd == -1) {
-        ipc::error("fail shm_open[%d]: %s\n", errno, name);
+        ipc::error("fail shm_open[%s]: name = %s\n", curr_error(), name);
         return nullptr;
     }
     auto ii = mem::alloc<id_info_t>();
@@ -119,12 +120,12 @@ void * get_mem(id_t id, std::size_t * size) {
         ipc::error("fail get_mem: invalid id (fd = -1)\n");
         return nullptr;
     }
+    struct stat st;
+    if (::fstat(fd, &st) != 0) {
+        ipc::error("fail fstat[%s]: name = %s, size = %zd\n", curr_error(), ii->name_.c_str(), ii->size_);
+        return nullptr;
+    }
     if (ii->size_ == 0) {
-        struct stat st;
-        if (::fstat(fd, &st) != 0) {
-            ipc::error("fail fstat[%d]: %s, size = %zd\n", errno, ii->name_.c_str(), ii->size_);
-            return nullptr;
-        }
         ii->size_ = static_cast<std::size_t>(st.st_size);
         if ((ii->size_ <= sizeof(info_t)) || (ii->size_ % sizeof(info_t))) {
             ipc::error("fail get_mem: %s, invalid size = %zd\n", ii->name_.c_str(), ii->size_);
@@ -134,13 +135,13 @@ void * get_mem(id_t id, std::size_t * size) {
     else {
         ii->size_ = calc_size(ii->size_);
         if (::ftruncate(fd, static_cast<off_t>(ii->size_)) != 0) {
-            ipc::error("fail ftruncate[%d]: %s, size = %zd\n", errno, ii->name_.c_str(), ii->size_);
+            ipc::error("fail ftruncate[%s]: name = %s, size = %zd\n", curr_error(), ii->name_.c_str(), ii->size_);
             return nullptr;
         }
     }
     void* mem = ::mmap(nullptr, ii->size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (mem == MAP_FAILED) {
-        ipc::error("fail mmap[%d]: %s, size = %zd\n", errno, ii->name_.c_str(), ii->size_);
+        ipc::error("fail mmap[%s]: name = %s, size = %zd\n", curr_error(), ii->name_.c_str(), ii->size_);
         return nullptr;
     }
     ::close(fd);
