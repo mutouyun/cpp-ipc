@@ -85,7 +85,7 @@
 #if (__cplusplus >= 201703L) && !defined(LIBIPC_CPP_17)
 # define LIBIPC_CPP_17
 #endif
-#if (__cplusplus >= 201402L) && !defined(LIBIPC_CPP_14)
+#if /*(__cplusplus >= 201402L) &&*/ !defined(LIBIPC_CPP_14)
 # define LIBIPC_CPP_14
 #endif
 
@@ -123,7 +123,7 @@
 #if !defined(LIBIPC_UNUSED)
 # if defined(LIBIPC_CC_GNUC)
 #   define LIBIPC_UNUSED __attribute__((__unused__))
-# elif defined(LIBIPC_CC_MSVC_)
+# elif defined(LIBIPC_CC_MSVC)
 #   define LIBIPC_UNUSED __pragma(warning(suppress: 4100 4101 4189))
 # else
 #   define LIBIPC_UNUSED

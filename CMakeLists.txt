@@ -13,8 +13,6 @@ if(NOT MSVC)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 endif()
 
-add_definitions(-DLIBIPC_CPP_14 -DLIBIPC_CPP_17)
-
 if (MSVC)
   set(CompilerFlags
       CMAKE_CXX_FLAGS

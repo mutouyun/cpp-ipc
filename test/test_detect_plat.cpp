@@ -36,6 +36,18 @@ TEST(detect_plat, cc) {
 #endif
 }
 
+TEST(detect_plat, cpp) {
+#if defined(LIBIPC_CPP_20)
+  std::cout << "LIBIPC_CPP_20\n";
+#elif defined(LIBIPC_CPP_17)
+  std::cout << "LIBIPC_CPP_17\n";
+#elif defined(LIBIPC_CPP_14)
+  std::cout << "LIBIPC_CPP_14\n";
+#else
+  ASSERT_TRUE(false);
+#endif
+}
+
 TEST(detect_plat, byte_order) {
   auto is_endian_little = [] {
     union {
