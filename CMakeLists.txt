@@ -10,29 +10,31 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 if(NOT MSVC)
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 endif()
 
+add_definitions(-DLIBIPC_CPP_14 -DLIBIPC_CPP_17)
+
 if (MSVC)
-    set(CompilerFlags
-        CMAKE_CXX_FLAGS
-        CMAKE_CXX_FLAGS_DEBUG
-        CMAKE_CXX_FLAGS_RELEASE
-        CMAKE_C_FLAGS
-        CMAKE_C_FLAGS_DEBUG
-        CMAKE_C_FLAGS_RELEASE
-        )
-    if (LIBIPC_USE_STATIC_CRT)
-        foreach(CompilerFlag ${CompilerFlags})
-            string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
-            string(REPLACE "/MDd" "/MTd" ${CompilerFlag} "${${CompilerFlag}}")
-        endforeach()
-    else()
-        foreach(CompilerFlag ${CompilerFlags})
-            string(REPLACE "/MT" "/MD" ${CompilerFlag} "${${CompilerFlag}}")
-            string(REPLACE "/MTd" "/MDd" ${CompilerFlag} "${${CompilerFlag}}")
-        endforeach()
-    endif()
+  set(CompilerFlags
+      CMAKE_CXX_FLAGS
+      CMAKE_CXX_FLAGS_DEBUG
+      CMAKE_CXX_FLAGS_RELEASE
+      CMAKE_C_FLAGS
+      CMAKE_C_FLAGS_DEBUG
+      CMAKE_C_FLAGS_RELEASE
+      )
+  if (LIBIPC_USE_STATIC_CRT)
+      foreach(CompilerFlag ${CompilerFlags})
+        string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
+        string(REPLACE "/MDd" "/MTd" ${CompilerFlag} "${${CompilerFlag}}")
+      endforeach()
+  else()
+      foreach(CompilerFlag ${CompilerFlags})
+        string(REPLACE "/MT" "/MD" ${CompilerFlag} "${${CompilerFlag}}")
+        string(REPLACE "/MTd" "/MDd" ${CompilerFlag} "${${CompilerFlag}}")
+      endforeach()
+  endif()
 endif()
 
 set(LIBRARY_OUTPUT_PATH    ${CMAKE_BINARY_DIR}/bin)
@@ -45,23 +47,23 @@ add_definitions(-DUNICODE -D_UNICODE)
 add_subdirectory(src)
 
 if (LIBIPC_BUILD_TESTS)
-    set(GOOGLETEST_VERSION 1.10.0)
-    if (LIBIPC_USE_STATIC_CRT)
-        set(gtest_force_shared_crt OFF)
-    else()
-        set(gtest_force_shared_crt ON)
-    endif()
-    add_subdirectory(3rdparty/gtest)
-    add_subdirectory(test)
+  set(GOOGLETEST_VERSION 1.10.0)
+  if (LIBIPC_USE_STATIC_CRT)
+      set(gtest_force_shared_crt OFF)
+  else()
+      set(gtest_force_shared_crt ON)
+  endif()
+  add_subdirectory(3rdparty/gtest)
+  add_subdirectory(test)
 endif()
 
-if (LIBIPC_BUILD_DEMOS)
-    add_subdirectory(demo/chat)
-    add_subdirectory(demo/msg_que)
-    add_subdirectory(demo/send_recv)
-endif()
+# if (LIBIPC_BUILD_DEMOS)
+#   add_subdirectory(demo/chat)
+#   add_subdirectory(demo/msg_que)
+#   add_subdirectory(demo/send_recv)
+# endif()
 
 install(
-    DIRECTORY "include/"
-    DESTINATION "include"
+  DIRECTORY "include/"
+  DESTINATION "include"
 )

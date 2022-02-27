@@ -1,17 +1,9 @@
 project(ipc)
 
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc SRC_FILES)
-aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/sync SRC_FILES)
-aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/platform SRC_FILES)
 
 file(GLOB HEAD_FILES
-  ${LIBIPC_PROJECT_DIR}/include/libipc/*.h
-  ${LIBIPC_PROJECT_DIR}/src/libipc/*.h
-  ${LIBIPC_PROJECT_DIR}/src/libipc/*.inc
-  ${LIBIPC_PROJECT_DIR}/src/libipc/circ/*.h
-  ${LIBIPC_PROJECT_DIR}/src/libipc/memory/*.h
-  ${LIBIPC_PROJECT_DIR}/src/libipc/platform/*.h
-  ${LIBIPC_PROJECT_DIR}/src/libipc/utility/*.h)
+  ${LIBIPC_PROJECT_DIR}/include/libipc/*.h)
 
 if (LIBIPC_BUILD_SHARED_LIBS)
   add_library(${PROJECT_NAME} SHARED ${SRC_FILES} ${HEAD_FILES})
@@ -33,14 +25,13 @@ set_target_properties(${PROJECT_NAME}
 
 # set version
 set_target_properties(${PROJECT_NAME}
-    PROPERTIES
-    VERSION 1.2.0
-    SOVERSION 3)
+  PROPERTIES
+  VERSION 2.0.0
+  SOVERSION 4)
 
 target_include_directories(${PROJECT_NAME}
   PUBLIC  ${LIBIPC_PROJECT_DIR}/include
-  PRIVATE ${LIBIPC_PROJECT_DIR}/src
-          $<$<BOOL:UNIX>:${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux>)
+  PRIVATE ${LIBIPC_PROJECT_DIR}/src)
 
 if(NOT MSVC)
   target_link_libraries(${PROJECT_NAME} PUBLIC
