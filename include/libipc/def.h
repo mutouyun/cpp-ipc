@@ -9,7 +9,10 @@
 #include <cstddef>
 #include <cstdint>
 
-#define LIBIPC_NAMESPACE_BEG_ namespace ipc {
+#if !defined(LIBIPC_NAMESPACE)
+# define LIBIPC_NAMESPACE ipc
+#endif
+#define LIBIPC_NAMESPACE_BEG_ namespace LIBIPC_NAMESPACE {
 #define LIBIPC_NAMESPACE_END_ }
 
 LIBIPC_NAMESPACE_BEG_
