@@ -51,10 +51,10 @@ TEST(detect_plat, byte_order) {
 
 TEST(detect_plat, fallthrough) {
   switch (0) {
-  case 1:
+  case 0:
     std::cout << "fallthrough 0\n";
     LIBIPC_FALLTHROUGH;
-  case 0:
+  case 1:
     std::cout << "fallthrough 1\n";
     LIBIPC_FALLTHROUGH;
   default:
