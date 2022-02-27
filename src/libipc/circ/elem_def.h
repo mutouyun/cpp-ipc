@@ -50,40 +50,8 @@ public:
     }
 };
 
-template <typename P, bool = relat_trait<P>::is_broadcast>
-class conn_head;
-
 template <typename P>
-class conn_head<P, true> : public conn_head_base {
-public:
-    cc_t connect() noexcept {
-        for (unsigned k = 0;; ipc::yield(k)) {
-            cc_t curr = this->cc_.load(std::memory_order_acquire);
-            cc_t next = curr | (curr + 1); // find the first 0, and set it to 1.
-            if (next == 0) {
-                // connection-slot is full.
-                return 0;
-            }
-            if (this->cc_.compare_exchange_weak(curr, next, std::memory_order_release)) {
-                return next ^ curr; // return connected id
-            }
-        }
-    }
-
-    cc_t disconnect(cc_t cc_id) noexcept {
-        return this->cc_.fetch_and(~cc_id, std::memory_order_acq_rel) & ~cc_id;
-    }
-
-    std::size_t conn_count(std::memory_order order = std::memory_order_acquire) const noexcept {
-        cc_t cur = this->cc_.load(order);
-        cc_t cnt; // accumulates the total bits set in cc
-        for (cnt = 0; cur; ++cnt) cur &= cur - 1;
-        return cnt;
-    }
-};
-
-template <typename P>
-class conn_head<P, false> : public conn_head_base {
+class conn_head : public conn_head_base {
 public:
     cc_t connect() noexcept {
         return this->cc_.fetch_add(1, std::memory_order_relaxed) + 1;

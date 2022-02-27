@@ -158,27 +158,19 @@ public:
     template <typename T, typename F, typename... P>
     bool push(F&& prep, P&&... params) {
         if (elems_ == nullptr) return false;
-        return elems_->push(this, [&](void* p) {
+        return elems_->push([&](void* p) {
             if (prep(p)) ::new (p) T(std::forward<P>(params)...);
         });
     }
 
-    template <typename T, typename F, typename... P>
-    bool force_push(F&& prep, P&&... params) {
-        if (elems_ == nullptr) return false;
-        return elems_->force_push(this, [&](void* p) {
-            if (prep(p)) ::new (p) T(std::forward<P>(params)...);
-        });
-    }
-
-    template <typename T, typename F>
-    bool pop(T& item, F&& out) {
+    template <typename T>
+    bool pop(T& item) {
         if (elems_ == nullptr) {
             return false;
         }
-        return elems_->pop(this, &(this->cursor_), [&item](void* p) {
+        return elems_->pop(&(this->cursor_), [&item](void* p) {
             ::new (&item) T(std::move(*static_cast<T*>(p)));
-        }, std::forward<F>(out));
+        });
     }
 };
 
@@ -198,18 +190,8 @@ public:
         return base_t::template push<T>(std::forward<P>(params)...);
     }
 
-    template <typename... P>
-    bool force_push(P&&... params) {
-        return base_t::template force_push<T>(std::forward<P>(params)...);
-    }
-
     bool pop(T& item) {
-        return base_t::pop(item, [](bool) {});
-    }
-
-    template <typename F>
-    bool pop(T& item, F&& out) {
-        return base_t::pop(item, std::forward<F>(out));
+        return base_t::pop(item);
     }
 };
 

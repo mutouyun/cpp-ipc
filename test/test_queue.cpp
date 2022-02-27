@@ -5,7 +5,6 @@
 #include <new>
 #include <vector>
 #include <unordered_map>
-#include <climits>  // CHAR_BIT
 
 #include "libipc/prod_cons.h"
 #include "libipc/policy.h"
@@ -143,6 +142,8 @@ TEST(Queue, el_connection) {
         for (std::size_t i = 0; i < 10000; ++i) {
             ASSERT_TRUE(el.connect_sender());
         }
+        el.disconnect_sender();
+        EXPECT_TRUE(el.connect_sender());
     }
     {
         elems_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> el;
@@ -156,12 +157,13 @@ TEST(Queue, el_connection) {
     }
     {
         elems_t<ipc::relat::single, ipc::relat::multi, ipc::trans::broadcast> el;
-        for (std::size_t i = 0; i < (sizeof(ipc::circ::cc_t) * CHAR_BIT); ++i) {
+        auto cc = el.connect_receiver();
+        EXPECT_EQ(cc, 1);
+        for (std::size_t i = 0; i < 10000; ++i) {
             ASSERT_NE(el.connect_receiver(), 0);
         }
-        for (std::size_t i = 0; i < 10000; ++i) {
-            ASSERT_EQ(el.connect_receiver(), 0);
-        }
+        EXPECT_EQ(el.disconnect_receiver(cc), 10000);
+        EXPECT_EQ(el.connect_receiver(), 10000 + cc);
     }
 }
 
@@ -227,25 +229,18 @@ TEST(Queue, connection) {
         for (std::size_t i = 0; i < 10000; ++i) {
             ASSERT_TRUE(que.connect());
         }
-        for (std::size_t i = 1; i < (sizeof(ipc::circ::cc_t) * CHAR_BIT); ++i) {
-            queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            ASSERT_TRUE(que.connect());
-        }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            ASSERT_FALSE(que.connect());
+            ASSERT_TRUE(que.connect());
         }
         ASSERT_TRUE(que.disconnect());
         for (std::size_t i = 0; i < 10000; ++i) {
             ASSERT_FALSE(que.disconnect());
         }
-        {
-            queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            ASSERT_TRUE(que.connect());
-        }
         for (std::size_t i = 0; i < 10000; ++i) {
             queue_t<ipc::relat::multi, ipc::relat::multi, ipc::trans::broadcast> que{&el};
-            ASSERT_FALSE(que.connect());
+            ASSERT_TRUE(que.connect());
+            ASSERT_TRUE(que.disconnect());
         }
     }
 }

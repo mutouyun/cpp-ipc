@@ -73,11 +73,9 @@ void test_basic(char const * name) {
 
     que_t que1 { name };
     EXPECT_FALSE(que1.send(test1));
-    EXPECT_FALSE(que1.try_send(test2));
 
     que_t que2 { que1.name(), ipc::receiver };
     ASSERT_TRUE(que1.send(test1));
-    ASSERT_TRUE(que1.try_send(test2));
 
     EXPECT_EQ(que2.recv(), test1);
     EXPECT_EQ(que2.recv(), test2);
