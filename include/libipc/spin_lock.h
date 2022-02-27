@@ -16,56 +16,56 @@
 #include "libipc/detect_plat.h"
 #include "libipc/def.h"
 
-////////////////////////////////////////////////////////////////
-/// Gives hint to processor that improves performance of spin-wait loops.
-////////////////////////////////////////////////////////////////
+/**
+ * @brief Gives hint to processor that improves performance of spin-wait loops.
+*/
 
 #pragma push_macro("LIBIPC_LOCK_PAUSE_")
 #undef LIBIPC_LOCK_PAUSE_
 
 #if defined(LIBIPC_CC_MSVC)
 # include <Windows.h>   // YieldProcessor
-/*
- *  @see http://msdn.microsoft.com/en-us/library/windows/desktop/ms687419(v=vs.85).aspx
- *       Not for intel c++ compiler, so ignore http://software.intel.com/en-us/forums/topic/296168
+/**
+ * @brief Not for intel c++ compiler, so ignore http://software.intel.com/en-us/forums/topic/296168
+ * @see http://msdn.microsoft.com/en-us/library/windows/desktop/ms687419(v=vs.85).aspx
 */
 # define LIBIPC_LOCK_PAUSE_() YieldProcessor()
 #elif defined(LIBIPC_CC_GNUC)
 # if defined(LIBIPC_INSTR_X86_64)
-/*
- *  @see Intel(R) 64 and IA-32 Architectures Software Developer's Manual V2
- *       PAUSE-Spin Loop Hint, 4-57
- *       http://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.html?wapkw=instruction+set+reference
+/**
+ * @brief Intel(R) 64 and IA-32 Architectures Software Developer's Manual V2
+ *        PAUSE-Spin Loop Hint, 4-57
+ * @see http://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.html?wapkw=instruction+set+reference
 */
 #   define LIBIPC_LOCK_PAUSE_() __asm__ __volatile__("pause")
 # elif defined(LIBIPC_INSTR_I64)
-/*
- *  @see Intel(R) Itanium(R) Architecture Developer's Manual, Vol.3
- *       hint - Performance Hint, 3:145
- *       http://www.intel.com/content/www/us/en/processors/itanium/itanium-architecture-vol-3-manual.html
+/**
+ * @brief Intel(R) Itanium(R) Architecture Developer's Manual, Vol.3
+ *        hint - Performance Hint, 3:145
+ * @see http://www.intel.com/content/www/us/en/processors/itanium/itanium-architecture-vol-3-manual.html
 */
 #   define LIBIPC_LOCK_PAUSE_() __asm__ __volatile__ ("hint @pause")
-#elif defined(LIBIPC_INSTR_ARM)
-/*
- *  @see ARM Architecture Reference Manuals (YIELD)
- *       http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.subset.architecture.reference/index.html
+# elif defined(LIBIPC_INSTR_ARM)
+/**
+ * @brief ARM Architecture Reference Manuals (YIELD)
+ * @see http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.subset.architecture.reference/index.html
 */
 #   define LIBIPC_LOCK_PAUSE_() __asm__ __volatile__ ("yield")
 # endif
 #endif /*compilers*/
 
 #if !defined(LIBIPC_LOCK_PAUSE_)
-/*
- *  Just use a compiler fence, prevent compiler from optimizing loop
+/**
+ * @brief Just use a compiler fence, prevent compiler from optimizing loop
 */
 # define LIBIPC_LOCK_PAUSE_() std::atomic_signal_fence(std::memory_order_seq_cst)
 #endif /*!defined(LIBIPC_LOCK_PAUSE_)*/
 
-////////////////////////////////////////////////////////////////
-/// Yield to other threads
-////////////////////////////////////////////////////////////////
-
 LIBIPC_NAMESPACE_BEG_
+
+/**
+ * @brief Yield to other threads
+*/
 
 template <typename K>
 inline void yield(K &k) noexcept {
@@ -100,38 +100,38 @@ inline void sleep(K &k) {
   });
 }
 
-} // namespace ipc
-
-#pragma pop_macro("LIBIPC_LOCK_PAUSE_")
-
-namespace ipc {
-
+/**
+ * @brief Basic spin lock
+*/
 class spin_lock {
-  std::atomic<unsigned> lc_ { 0 };
+  std::atomic<unsigned> lc_ {0};
 
 public:
   void lock(void) noexcept {
     for (unsigned k = 0;
-      lc_.exchange(1, std::memory_order_acquire);
-      yield(k)) ;
+         lc_.exchange(1, std::memory_order_acquire);
+         yield(k)) ;
   }
   void unlock(void) noexcept {
     lc_.store(0, std::memory_order_release);
   }
 };
 
+/**
+ * @brief Support for shared mode spin lock
+*/
 class rw_lock {
   using lc_ui_t = unsigned;
 
-  std::atomic<lc_ui_t> lc_ { 0 };
+  std::atomic<lc_ui_t> lc_ {0};
 
   enum : lc_ui_t {
     w_mask = (std::numeric_limits<std::make_signed_t<lc_ui_t>>::max)(), // b 0111 1111
-    w_flag = w_mask + 1                                                 // b 1000 0000
+    w_flag = w_mask + 1,                                                // b 1000 0000
   };
 
 public:
-  rw_lock() = default;
+  rw_lock() noexcept = default;
 
   rw_lock(const rw_lock &) = delete;
   rw_lock &operator=(const rw_lock &) = delete;
@@ -177,3 +177,5 @@ public:
 };
 
 LIBIPC_NAMESPACE_END_
+
+#pragma pop_macro("LIBIPC_LOCK_PAUSE_")
