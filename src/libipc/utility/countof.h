@@ -48,8 +48,8 @@ template <typename C, bool = countof_trait_has_size<C>::value
                     , bool = countof_trait_has_Size<C>::value>
 struct countof_trait;
 
-template <typename C>
-struct countof_trait<C, true, false> {
+template <typename C, bool B>
+struct countof_trait<C, true, B> {
   constexpr static auto countof(C const &c) noexcept(noexcept(c.size())) {
     return c.size();
   }
