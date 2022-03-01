@@ -6,7 +6,8 @@
  */
 #pragma once
 
-#include <cstddef>  // std::size_t
+#include <type_traits>  // std::declval, std::true_type, std::false_type
+#include <cstddef>      // std::size_t
 
 #include "libipc/def.h"
 #include "libipc/utility/generic.h"
@@ -19,24 +20,28 @@ LIBIPC_NAMESPACE_BEG_
 
 namespace detail {
 
-template <typename C, typename = void>
+template <typename T>
 struct countof_trait_has_size {
-  enum : bool { value = false };
+private:
+  template <typename Type>
+  static std::true_type check(decltype(std::declval<Type>().size())*);
+  template <typename Type>
+  static std::false_type check(...);
+public:
+  using type = decltype(check<T>(nullptr));
+  constexpr static auto value = type::value;
 };
 
-template <typename C>
-struct countof_trait_has_size<C, void_t<decltype(std::declval<C>().size())>> {
-  enum : bool { value = true };
-};
-
-template <typename C, typename = void>
+template <typename T>
 struct countof_trait_has_Size {
-  enum : bool { value = false };
-};
-
-template <typename C>
-struct countof_trait_has_Size<C, void_t<decltype(std::declval<C>().Size())>> {
-  enum : bool { value = true };
+private:
+  template <typename Type>
+  static std::true_type check(decltype(std::declval<Type>().Size())*);
+  template <typename Type>
+  static std::false_type check(...);
+public:
+  using type = decltype(check<T>(nullptr));
+  constexpr static auto value = type::value;
 };
 
 template <typename C, bool = countof_trait_has_size<C>::value
