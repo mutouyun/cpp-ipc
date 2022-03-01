@@ -17,11 +17,6 @@ LIBIPC_NAMESPACE_BEG_
  * @see https://en.cppreference.com/w/cpp/iterator/size
 */
 
-template <typename T, std::size_t N>
-constexpr std::size_t countof(T const (&)[N]) noexcept {
-  return N;
-}
-
 namespace detail {
 
 template <typename C, typename = void>
@@ -48,13 +43,18 @@ template <typename C, bool = countof_trait_has_size<C>::value
                     , bool = countof_trait_has_Size<C>::value>
 struct countof_trait;
 
+template <typename T, std::size_t N>
+struct countof_trait<T[N], false, false> {
+  constexpr static auto countof(T const (&)[N]) noexcept {
+    return N;
+  }
+};
+
 template <typename C, bool B>
 struct countof_trait<C, true, B> {
   constexpr static auto countof(C const &c) noexcept(noexcept(c.size())) {
     return c.size();
   }
-  using return_t = decltype(countof_trait::countof(std::declval<C>()));
-  enum : bool { noexcept_value = noexcept(countof_trait::countof(std::declval<C>())) };
 };
 
 template <typename C>
@@ -62,15 +62,12 @@ struct countof_trait<C, false, true> {
   constexpr static auto countof(C const &c) noexcept(noexcept(c.Size())) {
     return c.Size();
   }
-  using return_t = decltype(countof_trait::countof(std::declval<C>()));
-  enum : bool { noexcept_value = noexcept(countof_trait::countof(std::declval<C>())) };
 };
 
 } // namespace detail
 
 template <typename C, typename R = detail::countof_trait<C>>
-constexpr auto countof(C const &c) noexcept(R::noexcept_value)
-  -> typename R::return_t {
+constexpr auto countof(C const &c) noexcept(noexcept(R::countof(c))) {
   return R::countof(c);
 }
 
