@@ -45,7 +45,7 @@ auto construct(void *p, A &&... args)
 
 template <typename T>
 void *destroy(T *p) noexcept {
-#if defined(LIBIPC_CPP_17) && !defined(LIBIPC_CC_GNUC)
+#if defined(LIBIPC_CPP_17)
   std::destroy_at(p);
 #else
   p->~T();
@@ -57,7 +57,7 @@ template <typename T, std::size_t N>
 void *destroy(T (*p)[N]) noexcept {
 #if defined(LIBIPC_CPP_20)
   std::destroy_at(p);
-#elif defined(LIBIPC_CPP_17) && !defined(LIBIPC_CC_GNUC)
+#elif defined(LIBIPC_CPP_17)
   std::destroy(std::begin(*p), std::end(*p));
 #else
   for (auto &elem : *p) destroy(std::addressof(elem));
