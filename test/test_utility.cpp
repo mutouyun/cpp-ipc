@@ -1,6 +1,7 @@
 
 #include <type_traits>  // std::aligned_storage_t
 #include <cstdint>
+#include <vector>
 
 #include "gtest/gtest.h"
 
@@ -85,4 +86,15 @@ TEST(utility, pimpl_inherit) {
   EXPECT_EQ(ipc::pimpl::get(pbar)->pi_, &i);
   EXPECT_EQ(ipc::pimpl::get(pbar)->pj_, &j);
   pbar->clear();
+}
+
+TEST(utility, countof) {
+  struct {
+    constexpr int Size() const noexcept { return 3; }
+  } sv;
+  std::vector<int> vec {1, 2, 3, 4, 5};
+  int arr[] {7, 6, 5, 4, 3, 2, 1};
+  EXPECT_EQ(ipc::countof(sv) , sv.Size());
+  EXPECT_EQ(ipc::countof(vec), vec.size());
+  EXPECT_EQ(ipc::countof(arr), sizeof(arr) / sizeof(arr[0]));
 }
