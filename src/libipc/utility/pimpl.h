@@ -58,7 +58,7 @@ auto clear(T *p) noexcept -> std::enable_if_t<!is_comfortable<T>::value> {
 
 template <typename T>
 class Obj {
- public:
+public:
   template <typename... A>
   static T *make(A &&... args) {
     return pimpl::make<T>(std::forward<A>(args)...);
