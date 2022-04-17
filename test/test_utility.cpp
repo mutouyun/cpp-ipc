@@ -8,6 +8,9 @@
 #include "libipc/utility/construct.h"
 #include "libipc/utility/pimpl.h"
 #include "libipc/utility/countof.h"
+#include "libipc/utility/horrible_cast.h"
+
+#include "libipc/detect_plat.h"
 
 TEST(utility, construct) {
   struct Foo {
@@ -100,4 +103,26 @@ TEST(utility, countof) {
   EXPECT_EQ(ipc::countof(sv) , sv.Size());
   EXPECT_EQ(ipc::countof(vec), vec.size());
   EXPECT_EQ(ipc::countof(arr), sizeof(arr) / sizeof(arr[0]));
+}
+
+TEST(utility, horrible_cast) {
+  struct A {
+    int a_;
+  } a {123};
+
+  struct B {
+    char a_[sizeof(int)];
+  } b = ipc::horrible_cast<B>(a);
+
+  EXPECT_EQ(b.a_[1], 0);
+  EXPECT_EQ(b.a_[2], 0);
+#if LIBIPC_ENDIAN_LIT
+  EXPECT_EQ(b.a_[0], 123);
+  EXPECT_EQ(b.a_[3], 0);
+#else
+  EXPECT_EQ(b.a_[3], 123);
+  EXPECT_EQ(b.a_[0], 0);
+#endif
+
+  // ipc::horrible_cast<std::uint32_t>(0ll);
 }

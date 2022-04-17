@@ -7,6 +7,7 @@
 #pragma once
 
 #include "libipc/def.h"
+#include "libipc/export.h"
 #include "libipc/result.h"
 
 LIBIPC_NAMESPACE_BEG_
