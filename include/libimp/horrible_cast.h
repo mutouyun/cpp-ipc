@@ -1,5 +1,5 @@
 /**
- * @file src/horrible_cast.h
+ * @file libimp/horrible_cast.h
  * @author mutouyun (orz@orzz.org)
  * @date 2022-04-17
  */
@@ -8,9 +8,9 @@
 #include <type_traits>  // std::decay_t
 #include <utility>
 
-#include "libipc/def.h"
+#include "libimp/def.h"
 
-LIBIPC_NAMESPACE_BEG_
+LIBIMP_NAMESPACE_BEG_
 
 template <typename T, typename U>
 constexpr auto horrible_cast(U &&in) noexcept
@@ -22,4 +22,4 @@ constexpr auto horrible_cast(U &&in) noexcept
   return u.out;
 }
 
-LIBIPC_NAMESPACE_END_
+LIBIMP_NAMESPACE_END_

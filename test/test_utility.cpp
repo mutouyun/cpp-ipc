@@ -5,12 +5,11 @@
 
 #include "gtest/gtest.h"
 
-#include "libipc/utility/construct.h"
-#include "libipc/utility/pimpl.h"
-#include "libipc/utility/countof.h"
-#include "libipc/utility/horrible_cast.h"
-
-#include "libipc/detect_plat.h"
+#include "libimp/construct.h"
+#include "libimp/pimpl.h"
+#include "libimp/countof.h"
+#include "libimp/horrible_cast.h"
+#include "libimp/detect_plat.h"
 
 TEST(utility, construct) {
   struct Foo {
@@ -19,11 +18,11 @@ TEST(utility, construct) {
     char c_;
   };
   std::aligned_storage_t<sizeof(Foo)> foo;
-  Foo *pfoo = ipc::construct<Foo>(&foo, 123, short{321}, '1');
+  Foo *pfoo = imp::construct<Foo>(&foo, 123, short{321}, '1');
   EXPECT_EQ(pfoo->a_, 123);
   EXPECT_EQ(pfoo->b_, 321);
   EXPECT_EQ(pfoo->c_, '1');
-  ipc::destroy(pfoo);
+  imp::destroy(pfoo);
 
   static int bar_test_flag = 0;
   struct Bar : Foo {
@@ -34,34 +33,34 @@ TEST(utility, construct) {
     ~Bar() { --bar_test_flag; }
   };
   std::aligned_storage_t<sizeof(Bar)> bar;
-  Bar *pbar = ipc::construct<Bar>(&bar, 123, short(321), '1');
+  Bar *pbar = imp::construct<Bar>(&bar, 123, short(321), '1');
   EXPECT_EQ(pbar->a_, 123);
   EXPECT_EQ(pbar->b_, 321);
   EXPECT_EQ(pbar->c_, '1');
   EXPECT_EQ(bar_test_flag, 1);
-  ipc::destroy(pbar);
+  imp::destroy(pbar);
   EXPECT_EQ(bar_test_flag, 0);
 
   std::aligned_storage_t<sizeof(Bar)> bars[3];
   for (auto &b : bars) {
-    auto pb = ipc::construct<Bar>(&b, 321, short(123), '3');
+    auto pb = imp::construct<Bar>(&b, 321, short(123), '3');
     EXPECT_EQ(pb->a_, 321);
     EXPECT_EQ(pb->b_, 123);
     EXPECT_EQ(pb->c_, '3');
   }
-  //EXPECT_EQ(bar_test_flag, ipc::countof(bars));
-  ipc::destroy(reinterpret_cast<Bar(*)[3]>(&bars));
+  //EXPECT_EQ(bar_test_flag, imp::countof(bars));
+  imp::destroy(reinterpret_cast<Bar(*)[3]>(&bars));
   EXPECT_EQ(bar_test_flag, 0);
 }
 
 namespace {
 
-struct Foo : ipc::pimpl::Obj<Foo> {
+struct Foo : imp::pimpl::Obj<Foo> {
   int *pi_;
   Foo(int *pi) : pi_(pi) {}
 };
 
-struct Bar : ipc::pimpl::Obj<Bar> {
+struct Bar : imp::pimpl::Obj<Bar> {
   int *pi_;
   int *pj_;
   Bar(int *pi, int *pj) : pi_(pi), pj_(pj) {}
@@ -70,24 +69,24 @@ struct Bar : ipc::pimpl::Obj<Bar> {
 } // namespace
 
 TEST(utility, pimpl_is_comfortable) {
-  EXPECT_TRUE ((ipc::pimpl::is_comfortable<std::int32_t, std::int64_t>::value));
-  EXPECT_TRUE ((ipc::pimpl::is_comfortable<std::int64_t, std::int64_t>::value));
-  EXPECT_FALSE((ipc::pimpl::is_comfortable<std::int64_t, std::int32_t>::value));
+  EXPECT_TRUE ((imp::pimpl::is_comfortable<std::int32_t, std::int64_t>::value));
+  EXPECT_TRUE ((imp::pimpl::is_comfortable<std::int64_t, std::int64_t>::value));
+  EXPECT_FALSE((imp::pimpl::is_comfortable<std::int64_t, std::int32_t>::value));
 
-  EXPECT_TRUE ((ipc::pimpl::is_comfortable<Foo>::value));
-  EXPECT_FALSE((ipc::pimpl::is_comfortable<Bar>::value));
+  EXPECT_TRUE ((imp::pimpl::is_comfortable<Foo>::value));
+  EXPECT_FALSE((imp::pimpl::is_comfortable<Bar>::value));
 }
 
 TEST(utility, pimpl_inherit) {
   int i = 123;
   Foo *pfoo = Foo::make(&i);
-  EXPECT_EQ(ipc::pimpl::get(pfoo)->pi_, &i);
+  EXPECT_EQ(imp::pimpl::get(pfoo)->pi_, &i);
   pfoo->clear();
 
   int j = 321;
   Bar *pbar = Bar::make(&i, &j);
-  EXPECT_EQ(ipc::pimpl::get(pbar)->pi_, &i);
-  EXPECT_EQ(ipc::pimpl::get(pbar)->pj_, &j);
+  EXPECT_EQ(imp::pimpl::get(pbar)->pi_, &i);
+  EXPECT_EQ(imp::pimpl::get(pbar)->pj_, &j);
   pbar->clear();
 }
 
@@ -95,14 +94,14 @@ TEST(utility, countof) {
   struct {
     constexpr int Size() const noexcept { return 3; }
   } sv;
-  EXPECT_FALSE(ipc::detail::countof_trait_has_size<decltype(sv)>::value);
-  EXPECT_TRUE (ipc::detail::countof_trait_has_Size<decltype(sv)>::value);
+  EXPECT_FALSE(imp::detail::countof_trait_has_size<decltype(sv)>::value);
+  EXPECT_TRUE (imp::detail::countof_trait_has_Size<decltype(sv)>::value);
 
   std::vector<int> vec {1, 2, 3, 4, 5};
   int arr[] {7, 6, 5, 4, 3, 2, 1};
-  EXPECT_EQ(ipc::countof(sv) , sv.Size());
-  EXPECT_EQ(ipc::countof(vec), vec.size());
-  EXPECT_EQ(ipc::countof(arr), sizeof(arr) / sizeof(arr[0]));
+  EXPECT_EQ(imp::countof(sv) , sv.Size());
+  EXPECT_EQ(imp::countof(vec), vec.size());
+  EXPECT_EQ(imp::countof(arr), sizeof(arr) / sizeof(arr[0]));
 }
 
 TEST(utility, horrible_cast) {
@@ -112,11 +111,11 @@ TEST(utility, horrible_cast) {
 
   struct B {
     char a_[sizeof(int)];
-  } b = ipc::horrible_cast<B>(a);
+  } b = imp::horrible_cast<B>(a);
 
   EXPECT_EQ(b.a_[1], 0);
   EXPECT_EQ(b.a_[2], 0);
-#if LIBIPC_ENDIAN_LIT
+#if LIBIMP_ENDIAN_LIT
   EXPECT_EQ(b.a_[0], 123);
   EXPECT_EQ(b.a_[3], 0);
 #else
@@ -124,5 +123,5 @@ TEST(utility, horrible_cast) {
   EXPECT_EQ(b.a_[0], 0);
 #endif
 
-  // ipc::horrible_cast<std::uint32_t>(0ll);
+  // imp::horrible_cast<std::uint32_t>(0ll);
 }

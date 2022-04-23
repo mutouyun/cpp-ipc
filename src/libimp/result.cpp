@@ -1,8 +1,8 @@
 
-#include "libipc/result.h"
-#include "libipc/utility/horrible_cast.h"
+#include "libimp/result.h"
+#include "libimp/horrible_cast.h"
 
-LIBIPC_NAMESPACE_BEG_
+LIBIMP_NAMESPACE_BEG_
 namespace {
 
 struct result_code_info {
@@ -47,4 +47,4 @@ std::ostream &operator<<(std::ostream &o, result const &r) noexcept {
   return o;
 }
 
-LIBIPC_NAMESPACE_END_
+LIBIMP_NAMESPACE_END_

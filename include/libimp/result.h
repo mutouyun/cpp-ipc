@@ -1,5 +1,5 @@
 /**
- * @file result.h
+ * @file libimp/result.h
  * @author mutouyun (orz@orzz.org)
  * @brief Define the return value type with a status code
  * @date 2022-04-17
@@ -9,12 +9,12 @@
 #include <ostream>  // std::ostream
 #include <cstdint>
 
-#include "libipc/def.h"
-#include "libipc/export.h"
+#include "libimp/def.h"
+#include "libimp/export.h"
 
-LIBIPC_NAMESPACE_BEG_
+LIBIMP_NAMESPACE_BEG_
 
-class LIBIPC_EXPORT result {
+class LIBIMP_EXPORT result {
   std::uint64_t status_;
 
 public:
@@ -34,4 +34,4 @@ public:
   friend std::ostream &operator<<(std::ostream &o, result const &r) noexcept;
 };
 
-LIBIPC_NAMESPACE_END_
+LIBIMP_NAMESPACE_END_

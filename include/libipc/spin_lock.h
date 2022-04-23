@@ -1,5 +1,5 @@
 /**
- * @file spin_lock.h
+ * @file libipc/spin_lock.h
  * @author mutouyun (orz@orzz.org)
  * @brief Define spin locks
  * @date 2022-02-27
@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "libipc/detect_plat.h"
+#include "libimp/detect_plat.h"
 #include "libipc/def.h"
 
 /**

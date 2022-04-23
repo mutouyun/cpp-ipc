@@ -21,5 +21,5 @@ file(GLOB HEAD_FILES ${LIBIPC_PROJECT_DIR}/test/*.h)
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 
 link_directories(${LIBIPC_PROJECT_DIR}/3rdparty/gperftools)
-target_link_libraries(${PROJECT_NAME} gtest gtest_main ipc)
+target_link_libraries(${PROJECT_NAME} gtest gtest_main imp ipc)
 #target_link_libraries(${PROJECT_NAME} tcmalloc_minimal)

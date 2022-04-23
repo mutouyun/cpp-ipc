@@ -1,5 +1,5 @@
 /**
- * @file src/pimpl.h
+ * @file libimp/pimpl.h
  * @author mutouyun (orz@orzz.org)
  * @brief Pointer To Implementation (pImpl) idiom
  * @date 2022-02-27
@@ -10,10 +10,10 @@
 #include <type_traits>
 #include <cstdint>
 
-#include "libipc/utility/construct.h"
-#include "libipc/def.h"
+#include "libimp/construct.h"
+#include "libimp/def.h"
 
-LIBIPC_NAMESPACE_BEG_
+LIBIMP_NAMESPACE_BEG_
 namespace pimpl {
 
 template <typename T, typename R = T *>
@@ -70,4 +70,4 @@ public:
 };
 
 } // namespace pimpl
-LIBIPC_NAMESPACE_END_
+LIBIMP_NAMESPACE_END_

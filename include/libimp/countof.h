@@ -1,5 +1,5 @@
 /**
- * @file src/countof.h
+ * @file libimp/countof.h
  * @author mutouyun (orz@orzz.org)
  * @brief Returns the size of the given range
  * @date 2022-03-01
@@ -9,10 +9,10 @@
 #include <type_traits>  // std::declval, std::true_type, std::false_type
 #include <cstddef>      // std::size_t
 
-#include "libipc/def.h"
-#include "libipc/utility/generic.h"
+#include "libimp/def.h"
+#include "libimp/generic.h"
 
-LIBIPC_NAMESPACE_BEG_
+LIBIMP_NAMESPACE_BEG_
 
 /**
  * @see https://en.cppreference.com/w/cpp/iterator/size
@@ -76,4 +76,4 @@ constexpr auto countof(C const &c) noexcept(noexcept(R::countof(c))) {
   return R::countof(c);
 }
 
-LIBIPC_NAMESPACE_END_
+LIBIMP_NAMESPACE_END_

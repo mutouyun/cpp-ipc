@@ -1,5 +1,5 @@
 /**
- * @file def.h
+ * @file libipc/def.h
  * @author mutouyun (orz@orzz.org)
  * @brief Define the trivial configuration information
  * @date 2022-02-27
