@@ -3,6 +3,7 @@ project(cpp-ipc)
 
 option(LIBIPC_BUILD_TESTS       "Build all of libipc's own tests."                      OFF)
 option(LIBIPC_BUILD_DEMOS       "Build all of libipc's own demos."                      OFF)
+option(LIBIPC_BUILD_BENCHMARK   "Build all of libipc's own benchmark tests."            OFF)
 option(LIBIPC_BUILD_SHARED_LIBS "Build shared libraries (DLLs)."                        OFF)
 option(LIBIPC_USE_STATIC_CRT    "Set to ON to build with static CRT on Windows (/MT)."  OFF)
 
@@ -60,6 +61,11 @@ endif()
 #   add_subdirectory(demo/msg_que)
 #   add_subdirectory(demo/send_recv)
 # endif()
+
+if (LIBIPC_BUILD_BENCHMARK)
+  set(BENCHMARK_ENABLE_TESTING OFF)
+  add_subdirectory(3rdparty/benchmark)
+endif()
 
 install(
   DIRECTORY "include/"

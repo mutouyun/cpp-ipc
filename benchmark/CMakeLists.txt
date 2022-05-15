@@ -1,4 +1,4 @@
-project(test-ipc)
+project(benchmark-ipc)
 
 if(NOT MSVC)
   add_compile_options(
@@ -6,6 +6,8 @@ if(NOT MSVC)
     -Wno-missing-field-initializers 
     -Wno-unused-variable 
     -Wno-unused-function)
+else()
+  add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
 endif()
 
 include_directories(
@@ -13,11 +15,9 @@ include_directories(
   ${LIBIPC_PROJECT_DIR}/src
   ${LIBIPC_PROJECT_DIR}/test)
 
-file(GLOB SRC_FILES  ${LIBIPC_PROJECT_DIR}/test/*.cpp)
-file(GLOB HEAD_FILES ${LIBIPC_PROJECT_DIR}/test/*.h)
+file(GLOB SRC_FILES  ${LIBIPC_PROJECT_DIR}/benchmark/*.cpp)
+file(GLOB HEAD_FILES ${LIBIPC_PROJECT_DIR}/benchmark/*.h)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 
-link_directories(${LIBIPC_PROJECT_DIR}/3rdparty/gperftools)
-target_link_libraries(${PROJECT_NAME} gtest_main imp ipc)
-#target_link_libraries(${PROJECT_NAME} tcmalloc_minimal)
+target_link_libraries(${PROJECT_NAME} benchmark_main imp ipc)
