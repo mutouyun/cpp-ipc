@@ -19,7 +19,8 @@ LIBIPC_NAMESPACE_BEG_
 // constants
 
 struct prot {
-  enum : std::uint32_t {
+  using type = std::uint32_t;
+  enum : type {
     none  = 0x00,
     read  = 0x01,
     write = 0x02,
