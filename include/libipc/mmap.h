@@ -12,6 +12,12 @@
 
 LIBIPC_NAMESPACE_BEG_
 
+struct mmap_handle;
+using mmap_t = mmap_handle *;
 
+/**
+ * @brief Creates a new mapping in the virtual address space of the calling process.
+ */
+LIBIMP_EXPORT mmap_t mmap_open();
 
 LIBIPC_NAMESPACE_END_

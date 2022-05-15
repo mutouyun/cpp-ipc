@@ -43,6 +43,7 @@ set(LIBIPC_PROJECT_DIR     ${PROJECT_SOURCE_DIR})
 # Unicode Support
 add_definitions(-DUNICODE -D_UNICODE)
 
+add_subdirectory(3rdparty/fmt)
 add_subdirectory(src)
 
 if (LIBIPC_BUILD_TESTS)
@@ -65,6 +66,7 @@ endif()
 if (LIBIPC_BUILD_BENCHMARK)
   set(BENCHMARK_ENABLE_TESTING OFF)
   add_subdirectory(3rdparty/benchmark)
+  # add_subdirectory(benchmark)
 endif()
 
 install(

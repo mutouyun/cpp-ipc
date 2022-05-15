@@ -11,7 +11,7 @@ struct result_code_info {
 };
 
 std::uint64_t make_status(bool ok, std::uint64_t code) noexcept {
-  return horrible_cast<std::uint64_t>(result_code_info{ok ? 1ull : 0ull, code});
+  return horrible_cast<std::uint64_t>(result_code_info{(ok ? 1ull : 0ull), code});
 }
 
 result_code_info info_cast(std::uint64_t status) noexcept {
@@ -20,31 +20,26 @@ result_code_info info_cast(std::uint64_t status) noexcept {
 
 } // namespace
 
-result::result() noexcept
-  : result(false, 0) {}
+result_code::result_code() noexcept
+  : result_code(false) {}
 
-result::result(bool ok, std::uint64_t code) noexcept
+result_code::result_code(bool ok, std::uint64_t code) noexcept
   : status_(make_status(ok, code)) {}
 
-std::uint64_t result::code() const noexcept {
+std::uint64_t result_code::value() const noexcept {
   return info_cast(status_).code;
 }
 
-bool result::ok() const noexcept {
+bool result_code::ok() const noexcept {
   return info_cast(status_).ok != 0;
 }
 
-bool operator==(result const &lhs, result const &rhs) noexcept {
+bool operator==(result_code const &lhs, result_code const &rhs) noexcept {
   return lhs.status_ == rhs.status_;
 }
 
-bool operator!=(result const &lhs, result const &rhs) noexcept {
+bool operator!=(result_code const &lhs, result_code const &rhs) noexcept {
   return lhs.status_ != rhs.status_;
-}
-
-std::ostream &operator<<(std::ostream &o, result const &r) noexcept {
-  o << "[" << (r.ok() ? "succ" : "fail") << ", code = " << r.code() << "]";
-  return o;
 }
 
 LIBIMP_NAMESPACE_END_
