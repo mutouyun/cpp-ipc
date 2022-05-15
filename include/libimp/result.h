@@ -43,15 +43,19 @@ public:
   friend bool operator!=(result_code const &lhs, result_code const &rhs) noexcept;
 };
 
+namespace detail_result {
+
+template <typename T, typename = void>
+struct default_traits;
+
+} // namespace detail_result
+
 template <typename T, 
           typename DefTraits = detail_result::default_traits<T>, 
           typename = void>
 class result;
 
 namespace detail_result {
-
-template <typename T, typename = void>
-struct default_traits;
 
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
