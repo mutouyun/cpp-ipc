@@ -8,6 +8,7 @@
 
 #include "libimp/export.h"
 #include "libimp/result.h"
+
 #include "libipc/def.h"
 
 LIBIPC_NAMESPACE_BEG_
@@ -18,6 +19,6 @@ using mmap_t = mmap_handle *;
 /**
  * @brief Creates a new mapping in the virtual address space of the calling process.
  */
-LIBIMP_EXPORT mmap_t mmap_open();
+LIBIMP_EXPORT ::LIBIMP_::result<mmap_t> mmap_open();
 
 LIBIPC_NAMESPACE_END_
