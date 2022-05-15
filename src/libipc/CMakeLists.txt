@@ -1,5 +1,10 @@
 project(ipc)
 
+if(NOT MSVC)
+  add_compile_options(
+    -Wno-attributes)
+endif()
+
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc SRC_FILES)
 
 file(GLOB HEAD_FILES

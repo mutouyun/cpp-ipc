@@ -12,14 +12,20 @@
 
 LIBIMP_NAMESPACE_BEG_
 
+namespace detail_horrible_cast {
+
+template <typename T, typename U>
+union temp {
+  std::decay_t<U> in;
+  T out;
+};
+
+} // namespace detail_horrible_cast
+
 template <typename T, typename U>
 constexpr auto horrible_cast(U &&in) noexcept
   -> std::enable_if_t<(sizeof(T) == sizeof(std::decay_t<U>)), T> {
-  union {
-    std::decay_t<U> in;
-    T out;
-  } u {std::forward<U>(in)};
-  return u.out;
+  return detail_horrible_cast::temp<T, std::decay_t<U>>{std::forward<U>(in)}.out;
 }
 
 LIBIMP_NAMESPACE_END_

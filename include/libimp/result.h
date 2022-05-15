@@ -154,7 +154,7 @@ LIBIMP_NAMESPACE_END_
 
 template <typename T, typename D>
 struct fmt::formatter<::LIBIMP_::result<T, D>> {
-  constexpr auto parse(format_parse_context& ctx) {
+  constexpr auto parse(format_parse_context& ctx) const {
     return ctx.end();
   }
 

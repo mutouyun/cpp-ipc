@@ -1,5 +1,10 @@
 project(imp)
 
+if(NOT MSVC)
+  add_compile_options(
+    -Wno-attributes)
+endif()
+
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libimp SRC_FILES)
 
 file(GLOB HEAD_FILES
