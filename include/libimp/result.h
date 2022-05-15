@@ -16,6 +16,11 @@
 
 LIBIMP_NAMESPACE_BEG_
 
+/**
+ * @brief Use the least significant (in Little-Endian) of 
+ * a 64-bit unsigned integer to indicate success or failure,
+ * so the data significant bit cannot exceed 63 bits.
+ */
 class LIBIMP_EXPORT result_code {
   std::uint64_t status_;
 
