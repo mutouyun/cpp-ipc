@@ -1,6 +1,6 @@
 
 #include <utility>
-#include <iostream>
+#include <cstdio>
 
 #include "libimp/log.h"
 
@@ -23,11 +23,11 @@ void log_printer::error(std::string && s) {
 log_std_t log_std;
 
 void log_std_t::info(std::string && s) const {
-  std::cout << std::move(s);
+  std::fprintf(stdin, "%s", s.c_str());
 }
 
 void log_std_t::error(std::string && s) const {
-  std::cerr << std::move(s);
+  std::fprintf(stderr, "%s", s.c_str());
 }
 
 LIBIMP_NAMESPACE_END_

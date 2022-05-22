@@ -8,8 +8,10 @@
 
 #include <string>
 #include <type_traits>
+#include <chrono>
 
 #include "fmt/format.h"
+#include "fmt/chrono.h"
 
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
@@ -88,22 +90,6 @@ public:
   }
 };
 
-class prefix {
-  std::string px_;
-
-public:
-  template <typename... A>
-  prefix(A &&... args) {
-    LIBIMP_UNUSED auto unfold = {
-      0, ((px_ += ::fmt::format("[{}]", std::forward<A>(args))), 0)...
-    };
-  }
-
-  operator std::string() const noexcept {
-    return px_;
-  }
-};
-
 } // namespace detail_log
 
 class LIBIMP_EXPORT log_printer {
@@ -139,6 +125,32 @@ std::string fmt(Fmt &&ft, A &&... args) {
   return ::fmt::format(std::forward<Fmt>(ft), std::forward<A>(args)...);
 }
 
-} // namespace log
+class LIBIMP_EXPORT gripper {
+  log_printer printer_;
+  char const *func_;
 
+  gripper &output(void (log_printer::*out_fn)(std::string &&), char type, std::string &&log_str) {
+    auto tm = std::chrono::system_clock::now();
+    auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(tm).time_since_epoch().count() % 1000;
+    auto px = fmt("[{}][{:%Y-%m-%d %H:%M:%S}.{:03}][{}]\n", type, tm, ms, func_);
+    (printer_.*out_fn)(std::move(px += std::move(log_str)));
+    return *this;
+  }
+
+public:
+  gripper(log_printer printer, char const *func) noexcept 
+    : printer_(printer)
+    , func_   (func) {}
+
+  template <typename Fmt, typename... A>
+  gripper &info(Fmt &&ft, A &&... args) {
+    return output(&log_printer::info, 'I', fmt(std::forward<Fmt>(ft), std::forward<A>(args)...));
+  }
+  template <typename Fmt, typename... A>
+  gripper &error(Fmt &&ft, A &&... args) {
+    return output(&log_printer::error, 'E', fmt(std::forward<Fmt>(ft), std::forward<A>(args)...));
+  }
+};
+
+} // namespace log
 LIBIMP_NAMESPACE_END_

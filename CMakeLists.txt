@@ -66,7 +66,7 @@ endif()
 if (LIBIPC_BUILD_BENCHMARK)
   set(BENCHMARK_ENABLE_TESTING OFF)
   add_subdirectory(3rdparty/benchmark)
-  # add_subdirectory(benchmark)
+  add_subdirectory(benchmark)
 endif()
 
 install(

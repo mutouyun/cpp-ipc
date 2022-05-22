@@ -74,17 +74,7 @@ TEST(log, log_printer) {
   ps.info("hello world\n");
 }
 
-#include <chrono>
-#include <fmt/chrono.h>
-
-TEST(log, prefix) {
-  imp::detail_log::prefix prefix;
-  EXPECT_EQ(std::string{prefix}, "");
-
-  prefix = {"hello", "world"};
-  EXPECT_EQ(std::string{prefix}, "[hello][world]");
-
-  using namespace std::literals::chrono_literals;
-  prefix = {"time", imp::log::fmt("{:%H:%M:%S}", 3h + 15min + 30s)};
-  EXPECT_EQ(std::string{prefix}, "[time][03:15:30]");
+TEST(log, gripper) {
+  imp::log::gripper log {imp::log_std, __func__};
+  log.info("hello");
 }

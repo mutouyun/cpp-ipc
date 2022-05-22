@@ -157,7 +157,6 @@ struct fmt::formatter<::LIBIMP_::result<T, D>> {
   constexpr auto parse(format_parse_context& ctx) const {
     return ctx.end();
   }
-
   template <typename FormatContext>
   auto format(::LIBIMP_::result<T, D> r, FormatContext &ctx) {
     return format_to(::LIBIMP_::result<T, D>::default_traits_t::format(r, 
