@@ -18,10 +18,10 @@ LIBIMP_NAMESPACE_BEG_
  * @see https://en.cppreference.com/w/cpp/iterator/size
 */
 
-namespace detail {
+namespace detail_countof {
 
 template <typename T>
-struct countof_trait_has_size {
+struct trait_has_size {
 private:
   template <typename Type>
   static std::true_type check(decltype(std::declval<Type>().size())*);
@@ -33,7 +33,7 @@ public:
 };
 
 template <typename T>
-struct countof_trait_has_Size {
+struct trait_has_Size {
 private:
   template <typename Type>
   static std::true_type check(decltype(std::declval<Type>().Size())*);
@@ -44,34 +44,34 @@ public:
   constexpr static auto value = type::value;
 };
 
-template <typename C, bool = countof_trait_has_size<C>::value
-                    , bool = countof_trait_has_Size<C>::value>
-struct countof_trait;
+template <typename C, bool = trait_has_size<C>::value
+                    , bool = trait_has_Size<C>::value>
+struct trait;
 
 template <typename T, std::size_t N>
-struct countof_trait<T[N], false, false> {
+struct trait<T[N], false, false> {
   constexpr static auto countof(T const (&)[N]) noexcept {
     return N;
   }
 };
 
 template <typename C, bool B>
-struct countof_trait<C, true, B> {
+struct trait<C, true, B> {
   constexpr static auto countof(C const &c) noexcept(noexcept(c.size())) {
     return c.size();
   }
 };
 
 template <typename C>
-struct countof_trait<C, false, true> {
+struct trait<C, false, true> {
   constexpr static auto countof(C const &c) noexcept(noexcept(c.Size())) {
     return c.Size();
   }
 };
 
-} // namespace detail
+} // namespace detail_countof
 
-template <typename C, typename R = detail::countof_trait<C>>
+template <typename C, typename R = detail_countof::trait<C>>
 constexpr auto countof(C const &c) noexcept(noexcept(R::countof(c))) {
   return R::countof(c);
 }

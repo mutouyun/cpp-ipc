@@ -94,8 +94,8 @@ TEST(utility, countof) {
   struct {
     constexpr int Size() const noexcept { return 3; }
   } sv;
-  EXPECT_FALSE(imp::detail::countof_trait_has_size<decltype(sv)>::value);
-  EXPECT_TRUE (imp::detail::countof_trait_has_Size<decltype(sv)>::value);
+  EXPECT_FALSE(imp::detail_countof::trait_has_size<decltype(sv)>::value);
+  EXPECT_TRUE (imp::detail_countof::trait_has_Size<decltype(sv)>::value);
 
   std::vector<int> vec {1, 2, 3, 4, 5};
   int arr[] {7, 6, 5, 4, 3, 2, 1};
