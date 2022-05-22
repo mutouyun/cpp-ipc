@@ -8,7 +8,6 @@
 
 #include <type_traits>
 #include <cstdint>
-#include <span>
 
 #include "fmt/format.h"
 
