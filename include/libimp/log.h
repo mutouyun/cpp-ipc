@@ -30,7 +30,7 @@ public:
 };
 
 template <typename T>
-constexpr bool has_fn_info_v = typename has_fn_info<T>::type::value;
+constexpr bool has_fn_info_v = has_fn_info<T>::type::value;
 
 template <typename T>
 class has_fn_error {
@@ -43,7 +43,7 @@ public:
 };
 
 template <typename T>
-constexpr bool has_fn_error_v = typename has_fn_error<T>::type::value;
+constexpr bool has_fn_error_v = has_fn_error<T>::type::value;
 
 struct vtable_t {
   void (*info )(void *, std::string &&);
