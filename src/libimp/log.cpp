@@ -5,29 +5,35 @@
 #include "libimp/log.h"
 
 LIBIMP_NAMESPACE_BEG_
+namespace log {
 
-log_printer::operator bool() const noexcept {
+printer::operator bool() const noexcept {
   return (objp_ != nullptr) && (vtable_ != nullptr);
 }
 
-void log_printer::info(std::string && s) {
+void printer::output(log::level l, std::string &&s) {
   if (!*this) return;
-  vtable_->info(objp_, std::move(s));
+  vtable_->output(objp_, l, std::move(s));
 }
 
-void log_printer::error(std::string && s) {
-  if (!*this) return;
-  vtable_->error(objp_, std::move(s));
+std_t std_out;
+
+void std_t::output(log::level l, std::string &&s) {
+  switch (l) {
+  case level::trace:
+  case level::debug:
+  case level::info:
+    std::fprintf(stdout, "%s\n", s.c_str());
+    break;
+  case level::warning:
+  case level::error:
+  case level::failed:
+    std::fprintf(stderr, "%s\n", s.c_str());
+    break;
+  default:
+    break;
+  }
 }
 
-log_std_t log_std;
-
-void log_std_t::info(std::string && s) const {
-  std::fprintf(stdin, "%s", s.c_str());
-}
-
-void log_std_t::error(std::string && s) const {
-  std::fprintf(stderr, "%s", s.c_str());
-}
-
+} // namespace log
 LIBIMP_NAMESPACE_END_

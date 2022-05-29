@@ -5,6 +5,13 @@
 
 namespace {
 
+void BM_imp_log_no_output(benchmark::State& state) {
+  imp::log::gripper log {{}, __func__};
+  for (auto _ : state) {
+    log.debug("hello log.");
+  }
+}
+
 void BM_imp_log_gripper(benchmark::State& state) {
   imp::log::gripper log {{}, __func__};
   for (auto _ : state) {
@@ -14,4 +21,5 @@ void BM_imp_log_gripper(benchmark::State& state) {
 
 } // namespace
 
+BENCHMARK(BM_imp_log_no_output);
 BENCHMARK(BM_imp_log_gripper);

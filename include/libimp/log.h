@@ -16,108 +16,9 @@
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
+#include "libimp/enum_cast.h"
 
 LIBIMP_NAMESPACE_BEG_
-
-namespace detail_log {
-
-template <typename T>
-class has_fn_info {
-  static std::false_type check(...);
-  template <typename U>
-  static auto check(U *u) -> decltype(u->info(std::declval<std::string>()), std::true_type{});
-
-public:
-  using type = decltype(check(static_cast<T *>(nullptr)));
-};
-
-template <typename T>
-constexpr bool has_fn_info_v = has_fn_info<T>::type::value;
-
-template <typename T>
-class has_fn_error {
-  static std::false_type check(...);
-  template <typename U>
-  static auto check(U *u) -> decltype(u->error(std::declval<std::string>()), std::true_type{});
-
-public:
-  using type = decltype(check(static_cast<T *>(nullptr)));
-};
-
-template <typename T>
-constexpr bool has_fn_error_v = has_fn_error<T>::type::value;
-
-struct vtable_t {
-  void (*info )(void *, std::string &&);
-  void (*error)(void *, std::string &&);
-};
-
-template <typename T>
-class traits {
-  template <typename U>
-  static auto make_fn_info() noexcept
-    -> std::enable_if_t<has_fn_info_v<U>, void (*)(void *, std::string &&)> {
-    return [](void *p, std::string &&s) {
-      static_cast<U *>(p)->info(std::move(s));
-    };
-  }
-  template <typename U>
-  static auto make_fn_info() noexcept
-    -> std::enable_if_t<!has_fn_info_v<U>, void (*)(void *, std::string &&)> {
-    return [](void *, std::string &&) {};
-  }
-
-  template <typename U>
-  static auto make_fn_error() noexcept
-    -> std::enable_if_t<has_fn_error_v<U>, void (*)(void *, std::string &&)> {
-    return [](void *p, std::string &&s) {
-      static_cast<U *>(p)->error(std::move(s));
-    };
-  }
-  template <typename U>
-  static auto make_fn_error() noexcept
-    -> std::enable_if_t<!has_fn_error_v<U>, void (*)(void *, std::string &&)> {
-    return [](void *, std::string &&) {};
-  }
-
-public:
-  static auto make_vtable() noexcept {
-    static vtable_t vt {
-      make_fn_info <T>(),
-      make_fn_error<T>(),
-    };
-    return &vt;
-  }
-};
-
-} // namespace detail_log
-
-class LIBIMP_EXPORT log_printer {
-  void *objp_ {nullptr};
-  detail_log::vtable_t *vtable_ {nullptr};
-
-public:
-  log_printer() noexcept = default;
-
-  template <typename T>
-  log_printer(T &p) noexcept
-    : objp_  (static_cast<void *>(&p))
-    , vtable_(detail_log::traits<T>::make_vtable()) {}
-
-  explicit operator bool() const noexcept;
-
-  void info (std::string &&);
-  void error(std::string &&);
-};
-
-class LIBIMP_EXPORT log_std_t {
-public:
-  void info (std::string &&) const;
-  void error(std::string &&) const;
-};
-
-LIBIMP_EXPORT extern log_std_t log_std;
-
 namespace log {
 
 template <typename Fmt, typename... A>
@@ -125,30 +26,137 @@ std::string fmt(Fmt &&ft, A &&... args) {
   return ::fmt::format(std::forward<Fmt>(ft), std::forward<A>(args)...);
 }
 
-class LIBIMP_EXPORT gripper {
-  log_printer printer_;
-  char const *func_;
+enum class level : std::int32_t {
+  trace,
+  debug,
+  info,
+  warning,
+  error,
+  failed,
+};
 
-  gripper &output(void (log_printer::*out_fn)(std::string &&), char type, std::string &&log_str) {
-    auto tm = std::chrono::system_clock::now();
-    auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(tm).time_since_epoch().count() % 1000;
-    auto px = fmt("[{}][{:%Y-%m-%d %H:%M:%S}.{:03}][{}]\n", type, tm, ms, func_);
-    (printer_.*out_fn)(std::move(px += std::move(log_str)));
+} // namespace log
+
+namespace detail_log {
+
+template <typename T>
+class has_fn_output {
+  static std::false_type check(...);
+  template <typename U>
+  static auto check(U *u) -> decltype(u->output(log::level::trace, std::declval<std::string>()), std::true_type{});
+
+public:
+  using type = decltype(check(static_cast<T *>(nullptr)));
+};
+
+template <typename T>
+constexpr bool has_fn_output_v = has_fn_output<T>::type::value;
+
+struct vtable_t {
+  void (*output)(void *, log::level, std::string &&);
+};
+
+template <typename T>
+class traits {
+  template <typename U>
+  static auto make_fn_output() noexcept
+    -> std::enable_if_t<has_fn_output_v<U>, void (*)(void *, log::level, std::string &&)> {
+    return [](void *p, log::level l, std::string &&s) {
+      static_cast<U *>(p)->output(l, std::move(s));
+    };
+  }
+  template <typename U>
+  static auto make_fn_output() noexcept
+    -> std::enable_if_t<!has_fn_output_v<U>, void (*)(void *, log::level, std::string &&)> {
+    return [](void *, log::level, std::string &&) {};
+  }
+
+public:
+  static auto make_vtable() noexcept {
+    static vtable_t vt {
+      make_fn_output<T>(),
+    };
+    return &vt;
+  }
+};
+
+} // namespace detail_log
+
+namespace log {
+
+class LIBIMP_EXPORT printer {
+  void *objp_ {nullptr};
+  detail_log::vtable_t *vtable_ {nullptr};
+
+public:
+  printer() noexcept = default;
+
+  template <typename T>
+  printer(T &p) noexcept
+    : objp_  (static_cast<void *>(&p))
+    , vtable_(detail_log::traits<T>::make_vtable()) {}
+
+  explicit operator bool() const noexcept;
+
+  void output(log::level, std::string &&);
+};
+
+class LIBIMP_EXPORT std_t {
+public:
+  void output(log::level, std::string &&);
+};
+
+LIBIMP_EXPORT extern std_t std_out;
+
+class gripper {
+  printer printer_;
+  char const *func_;
+  level level_limit_;
+
+  template <typename Fmt, typename... A>
+  gripper &output(log::level l, Fmt &&ft, A &&... args) {
+    if (!printer_ || (enum_cast(l) < enum_cast(level_limit_))) {
+      return *this;
+    }
+    constexpr static char types[] = {
+      'T', 'D', 'I', 'W', 'E', 'F'
+    };
+    auto tp = std::chrono::system_clock::now();
+    auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(tp).time_since_epoch().count() % 1000;
+    auto px = fmt("[{}][{:%Y-%m-%d %H:%M:%S}.{:03}][{}] ", types[enum_cast(l)], tp, ms, func_);
+    printer_.output(l, std::move(px += fmt(std::forward<Fmt>(ft), std::forward<A>(args)...)));
     return *this;
   }
 
 public:
-  gripper(log_printer printer, char const *func) noexcept 
-    : printer_(printer)
-    , func_   (func) {}
+  gripper(printer printer, char const *func, level level_limit = level::info) noexcept 
+    : printer_    (printer)
+    , func_       (func)
+    , level_limit_(level_limit) {}
 
   template <typename Fmt, typename... A>
+  gripper &trace(Fmt &&ft, A &&... args) {
+    return output(log::level::trace, std::forward<Fmt>(ft), std::forward<A>(args)...);
+  }
+  template <typename Fmt, typename... A>
+  gripper &debug(Fmt &&ft, A &&... args) {
+    return output(log::level::debug, std::forward<Fmt>(ft), std::forward<A>(args)...);
+  }
+  template <typename Fmt, typename... A>
   gripper &info(Fmt &&ft, A &&... args) {
-    return output(&log_printer::info, 'I', fmt(std::forward<Fmt>(ft), std::forward<A>(args)...));
+    return output(log::level::info, std::forward<Fmt>(ft), std::forward<A>(args)...);
+  }
+  template <typename Fmt, typename... A>
+  gripper &warning(Fmt &&ft, A &&... args) {
+    return output(log::level::warning, std::forward<Fmt>(ft), std::forward<A>(args)...);
   }
   template <typename Fmt, typename... A>
   gripper &error(Fmt &&ft, A &&... args) {
-    return output(&log_printer::error, 'E', fmt(std::forward<Fmt>(ft), std::forward<A>(args)...));
+    return output(log::level::error, std::forward<Fmt>(ft), std::forward<A>(args)...);
+  }
+  template <typename Fmt, typename... A>
+  gripper &failed(Fmt &&ft, A &&... args) {
+    return output(log::level::failed, std::forward<Fmt>(ft), std::forward<A>(args)...);
   }
 };
 
