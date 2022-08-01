@@ -1,17 +1,17 @@
 # cpp-ipc(libipc) - C++ IPC Library
 
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/mutouyun/cpp-ipc/blob/master/LICENSE) 
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/mutouyun/cpp-ipc/blob/master/LICENSE)
 [![Build Status](https://github.com/mutouyun/cpp-ipc/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/mutouyun/cpp-ipc/actions)
 [![Build status](https://ci.appveyor.com/api/projects/status/github/mutouyun/cpp-ipc?branch=master&svg=true)](https://ci.appveyor.com/project/mutouyun/cpp-ipc)
 [![Vcpkg package](https://img.shields.io/badge/Vcpkg-package-blueviolet)](https://github.com/microsoft/vcpkg/tree/master/ports/cpp-ipc)
 
-## A high-performance inter-process communication using shared memory on Linux/Windows. 
+## A high-performance inter-process communication library using shared memory on Linux/Windows.
 
  * Compilers with C++17 support are recommended (msvc-2017/gcc-7/clang-4)
  * No other dependencies except STL.
  * Only lock-free or lightweight spin-lock is used.
  * Circular array is used as the underline data structure.
- * `ipc::route` supports single read and multiple write. `ipc::channel` supports multiple read and write. (**Note: currently, a channel supports up to 32 receivers, but there is no such a limit for sender.**) 
+ * `ipc::route` supports single read and multiple write. `ipc::channel` supports multiple read and write. (**Note: currently, a channel supports up to 32 receivers, but there is no such a limit for the sender.**) 
  * Broadcasting is used by default, but user can choose any read/ write combinations.
  * No long time blind wait. (Semaphore will be used after a certain number of retries.) 
  * [Vcpkg](https://github.com/microsoft/vcpkg/blob/master/README.md) way of installation is supported. E.g. `vcpkg install cpp-ipc`
@@ -30,7 +30,7 @@ See: [Wiki](https://github.com/mutouyun/cpp-ipc/wiki)
  OS | Windows 7 Ultimate x64
  Compiler | MSVC 2017 15.9.4
 
-Unit & benchmark tests: [test](test) 
+Unit & benchmark tests: [test](test)
 Performance data: [performance.xlsx](performance.xlsx)
 
 ## Reference
@@ -69,7 +69,7 @@ Performance data: [performance.xlsx](performance.xlsx)
 | 操作系统 | Windows 7 Ultimate x64           |
 | 编译器   | MSVC 2017 15.9.4                 |
 
-单元测试和Benchmark测试: [test](test) 
+单元测试和Benchmark测试: [test](test)
 性能数据: [performance.xlsx](performance.xlsx)
 
 ## 参考
