@@ -1,4 +1,4 @@
-# cpp-ipc(libipc) - C++ IPC Library
+# cpp-ipc (libipc) - C++ IPC Library
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/mutouyun/cpp-ipc/blob/master/LICENSE)
 [![Build Status](https://github.com/mutouyun/cpp-ipc/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/mutouyun/cpp-ipc/actions)
