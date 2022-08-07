@@ -68,6 +68,12 @@ TEST(log, log_printer) {
 }
 
 TEST(log, gripper) {
-  imp::log::gripper log {imp::log::std_out, __func__};
-  log.info("hello");
+  {
+    imp::log::gripper log {__func__};
+    log.info("hello");
+  }
+  {
+    LIBIMP_LOG_();
+    log.info("hello 2");
+  }
 }

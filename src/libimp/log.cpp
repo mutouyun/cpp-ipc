@@ -11,14 +11,14 @@ printer::operator bool() const noexcept {
   return (objp_ != nullptr) && (vtable_ != nullptr);
 }
 
-void printer::output(log::level l, std::string &&s) {
+void printer::output(log::level l, std::string &&s) noexcept {
   if (!*this) return;
   vtable_->output(objp_, l, std::move(s));
 }
 
 std_t std_out;
 
-void std_t::output(log::level l, std::string &&s) {
+void std_t::output(log::level l, std::string &&s) noexcept {
   switch (l) {
   case level::trace:
   case level::debug:
