@@ -24,6 +24,8 @@
 # define LIBIMP_OS_ANDROID
 #elif defined(__linux__) || defined(__linux)
 # define LIBIMP_OS_LINUX
+#elif defined(_POSIX_VERSION)
+# define LIBIMP_OS_POSIX
 #else
 # error "This OS is unsupported."
 #endif

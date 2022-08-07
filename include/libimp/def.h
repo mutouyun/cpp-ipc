@@ -10,8 +10,8 @@
 #include <cstdint>
 
 #define LIBIMP_               imp
-#define LIBIMP_NAMESPACE_     LIBIMP_
-#define LIBIMP_NAMESPACE_BEG_ namespace LIBIMP_NAMESPACE_ {
+#define LIBIMP_NAMESPACE_     :: LIBIMP_
+#define LIBIMP_NAMESPACE_BEG_ namespace LIBIMP_ {
 #define LIBIMP_NAMESPACE_END_ }
 
 LIBIMP_NAMESPACE_BEG_
