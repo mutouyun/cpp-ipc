@@ -16,12 +16,14 @@
 #elif defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || \
       defined(__NT__) || defined(__MSYS__)
 # define LIBIMP_OS_WIN32
-#elif defined(__linux__) || defined(__linux)
-# define LIBIMP_OS_LINUX
 #elif defined(__QNX__) || defined(__QNXNTO__)
 # define LIBIMP_OS_QNX
+#elif defined(__APPLE__)
+# define LIBIMP_OS_APPLE
 #elif defined(ANDROID) || defined(__ANDROID__)
 # define LIBIMP_OS_ANDROID
+#elif defined(__linux__) || defined(__linux)
+# define LIBIMP_OS_LINUX
 #else
 # error "This OS is unsupported."
 #endif
