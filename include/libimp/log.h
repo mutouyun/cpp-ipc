@@ -54,22 +54,22 @@ template <typename T>
 constexpr bool has_fn_output_v = has_fn_output<T>::type::value;
 
 struct vtable_t {
-  void (*output)(void *, log::level, std::string &&) noexcept;
+  void (*output)(void *, log::level, std::string &&);
 };
 
 template <typename T>
 class traits {
   template <typename U>
   static auto make_fn_output() noexcept
-    -> std::enable_if_t<has_fn_output_v<U>, void (*)(void *, log::level, std::string &&) noexcept> {
-    return [](void *p, log::level l, std::string &&s) noexcept {
+    -> std::enable_if_t<has_fn_output_v<U>, void (*)(void *, log::level, std::string &&)> {
+    return [](void *p, log::level l, std::string &&s) {
       static_cast<U *>(p)->output(l, std::move(s));
     };
   }
   template <typename U>
   static auto make_fn_output() noexcept
-    -> std::enable_if_t<!has_fn_output_v<U>, void (*)(void *, log::level, std::string &&) noexcept> {
-    return [](void *, log::level, std::string &&) noexcept {};
+    -> std::enable_if_t<!has_fn_output_v<U>, void (*)(void *, log::level, std::string &&)> {
+    return [](void *, log::level, std::string &&) {};
   }
 
 public:
