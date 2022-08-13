@@ -44,7 +44,7 @@ void error_code(result_code code) noexcept {
 std::string error_msg(result_code code) noexcept {
   LIBIMP_LOG_();
   try {
-    DWORD err = code ? ERROR_SUCCESS : (DWORD)code.value();
+    DWORD err = (DWORD)code.value();
     LPTSTR lpErrText = NULL;
     if (::FormatMessage(
           FORMAT_MESSAGE_ALLOCATE_BUFFER | 

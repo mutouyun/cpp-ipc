@@ -4,10 +4,6 @@
  */
 #pragma once
 
-#include <exception>
-#include <memory>
-#include <type_traits>
-
 #include <errno.h>
 #include <string.h>
 
@@ -40,7 +36,13 @@ void error_code(result_code code) noexcept {
  * https://man7.org/linux/man-pages/man3/strerror_l.3.html
  */
 std::string error_msg(result_code code) noexcept {
-  return {};
+  LIBIMP_LOG_();
+  char msg_buf[256] {};
+  if (::strerror_r((int)code.value(), msg_buf, sizeof(msg_buf)) != 0) {
+    log.error("strerror_r fails. return = {}", error_code());
+    return {};
+  }
+  return msg_buf;
 }
 
 } // namespace sys

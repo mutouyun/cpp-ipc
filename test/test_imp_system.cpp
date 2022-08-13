@@ -52,5 +52,6 @@ TEST(system, error_msg) {
     EXPECT_EQ(imp::sys::error_msg({false, ERROR_INVALID_HANDLE}), s_txt);
   }
 #else
+  imp::sys::error_msg({false, 1234}, "Unknown error nnn");
 #endif
 }
