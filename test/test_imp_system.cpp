@@ -9,7 +9,7 @@
 #include "libimp/codecvt.h"
 
 #if defined(LIBIMP_OS_WIN)
-#include <WinError.h>
+#include <Windows.h>
 #else
 #endif
 
@@ -27,16 +27,28 @@ TEST(system, error_code) {
 
 TEST(system, error_msg) {
 #if defined(LIBIMP_OS_WIN)
+  std::u16string u16_ok, u16_err;
+  LANGID lId = ::GetSystemDefaultLangID();
+  switch (lId) {
+  case 0x0804:
+    u16_ok  = u"操作成功完成。\r\n";
+    u16_err = u"句柄无效。\r\n";
+    break;
+  case 0x0409:
+    u16_ok  = u"The operation completed successfully.\r\n";
+    u16_err = u"The handle is invalid.\r\n";
+    break;
+  default:
+    return;
+  }
   {
-    std::u16string u16_txt = u"操作成功完成。\r\n";
     std::string s_txt;
-    imp::cvt_sstr(u16_txt, s_txt);
+    imp::cvt_sstr(u16_ok, s_txt);
     EXPECT_EQ(imp::sys::error_msg({}), s_txt);
   }
   {
-    std::u16string u16_txt = u"句柄无效。\r\n";
     std::string s_txt;
-    imp::cvt_sstr(u16_txt, s_txt);
+    imp::cvt_sstr(u16_err, s_txt);
     EXPECT_EQ(imp::sys::error_msg({false, ERROR_INVALID_HANDLE}), s_txt);
   }
 #else
