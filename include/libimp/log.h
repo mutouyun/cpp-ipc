@@ -92,7 +92,8 @@ class LIBIMP_EXPORT printer {
 public:
   printer() noexcept = default;
 
-  template <typename T>
+  template <typename T, 
+            typename = std::enable_if_t<!std::is_same<printer, T>::value>>
   printer(T &p) noexcept
     : objp_  (static_cast<void *>(&p))
     , vtable_(detail_log::traits<T>::make_vtable()) {}
