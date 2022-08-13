@@ -1,5 +1,8 @@
 ﻿
+#include <iostream>
+
 #include "gtest/gtest.h"
+#include "fmt/format.h"
 
 #include "libimp/system.h"
 #include "libimp/detect_plat.h"
@@ -11,7 +14,7 @@
 #endif
 
 TEST(system, error_code) {
-  EXPECT_TRUE(imp::sys::error_code());
+  std::cout << fmt::format("{}\n", imp::sys::error_code());
 
   imp::sys::error_code({false, 111});
   auto err = imp::sys::error_code();
