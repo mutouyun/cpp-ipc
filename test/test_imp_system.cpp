@@ -52,7 +52,8 @@ TEST(system, error_msg) {
     EXPECT_EQ(imp::sys::error_msg({false, ERROR_INVALID_HANDLE}), s_txt);
   }
 #else
-  EXPECT_EQ(imp::sys::error_msg({}), "");
-  EXPECT_EQ(imp::sys::error_msg({false, EINVAL}), "");
+  EXPECT_EQ(imp::sys::error_msg({false, 1234}), "Unknown error 1234");
+  EXPECT_EQ(imp::sys::error_msg({}), "Success");
+  EXPECT_EQ(imp::sys::error_msg({false, EINVAL}), "Invalid argument");
 #endif
 }
