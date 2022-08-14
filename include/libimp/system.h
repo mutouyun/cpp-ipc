@@ -31,5 +31,13 @@ LIBIMP_EXPORT std::string error_str(result_code) noexcept;
  */
 LIBIMP_EXPORT std::string error_msg(result_code) noexcept;
 
+/**
+ * @brief Get system configuration information at run time
+ */
+enum class info : std::int32_t {
+  page_size,
+};
+LIBIMP_EXPORT std::int64_t conf(info) noexcept;
+
 } // namespace sys
 LIBIMP_NAMESPACE_END_

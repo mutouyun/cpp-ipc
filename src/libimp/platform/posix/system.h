@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "libimp/system.h"
 #include "libimp/log.h"
@@ -48,6 +49,27 @@ std::string error_str(result_code code) noexcept {
 #else
   return ::strerror_r((int)code.value(), msg_buf, sizeof(msg_buf));
 #endif
+}
+
+/**
+ * @brief Gets configuration information at run time
+ * https://man7.org/linux/man-pages/man2/getpagesize.2.html
+ * https://man7.org/linux/man-pages/man3/sysconf.3.html
+ */
+std::int64_t conf(info r) noexcept {
+  LIBIMP_LOG_();
+  switch (r) {
+  case info::page_size: {
+      auto val = ::sysconf(_SC_PAGESIZE);
+      if (val >= 0) return (std::int64_t)val;
+    }
+    break;
+  default:
+    log.error("invalid info = {}", enum_cast(r));
+    return -1;
+  }
+  log.error("info = {}, error = {}", enum_cast(r), error_msg(error_code()));
+  return -1;
 }
 
 } // namespace sys

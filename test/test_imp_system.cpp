@@ -57,3 +57,7 @@ TEST(system, error_str) {
   EXPECT_EQ(imp::sys::error_str({false, EINVAL}), "Invalid argument");
 #endif
 }
+
+TEST(system, conf) {
+  EXPECT_EQ(imp::sys::conf(imp::sys::info::page_size), 4096);
+}
