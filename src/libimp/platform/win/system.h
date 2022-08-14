@@ -41,7 +41,7 @@ void error_code(result_code code) noexcept {
  * @brief Gets a text description of the system error
  * https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
  */
-std::string error_msg(result_code code) noexcept {
+std::string error_str(result_code code) noexcept {
   LIBIMP_LOG_();
   try {
     DWORD err = (DWORD)code.value();

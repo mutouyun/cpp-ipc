@@ -36,7 +36,7 @@ void error_code(result_code code) noexcept {
  * https://man7.org/linux/man-pages/man3/strerror_l.3.html
  * https://manpages.ubuntu.com/manpages/xenial/en/man3/strerror.3.html
  */
-std::string error_msg(result_code code) noexcept {
+std::string error_str(result_code code) noexcept {
   char msg_buf[256] {};
 #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE)
   LIBIMP_LOG_();

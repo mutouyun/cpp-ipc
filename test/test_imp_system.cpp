@@ -14,7 +14,7 @@
 #endif
 
 TEST(system, error_code) {
-  std::cout << fmt::format("{}\n", imp::sys::error_code());
+  std::cout << fmt::format("{}\n", imp::sys::error_msg(imp::sys::error_code()));
 
   imp::sys::error_code({false, 111});
   auto err = imp::sys::error_code();
@@ -25,7 +25,7 @@ TEST(system, error_code) {
   EXPECT_TRUE(imp::sys::error_code());
 }
 
-TEST(system, error_msg) {
+TEST(system, error_str) {
 #if defined(LIBIMP_OS_WIN)
   std::u16string u16_ok, u16_err;
   LANGID lId = ::GetSystemDefaultLangID();
@@ -44,16 +44,16 @@ TEST(system, error_msg) {
   {
     std::string s_txt;
     imp::cvt_sstr(u16_ok, s_txt);
-    EXPECT_EQ(imp::sys::error_msg({}), s_txt);
+    EXPECT_EQ(imp::sys::error_str({}), s_txt);
   }
   {
     std::string s_txt;
     imp::cvt_sstr(u16_err, s_txt);
-    EXPECT_EQ(imp::sys::error_msg({false, ERROR_INVALID_HANDLE}), s_txt);
+    EXPECT_EQ(imp::sys::error_str({false, ERROR_INVALID_HANDLE}), s_txt);
   }
 #else
-  EXPECT_EQ(imp::sys::error_msg({false, 1234}), "Unknown error 1234");
-  EXPECT_EQ(imp::sys::error_msg({}), "Success");
-  EXPECT_EQ(imp::sys::error_msg({false, EINVAL}), "Invalid argument");
+  EXPECT_EQ(imp::sys::error_str({false, 1234}), "Unknown error 1234");
+  EXPECT_EQ(imp::sys::error_str({}), "Success");
+  EXPECT_EQ(imp::sys::error_str({false, EINVAL}), "Invalid argument");
 #endif
 }

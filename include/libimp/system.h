@@ -24,6 +24,11 @@ LIBIMP_EXPORT void error_code(result_code) noexcept;
 /**
  * @brief Gets a text description of the system error
  */
+LIBIMP_EXPORT std::string error_str(result_code) noexcept;
+
+/**
+ * @brief @brief A text description string with an error number attached
+ */
 LIBIMP_EXPORT std::string error_msg(result_code) noexcept;
 
 } // namespace sys
