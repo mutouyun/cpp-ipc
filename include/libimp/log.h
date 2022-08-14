@@ -93,6 +93,7 @@ public:
   printer() noexcept = default;
 
   template <typename T, 
+            /// @brief generic constructor may shadow the default copy constructor
             typename = std::enable_if_t<!std::is_same<printer, T>::value>>
   printer(T &p) noexcept
     : objp_  (static_cast<void *>(&p))
