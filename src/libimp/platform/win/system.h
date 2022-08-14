@@ -14,6 +14,7 @@
 #include "libimp/system.h"
 #include "libimp/log.h"
 #include "libimp/codecvt.h"
+#include "libimp/enum_cast.h"
 
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
@@ -74,6 +75,25 @@ std::string error_str(result_code code) noexcept {
     log.failed(e.what());
   }
   return {};
+}
+
+/**
+ * @brief Retrieves information about the current system
+ * https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
+ * https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getnativesysteminfo
+ */
+std::int64_t conf(info r) noexcept {
+  LIBIMP_LOG_();
+  switch (r) {
+  case info::page_size: {
+    ::SYSTEM_INFO info {};
+    ::GetNativeSystemInfo(&info);
+    return (std::int64_t)info.dwPageSize;
+  }
+  default:
+    log.error("invalid info = {}", enum_cast(r));
+    return -1;
+  }
 }
 
 } // namespace sys

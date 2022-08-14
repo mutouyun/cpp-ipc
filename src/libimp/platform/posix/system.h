@@ -60,10 +60,10 @@ std::int64_t conf(info r) noexcept {
   LIBIMP_LOG_();
   switch (r) {
   case info::page_size: {
-      auto val = ::sysconf(_SC_PAGESIZE);
-      if (val >= 0) return (std::int64_t)val;
-    }
+    auto val = ::sysconf(_SC_PAGESIZE);
+    if (val >= 0) return (std::int64_t)val;
     break;
+  }
   default:
     log.error("invalid info = {}", enum_cast(r));
     return -1;
