@@ -171,4 +171,4 @@ public:
 } // namespace log
 LIBIMP_NAMESPACE_END_
 
-#define LIBIMP_LOG_(...) LIBIMP_NAMESPACE_::log::gripper log {__func__, __VA_ARGS__}
+#define LIBIMP_LOG_(...) ::LIBIMP_::log::gripper log {__func__, __VA_ARGS__}
