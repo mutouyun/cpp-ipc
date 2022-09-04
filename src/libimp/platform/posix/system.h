@@ -42,7 +42,7 @@ std::string error_str(result_code code) noexcept {
 #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE)
   LIBIMP_LOG_();
   if (::strerror_r((int)code.value(), msg_buf, sizeof(msg_buf)) != 0) {
-    log.error("strerror_r fails. return = {}", error_code());
+    log.error("strerror_r fails. error = {}", error_code());
     return {};
   }
   return msg_buf;

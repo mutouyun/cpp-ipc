@@ -10,8 +10,7 @@
 #include <cstdint>
 
 #define LIBIPC_               ipc
-#define LIBIPC_NAMESPACE_     LIBIPC_
-#define LIBIPC_NAMESPACE_BEG_ namespace LIBIPC_NAMESPACE_ {
+#define LIBIPC_NAMESPACE_BEG_ namespace LIBIPC_ {
 #define LIBIPC_NAMESPACE_END_ }
 
 LIBIPC_NAMESPACE_BEG_
@@ -24,6 +23,15 @@ struct prot {
     none  = 0x00,
     read  = 0x01,
     write = 0x02,
+  };
+};
+
+struct mode {
+  using type = std::uint32_t;
+  enum : type {
+    none   = 0x00,
+    create = 0x01,
+    open   = 0x02,
   };
 };
 

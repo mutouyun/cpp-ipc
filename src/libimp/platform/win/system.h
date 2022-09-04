@@ -56,7 +56,7 @@ std::string error_str(result_code code) noexcept {
           MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
           (LPTSTR)&lpErrText,
           0, NULL) == 0) {
-      log.error("FormatMessage fails. return = {}", error_code());
+      log.error("FormatMessage fails. error = {}", error_code());
       return {};
     }
     LIBIMP_UNUSED auto buf_guard = std::unique_ptr<std::remove_pointer_t<LPVOID>, 
