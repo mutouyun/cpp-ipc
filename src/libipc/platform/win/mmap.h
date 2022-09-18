@@ -54,7 +54,7 @@ void mmap_close(HANDLE h) {
  * @param type Combinable open modes, create | open
  * @return File mapping object HANDLE, NULL on error
  */
-HANDLE mmap_open(std::string file, std::size_t size, mode::type type) noexcept {
+HANDLE mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();
   if (file.empty()) {
     log.error("file name is empty.");
@@ -72,6 +72,9 @@ HANDLE mmap_open(std::string file, std::size_t size, mode::type type) noexcept {
       log.error("OpenFileMapping fails. error = {}", sys::error_msg(sys::error_code()));
     }
     return h;
+  } else if (!(type & mode::create)) {
+    log.error("mode type is invalid. type = {}", type);
+    return NULL;
   }
   /// @brief Creates or opens a named or unnamed file mapping object for a specified file.
   HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
@@ -84,6 +87,7 @@ HANDLE mmap_open(std::string file, std::size_t size, mode::type type) noexcept {
   // (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.
   if ((type == mode::create) && (::GetLastError() == ERROR_ALREADY_EXISTS)) {
     mmap_close(h);
+    log.info("the file being created already exists. file = {}, type = {}", file, type);
     return NULL;
   }
   return h;
@@ -148,7 +152,29 @@ void mmap_release(HANDLE h, LPCVOID mem) {
 } // namespace
 
 ::LIBIMP_::result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noexcept {
-  return {};
+  LIBIMP_LOG_();
+  auto h = mmap_open(name, size, type);
+  if (h == NULL) {
+    log.error("mmap_open failed.");
+    return {nullptr, *sys::error_code()};
+  }
+  auto mem = mmap_memof(h);
+  if (mem == NULL) {
+    log.warning("mmap_memof failed.");
+  }
+  return new shm_handle{std::move(name), mmap_sizeof(mem), mem, h};
+}
+
+::LIBIMP_::result_code shm_close(shm_t h) noexcept {
+  LIBIMP_LOG_();
+  if (h == nullptr) {
+    log.error("shm handle is null.");
+    return {};
+  }
+  auto shm = static_cast<shm_handle *>(h);
+  mmap_release(shm->h_fmap, shm->memp);
+  delete shm;
+  return {true};
 }
 
 LIBIPC_NAMESPACE_END_
