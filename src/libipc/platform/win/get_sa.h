@@ -1,3 +1,7 @@
+/**
+ * @file libipc/platform/win/get_sa.h
+ * @author mutouyun (orz@orzz.org)
+ */
 #pragma once
 
 #include <securitybaseapi.h>
