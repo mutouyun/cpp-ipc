@@ -15,7 +15,7 @@ TEST(shm, create_close) {
   EXPECT_NE(pt1, nullptr);
   *(int *)pt1 = 0;
 
-  auto shm2 = ipc::shm_open("hello-ipc-shm", 0, ipc::mode::open);
+  auto shm2 = ipc::shm_open(ipc::shm_file(*shm1), 0, ipc::mode::open);
   EXPECT_TRUE(shm2);
   EXPECT_EQ(ipc::shm_size(*shm1), ipc::shm_size(*shm2));
   auto pt2 = ipc::shm_get(*shm1);
