@@ -7,29 +7,29 @@
 
 LIBIPC_NAMESPACE_BEG_
 
-#if defined(LIBIPC_CC_MSVC)
+#if defined(LIBIMP_CC_MSVC)
 # include <Windows.h>   // YieldProcessor
 /**
  * @brief Not for intel c++ compiler, so ignore http://software.intel.com/en-us/forums/topic/296168
  * @see http://msdn.microsoft.com/en-us/library/windows/desktop/ms687419(v=vs.85).aspx
 */
 # define LIBIPC_LOCK_PAUSE_() YieldProcessor()
-#elif defined(LIBIPC_CC_GNUC)
-# if defined(LIBIPC_INSTR_X86_64)
+#elif defined(LIBIMP_CC_GNUC)
+# if defined(LIBIMP_INSTR_X86_64)
 /**
  * @brief Intel(R) 64 and IA-32 Architectures Software Developer's Manual V2
  *        PAUSE-Spin Loop Hint, 4-57
  * @see http://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.html?wapkw=instruction+set+reference
 */
 #   define LIBIPC_LOCK_PAUSE_() __asm__ __volatile__("pause")
-# elif defined(LIBIPC_INSTR_I64)
+# elif defined(LIBIMP_INSTR_I64)
 /**
  * @brief Intel(R) Itanium(R) Architecture Developer's Manual, Vol.3
  *        hint - Performance Hint, 3:145
  * @see http://www.intel.com/content/www/us/en/processors/itanium/itanium-architecture-vol-3-manual.html
 */
 #   define LIBIPC_LOCK_PAUSE_() __asm__ __volatile__ ("hint @pause")
-# elif defined(LIBIPC_INSTR_ARM)
+# elif defined(LIBIMP_INSTR_ARM)
 /**
  * @brief ARM Architecture Reference Manuals (YIELD)
  * @see http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.subset.architecture.reference/index.html
