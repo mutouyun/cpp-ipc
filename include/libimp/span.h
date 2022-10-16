@@ -91,7 +91,10 @@ private:
 public:
   constexpr span() noexcept = default;
   constexpr span(span const &) noexcept = default;
-  constexpr span & operator=(span const &) noexcept = default;
+#if (LIBIMP_CC_MSVC > LIBIMP_CC_MSVC_2015)
+  constexpr
+#endif
+  span & operator=(span const &) noexcept = default;
 
   template <typename It, 
             typename = detail::is_compatible_iter<T, It>>
@@ -128,7 +131,7 @@ public:
     : ptr_   (s.data())
     , extent_(s.size()) {}
 
-#ifdef LIBIMP_CPP_20
+#if defined(LIBIMP_CPP_20) || defined(__cpp_lib_span)
   template <typename U, std::size_t E,
             typename = detail::is_array_convertible<U, T>>
   constexpr span(std::span<U, E> const &s) noexcept

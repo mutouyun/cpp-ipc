@@ -38,9 +38,12 @@
 // Compiler
 
 #if defined(_MSC_VER)
-# define LIBIMP_CC_MSVC
+# define LIBIMP_CC_MSVC      _MSC_VER
+# define LIBIMP_CC_MSVC_2015 1900
+# define LIBIMP_CC_MSVC_2017 1910
+# define LIBIMP_CC_MSVC_2019 1920
 #elif defined(__GNUC__)
-# define LIBIMP_CC_GNUC
+# define LIBIMP_CC_GNUC __GNUC__
 #else
 # error "This compiler is unsupported."
 #endif
