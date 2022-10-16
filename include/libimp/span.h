@@ -25,15 +25,15 @@ namespace detail {
 template <typename From, typename To>
 using array_convertible = std::is_convertible<From(*)[], To(*)[]>;
 
+template <typename From, typename To>
+using is_array_convertible = 
+  typename std::enable_if<array_convertible<From, To>::value>::type;
+
 template <typename T, typename Ref>
 using compatible_ref = array_convertible<typename std::remove_reference<Ref>::type, T>;
 
 template <typename It>
 using iter_reference_t = decltype(*std::declval<It&>());
-
-template <typename From, typename To>
-using is_array_convertible = 
-  typename std::enable_if<array_convertible<From, To>::value>::type;
 
 template <typename T, typename It>
 using is_compatible_iter = 
@@ -42,6 +42,10 @@ using is_compatible_iter =
 template <typename From, typename To>
 using is_inconvertible = 
   typename std::enable_if<!std::is_convertible<From, To>::value>::type;
+
+template <typename S, typename I>
+using is_sized_sentinel_for = 
+  is_inconvertible<decltype(std::declval<S>() - std::declval<I>()), std::ptrdiff_t>;
 
 /// @brief Obtain the address represented by p 
 ///        without forming a reference to the object pointed to by p.
@@ -97,7 +101,7 @@ public:
 
   template <typename It, typename End,
             typename = detail::is_compatible_iter<T, It>,
-            typename = detail::is_compatible_iter<T, End>,
+            typename = detail::is_sized_sentinel_for<End, It>,
             typename = detail::is_inconvertible<End, size_type>>
   constexpr span(It first, End last) noexcept(noexcept(last - first))
     : ptr_   (detail::to_address(first))
