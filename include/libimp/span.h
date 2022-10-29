@@ -10,9 +10,12 @@
 #include <cstddef>
 #include <iterator>
 #include <array>
+#include <vector>
+#include <string>
 #include <limits>
 #include <algorithm>
 #include <cstdint>
+#include <initializer_list>
 #ifdef LIBIMP_CPP_20
 #include <span>
 #endif // LIBIMP_CPP_20
@@ -48,7 +51,8 @@ using is_inconvertible =
 
 template <typename S, typename I>
 using is_sized_sentinel_for = 
-  is_inconvertible<decltype(std::declval<S>() - std::declval<I>()), std::ptrdiff_t>;
+  typename std::enable_if<std::is_convertible<decltype(std::declval<S>() - std::declval<I>()), 
+                          std::ptrdiff_t>::value>::type;
 
 /// @brief Obtain the address represented by p 
 ///        without forming a reference to the object pointed to by p.
@@ -202,10 +206,65 @@ public:
   }
 };
 
+template <typename T, typename U, 
+          typename = decltype(std::declval<T>() == std::declval<U>())>
+bool operator==(span<T> a, span<U> b) noexcept {
+  if (a.size() != b.size()) {
+    return false;
+  }
+  for (std::size_t i = 0; i < a.size(); ++i) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
 template <typename T, 
           typename Byte = typename std::conditional<std::is_const<T>::value, std::uint8_t const, std::uint8_t>::type>
 auto as_bytes(span<T> s) noexcept -> span<Byte> {
   return {reinterpret_cast<Byte *>(s.data()), s.size_bytes()};
+}
+
+template <typename T>
+auto make_span(T *arr, std::size_t count) noexcept -> span<T> {
+  return {arr, count};
+}
+
+template <typename T, std::size_t E>
+auto make_span(T (&arr)[E]) noexcept -> span<T> {
+  return {arr};
+}
+
+template <typename T, std::size_t E>
+auto make_span(std::array<T, E> const &arr) noexcept -> span<T> {
+  return {arr};
+}
+
+template <typename T, std::size_t E>
+auto make_span(std::array<T, E> const &arr) noexcept -> span<typename std::add_const<T>::type> {
+  return {arr};
+}
+
+template <typename T>
+auto make_span(std::vector<T> &arr) noexcept -> span<T> {
+  return {arr.data(), arr.size()};
+}
+
+template <typename T>
+auto make_span(std::vector<T> const &arr) noexcept -> span<typename std::add_const<T>::type> {
+  return {arr.data(), arr.size()};
+}
+
+template <typename T>
+auto make_span(std::initializer_list<T> list) noexcept -> span<typename std::add_const<T>::type> {
+  return {list.begin(), list.end()};
+}
+
+inline auto make_span(std::string &str) noexcept -> span<char> {
+  return {const_cast<char *>(str.data()), str.size()};
+}
+
+inline auto make_span(std::string const &str) noexcept -> span<char const> {
+  return {str.data(), str.size()};
 }
 
 LIBIMP_NAMESPACE_END_
