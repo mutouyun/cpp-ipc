@@ -56,7 +56,7 @@ using is_sized_sentinel_for =
 
 /// @brief Obtain the address represented by p 
 ///        without forming a reference to the object pointed to by p.
-/// @see   https://en.cppreference.com/w/cpp/memory/to_address
+/// @see https://en.cppreference.com/w/cpp/memory/to_address
 
 template<typename T>
 constexpr T *to_address(T *ptr) noexcept {
@@ -217,11 +217,18 @@ bool operator==(span<T> a, span<U> b) noexcept {
   return true;
 }
 
+/// @brief Converts a span into a view of its underlying bytes.
+/// @see https://en.cppreference.com/w/cpp/container/span/as_bytes
+
 template <typename T, 
           typename Byte = typename std::conditional<std::is_const<T>::value, std::uint8_t const, std::uint8_t>::type>
 auto as_bytes(span<T> s) noexcept -> span<Byte> {
   return {reinterpret_cast<Byte *>(s.data()), s.size_bytes()};
 }
+
+/// @brief Constructs an object of type T and wraps it in a span.
+/// Before C++17, template argument deduction for class templates was not supported.
+/// @see https://en.cppreference.com/w/cpp/language/template_argument_deduction
 
 template <typename T>
 auto make_span(T *arr, std::size_t count) noexcept -> span<T> {
