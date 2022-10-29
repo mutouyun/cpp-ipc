@@ -190,21 +190,20 @@ public:
     return reverse_iterator(this->begin());
   }
 
-  constexpr span<element_type> first(size_type count) const noexcept {
+  constexpr span first(size_type count) const noexcept {
     return span(begin(), count);
   }
 
-  constexpr span<element_type> last(size_type count) const noexcept {
+  constexpr span last(size_type count) const noexcept {
     return span(end() - count, count);
   }
 
-  constexpr span<element_type> subspan(size_type offset, size_type count = (std::numeric_limits<size_type>::max)()) const noexcept {
-    if (offset >= size()) {
-      return {};
-    }
-    return span(begin() + offset, (std::min)(size() - offset, count));
+  constexpr span subspan(size_type offset, size_type count = (std::numeric_limits<size_type>::max)()) const noexcept {
+    return (offset >= size()) ? span() : span(begin() + offset, (std::min)(size() - offset, count));
   }
 };
+
+/// @brief Support for span equals comparison.
 
 template <typename T, typename U, 
           typename = decltype(std::declval<T>() == std::declval<U>())>
