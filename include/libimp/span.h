@@ -10,6 +10,9 @@
 #include <cstddef>
 #include <iterator>
 #include <array>
+#include <limits>
+#include <algorithm>
+#include <cstdint>
 #ifdef LIBIMP_CPP_20
 #include <span>
 #endif // LIBIMP_CPP_20
@@ -182,6 +185,27 @@ public:
   constexpr reverse_iterator rend() const noexcept {
     return reverse_iterator(this->begin());
   }
+
+  constexpr span<element_type> first(size_type count) const noexcept {
+    return span(begin(), count);
+  }
+
+  constexpr span<element_type> last(size_type count) const noexcept {
+    return span(end() - count, count);
+  }
+
+  constexpr span<element_type> subspan(size_type offset, size_type count = (std::numeric_limits<size_type>::max)()) const noexcept {
+    if (offset >= size()) {
+      return {};
+    }
+    return span(begin() + offset, (std::min)(size() - offset, count));
+  }
 };
+
+template <typename T, 
+          typename Byte = typename std::conditional<std::is_const<T>::value, std::uint8_t const, std::uint8_t>::type>
+auto as_bytes(span<T> s) noexcept -> span<Byte> {
+  return {reinterpret_cast<Byte *>(s.data()), s.size_bytes()};
+}
 
 LIBIMP_NAMESPACE_END_
