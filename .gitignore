@@ -43,7 +43,7 @@ target_wrapper.*
 CMakeLists.txt.user*
 
 # My output files
-build
+build*
 
 # vs
 .vs
