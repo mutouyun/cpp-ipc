@@ -34,7 +34,7 @@ inline void yield(K &k) noexcept {
   else
   if (k < 32) { std::this_thread::yield(); }
   else {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::microseconds(1));
     return;
   }
   ++k;
