@@ -29,6 +29,7 @@ TEST(system, error_code) {
   std::stringstream ss;
   ss << imp::sys::error{};
   EXPECT_EQ(e_msg, ss.str());
+  EXPECT_EQ(e_msg, fmt::format("{}", imp::sys::error()));
   std::cout << e_msg << "\n";
 }
 
