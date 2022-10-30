@@ -7,6 +7,7 @@
 #pragma once
 
 #include <string>
+#include <ostream>  // std::ostream
 #include <cstdint>
 
 #include "libimp/def.h"
@@ -33,6 +34,28 @@ LIBIMP_EXPORT std::string error_str(result_code) noexcept;
 LIBIMP_EXPORT std::string error_msg(result_code) noexcept;
 
 /**
+ * @brief The system error object.
+ */
+class LIBIMP_EXPORT error {
+  result_code r_code_;
+
+public:
+  explicit error() noexcept;
+  explicit error(result_code rc) noexcept;
+
+  result_code code() const noexcept;
+  std::uint64_t value() const noexcept;
+  explicit operator bool() const noexcept;
+
+  std::string str() const noexcept;
+
+  friend bool operator==(error const &lhs, error const &rhs) noexcept;
+  friend bool operator!=(error const &lhs, error const &rhs) noexcept;
+
+  friend std::ostream &operator<<(std::ostream &o, error const &e);
+};
+
+/**
  * @brief Get system configuration information at run time
  */
 enum class info : std::int32_t {
@@ -42,3 +65,12 @@ LIBIMP_EXPORT std::int64_t conf(info) noexcept;
 
 } // namespace sys
 LIBIMP_NAMESPACE_END_
+
+template <>
+struct fmt::formatter<::LIBIMP_::sys::error>
+          : formatter<std::string> {
+  template <typename FormatContext>
+  auto format(::LIBIMP_::sys::error r, FormatContext &ctx) {
+    return format_to(ctx.out(), "{}", ::LIBIMP_::sys::error_msg(r.code()));
+  }
+};

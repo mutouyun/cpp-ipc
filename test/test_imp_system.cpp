@@ -1,5 +1,6 @@
 ﻿
 #include <iostream>
+#include <string>
 
 #include "gtest/gtest.h"
 #include "fmt/format.h"
@@ -14,8 +15,6 @@
 #endif
 
 TEST(system, error_code) {
-  std::cout << fmt::format("{}\n", imp::sys::error_msg(imp::sys::error_code()));
-
   imp::sys::error_code({false, 111});
   auto err = imp::sys::error_code();
   EXPECT_FALSE(err);
@@ -23,20 +22,28 @@ TEST(system, error_code) {
 
   imp::sys::error_code({});
   EXPECT_TRUE(imp::sys::error_code());
+
+  imp::sys::error e_obj {err};
+  EXPECT_EQ(err.value(), e_obj.value());
+  auto e_msg = fmt::format("{}", imp::sys::error_msg(imp::sys::error_code()));
+  std::stringstream ss;
+  ss << imp::sys::error{};
+  EXPECT_EQ(e_msg, ss.str());
+  std::cout << e_msg << "\n";
 }
 
 TEST(system, error_str) {
 #if defined(LIBIMP_OS_WIN)
-  std::u16string u16_ok, u16_err;
+  std::wstring u16_ok, u16_err;
   LANGID lId = ::GetSystemDefaultLangID();
   switch (lId) {
   case 0x0804:
-    u16_ok  = u"操作成功完成。\r\n";
-    u16_err = u"句柄无效。\r\n";
+    u16_ok  = L"操作成功完成。\r\n";
+    u16_err = L"句柄无效。\r\n";
     break;
   case 0x0409:
-    u16_ok  = u"The operation completed successfully.\r\n";
-    u16_err = u"The handle is invalid.\r\n";
+    u16_ok  = L"The operation completed successfully.\r\n";
+    u16_err = L"The handle is invalid.\r\n";
     break;
   default:
     return;

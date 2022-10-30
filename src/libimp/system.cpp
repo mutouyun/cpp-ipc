@@ -18,5 +18,42 @@ std::string error_msg(result_code code) noexcept {
   }
 }
 
+/// @brief The system error object.
+
+error::error() noexcept
+  : error(error_code()) {}
+
+error::error(result_code rc) noexcept
+  : r_code_(rc) {}
+
+result_code error::code() const noexcept {
+  return r_code_;
+}
+
+std::uint64_t error::value() const noexcept {
+  return r_code_.value();
+}
+
+error::operator bool() const noexcept {
+  return !!r_code_;
+}
+
+std::string error::str() const noexcept {
+  return error_str(r_code_);
+}
+
+bool operator==(error const &lhs, error const &rhs) noexcept {
+  return lhs.code() == rhs.code();
+}
+
+bool operator!=(error const &lhs, error const &rhs) noexcept {
+  return lhs.code() != rhs.code();
+}
+
+std::ostream &operator<<(std::ostream &o, error const &e) {
+  o << error_msg(e.code());
+  return o;
+}
+
 } // namespace sys
 LIBIMP_NAMESPACE_END_
