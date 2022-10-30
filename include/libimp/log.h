@@ -130,7 +130,7 @@ class gripper {
       auto px = fmt("[{}][{:%Y-%m-%d %H:%M:%S}.{:03}][{}] ", types[enum_cast(l)], tp, ms, func_);
       printer_.output(l, std::move(px += fmt(std::forward<Fmt>(ft), std::forward<A>(args)...)));
     } catch (std::exception const &e) {
-      /// @brief [TBD] std::string constructor may throw an exception
+      /// @remark [TBD] std::string constructor may throw an exception
       printer_.output(level::failed, e.what());
     }
     return *this;

@@ -35,6 +35,10 @@ LIBIMP_EXPORT void *shm_get(shm_t) noexcept;
 /// @return 0 on failure.
 LIBIMP_EXPORT std::size_t shm_size(shm_t) noexcept;
 
+/// @brief Sets the memory size based on the shared memory handle.
+/// @remark [TBD]
+LIBIMP_EXPORT ::LIBIMP_::result_code shm_size(shm_t, std::size_t) noexcept;
+
 /// @brief Gets the name of the shared memory file based on the shared memory handle.
 /// @return empty string on failure.
 LIBIMP_EXPORT std::string shm_name(shm_t) noexcept;
