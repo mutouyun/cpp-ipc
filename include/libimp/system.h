@@ -71,6 +71,6 @@ struct fmt::formatter<::LIBIMP_::sys::error>
           : formatter<std::string> {
   template <typename FormatContext>
   auto format(::LIBIMP_::sys::error r, FormatContext &ctx) {
-    return format_to(ctx.out(), "{}", ::LIBIMP_::sys::error_msg(r.code()));
+    return format_to(ctx.out(), ::LIBIMP_::sys::error_msg(r.code()));
   }
 };
