@@ -5,6 +5,7 @@
 #pragma once
 
 #include <string>
+#include <memory>   // std::unique_ptr
 #include <cstddef>
 
 #include <sys/stat.h>
@@ -15,6 +16,7 @@
 
 #include "libimp/log.h"
 #include "libimp/system.h"
+#include "libimp/detect_plat.h"
 
 #include "libipc/shm.h"
 
@@ -70,21 +72,36 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
     log.error("shm_open fails. error = {}", sys::error());
     return {};
   }
+  LIBIMP_UNUSED auto guard = std::unique_ptr<int, void (*)(int *)>(&fd, [](int *pfd) {
+    if (pfd != nullptr) ::close(*pfd);
+  });
 
-  if (size == 0) {
-    /// @brief Try to get the size of this fd
-    struct stat st;
-    if (::fstat(fd, &st) == posix::failed) {
-      log.error("fstat fails. error = {}", sys::error());
-      ::shm_unlink(name.c_str());
-      return {};
-    }
-    size = static_cast<std::size_t>(st.st_size);
-    /// @brief Truncate this fd to a specified length
-  } else if (::ftruncate(fd, size) != 0) {
-    log.error("ftruncate fails. error = {}", sys::error());
+  /// @brief Try to get the size of this fd
+  struct stat st;
+  if (::fstat(fd, &st) == posix::failed) {
+    log.error("fstat fails. error = {}", sys::error());
     ::shm_unlink(name.c_str());
     return {};
+  }
+
+  /// @brief Truncate this fd to a specified length
+  auto ftruncate = [&log, &name](int fd, std::size_t size) {
+    if (::ftruncate(fd, size) != 0) {
+      log.error("ftruncate fails. error = {}", sys::error());
+      ::shm_unlink(name.c_str());
+      return false;
+    }
+    return true;
+  };
+
+  if (size == 0) {
+    size = static_cast<std::size_t>(st.st_size);
+    if (!ftruncate(fd, size)) return {};
+  } else if (st.st_size > 0) {
+    /// @remark Based on the actual size.
+    size = static_cast<std::size_t>(st.st_size);
+  } else { // st.st_size <= 0
+    if (!ftruncate(fd, size)) return {};
   }
 
   /// @brief Creates a new mapping in the virtual address space of the calling process.
@@ -94,7 +111,6 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
     ::shm_unlink(name.c_str());
     return {};
   }
-  ::close(fd);
   return new shm_handle{std::move(name), size, mem};
 }
 
