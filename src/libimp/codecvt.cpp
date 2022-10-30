@@ -8,13 +8,22 @@
 #include "libimp/log.h"
 #include "libimp/detect_plat.h"
 
+#if defined(LIBIMP_OS_WIN)
+#include "libimp/platform/win/codecvt.h"
+#endif
+
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief The transform between local-character-set(UTF-8/GBK/...) and UTF-16/32
+ * @brief The transform between local-character-set(UTF-8/GBK/...) and UTF-16/32.
  * 
- * Modified from UnicodeConverter
- * Copyright (c) 2010. Jianhui Qin (http://blog.csdn.net/jhqin)
+ * Modified from UnicodeConverter.
+ * Copyright (c) 2010. Jianhui Qin (http://blog.csdn.net/jhqin).
+ * 
+ * @remarks codecvt_utf8_utf16/std::wstring_convert is deprecated.
+ * @see https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
+ *      https://stackoverflow.com/questions/42946335/deprecated-header-codecvt-replacement
+ *      https://en.cppreference.com/w/cpp/locale/codecvt/in
  */
 namespace {
 
@@ -323,33 +332,37 @@ auto cvt_cstr_utf(T const *src, std::size_t slen, U *des, std::size_t dlen) noex
 // #define LIBIMP_DEF_CVT_CSTR_($char_t, $char_u)
 
 LIBIMP_DEF_CVT_CSTR_(char    , char)
-LIBIMP_DEF_CVT_CSTR_(char    , wchar_t)
 LIBIMP_DEF_CVT_CSTR_(char    , char16_t)
 LIBIMP_DEF_CVT_CSTR_(char    , char32_t)
 LIBIMP_DEF_CVT_CSTR_(wchar_t , wchar_t)
-LIBIMP_DEF_CVT_CSTR_(wchar_t , char)
-LIBIMP_DEF_CVT_CSTR_(wchar_t , char16_t)
-LIBIMP_DEF_CVT_CSTR_(wchar_t , char32_t)
 LIBIMP_DEF_CVT_CSTR_(char16_t, char16_t)
 LIBIMP_DEF_CVT_CSTR_(char16_t, char)
-LIBIMP_DEF_CVT_CSTR_(char16_t, wchar_t)
 LIBIMP_DEF_CVT_CSTR_(char16_t, char32_t)
 LIBIMP_DEF_CVT_CSTR_(char32_t, char32_t)
 LIBIMP_DEF_CVT_CSTR_(char32_t, char)
-LIBIMP_DEF_CVT_CSTR_(char32_t, wchar_t)
 LIBIMP_DEF_CVT_CSTR_(char32_t, char16_t)
+#if !defined(LIBIMP_OS_WIN)
+LIBIMP_DEF_CVT_CSTR_(char    , wchar_t)
+LIBIMP_DEF_CVT_CSTR_(wchar_t , char)
+LIBIMP_DEF_CVT_CSTR_(wchar_t , char16_t)
+LIBIMP_DEF_CVT_CSTR_(wchar_t , char32_t)
+LIBIMP_DEF_CVT_CSTR_(char16_t, wchar_t)
+LIBIMP_DEF_CVT_CSTR_(char32_t, wchar_t)
+#endif // !defined(LIBIMP_OS_WIN)
 
 #if defined(LIBIMP_CPP_20)
 LIBIMP_DEF_CVT_CSTR_(char8_t , char8_t)
 LIBIMP_DEF_CVT_CSTR_(char8_t , char)
-LIBIMP_DEF_CVT_CSTR_(char8_t , wchar_t)
 LIBIMP_DEF_CVT_CSTR_(char8_t , char16_t)
 LIBIMP_DEF_CVT_CSTR_(char8_t , char32_t)
 LIBIMP_DEF_CVT_CSTR_(char    , char8_t)
-LIBIMP_DEF_CVT_CSTR_(wchar_t , char8_t)
 LIBIMP_DEF_CVT_CSTR_(char16_t, char8_t)
 LIBIMP_DEF_CVT_CSTR_(char32_t, char8_t)
-#endif
+#if !defined(LIBIMP_OS_WIN)
+LIBIMP_DEF_CVT_CSTR_(char8_t , wchar_t)
+LIBIMP_DEF_CVT_CSTR_(wchar_t , char8_t)
+#endif // !defined(LIBIMP_OS_WIN)
+#endif // defined(LIBIMP_CPP_20)
 
 #undef LIBIMP_DEF_CVT_CSTR_
 
