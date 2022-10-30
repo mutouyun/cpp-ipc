@@ -40,18 +40,21 @@ void mmap_close(HANDLE h) {
     return;
   }
   if (!::CloseHandle(h)) {
-    log.error("CloseHandle fails. error = {}", sys::error_msg(sys::error_code()));
+    log.error("CloseHandle fails. error = {}", sys::error());
   }
 }
 
 /**
  * @brief Creates or opens a file mapping object for a specified file.
+ * 
  * @see https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-openfilemappinga
  *      https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createfilemappinga
+ * 
  * @param file Specifies the name of the file mapping object
  * @param size Specifies the size required to create a file mapping object.
  *             This size is ignored when opening an existing file mapping object
  * @param type Combinable open modes, create | open
+ * 
  * @return File mapping object HANDLE, NULL on error
  */
 HANDLE mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
@@ -65,26 +68,42 @@ HANDLE mmap_open(std::string const &file, std::size_t size, mode::type type) noe
     log.error("file name is empty. (TCHAR conversion failed)");
     return NULL;
   }
+
   /// @brief Opens a named file mapping object.
-  if (type == mode::open) {
+  auto try_open = [&]() -> HANDLE {
     HANDLE h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, t_name.c_str());
     if (h == NULL) {
-      log.error("OpenFileMapping fails. error = {}", sys::error_msg(sys::error_code()));
+      log.error("OpenFileMapping fails. error = {}", sys::error());
     }
     return h;
+  };
+
+  /// @brief Creates or opens a named or unnamed file mapping object for a specified file.
+  auto try_create = [&]() -> HANDLE {
+    HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
+                                   /// @remark dwMaximumSizeHigh always 0 here.
+                                   0, static_cast<DWORD>(size), t_name.c_str());
+    if (h == NULL) {
+      log.error("CreateFileMapping fails. error = {}", sys::error());
+      return NULL;
+    }
+    return h;
+  };
+
+  if (type == mode::open) {
+    return try_open();
+  } else if ((type == (mode::create | mode::open)) && (size == 0)) {
+    /// @remark CreateFileMapping may returns ERROR_INVALID_PARAMETER when dwMaximumSizeLow is zero.
+    /// @see CreateFileMapping (Windows CE 5.0)
+    ///      https://learn.microsoft.com/en-us/previous-versions/windows/embedded/aa517331(v=msdn.10)
+    return try_open();
   } else if (!(type & mode::create)) {
     log.error("mode type is invalid. type = {}", type);
     return NULL;
   }
-  /// @brief Creates or opens a named or unnamed file mapping object for a specified file.
-  HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
-                                 0, static_cast<DWORD>(size), t_name.c_str());
-  if (h == NULL) {
-    log.error("CreateFileMapping fails. error = {}", sys::error_msg(sys::error_code()));
-    return NULL;
-  }
-  // If the object exists before the function call, the function returns a handle to the existing object
-  // (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.
+  HANDLE h = try_create();
+  /// @remark If the object exists before the function call, the function returns a handle to the existing object
+  ///         (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.
   if ((type == mode::create) && (::GetLastError() == ERROR_ALREADY_EXISTS)) {
     mmap_close(h);
     log.info("the file being created already exists. file = {}, type = {}", file, type);
@@ -105,7 +124,7 @@ LPVOID mmap_memof(HANDLE h) {
   }
   LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
   if (h == NULL) {
-    log.error("MapViewOfFile fails. error = {}", sys::error_msg(sys::error_code()));
+    log.error("MapViewOfFile fails. error = {}", sys::error());
     return NULL;
   }
   return mem;
@@ -123,7 +142,7 @@ SIZE_T mmap_sizeof(LPCVOID mem) {
   }
   MEMORY_BASIC_INFORMATION mem_info {};
   if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
-    log.error("VirtualQuery fails. error = {}", sys::error_msg(sys::error_code()));
+    log.error("VirtualQuery fails. error = {}", sys::error());
     return 0;
   }
   return mem_info.RegionSize;
@@ -144,7 +163,7 @@ void mmap_release(HANDLE h, LPCVOID mem) {
     return;
   }
   if (!::UnmapViewOfFile(mem)) {
-    log.warning("UnmapViewOfFile fails. error = {}", sys::error_msg(sys::error_code()));
+    log.warning("UnmapViewOfFile fails. error = {}", sys::error());
   }
   mmap_close(h);
 }

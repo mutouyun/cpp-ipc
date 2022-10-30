@@ -67,7 +67,7 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
                                           S_IRGRP | S_IWGRP |
                                           S_IROTH | S_IWOTH);
   if (fd == posix::failed) {
-    log.error("shm_open fails. error = {}", sys::error_msg(sys::error_code()));
+    log.error("shm_open fails. error = {}", sys::error());
     return {};
   }
 
@@ -75,14 +75,14 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
     /// @brief Try to get the size of this fd
     struct stat st;
     if (::fstat(fd, &st) == posix::failed) {
-      log.error("fstat fails. error = {}", sys::error_msg(sys::error_code()));
+      log.error("fstat fails. error = {}", sys::error());
       ::shm_unlink(name.c_str());
       return {};
     }
     size = static_cast<std::size_t>(st.st_size);
     /// @brief Truncate this fd to a specified length
   } else if (::ftruncate(fd, size) != 0) {
-    log.error("ftruncate fails. error = {}", sys::error_msg(sys::error_code()));
+    log.error("ftruncate fails. error = {}", sys::error());
     ::shm_unlink(name.c_str());
     return {};
   }
@@ -90,7 +90,7 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   /// @brief Creates a new mapping in the virtual address space of the calling process.
   void *mem = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (mem == MAP_FAILED) {
-    log.error("mmap fails. error = {}", sys::error_msg(sys::error_code()));
+    log.error("mmap fails. error = {}", sys::error());
     ::shm_unlink(name.c_str());
     return {};
   }
@@ -114,7 +114,7 @@ result_code shm_close(shm_t h) noexcept {
   }
   if (::munmap(shm->memp, shm->f_sz) == posix::failed) {
     auto ec = sys::error_code();
-    log.error("munmap fails. error = {}", sys::error_msg(ec));
+    log.error("munmap fails. error = {}", sys::error(ec));
     return ec;
   }
   /// @brief no unlink the file.

@@ -37,6 +37,37 @@ LIBIMP_EXPORT std::size_t shm_size(shm_t) noexcept;
 
 /// @brief Gets the name of the shared memory file based on the shared memory handle.
 /// @return empty string on failure.
-LIBIMP_EXPORT std::string shm_file(shm_t) noexcept;
+LIBIMP_EXPORT std::string shm_name(shm_t) noexcept;
+
+/**
+ * @brief The shared memory object.
+ */
+class LIBIMP_EXPORT shared_memory {
+  shm_t shm_;
+
+public:
+  explicit shared_memory() noexcept;
+  ~shared_memory() noexcept;
+
+  shared_memory(shared_memory &&other) noexcept;
+  shared_memory &operator=(shared_memory &&rhs) & noexcept;
+  void swap(shared_memory &other) noexcept;
+
+  explicit shared_memory(std::string name, 
+                         std::size_t size = 0, 
+                         mode::type = mode::create | mode::open) noexcept;
+
+  bool open(std::string name, std::size_t size, mode::type) noexcept;
+  void close() noexcept;
+  bool valid() const noexcept;
+
+  void *get() const noexcept;
+  void *operator*() const noexcept;
+  template <typename T>
+  T *as() { return static_cast<T *>(get()); }
+
+  std::size_t size() const noexcept;
+  std::string name() const noexcept;
+};
 
 LIBIPC_NAMESPACE_END_

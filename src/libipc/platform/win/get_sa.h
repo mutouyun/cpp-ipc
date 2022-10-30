@@ -30,11 +30,11 @@ inline LPSECURITY_ATTRIBUTES get_sa() {
       using namespace ::LIBIMP_;
       log::gripper log {"get_sa"};
       if (!::InitializeSecurityDescriptor(&sd_, SECURITY_DESCRIPTOR_REVISION)) {
-        log.error("InitializeSecurityDescriptor fails. error = {}", sys::error_msg(sys::error_code()));
+        log.error("InitializeSecurityDescriptor fails. error = {}", sys::error());
         return;
       }
       if (!::SetSecurityDescriptorDacl(&sd_, TRUE, NULL, FALSE)) {
-        log.error("SetSecurityDescriptorDacl fails. error = {}", sys::error_msg(sys::error_code()));
+        log.error("SetSecurityDescriptorDacl fails. error = {}", sys::error());
         return;
       }
       sa_.nLength = sizeof(SECURITY_ATTRIBUTES);
