@@ -17,23 +17,25 @@
 
 LIBIMP_NAMESPACE_BEG_
 
+using result_type = std::uint64_t;
+
 /**
  * @brief Use the least significant (in Little-Endian) of 
  * a 64-bit unsigned integer to indicate success or failure,
  * so the data significant bit cannot exceed 63 bits.
  */
 class LIBIMP_EXPORT result_code {
-  std::uint64_t status_;
+  result_type status_;
 
 public:
   result_code() noexcept;
-  result_code(std::uint64_t value) noexcept;
-  result_code(bool ok, std::uint64_t value) noexcept;
+  result_code(result_type value) noexcept;
+  result_code(bool ok, result_type value) noexcept;
 
-  std::uint64_t value() const noexcept;
+  result_type value() const noexcept;
   bool ok() const noexcept;
 
-  std::uint64_t operator*() const noexcept {
+  result_type operator*() const noexcept {
     return value();
   }
   explicit operator bool() const noexcept {
@@ -62,10 +64,10 @@ template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
   constexpr static T value() noexcept { return 0; }
 
-  static std::uint64_t cast_to_code(T value) noexcept {
-    return static_cast<std::uint64_t>(value);
+  static result_type cast_to_code(T value) noexcept {
+    return static_cast<result_type>(value);
   }
-  static T cast_from_code(std::uint64_t code) noexcept {
+  static T cast_from_code(result_type code) noexcept {
     return static_cast<T>(code);
   }
   template <typename Out>
@@ -78,10 +80,10 @@ template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
   constexpr static T value() noexcept { return nullptr; }
 
-  static std::uint64_t cast_to_code(T value) noexcept {
-    return reinterpret_cast<std::uint64_t>(value);
+  static result_type cast_to_code(T value) noexcept {
+    return reinterpret_cast<result_type>(value);
   }
-  static T cast_from_code(std::uint64_t code) noexcept {
+  static T cast_from_code(result_type code) noexcept {
     return reinterpret_cast<T>(code);
   }
   template <typename Out>
@@ -89,7 +91,7 @@ struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
     if LIBIMP_LIKELY(r) {
       return format_to(out, "{}", static_cast<void *>(*r));
     }
-    return format_to(out, "{}, code = {}", static_cast<void *>(*r), r.code());
+    return format_to(out, "{}, code = {}", static_cast<void *>(*r), r.code_value());
   }
 };
 
@@ -137,12 +139,12 @@ public:
     : code_(default_traits_t::value() != value, 
             default_traits_t::cast_to_code(value)) {}
 
-  result(std::nullptr_t, std::uint64_t code) noexcept
+  result(std::nullptr_t, result_type code) noexcept
     : code_(false, code) {}
 
   T value() const noexcept { return code_.ok() ? default_traits_t::cast_from_code(code_.value()) : nullptr; }
   bool ok() const noexcept { return code_.ok(); }
-  std::uint64_t code() const noexcept { return code_.value(); }
+  result_type code_value() const noexcept { return code_.value(); }
 
   T operator*() const noexcept {
     return value();
@@ -171,7 +173,7 @@ struct fmt::formatter<::LIBIMP_::result<T, D>> {
 
 template <>
 struct fmt::formatter<::LIBIMP_::result_code>
-          : formatter<::LIBIMP_::result<std::uint64_t>> {
+          : formatter<::LIBIMP_::result<::LIBIMP_::result_type>> {
   template <typename FormatContext>
   auto format(::LIBIMP_::result_code r, FormatContext &ctx) {
     return format_to(ctx.out(), "[{}, value = {}]", (r ? "succ" : "fail"), *r);

@@ -33,15 +33,18 @@ namespace {
  * @brief Closes an open object handle.
  * @see https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
  */
-void mmap_close(HANDLE h) {
+result_code mmap_close(HANDLE h) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
-    return;
+    return {};
   }
   if (!::CloseHandle(h)) {
-    log.error("CloseHandle fails. error = {}", sys::error());
+    auto err = sys::error();
+    log.error("CloseHandle({}) fails. error = {}", h, err);
+    return err.code();
   }
+  return {ERROR_SUCCESS};
 }
 
 /**
@@ -57,35 +60,38 @@ void mmap_close(HANDLE h) {
  * 
  * @return File mapping object HANDLE, NULL on error
  */
-HANDLE mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
+result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();
   if (file.empty()) {
     log.error("file name is empty.");
-    return NULL;
+    return {};
   }
   auto t_name = detail::to_tstring(file);
   if (t_name.empty()) {
     log.error("file name is empty. (TCHAR conversion failed)");
-    return NULL;
+    return {};
   }
 
   /// @brief Opens a named file mapping object.
-  auto try_open = [&]() -> HANDLE {
+  auto try_open = [&]() -> result<HANDLE> {
     HANDLE h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, t_name.c_str());
     if (h == NULL) {
-      log.error("OpenFileMapping fails. error = {}", sys::error());
+      auto err = sys::error();
+      log.error("OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, {}) fails. error = {}", file, err);
+      return {nullptr, err.value()};
     }
     return h;
   };
 
   /// @brief Creates or opens a named or unnamed file mapping object for a specified file.
-  auto try_create = [&]() -> HANDLE {
+  auto try_create = [&]() -> result<HANDLE> {
     HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
                                    /// @remark dwMaximumSizeHigh always 0 here.
                                    0, static_cast<DWORD>(size), t_name.c_str());
     if (h == NULL) {
-      log.error("CreateFileMapping fails. error = {}", sys::error());
-      return NULL;
+      auto err = sys::error();
+      log.error("CreateFileMapping(PAGE_READWRITE | SEC_COMMIT, {}, {}) fails. error = {}", size, file, err);
+      return {nullptr, err.value()};
     }
     return h;
   };
@@ -99,15 +105,16 @@ HANDLE mmap_open(std::string const &file, std::size_t size, mode::type type) noe
     return try_open();
   } else if (!(type & mode::create)) {
     log.error("mode type is invalid. type = {}", type);
-    return NULL;
+    return {};
   }
-  HANDLE h = try_create();
+  auto h = try_create();
+  if (!h) return h;
   /// @remark If the object exists before the function call, the function returns a handle to the existing object
   ///         (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.
   if ((type == mode::create) && (::GetLastError() == ERROR_ALREADY_EXISTS)) {
-    mmap_close(h);
     log.info("the file being created already exists. file = {}, type = {}", file, type);
-    return NULL;
+    mmap_close(*h);
+    return {};
   }
   return h;
 }
@@ -116,16 +123,17 @@ HANDLE mmap_open(std::string const &file, std::size_t size, mode::type type) noe
  * @brief Maps a view of a file mapping into the address space of a calling process.
  * @see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
  */
-LPVOID mmap_memof(HANDLE h) {
+result<LPVOID> mmap_memof(HANDLE h) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
-    return NULL;
+    return {};
   }
   LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-  if (h == NULL) {
-    log.error("MapViewOfFile fails. error = {}", sys::error());
-    return NULL;
+  if (mem == NULL) {
+    auto err = sys::error();
+    log.error("MapViewOfFile({}, FILE_MAP_ALL_ACCESS) fails. error = {}", h, err);
+    return {nullptr, err.value()};
   }
   return mem;
 }
@@ -134,16 +142,17 @@ LPVOID mmap_memof(HANDLE h) {
  * @brief Retrieves the size about a range of pages in the virtual address space of the calling process.
  * @see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualquery
  */
-SIZE_T mmap_sizeof(LPCVOID mem) {
+result<SIZE_T> mmap_sizeof(LPCVOID mem) {
   LIBIMP_LOG_();
   if (mem == NULL) {
     log.error("memory pointer is null.");
-    return 0;
+    return {};
   }
   MEMORY_BASIC_INFORMATION mem_info {};
   if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
-    log.error("VirtualQuery fails. error = {}", sys::error());
-    return 0;
+    auto err = sys::error();
+    log.error("VirtualQuery({}) fails. error = {}", mem, err);
+    return {false, (SIZE_T)err.value()};
   }
   return mem_info.RegionSize;
 }
@@ -152,20 +161,20 @@ SIZE_T mmap_sizeof(LPCVOID mem) {
  * @brief Unmaps a mapped view of a file from the calling process's address space.
  * @see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-unmapviewoffile
  */
-void mmap_release(HANDLE h, LPCVOID mem) {
+result_code mmap_release(HANDLE h, LPCVOID mem) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
-    return;
+    return {};
   }
   if (mem == NULL) {
     log.error("memory pointer is null.");
-    return;
+    return {};
   }
   if (!::UnmapViewOfFile(mem)) {
     log.warning("UnmapViewOfFile fails. error = {}", sys::error());
   }
-  mmap_close(h);
+  return mmap_close(h);
 }
 
 } // namespace

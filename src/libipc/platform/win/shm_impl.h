@@ -22,13 +22,21 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   auto h = mmap_open(name, size, type);
   if (h == NULL) {
     log.error("mmap_open failed.");
-    return {nullptr, *sys::error_code()};
+    return {nullptr, h.code_value()};
   }
-  auto mem = mmap_memof(h);
-  if (mem == NULL) {
-    log.warning("mmap_memof failed.");
+  auto mem = mmap_memof(*h);
+  if (*mem == NULL) {
+    log.error("mmap_memof failed.");
+    mmap_close(*h);
+    return {nullptr, mem.code_value()};
   }
-  return new shm_handle{std::move(name), mmap_sizeof(mem), mem, h};
+  auto sz = mmap_sizeof(*mem);
+  if (!sz) {
+    log.error("mmap_sizeof failed.");
+    mmap_close(*h);
+    return {nullptr, static_cast<result_type>(sz.value())};
+  }
+  return new shm_handle{std::move(name), *sz, *mem, *h};
 }
 
 result_code shm_close(shm_t h) noexcept {
@@ -38,9 +46,9 @@ result_code shm_close(shm_t h) noexcept {
     return {};
   }
   auto shm = static_cast<shm_handle *>(h);
-  mmap_release(shm->h_fmap, shm->memp);
+  auto ret = mmap_release(shm->h_fmap, shm->memp);
   delete shm;
-  return {0};
+  return ret;
 }
 
 LIBIPC_NAMESPACE_END_

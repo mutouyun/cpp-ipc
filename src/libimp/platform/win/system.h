@@ -25,7 +25,9 @@ namespace sys {
  */
 result_code error_code() noexcept {
   auto err = ::GetLastError();
-  if (err == ERROR_SUCCESS) return {true};
+  if (err == ERROR_SUCCESS) {
+    return {ERROR_SUCCESS};
+  }
   return {false, std::uint64_t(err)};
 }
 
@@ -82,7 +84,7 @@ std::string error_str(result_code code) noexcept {
  * https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
  * https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getnativesysteminfo
  */
-std::int64_t conf(info r) noexcept {
+result<std::int64_t> conf(info r) noexcept {
   LIBIMP_LOG_();
   switch (r) {
   case info::page_size: {
@@ -92,7 +94,7 @@ std::int64_t conf(info r) noexcept {
   }
   default:
     log.error("invalid info = {}", enum_cast(r));
-    return -1;
+    return {};
   }
 }
 
