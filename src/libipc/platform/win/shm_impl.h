@@ -40,7 +40,7 @@ result_code shm_close(shm_t h) noexcept {
   auto shm = static_cast<shm_handle *>(h);
   mmap_release(shm->h_fmap, shm->memp);
   delete shm;
-  return {true};
+  return {0};
 }
 
 LIBIPC_NAMESPACE_END_

@@ -12,7 +12,7 @@ TEST(result, ok) {
   EXPECT_FALSE(ret.ok());
   EXPECT_EQ(ret.value(), 0);
 
-  ret = {true};
+  ret = {true, 0};
   EXPECT_TRUE(ret);
   EXPECT_TRUE(ret.ok());
   EXPECT_EQ(ret.value(), 0);
@@ -29,7 +29,7 @@ TEST(result, code) {
   EXPECT_TRUE(ret.ok());
   EXPECT_EQ(ret.value(), 1234);
 
-  ret = {false};
+  ret = {false, 0};
   EXPECT_FALSE(ret);
   EXPECT_FALSE(ret.ok());
   EXPECT_EQ(ret.value(), 0);
@@ -62,7 +62,7 @@ TEST(result, fmt) {
     EXPECT_EQ(fmt::format("{}", r1), "[fail, value = 0]");
     imp::result_code r2(true, 65537);
     EXPECT_EQ(fmt::format("{}", r2), "[succ, value = 65537]");
-    imp::result_code r3(true);
+    imp::result_code r3(0);
     EXPECT_EQ(fmt::format("{}", r3), "[succ, value = 0]");
   }
   {

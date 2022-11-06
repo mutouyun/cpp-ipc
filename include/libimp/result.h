@@ -27,7 +27,8 @@ class LIBIMP_EXPORT result_code {
 
 public:
   result_code() noexcept;
-  result_code(bool ok, std::uint64_t value = {}) noexcept;
+  result_code(std::uint64_t value) noexcept;
+  result_code(bool ok, std::uint64_t value) noexcept;
 
   std::uint64_t value() const noexcept;
   bool ok() const noexcept;
@@ -103,7 +104,11 @@ public:
   using default_traits_t = DefTraits;
 
   result() noexcept = default;
-  result(bool ok, T value = default_traits_t::value()) noexcept
+
+  result(T value) noexcept
+    : result(true, std::move(value)) {}
+
+  result(bool ok, T value) noexcept
     : code_(ok, default_traits_t::cast_to_code(value)) {}
 
   T value() const noexcept { return default_traits_t::cast_from_code(code_.value()); }

@@ -31,13 +31,23 @@ struct shm_handle {
   void *memp;
 };
 
-/**
- * @see https://man7.org/linux/man-pages/man3/shm_open.3.html
- *      https://man7.org/linux/man-pages/man3/fstat.3p.html
- *      https://man7.org/linux/man-pages/man3/ftruncate.3p.html
- *      https://man7.org/linux/man-pages/man2/mmap.2.html
- */
-result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noexcept {
+namespace {
+
+shm_handle *valid(shm_t h) noexcept {
+  LIBIMP_LOG_();
+  if (h == nullptr) {
+    log.error("shm handle is null.");
+    return nullptr;
+  }
+  auto shm = static_cast<shm_handle *>(h);
+  if (shm->memp == nullptr) {
+    log.error("memory pointer is null.");
+    return nullptr;
+  }
+  return shm;
+}
+
+result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
   LIBIMP_LOG_();
   if (name.empty()) {
     log.error("name is empty.");
@@ -48,7 +58,6 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   int flag = O_RDWR;
   switch (type) {
   case mode::open:
-    size = 0;
     break;
   // The check for the existence of the object, 
   // and its creation if it does not exist, are performed atomically.
@@ -65,50 +74,64 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   }
 
   /// @brief Create/Open POSIX shared memory bject
-  int fd = ::shm_open(name.c_str(), flag, S_IRUSR | S_IWUSR |
-                                          S_IRGRP | S_IWGRP |
-                                          S_IROTH | S_IWOTH);
-  if (fd == posix::failed) {
+  return ::shm_open(name.c_str(), flag, S_IRUSR | S_IWUSR |
+                                        S_IRGRP | S_IWGRP |
+                                        S_IROTH | S_IWOTH);
+}
+
+result_code ftruncate_fd(int fd, std::size_t size) noexcept {
+  LIBIMP_LOG_();
+  /// @see https://man7.org/linux/man-pages/man3/ftruncate.3p.html
+  if (::ftruncate(fd, size) != posix::succ) {
+    auto err = sys::error();
+    log.error("ftruncate({}, {}) fails. error = {}", fd, size, err);
+    return err.code();
+  }
+  return {posix::succ};
+}
+
+} // namespace
+
+/**
+ * @see https://man7.org/linux/man-pages/man3/shm_open.3.html
+ *      https://man7.org/linux/man-pages/man3/fstat.3p.html
+ *      https://man7.org/linux/man-pages/man2/mmap.2.html
+ */
+result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noexcept {
+  LIBIMP_LOG_();
+  auto fd = shm_open_fd(name, type);
+  if (!fd) return {};
+  if (*fd == posix::failed) {
     log.error("shm_open fails. error = {}", sys::error());
     return {};
   }
-  LIBIMP_UNUSED auto guard = std::unique_ptr<int, void (*)(int *)>(&fd, [](int *pfd) {
-    if (pfd != nullptr) ::close(*pfd);
-  });
+  LIBIMP_UNUSED auto guard = std::unique_ptr<decltype(fd), void (*)(decltype(fd) *)> {
+    &fd, [](decltype(fd) *pfd) {
+      if (pfd != nullptr) ::close(**pfd);
+    }};
 
   /// @brief Try to get the size of this fd
   struct stat st;
-  if (::fstat(fd, &st) == posix::failed) {
+  if (::fstat(*fd, &st) == posix::failed) {
     log.error("fstat fails. error = {}", sys::error());
-    ::shm_unlink(name.c_str());
     return {};
   }
 
   /// @brief Truncate this fd to a specified length
-  auto ftruncate = [&log, &name](int fd, std::size_t size) {
-    if (::ftruncate(fd, size) != 0) {
-      log.error("ftruncate fails. error = {}", sys::error());
-      ::shm_unlink(name.c_str());
-      return false;
-    }
-    return true;
-  };
-
   if (size == 0) {
     size = static_cast<std::size_t>(st.st_size);
-    if (!ftruncate(fd, size)) return {};
+    if (!ftruncate_fd(*fd, size)) return {};
   } else if (st.st_size > 0) {
     /// @remark Based on the actual size.
     size = static_cast<std::size_t>(st.st_size);
   } else { // st.st_size <= 0
-    if (!ftruncate(fd, size)) return {};
+    if (!ftruncate_fd(*fd, size)) return {};
   }
 
   /// @brief Creates a new mapping in the virtual address space of the calling process.
-  void *mem = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  void *mem = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0);
   if (mem == MAP_FAILED) {
     log.error("mmap fails. error = {}", sys::error());
-    ::shm_unlink(name.c_str());
     return {};
   }
   return new shm_handle{std::move(name), size, mem};
@@ -119,23 +142,16 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
  */
 result_code shm_close(shm_t h) noexcept {
   LIBIMP_LOG_();
-  if (h == nullptr) {
-    log.error("shm handle is null.");
-    return {};
-  }
-  auto shm = static_cast<shm_handle *>(h);
-  if (shm->memp == nullptr) {
-    log.error("memory pointer is null.");
-    return {};
-  }
+  auto shm = valid(h);
+  if (shm == nullptr) return {};
   if (::munmap(shm->memp, shm->f_sz) == posix::failed) {
-    auto ec = sys::error_code();
-    log.error("munmap fails. error = {}", sys::error(ec));
-    return ec;
+    auto err = sys::error();
+    log.error("munmap({}, {}) fails. error = {}", shm->memp, shm->f_sz, err);
+    return err.code();
   }
   /// @brief no unlink the file.
   delete shm;
-  return {true};
+  return {posix::succ};
 }
 
 LIBIPC_NAMESPACE_END_

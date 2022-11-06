@@ -21,7 +21,10 @@ result_code_info info_cast(std::uint64_t status) noexcept {
 } // namespace
 
 result_code::result_code() noexcept
-  : result_code(false) {}
+  : result_code(false, {}) {}
+
+result_code::result_code(std::uint64_t value) noexcept
+  : result_code(true, value) {}
 
 result_code::result_code(bool ok, std::uint64_t code) noexcept
   : status_(make_status(ok, code)) {}

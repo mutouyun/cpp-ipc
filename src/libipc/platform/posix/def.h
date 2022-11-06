@@ -10,6 +10,7 @@ LIBIPC_NAMESPACE_BEG_
 namespace posix {
 
 enum : int {
+  succ   = 0,
   failed = -1,
 };
 
