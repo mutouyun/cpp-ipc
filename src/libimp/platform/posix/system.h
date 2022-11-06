@@ -14,13 +14,17 @@
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
 
+#ifndef ENOERR
+#define ENOERR (0)
+#endif
+
 /**
  * @brief Get the system error code
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
 result_code error_code() noexcept {
   auto err = errno;
-  if (err == 0) return {true};
+  if (err == ENOERR) return {ENOERR};
   return {false, std::uint64_t(err)};
 }
 
@@ -29,7 +33,7 @@ result_code error_code() noexcept {
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
 void error_code(result_code code) noexcept {
-  errno = code ? 0 : (int)code.value();
+  errno = code ? ENOERR : (int)code.value();
 }
 
 /**
@@ -56,7 +60,7 @@ std::string error_str(result_code code) noexcept {
  * https://man7.org/linux/man-pages/man2/getpagesize.2.html
  * https://man7.org/linux/man-pages/man3/sysconf.3.html
  */
-std::int64_t conf(info r) noexcept {
+result<std::int64_t> conf(info r) noexcept {
   LIBIMP_LOG_();
   switch (r) {
   case info::page_size: {
@@ -66,10 +70,11 @@ std::int64_t conf(info r) noexcept {
   }
   default:
     log.error("invalid info = {}", enum_cast(r));
-    return -1;
+    return {};
   }
-  log.error("info = {}, error = {}", enum_cast(r), error_msg(error_code()));
-  return -1;
+  auto err = sys::error();
+  log.error("info = {}, error = {}", enum_cast(r), err);
+  return {false, (int)err.value()};
 }
 
 } // namespace sys

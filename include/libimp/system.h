@@ -61,7 +61,7 @@ public:
 enum class info : std::int32_t {
   page_size,
 };
-LIBIMP_EXPORT std::int64_t conf(info) noexcept;
+LIBIMP_EXPORT result<std::int64_t> conf(info) noexcept;
 
 } // namespace sys
 LIBIMP_NAMESPACE_END_

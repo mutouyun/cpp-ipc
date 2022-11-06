@@ -67,5 +67,7 @@ TEST(system, error_str) {
 }
 
 TEST(system, conf) {
-  EXPECT_EQ(imp::sys::conf(imp::sys::info::page_size), 4096);
+  auto ret = imp::sys::conf(imp::sys::info::page_size);
+  EXPECT_TRUE(ret);
+  EXPECT_EQ(ret.value(), 4096);
 }
