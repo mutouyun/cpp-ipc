@@ -1,11 +1,17 @@
+/**
+ * @file libconcur/concurrent.h
+ * @author mutouyun (orz@orzz.org)
+ * @brief Define different policies for concurrent queue
+ * @date 2022-11-07
+ */
+#pragma once
 
 #include <cstdint>
 #include <limits>
 
-#include "libipc/def.h"
+#include "libconcur/def.h"
 
-LIBIPC_NAMESPACE_BEG_
-namespace concurrent {
+LIBCONCUR_NAMESPACE_BEG_
 
 /// @brief The queue index type.
 using index_t = std::uint32_t;
@@ -22,5 +28,4 @@ enum : flag_t {
 
 } // namespace state
 
-} // namespace concurrent
-LIBIPC_NAMESPACE_END_
+LIBCONCUR_NAMESPACE_END_
