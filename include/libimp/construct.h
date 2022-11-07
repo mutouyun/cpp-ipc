@@ -45,6 +45,7 @@ auto construct(void *p, A &&... args)
 
 template <typename T>
 void *destroy(T *p) noexcept {
+  if (p == nullptr) return nullptr;
 #if defined(LIBIMP_CPP_17)
   std::destroy_at(p);
 #else
@@ -55,6 +56,7 @@ void *destroy(T *p) noexcept {
 
 template <typename T, std::size_t N>
 void *destroy(T (*p)[N]) noexcept {
+  if (p == nullptr) return nullptr;
 #if defined(LIBIMP_CPP_20)
   std::destroy_at(p);
 #elif defined(LIBIMP_CPP_17)
