@@ -16,12 +16,17 @@
 #include <algorithm>
 #include <cstdint>
 #include <initializer_list>
-#ifdef LIBIMP_CPP_20
-#include <span>
-#endif // LIBIMP_CPP_20
+
+#include "fmt/format.h"
 
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
+#include "libimp/byte.h"
+
+#if defined(LIBIMP_CPP_20) && defined(__cpp_lib_span)
+#include <span>
+#define LIBIMP_CPP_LIB_SPAN_
+#endif // __cpp_lib_span
 
 LIBIMP_NAMESPACE_BEG_
 namespace detail {
@@ -138,13 +143,13 @@ public:
     : ptr_   (s.data())
     , extent_(s.size()) {}
 
-#if defined(LIBIMP_CPP_20) || defined(__cpp_lib_span)
+#ifdef LIBIMP_CPP_LIB_SPAN_
   template <typename U, std::size_t E,
             typename = detail::is_array_convertible<U, T>>
   constexpr span(std::span<U, E> const &s) noexcept
     : ptr_   (s.data())
     , extent_(s.size()) {}
-#endif // LIBIMP_CPP_20
+#endif // LIBIMP_CPP_LIB_SPAN_
 
   constexpr size_type size() const noexcept {
     return extent_;
@@ -221,9 +226,9 @@ bool operator==(span<T> a, span<U> b) noexcept {
 /// @see https://en.cppreference.com/w/cpp/container/span/as_bytes
 
 template <typename T, 
-          typename Byte = typename std::conditional<std::is_const<T>::value, std::uint8_t const, std::uint8_t>::type>
+          typename Byte = typename std::conditional<std::is_const<T>::value, byte const, byte>::type>
 auto as_bytes(span<T> s) noexcept -> span<Byte> {
-  return {reinterpret_cast<Byte *>(s.data()), s.size_bytes()};
+  return {byte_cast(s.data()), s.size_bytes()};
 }
 
 /// @brief Constructs an object of type T and wraps it in a span.
@@ -274,3 +279,21 @@ inline auto make_span(std::string const &str) noexcept -> span<char const> {
 }
 
 LIBIMP_NAMESPACE_END_
+
+template <typename T>
+struct fmt::formatter<::LIBIMP_::span<T>> {
+  constexpr auto parse(format_parse_context& ctx) const {
+    return ctx.end();
+  }
+  template <typename FormatContext>
+  auto format(::LIBIMP_::span<T> s, FormatContext &ctx) {
+    if (s.empty()) {
+      return format_to(ctx.out(), "");
+    }
+    auto appender = format_to(ctx.out(), "{}", s[0]);
+    for (std::size_t i = 1; i < s.size(); ++i) {
+      appender = format_to(appender, " {}", s[i]);
+    }
+    return appender;
+  }
+};

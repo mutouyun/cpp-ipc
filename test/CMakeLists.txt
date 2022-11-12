@@ -13,8 +13,12 @@ include_directories(
   ${LIBIPC_PROJECT_DIR}/src
   ${LIBIPC_PROJECT_DIR}/test)
 
-file(GLOB SRC_FILES  ${LIBIPC_PROJECT_DIR}/test/*.cpp)
-file(GLOB HEAD_FILES ${LIBIPC_PROJECT_DIR}/test/*.h)
+file(GLOB SRC_FILES
+  ${LIBIPC_PROJECT_DIR}/test/imp/*.cpp
+  ${LIBIPC_PROJECT_DIR}/test/*.cpp)
+
+file(GLOB HEAD_FILES
+  ${LIBIPC_PROJECT_DIR}/test/*.h)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 

@@ -41,7 +41,7 @@ TEST(span, span) {
     test_proc(imp::make_span({6, 7, 8, 9}), sp.last(4));
     test_proc(imp::make_span({3, 4, 5, 6}), sp.subspan(3, 4));
     test_proc(imp::make_span({3, 4, 5, 6, 7, 8, 9}), sp.subspan(3));
-    test_proc(imp::make_span((char *)sp.data(), sp.size_bytes()), imp::as_bytes(sp));
+    test_proc(imp::make_span((imp::byte *)sp.data(), sp.size_bytes()), imp::as_bytes(sp));
   }
   {
     std::string buf = "0123456789";
@@ -53,4 +53,9 @@ TEST(span, span) {
     test_proc(imp::make_span("3456", 4), sp.subspan(3, 4));
     test_proc(imp::make_span("3456789", 7), sp.subspan(3));
   }
+}
+
+TEST(span, fmt) {
+  EXPECT_EQ(fmt::format("{}", imp::span<int>{}), "");
+  EXPECT_EQ(fmt::format("{}", imp::make_span({1, 3, 2, 4, 5, 6, 7})), "1 3 2 4 5 6 7");
 }
