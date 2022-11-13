@@ -1,7 +1,7 @@
 /**
  * @file libimp/def.h
  * @author mutouyun (orz@orzz.org)
- * @brief Define the trivial configuration information
+ * @brief Define the trivial configuration information.
  * @date 2022-04-23
  */
 #pragma once
@@ -15,6 +15,6 @@
 
 LIBIMP_NAMESPACE_BEG_
 
-// constants
+/// @brief Constants.
 
 LIBIMP_NAMESPACE_END_

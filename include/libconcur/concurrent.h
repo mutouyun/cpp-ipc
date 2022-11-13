@@ -1,7 +1,7 @@
 /**
  * @file libconcur/concurrent.h
  * @author mutouyun (orz@orzz.org)
- * @brief Define different policies for concurrent queue
+ * @brief Define different policies for concurrent queue.
  * @date 2022-11-07
  */
 #pragma once

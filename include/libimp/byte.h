@@ -1,7 +1,7 @@
 /**
  * @file libimp/byte.h
  * @author mutouyun (orz@orzz.org)
- * @brief Define the byte type
+ * @brief Define the byte type.
  * @date 2022-11-12
  */
 #pragma once

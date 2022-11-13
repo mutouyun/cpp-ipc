@@ -1,7 +1,7 @@
 /**
  * @file libconcur/def.h
  * @author mutouyun (orz@orzz.org)
- * @brief Define the trivial configuration information for concurrency
+ * @brief Define the trivial configuration information for concurrency.
  * @date 2022-11-07
  */
 #pragma once

@@ -15,6 +15,7 @@ include_directories(
 
 file(GLOB SRC_FILES
   ${LIBIPC_PROJECT_DIR}/test/imp/*.cpp
+  ${LIBIPC_PROJECT_DIR}/test/pmr/*.cpp
   ${LIBIPC_PROJECT_DIR}/test/*.cpp)
 
 file(GLOB HEAD_FILES
@@ -23,5 +24,5 @@ file(GLOB HEAD_FILES
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 
 link_directories(${LIBIPC_PROJECT_DIR}/3rdparty/gperftools)
-target_link_libraries(${PROJECT_NAME} gtest_main imp ipc)
+target_link_libraries(${PROJECT_NAME} gtest_main imp pmr ipc)
 #target_link_libraries(${PROJECT_NAME} tcmalloc_minimal)
