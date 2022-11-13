@@ -47,8 +47,8 @@ void *new_delete_resource::do_allocate(std::size_t bytes, std::size_t alignment)
     return std::malloc(bytes);
   }
 #if defined(LIBIMP_CPP_17)
+  /// @see https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
   LIBIMP_TRY {
-    /// @see https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
     return std::aligned_alloc(alignment, bytes);
   } LIBIMP_CATCH(std::exception const &e) {
     log.error("std::aligned_alloc(alignment = {}, bytes = {}) fails. error = {}", 
@@ -91,27 +91,32 @@ void new_delete_resource::do_deallocate(void* p, std::size_t bytes, std::size_t 
   if (!verify_args(log, bytes, alignment)) {
     return;
   }
-  if (alignment <= alignof(std::max_align_t)) {
+  auto std_free = [&log, bytes, alignment](void* p) noexcept {
     /// @see https://en.cppreference.com/w/cpp/memory/c/free
-    std::free(p);
+    LIBIMP_TRY {
+      std::free(p);
+    } LIBIMP_CATCH(std::exception const &e) {
+      log.error("std::free(p = {}) fails, alignment = {}, bytes = {}. error = {}", 
+                p, alignment, bytes, e.what());
+    } LIBIMP_CATCH(...) {
+      log.error("std::free(p = {}) fails, alignment = {}, bytes = {}. error = unknown exception", 
+                p, alignment, bytes);
+    }
+  };
+#if defined(LIBIMP_CPP_17)
+  std_free(p);
+#else
+  if (alignment <= alignof(std::max_align_t)) {
+    std_free(p);
     return;
   }
-#if defined(LIBIMP_CPP_17)
-  LIBIMP_TRY {
-    std::free(p);
-  } LIBIMP_CATCH(std::exception const &e) {
-    log.error("std::free(p = {}) fails, alignment = {}, bytes = {}. error = {}", 
-               p, alignment, bytes, e.what());
-  } LIBIMP_CATCH(...) {
-    log.error("std::free(p = {}) fails, alignment = {}, bytes = {}. error = unknown exception", 
-               p, alignment, bytes);
-  }
-#elif defined(LIBIMP_OS_WIN)
+#if defined(LIBIMP_OS_WIN)
   /// @see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/aligned-free
   ::_aligned_free(p);
 #else // try posix
   ::free(p);
 #endif
+#endif // defined(LIBIMP_CPP_17)
 }
 
 LIBPMR_NAMESPACE_END_
