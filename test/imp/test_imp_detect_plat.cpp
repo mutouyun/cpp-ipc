@@ -24,6 +24,7 @@ TEST(detect_plat, os) {
 #else
   ASSERT_TRUE(false);
 #endif
+  SUCCEED();
 }
 
 TEST(detect_plat, cc) {
@@ -34,6 +35,7 @@ TEST(detect_plat, cc) {
 #else
   ASSERT_TRUE(false);
 #endif
+  SUCCEED();
 }
 
 TEST(detect_plat, cpp) {
@@ -46,6 +48,7 @@ TEST(detect_plat, cpp) {
 #else
   ASSERT_TRUE(false);
 #endif
+  SUCCEED();
 }
 
 TEST(detect_plat, byte_order) {
@@ -73,10 +76,12 @@ TEST(detect_plat, fallthrough) {
     std::cout << "fallthrough default\n";
     break;
   }
+  SUCCEED();
 }
 
 TEST(detect_plat, unused) {
   LIBIMP_UNUSED int abc;
+  SUCCEED();
 }
 
 TEST(detect_plat, likely_unlikely) {
@@ -88,4 +93,5 @@ TEST(detect_plat, likely_unlikely) {
   } else {
     std::cout << "sizeof(int) < whatever\n";
   }
+  SUCCEED();
 }
