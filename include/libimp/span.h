@@ -31,7 +31,7 @@
 LIBIMP_NAMESPACE_BEG_
 namespace detail {
 
-/// @brief helper trait for span
+/// @brief Helper trait for span.
 
 template <typename From, typename To>
 using array_convertible = std::is_convertible<From(*)[], To(*)[]>;

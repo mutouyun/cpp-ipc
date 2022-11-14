@@ -6,10 +6,37 @@
  */
 #pragma once
 
+#include <type_traits>
+
+#include "libimp/export.h"
+
 #include "libpmr/def.h"
 #include "libpmr/memory_resource.h"
 
 LIBPMR_NAMESPACE_BEG_
+namespace detail {
+
+/// @brief Helper trait for allocator.
+
+template <typename T, typename = void>
+struct has_allocate : std::false_type {};
+
+template <typename T>
+struct has_allocate<T, 
+  typename std::enable_if<std::is_convertible<
+  decltype(std::declval<T &>().allocate(std::declval<std::size_t>())), void *
+  >::value>::type> : std::true_type {};
+
+template <typename T, typename = void>
+struct has_deallocate : std::false_type {};
+
+template <typename T>
+struct has_deallocate<T, 
+  decltype(std::declval<T &>().deallocate(std::declval<void *>(), 
+                                          std::declval<std::size_t>()))
+  > : std::true_type {};
+
+} // namespace detail
 
 /**
  * @brief An allocator which exhibits different allocation behavior 
@@ -23,6 +50,8 @@ LIBPMR_NAMESPACE_BEG_
  * @see https://en.cppreference.com/w/cpp/memory/memory_resource
  *      https://en.cppreference.com/w/cpp/memory/polymorphic_allocator
  */
+class LIBIMP_EXPORT allocator {
 
+};
 
 LIBPMR_NAMESPACE_END_

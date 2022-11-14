@@ -1,6 +1,5 @@
 
 #include <cstdlib>    // std::aligned_alloc
-#include <cstddef>    // std::max_align_t
 #include <exception>
 
 #include "libimp/detect_plat.h"
@@ -37,7 +36,7 @@ bool verify_args(::LIBIMP_::log::gripper &log, std::size_t bytes, std::size_t al
  * 
  * @return void * - nullptr if storage of the requested size and alignment cannot be obtained.
  */
-void *new_delete_resource::do_allocate(std::size_t bytes, std::size_t alignment) noexcept {
+void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) noexcept {
   LIBIMP_LOG_();
   if (!verify_args(log, bytes, alignment)) {
     return nullptr;
@@ -83,7 +82,7 @@ void *new_delete_resource::do_allocate(std::size_t bytes, std::size_t alignment)
  * 
  * @param p must have been returned by a prior call to new_delete_resource::do_allocate(bytes, alignment).
  */
-void new_delete_resource::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) noexcept {
+void new_delete_resource::deallocate(void *p, std::size_t bytes, std::size_t alignment) noexcept {
   LIBIMP_LOG_();
   if (p == nullptr) {
     return;

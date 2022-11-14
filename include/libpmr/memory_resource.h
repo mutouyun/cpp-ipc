@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <cstddef>  // std::size_t
+#include <cstddef>  // std::size_t, std::max_align_t
 
 #include "libimp/export.h"
 #include "libpmr/def.h"
@@ -24,11 +24,11 @@ public:
   /// @brief Allocates storage with a size of at least bytes bytes, aligned to the specified alignment.
   /// @remark Returns nullptr if storage of the requested size and alignment cannot be obtained.
   /// @see https://en.cppreference.com/w/cpp/memory/memory_resource/do_allocate
-  void *do_allocate(std::size_t bytes, std::size_t alignment) noexcept;
+  void *allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept;
 
   /// @brief Deallocates the storage pointed to by p.
   /// @see https://en.cppreference.com/w/cpp/memory/memory_resource/deallocate
-  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) noexcept;
+  void deallocate(void *p, std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept;
 };
 
 LIBPMR_NAMESPACE_END_

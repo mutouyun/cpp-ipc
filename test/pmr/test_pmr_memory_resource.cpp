@@ -9,13 +9,13 @@ namespace {
 
 template <typename T>
 void *test_mr(T &&mr, std::size_t bytes, std::size_t alignment) {
-  auto p = std::forward<T>(mr).do_allocate(bytes, alignment);
+  auto p = std::forward<T>(mr).allocate(bytes, alignment);
   if (alignment == 0) {
     EXPECT_EQ(p, nullptr);
   } else if (p != nullptr) {
     EXPECT_EQ((std::size_t)p % alignment, 0);
   }
-  std::forward<T>(mr).do_deallocate(p, bytes, alignment);
+  std::forward<T>(mr).deallocate(p, bytes, alignment);
   return p;
 }
 
