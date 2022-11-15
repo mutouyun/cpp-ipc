@@ -17,6 +17,15 @@ TEST(allocator, detail) {
   EXPECT_TRUE (pmr::detail::has_allocate<std::pmr::memory_resource>::value);
   EXPECT_TRUE (pmr::detail::has_allocate<std::pmr::polymorphic_allocator<int>>::value);
 #endif
+
+  EXPECT_FALSE(pmr::detail::has_deallocate<void>::value);
+  EXPECT_FALSE(pmr::detail::has_deallocate<int>::value);
+  EXPECT_FALSE(pmr::detail::has_deallocate<std::vector<int>>::value);
+  EXPECT_FALSE(pmr::detail::has_deallocate<std::allocator<int>>::value);
+#if defined(LIBIMP_CPP_17) && defined(__cpp_lib_memory_resource)
+  EXPECT_TRUE (pmr::detail::has_deallocate<std::pmr::memory_resource>::value);
+  EXPECT_FALSE(pmr::detail::has_deallocate<std::pmr::polymorphic_allocator<int>>::value);
+#endif
 }
 
 TEST(allocator, construct) {

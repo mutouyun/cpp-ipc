@@ -36,6 +36,11 @@ struct has_deallocate<T,
                                           std::declval<std::size_t>()))
   > : std::true_type {};
 
+template <typename T>
+using is_memory_resource = 
+  typename std::enable_if<has_allocate  <T>::value && 
+                          has_deallocate<T>::value>::type;
+
 } // namespace detail
 
 /**
