@@ -6,11 +6,11 @@
 LIBPMR_NAMESPACE_BEG_
 
 allocator::holder_base &allocator::get_holder() noexcept {
-  return *::LIBIMP_::byte_cast<holder_base>(holder_.data());
+  return *reinterpret_cast<holder_base *>(holder_.data());
 }
 
 allocator::holder_base const &allocator::get_holder() const noexcept {
-  return *::LIBIMP_::byte_cast<holder_base const>(holder_.data());
+  return *reinterpret_cast<holder_base const *>(holder_.data());
 }
 
 allocator::allocator() noexcept {

@@ -1,6 +1,5 @@
 
-#include <cstdlib>    // std::aligned_alloc
-#include <exception>
+#include <cstdlib>  // std::aligned_alloc
 
 #include "libimp/detect_plat.h"
 #include "libimp/system.h"
@@ -51,24 +50,15 @@ void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) no
   if (!verify_args(log, bytes, alignment)) {
     return nullptr;
   }
+#if defined(LIBIMP_CPP_17)
+  /// @see https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
+  return std::aligned_alloc(alignment, bytes);
+#else
   if (alignment <= alignof(std::max_align_t)) {
     /// @see https://en.cppreference.com/w/cpp/memory/c/malloc
     return std::malloc(bytes);
   }
-#if defined(LIBIMP_CPP_17)
-  /// @see https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
-  LIBIMP_TRY {
-    return std::aligned_alloc(alignment, bytes);
-  } LIBIMP_CATCH(std::exception const &e) {
-    log.error("std::aligned_alloc(alignment = {}, bytes = {}) fails. error = {}", 
-               alignment, bytes, e.what());
-    return nullptr;
-  } LIBIMP_CATCH(...) {
-    log.error("std::aligned_alloc(alignment = {}, bytes = {}) fails. error = unknown exception", 
-               alignment, bytes);
-    return nullptr;
-  }
-#elif defined(LIBIMP_OS_WIN)
+#if defined(LIBIMP_OS_WIN)
   /// @see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/aligned-malloc
   return ::_aligned_malloc(bytes, alignment);
 #else // try posix
@@ -82,6 +72,7 @@ void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) no
   }
   return p;
 #endif
+#endif // defined(LIBIMP_CPP_17)
 }
 
 /**
@@ -100,23 +91,12 @@ void new_delete_resource::deallocate(void *p, std::size_t bytes, std::size_t ali
   if (!verify_args(log, bytes, alignment)) {
     return;
   }
-  auto std_free = [&log, bytes, alignment](void* p) noexcept {
-    /// @see https://en.cppreference.com/w/cpp/memory/c/free
-    LIBIMP_TRY {
-      std::free(p);
-    } LIBIMP_CATCH(std::exception const &e) {
-      log.error("std::free(p = {}) fails, alignment = {}, bytes = {}. error = {}", 
-                p, alignment, bytes, e.what());
-    } LIBIMP_CATCH(...) {
-      log.error("std::free(p = {}) fails, alignment = {}, bytes = {}. error = unknown exception", 
-                p, alignment, bytes);
-    }
-  };
 #if defined(LIBIMP_CPP_17)
-  std_free(p);
+  /// @see https://en.cppreference.com/w/cpp/memory/c/free
+  std::free(p);
 #else
   if (alignment <= alignof(std::max_align_t)) {
-    std_free(p);
+    std::free(p);
     return;
   }
 #if defined(LIBIMP_OS_WIN)

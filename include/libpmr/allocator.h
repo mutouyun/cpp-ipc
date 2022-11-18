@@ -47,12 +47,19 @@ class LIBIMP_EXPORT allocator {
     bool  valid() const noexcept override { return false; }
   };
 
-  template <typename MemRes>
-  class holder_memory_resource : public holder_base {
-    MemRes *p_mem_res_;
+  template <typename MemRes, typename = void>
+  class holder_memory_resource;
+
+  /**
+   * @brief A memory resource pointer holder class for type erasure.
+   * @tparam MR memory resource type
+   */
+  template <typename MR>
+  class holder_memory_resource<MR, is_memory_resource<MR>> : public holder_base {
+    MR *p_mem_res_;
 
   public:
-    holder_memory_resource(MemRes *p_mr) noexcept
+    holder_memory_resource(MR *p_mr) noexcept
       : p_mem_res_(p_mr) {}
 
     void *alloc(std::size_t s) override {
@@ -68,9 +75,13 @@ class LIBIMP_EXPORT allocator {
     }
   };
 
-  template <>
-  class holder_memory_resource<void> : public holder_null {
-    void *p_dummy_;
+  /**
+   * @brief An empty holding class used to calculate a reasonable memory size for the holder.
+   * @tparam MR cannot be converted to the type of memory resource
+   */
+  template <typename MR, typename U>
+  class holder_memory_resource : public holder_null {
+    MR *p_dummy_;
   };
 
   using void_holder_type = holder_memory_resource<void>;
