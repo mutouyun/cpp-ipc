@@ -7,41 +7,16 @@
 #pragma once
 
 #include <type_traits>
+#include <array>
 
 #include "libimp/export.h"
+#include "libimp/construct.h"
+#include "libimp/byte.h"
 
 #include "libpmr/def.h"
 #include "libpmr/memory_resource.h"
 
 LIBPMR_NAMESPACE_BEG_
-namespace detail {
-
-/// @brief Helper trait for allocator.
-
-template <typename T, typename = void>
-struct has_allocate : std::false_type {};
-
-template <typename T>
-struct has_allocate<T, 
-  typename std::enable_if<std::is_convertible<
-  decltype(std::declval<T &>().allocate(std::declval<std::size_t>())), void *
-  >::value>::type> : std::true_type {};
-
-template <typename T, typename = void>
-struct has_deallocate : std::false_type {};
-
-template <typename T>
-struct has_deallocate<T, 
-  decltype(std::declval<T &>().deallocate(std::declval<void *>(), 
-                                          std::declval<std::size_t>()))
-  > : std::true_type {};
-
-template <typename T>
-using is_memory_resource = 
-  typename std::enable_if<has_allocate  <T>::value && 
-                          has_deallocate<T>::value>::type;
-
-} // namespace detail
 
 /**
  * @brief An allocator which exhibits different allocation behavior 
@@ -57,6 +32,78 @@ using is_memory_resource =
  */
 class LIBIMP_EXPORT allocator {
 
+  class holder_base {
+  public:
+    virtual ~holder_base() noexcept = default;
+    virtual void *alloc(std::size_t) = 0;
+    virtual void  free (void *, std::size_t) = 0;
+    virtual bool  valid() const noexcept = 0;
+  };
+
+  class holder_null : public holder_base {
+  public:
+    void *alloc(std::size_t) override { return nullptr; }
+    void  free (void *, std::size_t) override {}
+    bool  valid() const noexcept override { return false; }
+  };
+
+  template <typename MemRes>
+  class holder_memory_resource : public holder_base {
+    MemRes *p_mem_res_;
+
+  public:
+    holder_memory_resource(MemRes *p_mr) noexcept
+      : p_mem_res_(p_mr) {}
+
+    void *alloc(std::size_t s) override {
+      return p_mem_res_->allocate(s);
+    }
+
+    void free(void *p, std::size_t s) override {
+      p_mem_res_->deallocate(p, s);
+    }
+  
+    bool valid() const noexcept override {
+      return p_mem_res_ != nullptr;
+    }
+  };
+
+  template <>
+  class holder_memory_resource<void> : public holder_null {
+    void *p_dummy_;
+  };
+
+  using void_holder_type = holder_memory_resource<void>;
+  alignas(void_holder_type) std::array<::LIBIMP_::byte, sizeof(void_holder_type)> holder_;
+
+  holder_base &      get_holder() noexcept;
+  holder_base const &get_holder() const noexcept;
+
+public:
+  allocator() noexcept;
+  ~allocator() noexcept;
+
+  allocator(allocator const &other) noexcept = default;
+  allocator &operator=(allocator const &other) & noexcept = default;
+
+  allocator(allocator &&other) noexcept;
+  allocator &operator=(allocator &&other) & noexcept;
+
+  /// @brief Constructs a allocator from a memory resource pointer
+  /// @remark The lifetime of the pointer must be longer than that of allocator.
+  template <typename T, typename = is_memory_resource<T>>
+  allocator(T *p_mr) : allocator() {
+    if (p_mr == nullptr) return;
+    ::LIBIMP_::construct<holder_memory_resource<T>>(holder_.data(), p_mr);
+  }
+
+  void swap(allocator &other) noexcept;
+  bool valid() const noexcept;
+  explicit operator bool() const noexcept;
+
+  /// @brief Allocate/deallocate memory.
+  void *alloc(std::size_t s);
+  void  free (void *p, std::size_t s);
 };
 
 LIBPMR_NAMESPACE_END_

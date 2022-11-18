@@ -28,6 +28,16 @@ bool verify_args(::LIBIMP_::log::gripper &log, std::size_t bytes, std::size_t al
 } // namespace
 
 /**
+ * @brief Returns a pointer to a new_delete_resource.
+ * 
+ * @return new_delete_resource* 
+ */
+new_delete_resource *new_delete_resource::get() noexcept {
+  static new_delete_resource mem_res;
+  return &mem_res;
+}
+
+/**
  * @brief Allocates storage with a size of at least bytes bytes, aligned to the specified alignment.
  * @remark Alignment shall be a power of two.
  * 
