@@ -74,7 +74,7 @@ TEST(log, log_printer) {
 
 TEST(log, gripper) {
   {
-    imp::log::gripper log {__func__};
+    imp::log::grip log {__func__};
     log.info("hello");
   }
   {

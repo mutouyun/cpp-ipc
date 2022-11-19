@@ -53,15 +53,11 @@ template <typename T>
 class has_fn_output {
   static std::integral_constant<out_type, out_none> check(...);
 
-  template <typename U>
-  static auto check(U *u)
-    -> decltype(u->output(log::level::trace, std::declval<std::string>()), 
-                std::integral_constant<out_type, out_string>{});
+  template <typename U, typename = decltype(u->output(log::level::trace, std::declval<std::string>()))>
+  static std::integral_constant<out_type, out_string> check(U *u);
 
-  template <typename U>
-  static auto check(U *u)
-    -> decltype(u->output(log::level::trace, std::declval<log::context>()), 
-                std::integral_constant<out_type, out_context>{});
+  template <typename U, typename = decltype(u->output(std::declval<log::context>()))>
+  static std::integral_constant<out_type, out_context> check(U *u);
 
 public:
   using type = decltype(check(static_cast<T *>(nullptr)));
@@ -129,20 +125,25 @@ public:
   void output(context) noexcept;
 };
 
+/// @brief Standard console output.
 class LIBIMP_EXPORT std_t {
 public:
   void output(log::level, std::string &&) noexcept;
 };
 
+/// @brief Standard console output object.
 LIBIMP_EXPORT extern std_t std_out;
 
-class gripper {
+/**
+ * @brief Log information grips.
+ */
+class grip {
   printer printer_;
   char const *func_;
   level level_limit_;
 
   template <typename Fmt, typename... A>
-  gripper &output(log::level l, Fmt &&ft, A &&... args) noexcept {
+  grip &output(log::level l, Fmt &&ft, A &&... args) noexcept {
     if (!printer_ || (enum_cast(l) < enum_cast(level_limit_))) {
       return *this;
     }
@@ -163,33 +164,33 @@ class gripper {
   }
 
 public:
-  gripper(char const *func, printer printer = std_out, level level_limit = level::info) noexcept 
+  grip(char const *func, printer printer = std_out, level level_limit = level::info) noexcept 
     : printer_    (printer)
     , func_       (func)
     , level_limit_(level_limit) {}
 
   template <typename Fmt, typename... A>
-  gripper &trace(Fmt &&ft, A &&... args) noexcept {
+  grip &trace(Fmt &&ft, A &&... args) noexcept {
     return output(log::level::trace, std::forward<Fmt>(ft), std::forward<A>(args)...);
   }
   template <typename Fmt, typename... A>
-  gripper &debug(Fmt &&ft, A &&... args) noexcept {
+  grip &debug(Fmt &&ft, A &&... args) noexcept {
     return output(log::level::debug, std::forward<Fmt>(ft), std::forward<A>(args)...);
   }
   template <typename Fmt, typename... A>
-  gripper &info(Fmt &&ft, A &&... args) noexcept {
+  grip &info(Fmt &&ft, A &&... args) noexcept {
     return output(log::level::info, std::forward<Fmt>(ft), std::forward<A>(args)...);
   }
   template <typename Fmt, typename... A>
-  gripper &warning(Fmt &&ft, A &&... args) noexcept {
+  grip &warning(Fmt &&ft, A &&... args) noexcept {
     return output(log::level::warning, std::forward<Fmt>(ft), std::forward<A>(args)...);
   }
   template <typename Fmt, typename... A>
-  gripper &error(Fmt &&ft, A &&... args) noexcept {
+  grip &error(Fmt &&ft, A &&... args) noexcept {
     return output(log::level::error, std::forward<Fmt>(ft), std::forward<A>(args)...);
   }
   template <typename Fmt, typename... A>
-  gripper &failed(Fmt &&ft, A &&... args) noexcept {
+  grip &failed(Fmt &&ft, A &&... args) noexcept {
     return output(log::level::failed, std::forward<Fmt>(ft), std::forward<A>(args)...);
   }
 };
@@ -197,4 +198,4 @@ public:
 } // namespace log
 LIBIMP_NAMESPACE_END_
 
-#define LIBIMP_LOG_(...) ::LIBIMP_::log::gripper log {__func__, __VA_ARGS__}
+#define LIBIMP_LOG_(...) ::LIBIMP_::log::grip log {__func__, __VA_ARGS__}
