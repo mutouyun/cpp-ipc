@@ -53,10 +53,10 @@ template <typename T>
 class has_fn_output {
   static std::integral_constant<out_type, out_none> check(...);
 
-  template <typename U, typename = decltype(u->output(log::level::trace, std::declval<std::string>()))>
+  template <typename U, typename = decltype(std::declval<U &>().output(log::level::trace, std::declval<std::string>()))>
   static std::integral_constant<out_type, out_string> check(U *u);
 
-  template <typename U, typename = decltype(u->output(std::declval<log::context>()))>
+  template <typename U, typename = decltype(std::declval<U &>().output(std::declval<log::context>()))>
   static std::integral_constant<out_type, out_context> check(U *u);
 
 public:
