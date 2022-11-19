@@ -12,7 +12,6 @@
 #include <exception>
 
 #include "fmt/format.h"
-#include "fmt/chrono.h"
 
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
@@ -21,11 +20,6 @@
 
 LIBIMP_NAMESPACE_BEG_
 namespace log {
-
-template <typename Fmt, typename... A>
-std::string fmt(Fmt &&ft, A &&... args) {
-  return ::fmt::format(std::forward<Fmt>(ft), std::forward<A>(args)...);
-}
 
 enum class level : std::int32_t {
   trace,
@@ -36,47 +30,79 @@ enum class level : std::int32_t {
   failed,
 };
 
+struct context {
+  log::level level;
+  std::chrono::system_clock::time_point tp;
+  char const *func;
+  std::string text;
+};
+
+LIBIMP_EXPORT std::string to_string(context &&) noexcept;
+
 } // namespace log
 
 namespace detail_log {
 
+enum out_type : unsigned {
+  out_none    = 0x0,
+  out_string  = 0x1,
+  out_context = 0x2,
+};
+
 template <typename T>
 class has_fn_output {
-  static std::false_type check(...);
+  static std::integral_constant<out_type, out_none> check(...);
+
   template <typename U>
-  static auto check(U *u) -> decltype(u->output(log::level::trace, std::declval<std::string>()), std::true_type{});
+  static auto check(U *u)
+    -> decltype(u->output(log::level::trace, std::declval<std::string>()), 
+                std::integral_constant<out_type, out_string>{});
+
+  template <typename U>
+  static auto check(U *u)
+    -> decltype(u->output(log::level::trace, std::declval<log::context>()), 
+                std::integral_constant<out_type, out_context>{});
 
 public:
   using type = decltype(check(static_cast<T *>(nullptr)));
 };
 
 template <typename T>
-constexpr bool has_fn_output_v = has_fn_output<T>::type::value;
+constexpr out_type has_fn_output_v = has_fn_output<T>::type::value;
 
 struct vtable_t {
-  void (*output)(void *, log::level, std::string &&);
+  void (*output)(void *, log::context &&);
 };
 
 template <typename T>
 class traits {
   template <typename U>
   static auto make_fn_output() noexcept
-    -> std::enable_if_t<has_fn_output_v<U>, void (*)(void *, log::level, std::string &&)> {
-    return [](void *p, log::level l, std::string &&s) {
-      static_cast<U *>(p)->output(l, std::move(s));
-    };
+    -> std::enable_if_t<(has_fn_output_v<U> == out_none), decltype(vtable_t{}.output)> {
+    return [](void *, log::context &&) {};
   }
+
   template <typename U>
   static auto make_fn_output() noexcept
-    -> std::enable_if_t<!has_fn_output_v<U>, void (*)(void *, log::level, std::string &&)> {
-    return [](void *, log::level, std::string &&) {};
+    -> std::enable_if_t<(has_fn_output_v<U> == out_string), decltype(vtable_t{}.output)> {
+    return [](void *p, log::context &&ctx) {
+      auto lev = ctx.level;
+      auto str = to_string(std::move(ctx));
+      static_cast<U *>(p)->output(lev, std::move(str));
+    };
+  }
+
+  template <typename U>
+  static auto make_fn_output() noexcept
+    -> std::enable_if_t<(has_fn_output_v<U> == out_context), decltype(vtable_t{}.output)> {
+    return [](void *p, log::context &&ctx) {
+      static_cast<U *>(p)->output(std::move(ctx));
+    };
   }
 
 public:
   static auto make_vtable() noexcept {
-    static vtable_t vt {
-      make_fn_output<T>(),
-    };
+    static vtable_t vt { make_fn_output<T>() };
     return &vt;
   }
 };
@@ -93,15 +119,14 @@ public:
   printer() noexcept = default;
 
   template <typename T, 
-            /// @brief generic constructor may shadow the default copy constructor
+            /// @remark generic constructor may shadow the default copy constructor
             typename = std::enable_if_t<!std::is_same<printer, T>::value>>
   printer(T &p) noexcept
     : objp_  (static_cast<void *>(&p))
     , vtable_(detail_log::traits<T>::make_vtable()) {}
 
   explicit operator bool() const noexcept;
-
-  void output(log::level, std::string &&) noexcept;
+  void output(context) noexcept;
 };
 
 class LIBIMP_EXPORT std_t {
@@ -121,18 +146,19 @@ class gripper {
     if (!printer_ || (enum_cast(l) < enum_cast(level_limit_))) {
       return *this;
     }
-    constexpr static char types[] = {
-      'T', 'D', 'I', 'W', 'E', 'F'
-    };
-    try {
-      auto tp = std::chrono::system_clock::now();
-      auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(tp).time_since_epoch().count() % 1000;
-      auto px = fmt("[{}][{:%Y-%m-%d %H:%M:%S}.{:03}][{}] ", types[enum_cast(l)], tp, ms, func_);
-      printer_.output(l, std::move(px += fmt(std::forward<Fmt>(ft), std::forward<A>(args)...)));
-    } catch (std::exception const &e) {
+    context ctx;
+    LIBIMP_TRY {
+      ctx = {
+        l, std::chrono::system_clock::now(), func_,
+        ::fmt::format(std::forward<Fmt>(ft), std::forward<A>(args)...),
+      };
+    } LIBIMP_CATCH(std::exception const &e) {
       /// @remark [TBD] std::string constructor may throw an exception
-      printer_.output(level::failed, e.what());
+      ctx = {
+        level::failed, std::chrono::system_clock::now(), func_, e.what(),
+      };
     }
+    printer_.output(std::move(ctx));
     return *this;
   }
 
