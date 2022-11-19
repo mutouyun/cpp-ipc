@@ -16,6 +16,7 @@ include_directories(
 file(GLOB SRC_FILES
   ${LIBIPC_PROJECT_DIR}/test/imp/*.cpp
   ${LIBIPC_PROJECT_DIR}/test/pmr/*.cpp
+  ${LIBIPC_PROJECT_DIR}/test/concur/*.cpp
   ${LIBIPC_PROJECT_DIR}/test/*.cpp)
 
 file(GLOB HEAD_FILES
