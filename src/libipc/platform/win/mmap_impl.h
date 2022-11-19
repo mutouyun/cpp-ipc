@@ -41,7 +41,7 @@ result_code mmap_close(HANDLE h) {
   }
   if (!::CloseHandle(h)) {
     auto err = sys::error();
-    log.error("CloseHandle({}) fails. error = {}", h, err);
+    log.error("failed: CloseHandle({}). error = {}", h, err);
     return err.code();
   }
   return {ERROR_SUCCESS};
@@ -77,7 +77,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     HANDLE h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, t_name.c_str());
     if (h == NULL) {
       auto err = sys::error();
-      log.error("OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, {}) fails. error = {}", file, err);
+      log.error("failed: OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, {}). error = {}", file, err);
       return {nullptr, err.value()};
     }
     return h;
@@ -90,7 +90,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
                                    0, static_cast<DWORD>(size), t_name.c_str());
     if (h == NULL) {
       auto err = sys::error();
-      log.error("CreateFileMapping(PAGE_READWRITE | SEC_COMMIT, {}, {}) fails. error = {}", size, file, err);
+      log.error("failed: CreateFileMapping(PAGE_READWRITE | SEC_COMMIT, {}, {}). error = {}", size, file, err);
       return {nullptr, err.value()};
     }
     return h;
@@ -132,7 +132,7 @@ result<LPVOID> mmap_memof(HANDLE h) {
   LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
   if (mem == NULL) {
     auto err = sys::error();
-    log.error("MapViewOfFile({}, FILE_MAP_ALL_ACCESS) fails. error = {}", h, err);
+    log.error("failed: MapViewOfFile({}, FILE_MAP_ALL_ACCESS). error = {}", h, err);
     return {nullptr, err.value()};
   }
   return mem;
@@ -151,7 +151,7 @@ result<SIZE_T> mmap_sizeof(LPCVOID mem) {
   MEMORY_BASIC_INFORMATION mem_info {};
   if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
     auto err = sys::error();
-    log.error("VirtualQuery({}) fails. error = {}", mem, err);
+    log.error("failed: VirtualQuery({}). error = {}", mem, err);
     return {false, (SIZE_T)err.value()};
   }
   return mem_info.RegionSize;
@@ -172,7 +172,7 @@ result_code mmap_release(HANDLE h, LPCVOID mem) {
     return {};
   }
   if (!::UnmapViewOfFile(mem)) {
-    log.warning("UnmapViewOfFile fails. error = {}", sys::error());
+    log.warning("failed: UnmapViewOfFile. error = {}", sys::error());
   }
   return mmap_close(h);
 }

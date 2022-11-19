@@ -21,18 +21,18 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   LIBIMP_LOG_();
   auto h = mmap_open(name, size, type);
   if (h == NULL) {
-    log.error("mmap_open failed.");
+    log.error("failed: mmap_open(name = {}, size = {}, type = {}).", name, size, type);
     return {nullptr, h.code_value()};
   }
   auto mem = mmap_memof(*h);
   if (*mem == NULL) {
-    log.error("mmap_memof failed.");
+    log.error("failed: mmap_memof({}).", *h);
     mmap_close(*h);
     return {nullptr, mem.code_value()};
   }
   auto sz = mmap_sizeof(*mem);
   if (!sz) {
-    log.error("mmap_sizeof failed.");
+    log.error("failed: mmap_sizeof({}).", *mem);
     mmap_close(*h);
     return {nullptr, static_cast<result_type>(sz.value())};
   }

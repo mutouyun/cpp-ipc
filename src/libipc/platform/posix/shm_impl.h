@@ -84,7 +84,7 @@ result_code ftruncate_fd(int fd, std::size_t size) noexcept {
   /// @see https://man7.org/linux/man-pages/man3/ftruncate.3p.html
   if (::ftruncate(fd, size) != posix::succ) {
     auto err = sys::error();
-    log.error("ftruncate({}, {}) fails. error = {}", fd, size, err);
+    log.error("failed: ftruncate({}, {}). error = {}", fd, size, err);
     return err.code();
   }
   return {posix::succ};
@@ -102,7 +102,8 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   auto fd = shm_open_fd(name, type);
   if (!fd) return {};
   if (*fd == posix::failed) {
-    log.error("shm_open fails. error = {}", sys::error());
+    log.error("failed: shm_open(name = {}, type = {}). error = {}", 
+               name, type, sys::error());
     return {};
   }
   LIBIMP_UNUSED auto guard = std::unique_ptr<decltype(fd), void (*)(decltype(fd) *)> {
@@ -113,7 +114,7 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   /// @brief Try to get the size of this fd
   struct stat st;
   if (::fstat(*fd, &st) == posix::failed) {
-    log.error("fstat fails. error = {}", sys::error());
+    log.error("failed: fstat(fd = {}). error = {}", *fd, sys::error());
     return {};
   }
 
@@ -131,7 +132,7 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   /// @brief Creates a new mapping in the virtual address space of the calling process.
   void *mem = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0);
   if (mem == MAP_FAILED) {
-    log.error("mmap fails. error = {}", sys::error());
+    log.error("failed: mmap(size = {}, fd = {}). error = {}", size, *fd, sys::error());
     return {};
   }
   return new shm_handle{std::move(name), size, mem};
@@ -146,7 +147,7 @@ result_code shm_close(shm_t h) noexcept {
   if (shm == nullptr) return {};
   if (::munmap(shm->memp, shm->f_sz) == posix::failed) {
     auto err = sys::error();
-    log.error("munmap({}, {}) fails. error = {}", shm->memp, shm->f_sz, err);
+    log.error("failed: munmap({}, {}). error = {}", shm->memp, shm->f_sz, err);
     return err.code();
   }
   /// @brief no unlink the file.

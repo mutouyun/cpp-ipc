@@ -24,7 +24,7 @@ LIBIMP_NAMESPACE_BEG_
  * @see https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
  *      https://stackoverflow.com/questions/42946335/deprecated-header-codecvt-replacement
  *      https://en.cppreference.com/w/cpp/locale/codecvt/in
- */
+*/
 namespace {
 
 /// @brief X-bit unicode transformation format

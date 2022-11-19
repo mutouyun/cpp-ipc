@@ -66,7 +66,7 @@ void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) no
   void *p = nullptr;
   int ret = ::posix_memalign(&p, alignment, bytes);
   if (ret != 0) {
-    log.error("posix_memalign(alignment = {}, bytes = {}) fails. error = {}", 
+    log.error("failed: posix_memalign(alignment = {}, bytes = {}). error = {}", 
                alignment, bytes, sys::error(ret));
     return nullptr;
   }
