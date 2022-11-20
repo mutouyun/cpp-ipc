@@ -11,9 +11,9 @@ LIBIMP_NAMESPACE_BEG_
 namespace sys {
 
 std::string error_msg(result_code code) noexcept {
-  try {
+  LIBIMP_TRY {
     return ::fmt::format("[{}, \"{}\"]", code.value(), error_str(code));
-  } catch (...) {
+  } LIBIMP_CATCH(...) {
     return error_str(code);
   }
 }

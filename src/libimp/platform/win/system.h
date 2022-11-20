@@ -15,6 +15,7 @@
 #include "libimp/log.h"
 #include "libimp/codecvt.h"
 #include "libimp/enum_cast.h"
+#include "libimp/detect_plat.h"
 
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
@@ -46,7 +47,7 @@ void error_code(result_code code) noexcept {
  */
 std::string error_str(result_code code) noexcept {
   LIBIMP_LOG_();
-  try {
+  LIBIMP_TRY {
     DWORD err = (DWORD)code.value();
     LPTSTR lpErrText = NULL;
     if (::FormatMessage(
@@ -73,7 +74,7 @@ std::string error_str(result_code code) noexcept {
     std::string ret(len, '\0');
     cvt_cstr(lpErrText, msg_len, &ret[0], ret.size());
     return ret;
-  } catch (std::exception const &e) {
+  } LIBIMP_CATCH(std::exception const &e) {
     log.failed(e.what());
   }
   return {};
