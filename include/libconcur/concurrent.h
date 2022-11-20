@@ -207,6 +207,30 @@ struct consumer<trans::unicast, relation::multi> {
 };
 
 /**
+ * @brief Algorithm definition under broadcast transmission model.
+*/
+
+/// @brief Single-write producer model implementation.
+template <>
+struct producer<trans::broadcast, relation::single> {
+};
+
+/// @brief Multi-write producer model implementation.
+template <>
+struct producer<trans::broadcast, relation::multi> {
+};
+
+/// @brief Single-read consumer model implementation.
+template <>
+struct consumer<trans::broadcast, relation::single> {
+};
+
+/// @brief Multi-read consumer model implementation.
+template <>
+struct consumer<trans::broadcast, relation::multi> {
+};
+
+/**
  * @brief Producer-consumer implementation.
  * 
  * @tparam TransModT transmission mode (trans::unicast/trans::broadcast)
