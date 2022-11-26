@@ -56,7 +56,6 @@ endif()
 # Unicode Support
 add_definitions(-DUNICODE -D_UNICODE)
 
-add_subdirectory(3rdparty/fmt)
 add_subdirectory(src)
 
 if (LIBIPC_BUILD_TESTS)

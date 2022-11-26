@@ -5,6 +5,12 @@ if(NOT MSVC)
     -Wno-attributes)
 endif()
 
+FetchContent_Declare(fmtlib
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG        9.1.0
+)
+FetchContent_MakeAvailable(fmtlib)
+
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libimp SRC_FILES)
 
 file(GLOB HEAD_FILES
