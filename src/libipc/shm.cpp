@@ -5,9 +5,9 @@
 
 #include "libimp/detect_plat.h"
 #if defined(LIBIMP_OS_WIN)
-#include "libipc/platform/win/shm_impl.h"
+# include "libipc/platform/win/shm_impl.h"
 #else
-#include "libipc/platform/posix/shm_impl.h"
+# include "libipc/platform/posix/shm_impl.h"
 #endif
 
 LIBIPC_NAMESPACE_BEG_

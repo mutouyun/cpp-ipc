@@ -95,14 +95,14 @@ struct producer<trans::unicast, relation::single> {
     auto f_ct  = elem.get_flag();
     /// @remark Verify index.
     if ((f_ct != state::invalid_value) && 
-        (f_ct != static_cast<state::flag_t>(w_idx))) {
+        (f_ct != w_idx)) {
       return false; // full
     }
     /// @remark Get a valid index and iterate backwards.
     ctx.w_idx += 1;
     /// @remark Set data & flag.
     elem.set_data(std::forward<U>(src));
-    elem.set_flag(static_cast<state::flag_t>(~w_idx));
+    elem.set_flag(static_cast<index_t>(~w_idx));
     return true;
   }
 };
@@ -131,12 +131,12 @@ struct producer<trans::unicast, relation::multi> {
         return false; // full
       }
       /// @remark Get a valid index and iterate backwards.
-      if (!ctx.w_idx.compare_exchange_week(w_idx, w_idx + 1, std::memory_order_acq_rel)) {
+      if (!ctx.w_idx.compare_exchange_weak(w_idx, w_idx + 1, std::memory_order_acq_rel)) {
         continue;
       }
       /// @remark Set data & flag.
       elem.set_data(std::forward<U>(src));
-      elem.set_flag(~w_idx);
+      elem.set_flag(static_cast<index_t>(~w_idx));
       return true;
     }
   }
@@ -160,7 +160,7 @@ struct consumer<trans::unicast, relation::single> {
     auto &elem = elems[r_cur];
     auto f_ct  = elem.get_flag();
     /// @remark Verify index.
-    if (f_ct != ~r_idx) {
+    if (f_ct != static_cast<index_t>(~r_idx)) {
       return false; // empty
     }
     /// @remark Get a valid index and iterate backwards.
@@ -191,11 +191,11 @@ struct consumer<trans::unicast, relation::multi> {
       auto &elem = elems[r_cur];
       auto f_ct  = elem.get_flag();
       /// @remark Verify index.
-      if (f_ct != ~r_idx) {
+      if (f_ct != static_cast<index_t>(~r_idx)) {
         return false; // empty
       }
       /// @remark Get a valid index and iterate backwards.
-      if (!ctx.r_idx.compare_exchange_week(r_idx, r_idx + 1, std::memory_order_acq_rel)) {
+      if (!ctx.r_idx.compare_exchange_weak(r_idx, r_idx + 1, std::memory_order_acq_rel)) {
         continue;
       }
       /// @remark Get data & set flag.
@@ -240,7 +240,7 @@ struct consumer<trans::broadcast, relation::multi> {
 template <typename TransModT, typename ProdModT, typename ConsModT>
 struct prod_cons : producer<TransModT, ProdModT>
                  , consumer<TransModT, ConsModT> {
-  
+
   /// @brief Mixing producer and consumer context definitions.
   struct context : producer<TransModT, ProdModT>::context_impl
                  , consumer<TransModT, ConsModT>::context_impl {
@@ -248,6 +248,10 @@ struct prod_cons : producer<TransModT, ProdModT>
 
     constexpr context(index_t cs) noexcept
       : circ_size(cs) {}
+
+    template <typename T>
+    constexpr context(::LIBIMP_::span<element<T>> elems) noexcept
+      : circ_size(static_cast<index_t>(elems.size())) {}
 
     constexpr bool valid() const noexcept {
       /// @remark circ_size must be a power of two.
