@@ -99,7 +99,7 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
 
   concur::element<std::uint64_t> circ[32] {};
   PC pc;
-  PC::context ctx {imp::make_span(circ)};
+  typename PC::context ctx {imp::make_span(circ)};
   ASSERT_TRUE(ctx.valid());
 
   std::atomic<std::uint64_t> sum {0};
@@ -145,16 +145,20 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
 TEST(concurrent, prod_cons) {
   using namespace concur;
 
+  /// @brief 1-1
   test_concur<prod_cons<trans::unicast, relation::single, relation::single>>(1, 1, 1);
   test_concur<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 1, 1);
   test_concur<prod_cons<trans::unicast, relation::multi , relation::single>>(1, 1, 1);
   test_concur<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 1, 1);
 
+  /// @brief 8-1
   test_concur<prod_cons<trans::unicast, relation::multi , relation::single>>(8, 1, 1);
   test_concur<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 1, 1);
 
+  /// @brief 1-8
   test_concur<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 8, 1);
   test_concur<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 8, 1);
 
+  /// @brief 8-8
   test_concur<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 8, 1);
 }
