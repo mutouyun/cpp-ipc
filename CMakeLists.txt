@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.11)
 project(cpp-ipc)
 
 option(LIBIPC_BUILD_TESTS       "Build all of libipc's own tests."                      OFF)
@@ -41,6 +41,18 @@ set(LIBRARY_OUTPUT_PATH    ${CMAKE_BINARY_DIR}/bin)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 set(LIBIPC_PROJECT_DIR     ${PROJECT_SOURCE_DIR})
 
+# FetchContent Support
+include(FetchContent)
+if(${CMAKE_VERSION} VERSION_LESS 3.14)
+  macro(FetchContent_MakeAvailable NAME)
+    FetchContent_GetProperties(${NAME})
+    if(NOT ${NAME}_POPULATED)
+      FetchContent_Populate(${NAME})
+      add_subdirectory(${${NAME}_SOURCE_DIR} ${${NAME}_BINARY_DIR})
+    endif()
+  endmacro()
+endif()
+
 # Unicode Support
 add_definitions(-DUNICODE -D_UNICODE)
 
@@ -48,13 +60,6 @@ add_subdirectory(3rdparty/fmt)
 add_subdirectory(src)
 
 if (LIBIPC_BUILD_TESTS)
-  set(GOOGLETEST_VERSION 1.10.0)
-  if (LIBIPC_USE_STATIC_CRT)
-      set(gtest_force_shared_crt OFF)
-  else()
-      set(gtest_force_shared_crt ON)
-  endif()
-  add_subdirectory(3rdparty/gtest)
   add_subdirectory(test)
 endif()
 
@@ -65,8 +70,6 @@ endif()
 # endif()
 
 if (LIBIPC_BUILD_BENCHMARK)
-  set(BENCHMARK_ENABLE_TESTING OFF)
-  add_subdirectory(3rdparty/benchmark)
   add_subdirectory(benchmark)
 endif()
 

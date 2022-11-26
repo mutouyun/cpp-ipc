@@ -8,6 +8,17 @@ if(NOT MSVC)
     -Wno-unused-function)
 endif()
 
+FetchContent_Declare(googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG        v1.12.0
+)
+if (LIBIPC_USE_STATIC_CRT)
+  set(gtest_force_shared_crt OFF)
+else()
+  set(gtest_force_shared_crt ON)
+endif()
+FetchContent_MakeAvailable(googletest)
+
 include_directories(
   ${LIBIPC_PROJECT_DIR}/include 
   ${LIBIPC_PROJECT_DIR}/src
@@ -24,6 +35,4 @@ file(GLOB HEAD_FILES
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 
-link_directories(${LIBIPC_PROJECT_DIR}/3rdparty/gperftools)
 target_link_libraries(${PROJECT_NAME} gtest_main imp pmr ipc)
-#target_link_libraries(${PROJECT_NAME} tcmalloc_minimal)

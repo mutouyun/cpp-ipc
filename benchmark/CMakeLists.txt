@@ -10,6 +10,15 @@ else()
   add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
 endif()
 
+FetchContent_Declare(googlebenchmark
+  GIT_REPOSITORY https://github.com/google/benchmark.git
+  GIT_TAG        v1.7.0
+)
+set(BENCHMARK_ENABLE_TESTING OFF)
+set(BENCHMARK_ENABLE_INSTALL OFF)
+add_definitions(-DBENCHMARK_STATIC_DEFINE)
+FetchContent_MakeAvailable(googlebenchmark)
+
 include_directories(
   ${LIBIPC_PROJECT_DIR}/include 
   ${LIBIPC_PROJECT_DIR}/src
