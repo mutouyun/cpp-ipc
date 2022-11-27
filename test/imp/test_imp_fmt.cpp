@@ -6,13 +6,10 @@
 #include "libimp/fmt.h"
 
 TEST(fmt, operator) {
-  auto a = imp::spec("hello")(123);
-  EXPECT_STREQ(a.fstr.data(), "hello");
-  EXPECT_EQ(a.param , 123);
-
-  auto b = imp::spec("hello")("world");
-  EXPECT_STREQ(b.fstr.data(), "hello");
-  EXPECT_STREQ(b.param , "world");
+  EXPECT_STREQ(imp::spec("hello")(123).fstr.data(), "hello");
+  EXPECT_EQ(imp::spec("hello")(123).param , 123);
+  EXPECT_STREQ(imp::spec("hello")("world").fstr.data(), "hello");
+  EXPECT_STREQ(imp::spec("hello")("world").param , "world");
 }
 
 TEST(fmt, to_string) {
