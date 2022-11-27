@@ -41,7 +41,7 @@ result_code mmap_close(HANDLE h) {
   }
   if (!::CloseHandle(h)) {
     auto err = sys::error();
-    log.error("failed: CloseHandle({}). error = {}", h, err);
+    log.error("failed: CloseHandle(", h, "). error = ", err);
     return err.code();
   }
   return {ERROR_SUCCESS};
@@ -77,7 +77,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     HANDLE h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, t_name.c_str());
     if (h == NULL) {
       auto err = sys::error();
-      log.error("failed: OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, {}). error = {}", file, err);
+      log.error("failed: OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, ", file, "). error = ", err);
       return {nullptr, err.value()};
     }
     return h;
@@ -90,7 +90,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
                                    0, static_cast<DWORD>(size), t_name.c_str());
     if (h == NULL) {
       auto err = sys::error();
-      log.error("failed: CreateFileMapping(PAGE_READWRITE | SEC_COMMIT, {}, {}). error = {}", size, file, err);
+      log.error("failed: CreateFileMapping(PAGE_READWRITE | SEC_COMMIT, ", size, ", ", file, "). error = ", err);
       return {nullptr, err.value()};
     }
     return h;
@@ -104,7 +104,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     ///      https://learn.microsoft.com/en-us/previous-versions/windows/embedded/aa517331(v=msdn.10)
     return try_open();
   } else if (!(type & mode::create)) {
-    log.error("mode type is invalid. type = {}", type);
+    log.error("mode type is invalid. type = ", type);
     return {};
   }
   auto h = try_create();
@@ -112,7 +112,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
   /// @remark If the object exists before the function call, the function returns a handle to the existing object
   ///         (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.
   if ((type == mode::create) && (::GetLastError() == ERROR_ALREADY_EXISTS)) {
-    log.info("the file being created already exists. file = {}, type = {}", file, type);
+    log.info("the file being created already exists. file = ", file, ", type = ", type);
     mmap_close(*h);
     return {};
   }
@@ -132,7 +132,7 @@ result<LPVOID> mmap_memof(HANDLE h) {
   LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
   if (mem == NULL) {
     auto err = sys::error();
-    log.error("failed: MapViewOfFile({}, FILE_MAP_ALL_ACCESS). error = {}", h, err);
+    log.error("failed: MapViewOfFile(", h, ", FILE_MAP_ALL_ACCESS). error = ", err);
     return {nullptr, err.value()};
   }
   return mem;
@@ -151,7 +151,7 @@ result<SIZE_T> mmap_sizeof(LPCVOID mem) {
   MEMORY_BASIC_INFORMATION mem_info {};
   if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
     auto err = sys::error();
-    log.error("failed: VirtualQuery({}). error = {}", mem, err);
+    log.error("failed: VirtualQuery(", mem, "). error = ", err);
     return {false, (SIZE_T)err.value()};
   }
   return mem_info.RegionSize;
@@ -172,7 +172,7 @@ result_code mmap_release(HANDLE h, LPCVOID mem) {
     return {};
   }
   if (!::UnmapViewOfFile(mem)) {
-    log.warning("failed: UnmapViewOfFile. error = {}", sys::error());
+    log.warning("failed: UnmapViewOfFile. error = ", sys::error());
   }
   return mmap_close(h);
 }

@@ -11,8 +11,6 @@
 #include <chrono>
 #include <exception>
 
-#include "fmt/format.h"
-
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
@@ -40,9 +38,7 @@ struct context {
 
 LIBIMP_EXPORT std::string to_string(context &&) noexcept;
 
-/**
- * @brief Custom defined fmt_to_string method for imp::fmt
- */
+/// @brief Custom defined fmt_to_string method for imp::fmt
 template <typename T>
 std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), context &&arg) noexcept {
   return ::LIBIMP::log::to_string(std::move(arg));
@@ -151,8 +147,8 @@ class grip {
   char const *func_;
   level level_limit_;
 
-  template <typename Fmt, typename... A>
-  grip &output(log::level l, Fmt &&ft, A &&... args) noexcept {
+  template <typename... A>
+  grip &output(log::level l, A &&... args) noexcept {
     if (!printer_ || (enum_cast(l) < enum_cast(level_limit_))) {
       return *this;
     }
@@ -160,7 +156,7 @@ class grip {
     LIBIMP_TRY {
       ctx = {
         l, std::chrono::system_clock::now(), func_,
-        ::fmt::format(std::forward<Fmt>(ft), std::forward<A>(args)...),
+        fmt(std::forward<A>(args)...),
       };
     } LIBIMP_CATCH(std::exception const &e) {
       /// @remark [TBD] std::string constructor may throw an exception
@@ -178,30 +174,12 @@ public:
     , func_       (func)
     , level_limit_(level_limit) {}
 
-  template <typename Fmt, typename... A>
-  grip &trace(Fmt &&ft, A &&... args) noexcept {
-    return output(log::level::trace, std::forward<Fmt>(ft), std::forward<A>(args)...);
-  }
-  template <typename Fmt, typename... A>
-  grip &debug(Fmt &&ft, A &&... args) noexcept {
-    return output(log::level::debug, std::forward<Fmt>(ft), std::forward<A>(args)...);
-  }
-  template <typename Fmt, typename... A>
-  grip &info(Fmt &&ft, A &&... args) noexcept {
-    return output(log::level::info, std::forward<Fmt>(ft), std::forward<A>(args)...);
-  }
-  template <typename Fmt, typename... A>
-  grip &warning(Fmt &&ft, A &&... args) noexcept {
-    return output(log::level::warning, std::forward<Fmt>(ft), std::forward<A>(args)...);
-  }
-  template <typename Fmt, typename... A>
-  grip &error(Fmt &&ft, A &&... args) noexcept {
-    return output(log::level::error, std::forward<Fmt>(ft), std::forward<A>(args)...);
-  }
-  template <typename Fmt, typename... A>
-  grip &failed(Fmt &&ft, A &&... args) noexcept {
-    return output(log::level::failed, std::forward<Fmt>(ft), std::forward<A>(args)...);
-  }
+  template <typename... A> grip &trace  (A &&...args) noexcept { return output(log::level::trace  , std::forward<A>(args)...); }
+  template <typename... A> grip &debug  (A &&...args) noexcept { return output(log::level::debug  , std::forward<A>(args)...); }
+  template <typename... A> grip &info   (A &&...args) noexcept { return output(log::level::info   , std::forward<A>(args)...); }
+  template <typename... A> grip &warning(A &&...args) noexcept { return output(log::level::warning, std::forward<A>(args)...); }
+  template <typename... A> grip &error  (A &&...args) noexcept { return output(log::level::error  , std::forward<A>(args)...); }
+  template <typename... A> grip &failed (A &&...args) noexcept { return output(log::level::failed , std::forward<A>(args)...); }
 };
 
 } // namespace log

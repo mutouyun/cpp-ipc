@@ -208,7 +208,7 @@ std::string to_string(std::nullptr_t) noexcept {
 }
 
 template <>
-std::string to_string<void, void>(void *a) noexcept {
+std::string to_string<void, void>(void const volatile *a) noexcept {
   if (a == nullptr) {
     return to_string(nullptr);
   }

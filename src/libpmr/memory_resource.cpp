@@ -18,7 +18,7 @@ bool verify_args(::LIBIMP::log::grip &log, std::size_t bytes, std::size_t alignm
     return false;
   }
   if ((alignment == 0) || (alignment & (alignment - 1)) != 0) {
-    log.error("invalid bytes = {}, alignment = {}", bytes, alignment);
+    log.error("invalid bytes = ", bytes, ", alignment = ", alignment);
     return false;
   }
   return true;
@@ -66,8 +66,9 @@ void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) no
   void *p = nullptr;
   int ret = ::posix_memalign(&p, alignment, bytes);
   if (ret != 0) {
-    log.error("failed: posix_memalign(alignment = {}, bytes = {}). error = {}", 
-               alignment, bytes, sys::error(ret));
+    log.error("failed: posix_memalign(alignment = ", alignment, 
+                                       ", bytes = ", bytes, 
+                                      "). error = ", sys::error(ret));
     return nullptr;
   }
   return p;

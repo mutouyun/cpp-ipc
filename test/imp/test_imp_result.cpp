@@ -69,13 +69,13 @@ TEST(result, fmt) {
     imp::result<int> r1 {false, -123};
     EXPECT_EQ(fmt::format("{}", r1), fmt::format("[fail, value = {}]", -123));
     imp::result<void *> r2 {&r1};
-    EXPECT_EQ(fmt::format("{}", r2), fmt::format("[succ, value = {}]", (void *)&r1));
+    EXPECT_EQ(fmt::format("{}", r2), imp::fmt("[succ, value = ", (void *)&r1, "]"));
     int aaa {};
     imp::result<int *> r3 {&aaa};
-    EXPECT_EQ(fmt::format("{}", r3), fmt::format("[succ, value = {}]", (void *)&aaa));
+    EXPECT_EQ(fmt::format("{}", r3), imp::fmt("[succ, value = ", (void *)&aaa, "]"));
     imp::result<int *> r4 {nullptr};
-    EXPECT_EQ(fmt::format("{}", r4), fmt::format("[fail, value = {}, code = 0]", nullptr));
+    EXPECT_EQ(fmt::format("{}", r4), imp::fmt("[fail, value = ", nullptr, ", code = 0]"));
     r4 = {nullptr, 1234};
-    EXPECT_EQ(fmt::format("{}", r4), fmt::format("[fail, value = {}, code = 1234]", nullptr));
+    EXPECT_EQ(fmt::format("{}", r4), imp::fmt("[fail, value = ", nullptr, ", code = 1234]"));
   }
 }

@@ -93,7 +93,7 @@ namespace {
 template <typename PC>
 void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
   LIBIMP_LOG_();
-  log.info("\n\tStart with: {}, {} producers, {} consumers...", imp::nameof<PC>(), np, nc);
+  log.info("\n\tStart with: ", imp::nameof<PC>(), ", ", np, " producers, ", nc, " consumers...");
 
   constexpr static std::uint32_t loop_size = 100'0000;
 
@@ -112,7 +112,7 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
         std::this_thread::yield();
       }
       if (i % (loop_size / 10) == 0) {
-        log.info("[{}] put count: {}", n, i);
+        log.info("[", n, "] put count: ", i);
       }
     }
     --running;

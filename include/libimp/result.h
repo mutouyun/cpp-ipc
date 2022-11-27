@@ -7,6 +7,7 @@
 #pragma once
 
 #include <type_traits>
+#include <string>
 #include <cstdint>
 
 #include "fmt/format.h"
@@ -14,6 +15,7 @@
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
+#include "libimp/fmt.h"
 
 LIBIMP_NAMESPACE_BEG_
 
@@ -70,9 +72,12 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
   static T cast_from_code(result_type code) noexcept {
     return static_cast<T>(code);
   }
+  static std::string format(result<T> const &r) noexcept {
+    return fmt(*r);
+  }
   template <typename Out>
   static auto format(result<T> const &r, Out &&out) noexcept {
-    return format_to(out, "{}", *r);
+    return format_to(out, format(r));
   }
 };
 
@@ -86,12 +91,15 @@ struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
   static T cast_from_code(result_type code) noexcept {
     return reinterpret_cast<T>(code);
   }
+  static std::string format(result<T> const &r) noexcept {
+    if LIBIMP_LIKELY(r) {
+      return fmt(static_cast<void *>(*r));
+    }
+    return fmt(static_cast<void *>(*r), ", code = ", r.code_value());
+  }
   template <typename Out>
   static auto format(result<T> const &r, Out &&out) noexcept {
-    if LIBIMP_LIKELY(r) {
-      return format_to(out, "{}", static_cast<void *>(*r));
-    }
-    return format_to(out, "{}, code = {}", static_cast<void *>(*r), r.code_value());
+    return format_to(out, format(r));
   }
 };
 
@@ -157,6 +165,19 @@ public:
   friend bool operator!=(result const &lhs, result const &rhs) noexcept { return lhs.code_ != rhs.code_; }
 };
 
+/// @brief Custom defined fmt_to_string method for imp::fmt
+namespace detail {
+
+inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), result_code r) noexcept {
+  return fmt("[", (r ? "succ" : "fail"), ", value = ", *r, "]");
+}
+
+template <typename T, typename D>
+std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), result<T, D> r) noexcept {
+  return fmt("[", (r ? "succ" : "fail"), ", value = ", result<T, D>::default_traits_t::format(r), "]");
+}
+
+} // namespace detail
 LIBIMP_NAMESPACE_END_
 
 template <typename T, typename D>

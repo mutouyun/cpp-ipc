@@ -95,7 +95,7 @@ LIBIMP_EXPORT std::string to_string(long double a, span<char const> fstr = {}) n
 LIBIMP_EXPORT std::string to_string(std::nullptr_t) noexcept;
 template <typename T,
           typename = std::enable_if_t<std::is_same<T, void>::value>>
-LIBIMP_EXPORT std::string to_string(T *a) noexcept;
+LIBIMP_EXPORT std::string to_string(T const volatile *a) noexcept;
 
 /// @brief Date and time.
 LIBIMP_EXPORT std::string to_string(std::tm const &a, span<char const> fstr = {}) noexcept;
@@ -116,6 +116,12 @@ template <typename T>
 auto tag_invoke(fmt_to_string_t, T &&arg) noexcept
   -> decltype(::LIBIMP::to_string(std::forward<T>(arg))) {
   return ::LIBIMP::to_string(std::forward<T>(arg));
+}
+
+template <typename T>
+auto tag_invoke(fmt_to_string_t, fmt_ref<T> arg) noexcept
+  -> decltype(::LIBIMP::to_string(static_cast<T>(arg.param), arg.fstr)) {
+  return ::LIBIMP::to_string(static_cast<T>(arg.param), arg.fstr);
 }
 
 } // namespace detail

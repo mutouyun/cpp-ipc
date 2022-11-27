@@ -46,8 +46,9 @@ std::string error_str(result_code code) noexcept {
 #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE)
   LIBIMP_LOG_();
   if (::strerror_r((int)code.value(), msg_buf, sizeof(msg_buf)) != 0) {
-    log.error("failed: strerror_r(code = {}, buf, buf-size = {}). error = {}", 
-             (int)code.value(), sizeof(msg_buf), error_code());
+    log.error("failed: strerror_r(code = ", (int)code.value(), 
+                      ", buf, buf-size = ", sizeof(msg_buf), 
+                      "). error = ", error_code());
     return {};
   }
   return msg_buf;
@@ -70,11 +71,11 @@ result<std::int64_t> conf(info r) noexcept {
     break;
   }
   default:
-    log.error("invalid info = {}", enum_cast(r));
+    log.error("invalid info = ", enum_cast(r));
     return {};
   }
   auto err = sys::error();
-  log.error("info = {}, error = {}", enum_cast(r), err);
+  log.error("info = ", enum_cast(r), ", error = ", err);
   return {false, (int)err.value()};
 }
 

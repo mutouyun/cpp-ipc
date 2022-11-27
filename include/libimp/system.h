@@ -13,6 +13,7 @@
 #include "libimp/def.h"
 #include "libimp/export.h"
 #include "libimp/result.h"
+#include "libimp/fmt.h"
 
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
@@ -62,6 +63,13 @@ enum class info : std::int32_t {
   page_size,
 };
 LIBIMP_EXPORT result<std::int64_t> conf(info) noexcept;
+
+/**
+ * @brief @brief Custom defined fmt_to_string method for imp::fmt
+ */
+inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), error r) noexcept {
+  return error_msg(r.code());
+}
 
 } // namespace sys
 LIBIMP_NAMESPACE_END_

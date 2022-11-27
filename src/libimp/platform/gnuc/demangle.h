@@ -29,7 +29,7 @@ std::string demangle(span<char const> name) noexcept {
   int status = 0;
   char *realname = abi::__cxa_demangle(name.data(), buffer, &sz, &status);
   if (realname == nullptr) {
-    log.error("failed: abi::__cxa_demangle(sz = {}), status = {}", sz, status);
+    log.error("failed: abi::__cxa_demangle(sz = ", sz, "), status = ", status);
     std::free(buffer);
     return {};
   }

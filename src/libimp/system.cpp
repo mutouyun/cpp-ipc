@@ -1,6 +1,4 @@
 
-#include "fmt/format.h"
-
 #include "libimp/detect_plat.h"
 #if defined(LIBIMP_OS_WIN)
 # include "libimp/platform/win/system.h"
@@ -13,7 +11,7 @@ namespace sys {
 
 std::string error_msg(result_code code) noexcept {
   LIBIMP_TRY {
-    return ::fmt::format("[{}, \"{}\"]", code.value(), error_str(code));
+    return fmt("[", code.value(), ", \"", error_str(code), "\"]");
   } LIBIMP_CATCH(...) {
     return error_str(code);
   }

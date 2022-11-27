@@ -3,8 +3,6 @@
 #include <utility>
 #include <cstdio>
 
-#include "fmt/chrono.h"
-
 LIBIMP_NAMESPACE_BEG_
 namespace log {
 
@@ -14,7 +12,7 @@ std::string to_string(context &&ctx) noexcept {
   };
   LIBIMP_TRY {
     auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(ctx.tp).time_since_epoch().count() % 1000;
-    return ::fmt::format("[{}][{:%Y-%m-%d %H:%M:%S}.{:03}][{}] {}", types[enum_cast(ctx.level)], ctx.tp, ms, ctx.func, ctx.text);
+    return fmt("[", types[enum_cast(ctx.level)], "][", ctx.tp, ".", spec("03")(ms), "][", ctx.func, "] ", ctx.text);
   } LIBIMP_CATCH(std::exception const &e) {
     /// @remark [TBD] std::string constructor may throw an exception
     return e.what();

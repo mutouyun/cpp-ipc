@@ -29,4 +29,6 @@ file(GLOB HEAD_FILES ${LIBIPC_PROJECT_DIR}/benchmark/*.h)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 
-target_link_libraries(${PROJECT_NAME} benchmark_main imp ipc)
+target_link_libraries(${PROJECT_NAME}
+  benchmark_main fmt
+  imp ipc)
