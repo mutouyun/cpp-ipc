@@ -17,6 +17,7 @@
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
 #include "libimp/enum_cast.h"
+#include "libimp/fmt.h"
 
 LIBIMP_NAMESPACE_BEG_
 namespace log {
@@ -38,6 +39,14 @@ struct context {
 };
 
 LIBIMP_EXPORT std::string to_string(context &&) noexcept;
+
+/**
+ * @brief Custom defined fmt_to_string method for imp::fmt
+ */
+template <typename T>
+std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), context &&arg) noexcept {
+  return ::LIBIMP::log::to_string(std::move(arg));
+}
 
 } // namespace log
 

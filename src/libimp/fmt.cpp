@@ -98,8 +98,12 @@ std::string sprintf(F fop, span<char const> fstr, span<char const> s, A a) noexc
 
 } // namespace
 
-std::string const &to_string(std::string const &a) noexcept {
+std::string to_string(std::string const &a) noexcept {
   return a;
+}
+
+std::string to_string(std::string &&a) noexcept {
+  return std::move(a);
 }
 
 std::string to_string(std::string const &a, span<char const> fstr) noexcept {

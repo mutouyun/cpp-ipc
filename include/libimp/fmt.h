@@ -17,6 +17,7 @@
 #include "libimp/span.h"
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
+#include "libimp/generic.h"
 
 LIBIMP_NAMESPACE_BEG_
 
@@ -34,17 +35,31 @@ auto spec(char const (&fstr)[N]) noexcept {
   };
 }
 
+namespace detail {
+
+struct fmt_to_string_t {
+  template <typename T>
+  std::string operator()(T &&arg) const {
+    return ::LIBIMP::tag_invoke(fmt_to_string_t{}, std::forward<T>(arg));
+  }
+};
+
+} // namespace detail
+
+constexpr detail::fmt_to_string_t fmt_to_string {};
+
 template <typename... A>
 std::string fmt(A &&...args) {
   std::string joined;
   LIBIMP_UNUSED auto unfold = {
-    joined.append(to_string(std::forward<A>(args)))...
+    joined.append(fmt_to_string(std::forward<A>(args)))...
   };
   return joined;
 }
 
 /// @brief Return the string directly.
-LIBIMP_EXPORT std::string const &to_string(std::string const &a) noexcept;
+LIBIMP_EXPORT std::string to_string(std::string const &a) noexcept;
+LIBIMP_EXPORT std::string to_string(std::string &&a) noexcept;
 LIBIMP_EXPORT std::string to_string(std::string const &a, span<char const> fstr) noexcept;
 
 /// @brief Character to string conversion.
@@ -92,4 +107,16 @@ LIBIMP_EXPORT std::string to_string(std::chrono::time_point<Clock, Duration> con
   return detail::time_to_string(std::chrono::system_clock::to_time_t(a), fstr);
 }
 
+/**
+ * @brief Predefined fmt_to_string method
+ */
+namespace detail {
+
+template <typename T>
+auto tag_invoke(fmt_to_string_t, T &&arg) noexcept
+  -> decltype(::LIBIMP::to_string(std::forward<T>(arg))) {
+  return ::LIBIMP::to_string(std::forward<T>(arg));
+}
+
+} // namespace detail
 LIBIMP_NAMESPACE_END_
