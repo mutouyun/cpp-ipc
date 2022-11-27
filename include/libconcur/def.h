@@ -11,8 +11,8 @@
 
 #include "libimp/detect_plat.h"
 
-#define LIBCONCUR_               concur
-#define LIBCONCUR_NAMESPACE_BEG_ namespace LIBCONCUR_ {
+#define LIBCONCUR                concur
+#define LIBCONCUR_NAMESPACE_BEG_ namespace LIBCONCUR {
 #define LIBCONCUR_NAMESPACE_END_ }
 
 LIBCONCUR_NAMESPACE_BEG_

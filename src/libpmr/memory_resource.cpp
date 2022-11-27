@@ -13,7 +13,7 @@ namespace {
 /**
  * @brief Check that bytes is not 0 and that the alignment is a power of two.
  */
-bool verify_args(::LIBIMP_::log::grip &log, std::size_t bytes, std::size_t alignment) noexcept {
+bool verify_args(::LIBIMP::log::grip &log, std::size_t bytes, std::size_t alignment) noexcept {
   if (bytes == 0) {
     return false;
   }

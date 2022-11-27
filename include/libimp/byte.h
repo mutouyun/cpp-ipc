@@ -158,12 +158,12 @@ U *byte_cast(byte const *p) noexcept {
 LIBIMP_NAMESPACE_END_
 
 template <>
-struct fmt::formatter<::LIBIMP_::byte> {
+struct fmt::formatter<::LIBIMP::byte> {
   constexpr auto parse(format_parse_context& ctx) const {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(::LIBIMP_::byte b, FormatContext &ctx) {
+  auto format(::LIBIMP::byte b, FormatContext &ctx) {
     return format_to(ctx.out(), "{:#04x}", static_cast<std::uint8_t>(b));
   }
 };

@@ -19,7 +19,7 @@ using tstring = std::basic_string<TCHAR>;
 
 inline tstring to_tstring(std::string const &str) {
   tstring des;
-  ::LIBIMP_::cvt_sstr(str, des);
+  ::LIBIMP::cvt_sstr(str, des);
   return des;
 }
 

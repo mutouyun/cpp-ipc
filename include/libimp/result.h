@@ -160,22 +160,22 @@ public:
 LIBIMP_NAMESPACE_END_
 
 template <typename T, typename D>
-struct fmt::formatter<::LIBIMP_::result<T, D>> {
+struct fmt::formatter<::LIBIMP::result<T, D>> {
   constexpr auto parse(format_parse_context& ctx) const {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(::LIBIMP_::result<T, D> r, FormatContext &ctx) {
-    return format_to(::LIBIMP_::result<T, D>::default_traits_t::format(r, 
+  auto format(::LIBIMP::result<T, D> r, FormatContext &ctx) {
+    return format_to(::LIBIMP::result<T, D>::default_traits_t::format(r, 
            format_to(ctx.out(), "[{}, value = ", r ? "succ" : "fail")), "]");
   }
 };
 
 template <>
-struct fmt::formatter<::LIBIMP_::result_code>
-          : formatter<::LIBIMP_::result<::LIBIMP_::result_type>> {
+struct fmt::formatter<::LIBIMP::result_code>
+          : formatter<::LIBIMP::result<::LIBIMP::result_type>> {
   template <typename FormatContext>
-  auto format(::LIBIMP_::result_code r, FormatContext &ctx) {
+  auto format(::LIBIMP::result_code r, FormatContext &ctx) {
     return format_to(ctx.out(), "[{}, value = {}]", (r ? "succ" : "fail"), *r);
   }
 };

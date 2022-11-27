@@ -9,8 +9,8 @@
 #include <cstddef>
 #include <cstdint>
 
-#define LIBIPC_               ipc
-#define LIBIPC_NAMESPACE_BEG_ namespace LIBIPC_ {
+#define LIBIPC                ipc
+#define LIBIPC_NAMESPACE_BEG_ namespace LIBIPC {
 #define LIBIPC_NAMESPACE_END_ }
 
 LIBIPC_NAMESPACE_BEG_

@@ -1,10 +1,9 @@
+#include "libimp/log.h"
 
 #include <utility>
 #include <cstdio>
 
 #include "fmt/chrono.h"
-
-#include "libimp/log.h"
 
 LIBIMP_NAMESPACE_BEG_
 namespace log {

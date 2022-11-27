@@ -27,7 +27,7 @@ inline LPSECURITY_ATTRIBUTES get_sa() {
     bool succ_ = false;
 
     initiator() {
-      using namespace ::LIBIMP_;
+      using namespace ::LIBIMP;
       log::grip log {"get_sa"};
       if (!::InitializeSecurityDescriptor(&sd_, SECURITY_DESCRIPTOR_REVISION)) {
         log.error("failed: InitializeSecurityDescriptor(SECURITY_DESCRIPTOR_REVISION). error = {}", sys::error());

@@ -14,22 +14,22 @@ allocator::holder_base const &allocator::get_holder() const noexcept {
 }
 
 allocator::allocator() noexcept {
-  ::LIBIMP_::construct<holder_null>(holder_.data());
+  ::LIBIMP::construct<holder_null>(holder_.data());
 }
 
 allocator::~allocator() noexcept {
-  ::LIBIMP_::destroy(&get_holder());
+  ::LIBIMP::destroy(&get_holder());
 }
 
 allocator::allocator(allocator &&other) noexcept
   : allocator(other) /*copy*/ {
-  ::LIBIMP_::construct<holder_null>(other.holder_.data());
+  ::LIBIMP::construct<holder_null>(other.holder_.data());
 }
 
 allocator &allocator::operator=(allocator &&other) & noexcept {
   if (this == &other) return *this;
   this->holder_ = other.holder_;
-  ::LIBIMP_::construct<holder_null>(other.holder_.data());
+  ::LIBIMP::construct<holder_null>(other.holder_.data());
   return *this;
 }
 

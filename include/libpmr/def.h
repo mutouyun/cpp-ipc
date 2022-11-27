@@ -6,8 +6,8 @@
  */
 #pragma once
 
-#define LIBPMR_               pmr
-#define LIBPMR_NAMESPACE_BEG_ namespace LIBPMR_ {
+#define LIBPMR                pmr
+#define LIBPMR_NAMESPACE_BEG_ namespace LIBPMR {
 #define LIBPMR_NAMESPACE_END_ }
 
 LIBPMR_NAMESPACE_BEG_

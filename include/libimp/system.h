@@ -67,10 +67,10 @@ LIBIMP_EXPORT result<std::int64_t> conf(info) noexcept;
 LIBIMP_NAMESPACE_END_
 
 template <>
-struct fmt::formatter<::LIBIMP_::sys::error>
+struct fmt::formatter<::LIBIMP::sys::error>
           : formatter<std::string> {
   template <typename FormatContext>
-  auto format(::LIBIMP_::sys::error r, FormatContext &ctx) {
-    return format_to(ctx.out(), ::LIBIMP_::sys::error_msg(r.code()));
+  auto format(::LIBIMP::sys::error r, FormatContext &ctx) {
+    return format_to(ctx.out(), ::LIBIMP::sys::error_msg(r.code()));
   }
 };

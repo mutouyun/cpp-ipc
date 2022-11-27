@@ -29,11 +29,13 @@ file(GLOB SRC_FILES
   ${LIBIPC_PROJECT_DIR}/test/imp/*.cpp
   ${LIBIPC_PROJECT_DIR}/test/pmr/*.cpp
   ${LIBIPC_PROJECT_DIR}/test/concur/*.cpp
-  ${LIBIPC_PROJECT_DIR}/test/*.cpp)
+  ${LIBIPC_PROJECT_DIR}/test/ipc/*.cpp)
 
 file(GLOB HEAD_FILES
   ${LIBIPC_PROJECT_DIR}/test/*.h)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 
-target_link_libraries(${PROJECT_NAME} gtest_main imp pmr ipc)
+target_link_libraries(${PROJECT_NAME} 
+  gtest_main 
+  imp pmr ipc)

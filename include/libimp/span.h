@@ -281,12 +281,12 @@ inline auto make_span(std::string const &str) noexcept -> span<char const> {
 LIBIMP_NAMESPACE_END_
 
 template <typename T>
-struct fmt::formatter<::LIBIMP_::span<T>> {
+struct fmt::formatter<::LIBIMP::span<T>> {
   constexpr auto parse(format_parse_context& ctx) const {
     return ctx.end();
   }
   template <typename FormatContext>
-  auto format(::LIBIMP_::span<T> s, FormatContext &ctx) {
+  auto format(::LIBIMP::span<T> s, FormatContext &ctx) {
     if (s.empty()) {
       return format_to(ctx.out(), "");
     }

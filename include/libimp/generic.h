@@ -1,7 +1,7 @@
 /**
  * @file libimp/generic.h
  * @author mutouyun (orz@orzz.org)
- * @brief Tools for generic programming
+ * @brief Tools for generic programming.
  * @date 2022-03-01
  */
 #pragma once

@@ -1,10 +1,10 @@
+#include "libimp/codecvt.h"
 
 #include <algorithm>
 #include <type_traits>
 #include <cstring>
 #include <cstdint>
 
-#include "libimp/codecvt.h"
 #include "libimp/log.h"
 #include "libimp/detect_plat.h"
 

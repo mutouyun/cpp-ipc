@@ -88,7 +88,7 @@ struct producer<trans::unicast, relation::single> {
   template <typename T, typename C, typename U, 
             typename = is_context<C>,
             typename = is_convertible<C, context_impl>>
-  static bool enqueue(::LIBIMP_::span<element<T>> elems, C &ctx, U &&src) noexcept {
+  static bool enqueue(::LIBIMP::span<element<T>> elems, C &ctx, U &&src) noexcept {
     auto w_idx = ctx.w_idx;
     auto w_cur = trunc_index(ctx, w_idx);
     auto &elem = elems[w_cur];
@@ -119,7 +119,7 @@ struct producer<trans::unicast, relation::multi> {
   template <typename T, typename C, typename U, 
             typename = is_context<C>,
             typename = is_convertible<C, context_impl>>
-  static bool enqueue(::LIBIMP_::span<element<T>> elems, C &ctx, U &&src) noexcept {
+  static bool enqueue(::LIBIMP::span<element<T>> elems, C &ctx, U &&src) noexcept {
     auto w_idx = ctx.w_idx.load(std::memory_order_acquire);
     for (;;) {
       auto w_cur = trunc_index(ctx, w_idx);
@@ -154,7 +154,7 @@ struct consumer<trans::unicast, relation::single> {
   template <typename T, typename C, typename U, 
             typename = is_context<C>,
             typename = is_convertible<C, context_impl>>
-  static bool dequeue(::LIBIMP_::span<element<T>> elems, C &ctx, U &des) noexcept {
+  static bool dequeue(::LIBIMP::span<element<T>> elems, C &ctx, U &des) noexcept {
     auto r_idx = ctx.r_idx;
     auto r_cur = trunc_index(ctx, r_idx);
     auto &elem = elems[r_cur];
@@ -184,7 +184,7 @@ struct consumer<trans::unicast, relation::multi> {
   template <typename T, typename C, typename U, 
             typename = is_context<C>,
             typename = is_convertible<C, context_impl>>
-  static bool dequeue(::LIBIMP_::span<element<T>> elems, C &ctx, U &des) noexcept {
+  static bool dequeue(::LIBIMP::span<element<T>> elems, C &ctx, U &des) noexcept {
     auto r_idx = ctx.r_idx.load(std::memory_order_acquire);
     for (;;) {
       auto r_cur = trunc_index(ctx, r_idx);
@@ -250,7 +250,7 @@ struct prod_cons : producer<TransModT, ProdModT>
       : circ_size(cs) {}
 
     template <typename T>
-    constexpr context(::LIBIMP_::span<element<T>> elems) noexcept
+    constexpr context(::LIBIMP::span<element<T>> elems) noexcept
       : circ_size(static_cast<index_t>(elems.size())) {}
 
     constexpr bool valid() const noexcept {

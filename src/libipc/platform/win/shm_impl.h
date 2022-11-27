@@ -15,7 +15,7 @@
 #include "mmap_impl.h"
 
 LIBIPC_NAMESPACE_BEG_
-using namespace ::LIBIMP_;
+using namespace ::LIBIMP;
 
 result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();

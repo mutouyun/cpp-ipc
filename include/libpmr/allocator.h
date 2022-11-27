@@ -85,7 +85,7 @@ class LIBIMP_EXPORT allocator {
   };
 
   using void_holder_type = holder_memory_resource<void>;
-  alignas(void_holder_type) std::array<::LIBIMP_::byte, sizeof(void_holder_type)> holder_;
+  alignas(void_holder_type) std::array<::LIBIMP::byte, sizeof(void_holder_type)> holder_;
 
   holder_base &      get_holder() noexcept;
   holder_base const &get_holder() const noexcept;
@@ -105,7 +105,7 @@ public:
   template <typename T, typename = is_memory_resource<T>>
   allocator(T *p_mr) : allocator() {
     if (p_mr == nullptr) return;
-    ::LIBIMP_::construct<holder_memory_resource<T>>(holder_.data(), p_mr);
+    ::LIBIMP::construct<holder_memory_resource<T>>(holder_.data(), p_mr);
   }
 
   void swap(allocator &other) noexcept;

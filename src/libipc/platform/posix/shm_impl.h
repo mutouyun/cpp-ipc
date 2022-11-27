@@ -23,7 +23,7 @@
 #include "def.h"
 
 LIBIPC_NAMESPACE_BEG_
-using namespace ::LIBIMP_;
+using namespace ::LIBIMP;
 
 struct shm_handle {
   std::string file;

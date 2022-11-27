@@ -1,7 +1,7 @@
 /**
  * @file libimp/log.h
  * @author mutouyun (orz@orzz.org)
- * @brief Simple log output component
+ * @brief Simple log output component.
  * @date 2022-05-22
  */
 #pragma once
@@ -198,4 +198,4 @@ public:
 } // namespace log
 LIBIMP_NAMESPACE_END_
 
-#define LIBIMP_LOG_(...) ::LIBIMP_::log::grip log {__func__, __VA_ARGS__}
+#define LIBIMP_LOG_(...) ::LIBIMP::log::grip log {__func__, __VA_ARGS__}
