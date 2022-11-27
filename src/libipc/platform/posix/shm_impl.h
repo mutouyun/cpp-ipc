@@ -148,7 +148,7 @@ result_code shm_close(shm_t h) noexcept {
   if (shm == nullptr) return {};
   if (::munmap(shm->memp, shm->f_sz) == posix::failed) {
     auto err = sys::error();
-    log.error("failed: munmap(", shm->memp, ", ", shm->f_sz"). error = ", err);
+    log.error("failed: munmap(", shm->memp, ", ", shm->f_sz, "). error = ", err);
     return err.code();
   }
   /// @brief no unlink the file.
