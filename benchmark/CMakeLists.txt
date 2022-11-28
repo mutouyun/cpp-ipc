@@ -19,6 +19,12 @@ set(BENCHMARK_ENABLE_INSTALL OFF)
 add_definitions(-DBENCHMARK_STATIC_DEFINE)
 FetchContent_MakeAvailable(googlebenchmark)
 
+FetchContent_Declare(fmtlib
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG        9.1.0
+)
+FetchContent_MakeAvailable(fmtlib)
+
 include_directories(
   ${LIBIPC_PROJECT_DIR}/include 
   ${LIBIPC_PROJECT_DIR}/src
