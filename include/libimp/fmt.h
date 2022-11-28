@@ -111,5 +111,17 @@ auto tag_invoke(fmt_to_string_t, fmt_ref<T> arg) noexcept
   return ::LIBIMP::to_string(static_cast<T>(arg.param), arg.fstr);
 }
 
+template <typename T>
+std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), span<T> s) {
+  if (s.empty()) {
+    return {};
+  }
+  auto appender = fmt(s[0]);
+  for (std::size_t i = 1; i < s.size(); ++i) {
+    appender += fmt(' ', s[i]);
+  }
+  return appender;
+}
+
 } // namespace detail
 LIBIMP_NAMESPACE_END_

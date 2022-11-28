@@ -19,7 +19,6 @@
 
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
-#include "libimp/fmt_cpo.h"
 
 #if defined(LIBIMP_CPP_20) && defined(__cpp_lib_span)
 #include <span>
@@ -267,20 +266,4 @@ inline auto make_span(std::string const &str) noexcept -> span<char const> {
   return {str.data(), str.size()};
 }
 
-/// @brief Custom defined fmt_to_string method for imp::fmt
-namespace detail {
-
-template <typename T>
-std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), span<T> s) {
-  if (s.empty()) {
-    return {};
-  }
-  auto appender = fmt(s[0]);
-  for (std::size_t i = 1; i < s.size(); ++i) {
-    appender += fmt(' ', s[i]);
-  }
-  return appender;
-}
-
-} // namespace detail
 LIBIMP_NAMESPACE_END_
