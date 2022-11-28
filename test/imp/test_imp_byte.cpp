@@ -3,6 +3,7 @@
 
 #include "libimp/byte.h"
 #include "libimp/span.h"
+#include "libimp/fmt.h"
 
 TEST(byte, construct) {
   {
@@ -38,13 +39,13 @@ TEST(byte, compare) {
 TEST(byte, fmt) {
   {
     imp::byte b1, b2(31);
-    EXPECT_EQ(fmt::format("{}", b1), "0x00");
-    EXPECT_EQ(fmt::format("{}", b2), "0x1f");
+    EXPECT_EQ(imp::fmt(b1), "00");
+    EXPECT_EQ(imp::fmt(b2), "1f");
+    EXPECT_EQ(imp::fmt(imp::spec("03X")(b2)), "01F");
   }
   {
     imp::byte bs[] {31, 32, 33, 34, 35, 36, 37, 38};
-    EXPECT_EQ(fmt::format("{}", imp::make_span(bs)), 
-              "0x1f 0x20 0x21 0x22 0x23 0x24 0x25 0x26");
+    EXPECT_EQ(imp::fmt(imp::make_span(bs)), "1f 20 21 22 23 24 25 26");
   }
 }
 

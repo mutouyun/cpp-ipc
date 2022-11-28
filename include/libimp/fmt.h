@@ -14,10 +14,10 @@
 #include <ctime>    // std::tm
 
 #include "libimp/def.h"
+#include "libimp/fmt_cpo.h"
 #include "libimp/span.h"
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
-#include "libimp/generic.h"
 
 LIBIMP_NAMESPACE_BEG_
 
@@ -34,19 +34,6 @@ auto spec(char const (&fstr)[N]) noexcept {
     return fmt_ref<arg_t> {{fstr}, static_cast<arg_t>(arg)};
   };
 }
-
-namespace detail {
-
-struct fmt_to_string_t {
-  template <typename T>
-  std::string operator()(T &&arg) const {
-    return ::LIBIMP::tag_invoke(fmt_to_string_t{}, std::forward<T>(arg));
-  }
-};
-
-} // namespace detail
-
-constexpr detail::fmt_to_string_t fmt_to_string {};
 
 template <typename... A>
 std::string fmt(A &&...args) {

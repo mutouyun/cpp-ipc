@@ -10,8 +10,6 @@
 #include <string>
 #include <cstdint>
 
-#include "fmt/format.h"
-
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
@@ -75,10 +73,6 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
   static std::string format(result<T> const &r) noexcept {
     return fmt(*r);
   }
-  template <typename Out>
-  static auto format(result<T> const &r, Out &&out) noexcept {
-    return format_to(out, format(r));
-  }
 };
 
 template <typename T>
@@ -96,10 +90,6 @@ struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
       return fmt(static_cast<void *>(*r));
     }
     return fmt(static_cast<void *>(*r), ", code = ", r.code_value());
-  }
-  template <typename Out>
-  static auto format(result<T> const &r, Out &&out) noexcept {
-    return format_to(out, format(r));
   }
 };
 
@@ -168,35 +158,14 @@ public:
 /// @brief Custom defined fmt_to_string method for imp::fmt
 namespace detail {
 
-inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), result_code r) noexcept {
+inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), result_code r) {
   return fmt("[", (r ? "succ" : "fail"), ", value = ", *r, "]");
 }
 
 template <typename T, typename D>
-std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), result<T, D> r) noexcept {
+std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), result<T, D> r) {
   return fmt("[", (r ? "succ" : "fail"), ", value = ", result<T, D>::default_traits_t::format(r), "]");
 }
 
 } // namespace detail
 LIBIMP_NAMESPACE_END_
-
-template <typename T, typename D>
-struct fmt::formatter<::LIBIMP::result<T, D>> {
-  constexpr auto parse(format_parse_context& ctx) const {
-    return ctx.end();
-  }
-  template <typename FormatContext>
-  auto format(::LIBIMP::result<T, D> r, FormatContext &ctx) {
-    return format_to(::LIBIMP::result<T, D>::default_traits_t::format(r, 
-           format_to(ctx.out(), "[{}, value = ", r ? "succ" : "fail")), "]");
-  }
-};
-
-template <>
-struct fmt::formatter<::LIBIMP::result_code>
-          : formatter<::LIBIMP::result<::LIBIMP::result_type>> {
-  template <typename FormatContext>
-  auto format(::LIBIMP::result_code r, FormatContext &ctx) {
-    return format_to(ctx.out(), "[{}, value = {}]", (r ? "succ" : "fail"), *r);
-  }
-};

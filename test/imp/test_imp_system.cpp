@@ -3,11 +3,11 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "fmt/format.h"
 
 #include "libimp/system.h"
 #include "libimp/detect_plat.h"
 #include "libimp/codecvt.h"
+#include "libimp/fmt.h"
 
 #if defined(LIBIMP_OS_WIN)
 #include <Windows.h>
@@ -25,11 +25,11 @@ TEST(system, error_code) {
 
   imp::sys::error e_obj {err};
   EXPECT_EQ(err.value(), e_obj.value());
-  auto e_msg = fmt::format("{}", imp::sys::error_msg(imp::sys::error_code()));
+  auto e_msg = imp::fmt(imp::sys::error_msg(imp::sys::error_code()));
   std::stringstream ss;
   ss << imp::sys::error{};
   EXPECT_EQ(e_msg, ss.str());
-  EXPECT_EQ(e_msg, fmt::format("{}", imp::sys::error()));
+  EXPECT_EQ(e_msg, imp::fmt(imp::sys::error()));
   std::cout << e_msg << "\n";
 }
 

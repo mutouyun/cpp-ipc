@@ -13,7 +13,7 @@
 #include "libimp/def.h"
 #include "libimp/export.h"
 #include "libimp/result.h"
-#include "libimp/fmt.h"
+#include "libimp/fmt_cpo.h"
 
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
@@ -73,12 +73,3 @@ inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), error r) noexce
 
 } // namespace sys
 LIBIMP_NAMESPACE_END_
-
-template <>
-struct fmt::formatter<::LIBIMP::sys::error>
-          : formatter<std::string> {
-  template <typename FormatContext>
-  auto format(::LIBIMP::sys::error r, FormatContext &ctx) {
-    return format_to(ctx.out(), ::LIBIMP::sys::error_msg(r.code()));
-  }
-};

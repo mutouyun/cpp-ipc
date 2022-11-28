@@ -6,6 +6,8 @@
 
 #include "libimp/span.h"
 #include "libimp/countof.h"
+#include "libimp/byte.h"
+#include "libimp/fmt.h"
 
 TEST(span, to_address) {
   int *a = new int;
@@ -56,6 +58,6 @@ TEST(span, span) {
 }
 
 TEST(span, fmt) {
-  EXPECT_EQ(fmt::format("{}", imp::span<int>{}), "");
-  EXPECT_EQ(fmt::format("{}", imp::make_span({1, 3, 2, 4, 5, 6, 7})), "1 3 2 4 5 6 7");
+  EXPECT_EQ(imp::fmt(imp::span<int>{}), "");
+  EXPECT_EQ(imp::fmt(imp::make_span({1, 3, 2, 4, 5, 6, 7})), "1 3 2 4 5 6 7");
 }

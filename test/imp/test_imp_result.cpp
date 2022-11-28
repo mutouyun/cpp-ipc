@@ -2,9 +2,9 @@
 #include <sstream>
 
 #include "gtest/gtest.h"
-#include "fmt/format.h"
 
 #include "libimp/result.h"
+#include "libimp/fmt.h"
 
 TEST(result, ok) {
   imp::result_code ret;
@@ -59,23 +59,23 @@ TEST(result, compare) {
 TEST(result, fmt) {
   {
     imp::result_code r1;
-    EXPECT_EQ(fmt::format("{}", r1), "[fail, value = 0]");
+    EXPECT_EQ(imp::fmt(r1), "[fail, value = 0]");
     imp::result_code r2(true, 65537);
-    EXPECT_EQ(fmt::format("{}", r2), "[succ, value = 65537]");
+    EXPECT_EQ(imp::fmt(r2), "[succ, value = 65537]");
     imp::result_code r3(0);
-    EXPECT_EQ(fmt::format("{}", r3), "[succ, value = 0]");
+    EXPECT_EQ(imp::fmt(r3), "[succ, value = 0]");
   }
   {
     imp::result<int> r1 {false, -123};
-    EXPECT_EQ(fmt::format("{}", r1), fmt::format("[fail, value = {}]", -123));
+    EXPECT_EQ(imp::fmt(r1), imp::fmt("[fail, value = ", -123, "]"));
     imp::result<void *> r2 {&r1};
-    EXPECT_EQ(fmt::format("{}", r2), imp::fmt("[succ, value = ", (void *)&r1, "]"));
+    EXPECT_EQ(imp::fmt(r2), imp::fmt("[succ, value = ", (void *)&r1, "]"));
     int aaa {};
     imp::result<int *> r3 {&aaa};
-    EXPECT_EQ(fmt::format("{}", r3), imp::fmt("[succ, value = ", (void *)&aaa, "]"));
+    EXPECT_EQ(imp::fmt(r3), imp::fmt("[succ, value = ", (void *)&aaa, "]"));
     imp::result<int *> r4 {nullptr};
-    EXPECT_EQ(fmt::format("{}", r4), imp::fmt("[fail, value = ", nullptr, ", code = 0]"));
+    EXPECT_EQ(imp::fmt(r4), imp::fmt("[fail, value = ", nullptr, ", code = 0]"));
     r4 = {nullptr, 1234};
-    EXPECT_EQ(fmt::format("{}", r4), imp::fmt("[fail, value = ", nullptr, ", code = 1234]"));
+    EXPECT_EQ(imp::fmt(r4), imp::fmt("[fail, value = ", nullptr, ", code = 1234]"));
   }
 }

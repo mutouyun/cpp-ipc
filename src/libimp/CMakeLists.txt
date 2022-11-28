@@ -29,8 +29,6 @@ target_include_directories(${PROJECT_NAME}
   PUBLIC  ${LIBIPC_PROJECT_DIR}/include
   PRIVATE ${LIBIPC_PROJECT_DIR}/src)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC fmt)
-
 install(
   TARGETS ${PROJECT_NAME}
   RUNTIME DESTINATION bin

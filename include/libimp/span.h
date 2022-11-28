@@ -17,11 +17,9 @@
 #include <cstdint>
 #include <initializer_list>
 
-#include "fmt/format.h"
-
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
-#include "libimp/byte.h"
+#include "libimp/fmt_cpo.h"
 
 #if defined(LIBIMP_CPP_20) && defined(__cpp_lib_span)
 #include <span>
@@ -222,15 +220,6 @@ bool operator==(span<T> a, span<U> b) noexcept {
   return true;
 }
 
-/// @brief Converts a span into a view of its underlying bytes.
-/// @see https://en.cppreference.com/w/cpp/container/span/as_bytes
-
-template <typename T, 
-          typename Byte = typename std::conditional<std::is_const<T>::value, byte const, byte>::type>
-auto as_bytes(span<T> s) noexcept -> span<Byte> {
-  return {byte_cast(s.data()), s.size_bytes()};
-}
-
 /// @brief Constructs an object of type T and wraps it in a span.
 /// Before C++17, template argument deduction for class templates was not supported.
 /// @see https://en.cppreference.com/w/cpp/language/template_argument_deduction
@@ -278,22 +267,20 @@ inline auto make_span(std::string const &str) noexcept -> span<char const> {
   return {str.data(), str.size()};
 }
 
-LIBIMP_NAMESPACE_END_
+/// @brief Custom defined fmt_to_string method for imp::fmt
+namespace detail {
 
 template <typename T>
-struct fmt::formatter<::LIBIMP::span<T>> {
-  constexpr auto parse(format_parse_context& ctx) const {
-    return ctx.end();
+std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), span<T> s) {
+  if (s.empty()) {
+    return {};
   }
-  template <typename FormatContext>
-  auto format(::LIBIMP::span<T> s, FormatContext &ctx) {
-    if (s.empty()) {
-      return format_to(ctx.out(), "");
-    }
-    auto appender = format_to(ctx.out(), "{}", s[0]);
-    for (std::size_t i = 1; i < s.size(); ++i) {
-      appender = format_to(appender, " {}", s[i]);
-    }
-    return appender;
+  auto appender = fmt(s[0]);
+  for (std::size_t i = 1; i < s.size(); ++i) {
+    appender += fmt(' ', s[i]);
   }
-};
+  return appender;
+}
+
+} // namespace detail
+LIBIMP_NAMESPACE_END_

@@ -10,10 +10,10 @@
 #include <cstdint>
 #include <cstddef>  // std::byte (since C++17)
 
-#include "fmt/format.h"
-
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
+#include "libimp/span.h"
+#include "libimp/fmt.h"
 
 #if defined(LIBIMP_CPP_17) && defined(__cpp_lib_byte)
 #define LIBIMP_CPP_LIB_BYTE_
@@ -46,7 +46,7 @@ class byte {
 public:
   constexpr byte() noexcept
     : byte(0) {}
-  
+
   template <typename T, typename = detail::is_integral<T>>
   constexpr byte(T v) noexcept
     : bits_(static_cast<std::uint8_t>(v)) {}
@@ -155,15 +155,27 @@ U *byte_cast(byte const *p) noexcept {
   return reinterpret_cast<U *>(p);
 }
 
-LIBIMP_NAMESPACE_END_
+/// @brief Converts a span into a view of its underlying bytes.
+/// @see https://en.cppreference.com/w/cpp/container/span/as_bytes
 
-template <>
-struct fmt::formatter<::LIBIMP::byte> {
-  constexpr auto parse(format_parse_context& ctx) const {
-    return ctx.end();
-  }
-  template <typename FormatContext>
-  auto format(::LIBIMP::byte b, FormatContext &ctx) {
-    return format_to(ctx.out(), "{:#04x}", static_cast<std::uint8_t>(b));
-  }
-};
+template <typename T, 
+          typename Byte = typename std::conditional<std::is_const<T>::value, byte const, byte>::type>
+auto as_bytes(span<T> s) noexcept -> span<Byte> {
+  return {byte_cast(s.data()), s.size_bytes()};
+}
+
+/// @brief Custom defined fmt_to_string method for imp::fmt
+namespace detail {
+
+inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), ::LIBIMP::byte b) {
+  return ::LIBIMP::to_string(static_cast<std::uint8_t>(b), "02x");
+}
+
+template <typename T, 
+          typename = std::enable_if_t<std::is_same<std::decay_t<T>, ::LIBIMP::byte>::value>>
+std::string tag_invoke(fmt_to_string_t, fmt_ref<T> arg) noexcept {
+  return ::LIBIMP::to_string(static_cast<std::uint8_t>(arg.param), arg.fstr);
+}
+
+} // namespace detail
+LIBIMP_NAMESPACE_END_
