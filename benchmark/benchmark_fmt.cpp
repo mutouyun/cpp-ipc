@@ -11,7 +11,7 @@ namespace {
 
 void imp_fmt_string(benchmark::State &state) {
   for (auto _ : state) {
-    imp::fmt("hello world. hello world. hello world. hello world. hello world.");
+    std::ignore = imp::fmt("hello world. hello world. hello world. hello world. hello world.");
   }
 }
 
@@ -23,7 +23,7 @@ void fmt_format_string(benchmark::State &state) {
 
 void imp_fmt_int(benchmark::State &state) {
   for (auto _ : state) {
-    imp::fmt(654321);
+    std::ignore = imp::fmt(654321);
   }
 }
 
@@ -35,7 +35,7 @@ void fmt_format_int(benchmark::State &state) {
 
 void imp_fmt_float(benchmark::State &state) {
   for (auto _ : state) {
-    imp::fmt(654.321);
+    std::ignore = imp::fmt(654.321);
   }
 }
 
@@ -47,7 +47,7 @@ void fmt_format_float(benchmark::State &state) {
 
 void imp_fmt_chrono(benchmark::State &state) {
   for (auto _ : state) {
-    imp::fmt(std::chrono::system_clock::now());
+    std::ignore = imp::fmt(std::chrono::system_clock::now());
   }
 }
 

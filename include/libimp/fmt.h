@@ -52,12 +52,12 @@ auto spec(char const (&fstr)[N]) noexcept {
 /// @brief String formatting function.
 
 template <typename A>
-std::string fmt(A &&a) {
+LIBIMP_NODISCARD std::string fmt(A &&a) {
   return fmt_to_string(std::forward<A>(a));
 }
 
 template <typename A1, typename... A>
-std::string fmt(A1 &&a1, A &&...args) {
+LIBIMP_NODISCARD std::string fmt(A1 &&a1, A &&...args) {
   std::string joined(fmt(std::forward<A1>(a1)));
   LIBIMP_UNUSED auto unfold = {
     joined.append(fmt_to_string(std::forward<A>(args)))...
