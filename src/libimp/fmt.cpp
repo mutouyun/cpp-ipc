@@ -1,4 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include "libimp/fmt.h"
 
 #include <cstdio>   // std::snprintf
@@ -98,21 +97,9 @@ std::string sprintf(F fop, span<char const> fstr, span<char const> s, A a) noexc
 
 } // namespace
 
-std::string to_string(std::string const &a) noexcept {
-  return a;
-}
-
-std::string to_string(std::string &&a) noexcept {
-  return std::move(a);
-}
-
-std::string to_string(std::string const &a, span<char const> fstr) noexcept {
-  if (a.empty()) return {};
-  return ::LIBIMP::sprintf(fmt_of, fstr, "s", a.c_str());
-}
-
-std::string to_string(char a) noexcept {
-  return {a};
+std::string to_string(char const *a, span<char const> fstr) noexcept {
+  if (a == nullptr) return {};
+  return ::LIBIMP::sprintf(fmt_of, fstr, "s", a);
 }
 
 std::string to_string(wchar_t a) noexcept {
@@ -143,20 +130,6 @@ std::string to_string(char32_t a) noexcept {
   } LIBIMP_CATCH(...) {
     return {};
   }
-}
-
-#if defined(LIBIMP_CPP_20)
-std::string to_string(char8_t a) noexcept {
-  return to_string((char)a);
-}
-#endif // defined(LIBIMP_CPP_20)
-
-std::string to_string(signed char a, span<char const> fstr) noexcept {
-  return to_string((int)a, fstr);
-}
-
-std::string to_string(unsigned char a, span<char const> fstr) noexcept {
-  return to_string((unsigned)a, fstr);
 }
 
 std::string to_string(signed short a, span<char const> fstr) noexcept {
@@ -191,20 +164,12 @@ std::string to_string(unsigned long long a, span<char const> fstr) noexcept {
   return ::LIBIMP::sprintf(fmt_of_unsigned, fstr, "ll", a);
 }
 
-std::string to_string(float a, span<char const> fstr) noexcept {
-  return to_string((double)a, fstr);
-}
-
 std::string to_string(double a, span<char const> fstr) noexcept {
   return ::LIBIMP::sprintf(fmt_of_float, fstr, "", a);
 }
 
 std::string to_string(long double a, span<char const> fstr) noexcept {
   return ::LIBIMP::sprintf(fmt_of_float, fstr, "L", a);
-}
-
-std::string to_string(std::nullptr_t) noexcept {
-  return "null";
 }
 
 template <>
@@ -227,13 +192,5 @@ std::string to_string(std::tm const &a, span<char const> fstr) noexcept {
     return {};
   }
 }
-
-namespace detail {
-
-std::string time_to_string(std::time_t tt, span<char const> fstr) noexcept {
-  return to_string(*std::localtime(&tt), fstr);
-}
-
-} // namespace detail
 
 LIBIMP_NAMESPACE_END_

@@ -5,14 +5,14 @@
 
 namespace {
 
-void BM_imp_log_no_output(benchmark::State& state) {
+void imp_log_no_output(benchmark::State &state) {
   imp::log::grip log {__func__, {}};
   for (auto _ : state) {
     log.debug("hello log.");
   }
 }
 
-void BM_imp_log_gripper(benchmark::State& state) {
+void imp_log_gripper(benchmark::State &state) {
   imp::log::grip log {__func__, {}};
   for (auto _ : state) {
     log.info("hello log.");
@@ -21,5 +21,5 @@ void BM_imp_log_gripper(benchmark::State& state) {
 
 } // namespace
 
-BENCHMARK(BM_imp_log_no_output);
-BENCHMARK(BM_imp_log_gripper);
+BENCHMARK(imp_log_no_output);
+BENCHMARK(imp_log_gripper);
