@@ -1,8 +1,12 @@
 #include "libimp/fmt.h"
 
-#include <cstdio>   // std::snprintf
-#include <iomanip>  // std::put_time
-#include <sstream>  // std::ostringstream
+#include <cstdio>     // std::snprintf
+#include <iomanip>    // std::put_time
+#include <sstream>    // std::ostringstream
+#include <array>
+#include <cstring>    // std::memcpy, std::strncat
+#include <algorithm>  // std::min
+#include <initializer_list>
 
 #include "libimp/codecvt.h"
 
@@ -20,17 +24,46 @@ span<char const> normalize(span<char const> a) {
   return a.first(a.size() - (a.back() == '\0' ? 1 : 0));
 }
 
-std::string as_string(span<char const> a) {
-  if (a.empty()) return {};
+span<char> smem_cpy(span<char> sbuf, span<char const> a) noexcept {
+  if (sbuf.empty()) return {};
   a = normalize(a);
-  return std::string(a.data(), a.size());
+  auto sz = (std::min)(sbuf.size() - 1, a.size());
+  if (sz != 0) std::memcpy(sbuf.data(), a.data(), sz);
+  return sbuf.first(sz);
 }
 
-std::string fmt_of(span<char const> fstr, span<char const> s) {
-  return '%' + as_string(fstr) + as_string(s);
+span<char> sbuf_cpy(span<char> sbuf, span<char const> a) noexcept {
+  sbuf = smem_cpy(sbuf, a);
+  *sbuf.end() = '\0';
+  return sbuf;
 }
 
-std::string fmt_of_unsigned(span<char const> fstr, span<char const> l) {
+span<char> sbuf_cat(span<char> sbuf, std::initializer_list<span<char const>> args) noexcept {
+  std::size_t remain = sbuf.size();
+  for (auto s : args) {
+    remain -= smem_cpy(sbuf.last(remain), s).size();
+  }
+  auto sz = sbuf.size() - remain;
+  sbuf[sz] = '\0';
+  return sbuf.first(sz);
+}
+
+span<char> local_fmt_str() noexcept {
+  thread_local std::array<char, 512> sbuf;
+  return sbuf;
+}
+
+char const *as_cstr(span<char const> a) {
+  if (a.empty()) return "";
+  if (a.back() == '\0') return a.data();
+  return sbuf_cpy(local_fmt_str(), a).data();
+}
+
+span<char> fmt_of(span<char const> fstr, span<char const> s) {
+  return sbuf_cat(local_fmt_str(), {"%", fstr, s});
+}
+
+span<char> fmt_of_unsigned(span<char const> fstr, span<char const> l) {
   if (fstr.empty()) {
     return fmt_of(l, "u");
   }
@@ -39,12 +72,12 @@ std::string fmt_of_unsigned(span<char const> fstr, span<char const> l) {
     case 'o':
     case 'x':
     case 'X':
-    case 'u': return fmt_of(fstr.first(fstr.size() - 1), l) + fstr.back();
-    default : return fmt_of(fstr, l) + 'u';
+    case 'u': return sbuf_cat(local_fmt_str(), {"%", fstr.first(fstr.size() - 1), l, fstr.last(1)});
+    default : return sbuf_cat(local_fmt_str(), {"%", fstr, l, "u"});
   }
 }
 
-std::string fmt_of_signed(span<char const> fstr, span<char const> l) {
+span<char> fmt_of_signed(span<char const> fstr, span<char const> l) {
   if (fstr.empty()) {
     return fmt_of(l, "d");
   }
@@ -54,11 +87,11 @@ std::string fmt_of_signed(span<char const> fstr, span<char const> l) {
     case 'x':
     case 'X':
     case 'u': return fmt_of_unsigned(fstr, l);
-    default : return fmt_of(fstr, l) + 'd';
+    default : return sbuf_cat(local_fmt_str(), {"%", fstr, l, "d"});
   }
 }
 
-std::string fmt_of_float(span<char const> fstr, span<char const> l) {
+span<char> fmt_of_float(span<char const> fstr, span<char const> l) {
   if (fstr.empty()) {
     return fmt_of(l, "f");
   }
@@ -67,22 +100,22 @@ std::string fmt_of_float(span<char const> fstr, span<char const> l) {
     case 'e':
     case 'E':
     case 'g':
-    case 'G': return fmt_of(fstr.first(fstr.size() - 1), l) + fstr.back();
-    default : return fmt_of(fstr, l) + 'f';
+    case 'G': return sbuf_cat(local_fmt_str(), {"%", fstr.first(fstr.size() - 1), l, fstr.last(1)});
+    default : return sbuf_cat(local_fmt_str(), {"%", fstr, l, "f"});
   }
 }
 
 template <typename A /*a fundamental or pointer type*/>
-std::string sprintf(std::string const &sfmt, A a) {
-  char sbuf[2048];
-  auto sz = std::snprintf(sbuf, sizeof(sbuf), sfmt.c_str(), a);
+std::string sprintf(span<char const> sfmt, A a) {
+  std::array<char, 512> sbuf;
+  auto sz = std::snprintf(sbuf.data(), sbuf.size(), sfmt.data(), a);
   if (sz <= 0) return {};
-  if (sz < sizeof(sbuf)) {
-    return sbuf;
+  if (sz < sbuf.size()) {
+    return std::string(sbuf.data(), sz);
   }
   std::string des;
   des.resize(sz + 1);
-  if (std::snprintf(&des[0], des.size(), sfmt.c_str(), a) < 0) {
+  if (std::snprintf(&des[0], des.size(), sfmt.data(), a) < 0) {
     return {};
   }
   des.pop_back(); // remove the terminated null character
@@ -190,7 +223,7 @@ std::string to_string(std::tm const &a, span<char const> fstr) noexcept {
   }
   LIBIMP_TRY {
     std::ostringstream ss;
-    ss << std::put_time(&a, as_string(fstr).c_str());
+    ss << std::put_time(&a, as_cstr(fstr));
     return ss.str();
   } LIBIMP_CATCH(...) {
     return {};
