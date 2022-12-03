@@ -4,7 +4,7 @@
 #include <iomanip>    // std::put_time
 #include <sstream>    // std::ostringstream
 #include <array>
-#include <cstring>    // std::memcpy, std::strncat
+#include <cstring>    // std::memcpy
 #include <algorithm>  // std::min
 #include <initializer_list>
 

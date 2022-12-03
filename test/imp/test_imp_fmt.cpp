@@ -5,7 +5,7 @@
 
 #include "libimp/fmt.h"
 
-TEST(fmt, operator) {
+TEST(fmt, spec) {
   EXPECT_STREQ(imp::spec("hello")(123).fstr.data(), "hello");
   EXPECT_EQ(imp::spec("hello")(123).param , 123);
   EXPECT_STREQ(imp::spec("hello")("world").fstr.data(), "hello");
@@ -81,4 +81,19 @@ TEST(fmt, fmt) {
   auto s = imp::fmt("hello", " ", "world", ".");
   EXPECT_EQ(s, "hello world.");
   std::cout << imp::fmt('[', std::chrono::system_clock::now(), "] ", s) << "\n";
+}
+
+namespace {
+
+class foo {};
+
+std::string tag_invoke(decltype(imp::fmt_to_string), foo arg) noexcept(false) {
+  throw arg;
+  return {};
+}
+
+} // namespace
+
+TEST(fmt, throw) {
+  EXPECT_THROW(imp::fmt(foo{}), foo);
 }
