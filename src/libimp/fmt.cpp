@@ -74,8 +74,12 @@ std::string fmt_of_float(span<char const> fstr, span<char const> l) {
 
 template <typename A /*a fundamental or pointer type*/>
 std::string sprintf(std::string const &sfmt, A a) {
-  auto sz = std::snprintf(nullptr, 0, sfmt.c_str(), a);
+  char sbuf[2048];
+  auto sz = std::snprintf(sbuf, sizeof(sbuf), sfmt.c_str(), a);
   if (sz <= 0) return {};
+  if (sz < sizeof(sbuf)) {
+    return sbuf;
+  }
   std::string des;
   des.resize(sz + 1);
   if (std::snprintf(&des[0], des.size(), sfmt.c_str(), a) < 0) {

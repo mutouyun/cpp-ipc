@@ -14,8 +14,8 @@ TEST(fmt, operator) {
 
 TEST(fmt, to_string) {
   /// @brief string
-  EXPECT_EQ(imp::to_string(""), "");
-  EXPECT_EQ(imp::to_string("%what%"), "%what%");
+  EXPECT_STREQ(imp::to_string(""), "");
+  EXPECT_STREQ(imp::to_string("%what%"), "%what%");
   EXPECT_EQ(imp::to_string("%what%", "10") , "    %what%");
   EXPECT_EQ(imp::to_string("%what%", "-10"), "%what%    ");
 

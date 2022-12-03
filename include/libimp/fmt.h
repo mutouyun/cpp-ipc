@@ -67,8 +67,6 @@ LIBIMP_NODISCARD std::string fmt(A1 &&a1, A &&...args) {
 
 /// @brief Return the string directly.
 inline char const *to_string(char const *a) noexcept { return (a == nullptr) ? "" : a; }
-template <std::size_t N>
-inline char const *to_string(char const (&a)[N]) noexcept { return a; }
 inline std::string to_string(std::string const &a) noexcept { return a; }
 inline std::string to_string(std::string &&a) noexcept { return std::move(a); }
 LIBIMP_EXPORT std::string to_string(char const *a, span<char const> fstr) noexcept;
