@@ -66,40 +66,40 @@ LIBIMP_NODISCARD std::string fmt(A1 &&a1, A &&...args) {
 }
 
 /// @brief Return the string directly.
-inline char const *to_string(char const *a) noexcept { return (a == nullptr) ? "" : a; }
-inline std::string to_string(std::string const &a) noexcept { return a; }
-inline std::string to_string(std::string &&a) noexcept { return std::move(a); }
-LIBIMP_EXPORT std::string to_string(char const *a, span<char const> fstr) noexcept;
-inline std::string to_string(std::string const &a, span<char const> fstr) noexcept { return to_string(a.c_str(), fstr); }
+       inline char const *to_string(char const *       a) noexcept { return (a == nullptr) ? "" : a; }
+       inline std::string to_string(std::string const &a) noexcept { return a; }
+       inline std::string to_string(std::string &&     a) noexcept { return std::move(a); }
+LIBIMP_EXPORT std::string to_string(char const *       a, span<char const> fstr) noexcept;
+       inline std::string to_string(std::string const &a, span<char const> fstr) noexcept { return to_string(a.c_str(), fstr); }
 
 /// @brief Character to string conversion.
 /// @return an empty string if the conversion fails
-inline std::string to_string(char a) noexcept { return {a}; }
-LIBIMP_EXPORT std::string to_string(wchar_t a) noexcept;
+       inline std::string to_string(char     a) noexcept { return {a}; }
+#if defined(LIBIMP_CPP_20)
+       inline std::string to_string(char8_t  a) noexcept { return to_string((char)a); }
+#endif // defined(LIBIMP_CPP_20)
+LIBIMP_EXPORT std::string to_string(wchar_t  a) noexcept;
 LIBIMP_EXPORT std::string to_string(char16_t a) noexcept;
 LIBIMP_EXPORT std::string to_string(char32_t a) noexcept;
-#if defined(LIBIMP_CPP_20)
-LIBIMP_EXPORT std::string to_string(char8_t a) noexcept { return to_string((char)a); }
-#endif // defined(LIBIMP_CPP_20)
 
 /// @brief Conversion of numeric types to strings.
 /// @return an empty string if the conversion fails
-LIBIMP_EXPORT std::string to_string(signed short a, span<char const> fstr = {}) noexcept;
-LIBIMP_EXPORT std::string to_string(unsigned short a, span<char const> fstr = {}) noexcept;
-LIBIMP_EXPORT std::string to_string(signed int a, span<char const> fstr = {}) noexcept;
-LIBIMP_EXPORT std::string to_string(unsigned int a, span<char const> fstr = {}) noexcept;
-LIBIMP_EXPORT std::string to_string(signed long a, span<char const> fstr = {}) noexcept;
-LIBIMP_EXPORT std::string to_string(unsigned long a, span<char const> fstr = {}) noexcept;
-LIBIMP_EXPORT std::string to_string(signed long long a, span<char const> fstr = {}) noexcept;
+LIBIMP_EXPORT std::string to_string(  signed short     a, span<char const> fstr = {}) noexcept;
+LIBIMP_EXPORT std::string to_string(unsigned short     a, span<char const> fstr = {}) noexcept;
+LIBIMP_EXPORT std::string to_string(  signed int       a, span<char const> fstr = {}) noexcept;
+LIBIMP_EXPORT std::string to_string(unsigned int       a, span<char const> fstr = {}) noexcept;
+LIBIMP_EXPORT std::string to_string(  signed long      a, span<char const> fstr = {}) noexcept;
+LIBIMP_EXPORT std::string to_string(unsigned long      a, span<char const> fstr = {}) noexcept;
+LIBIMP_EXPORT std::string to_string(  signed long long a, span<char const> fstr = {}) noexcept;
 LIBIMP_EXPORT std::string to_string(unsigned long long a, span<char const> fstr = {}) noexcept;
-inline std::string to_string(  signed char a, span<char const> fstr = {}) noexcept { return to_string(     (int)a, fstr); }
-inline std::string to_string(unsigned char a, span<char const> fstr = {}) noexcept { return to_string((unsigned)a, fstr); }
+       inline std::string to_string(  signed char      a, span<char const> fstr = {}) noexcept { return to_string(     (int)a, fstr); }
+       inline std::string to_string(unsigned char      a, span<char const> fstr = {}) noexcept { return to_string((unsigned)a, fstr); }
 
 /// @brief Conversion of floating point type to strings.
 /// @return an empty string if the conversion fails
-LIBIMP_EXPORT std::string to_string(double a, span<char const> fstr = {}) noexcept;
+LIBIMP_EXPORT std::string to_string(     double a, span<char const> fstr = {}) noexcept;
 LIBIMP_EXPORT std::string to_string(long double a, span<char const> fstr = {}) noexcept;
-inline std::string to_string(float a, span<char const> fstr = {}) noexcept { return to_string((double)a, fstr); }
+       inline std::string to_string(float       a, span<char const> fstr = {}) noexcept { return to_string((double)a, fstr); }
 
 /// @brief Pointer.
 inline std::string to_string(std::nullptr_t) noexcept { return "null"; }
