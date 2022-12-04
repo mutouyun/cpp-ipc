@@ -234,7 +234,7 @@ auto make_span(T (&arr)[E]) noexcept -> span<T> {
 }
 
 template <typename T, std::size_t E>
-auto make_span(std::array<T, E> const &arr) noexcept -> span<T> {
+auto make_span(std::array<T, E> &arr) noexcept -> span<T> {
   return {arr};
 }
 

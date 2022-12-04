@@ -37,11 +37,12 @@ struct context {
 };
 
 LIBIMP_EXPORT std::string to_string(context &&) noexcept;
+LIBIMP_EXPORT bool to_string(fmt_context &ctx, context &&) noexcept;
 
-/// @brief Custom defined fmt_to_string method for imp::fmt
+/// @brief Custom defined fmt_to method for imp::fmt
 template <typename T>
-std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), context &&arg) noexcept {
-  return ::LIBIMP::log::to_string(std::move(arg));
+bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, context &&arg) noexcept {
+  return ::LIBIMP::log::to_string(ctx, std::move(arg));
 }
 
 } // namespace log

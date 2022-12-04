@@ -164,17 +164,17 @@ auto as_bytes(span<T> s) noexcept -> span<Byte> {
   return {byte_cast(s.data()), s.size_bytes()};
 }
 
-/// @brief Custom defined fmt_to_string method for imp::fmt
+/// @brief Custom defined fmt_to method for imp::fmt
 namespace detail {
 
-inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), ::LIBIMP::byte b) {
-  return ::LIBIMP::to_string(static_cast<std::uint8_t>(b), "02x");
+inline bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, ::LIBIMP::byte b) {
+  return ::LIBIMP::to_string(ctx, static_cast<std::uint8_t>(b), "02x");
 }
 
 template <typename T, 
           typename = std::enable_if_t<std::is_same<std::decay_t<T>, ::LIBIMP::byte>::value>>
-std::string tag_invoke(fmt_to_string_t, fmt_ref<T> arg) noexcept {
-  return ::LIBIMP::to_string(static_cast<std::uint8_t>(arg.param), arg.fstr);
+bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, fmt_ref<T> arg) noexcept {
+  return ::LIBIMP::to_string(ctx, static_cast<std::uint8_t>(arg.param), arg.fstr);
 }
 
 } // namespace detail

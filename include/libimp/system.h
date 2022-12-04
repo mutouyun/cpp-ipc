@@ -50,10 +50,8 @@ public:
 
   std::string str() const noexcept;
 
-  friend bool operator==(error const &lhs, error const &rhs) noexcept;
-  friend bool operator!=(error const &lhs, error const &rhs) noexcept;
-
-  friend std::ostream &operator<<(std::ostream &o, error const &e);
+  friend LIBIMP_EXPORT bool operator==(error const &lhs, error const &rhs) noexcept;
+  friend LIBIMP_EXPORT bool operator!=(error const &lhs, error const &rhs) noexcept;
 };
 
 /**
@@ -65,10 +63,10 @@ enum class info : std::int32_t {
 LIBIMP_EXPORT result<std::int64_t> conf(info) noexcept;
 
 /**
- * @brief @brief Custom defined fmt_to_string method for imp::fmt
+ * @brief @brief Custom defined fmt_to method for imp::fmt
  */
-inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), error r) noexcept {
-  return error_msg(r.code());
+inline bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, error r) noexcept {
+  return fmt_to(ctx, error_msg(r.code()));
 }
 
 } // namespace sys

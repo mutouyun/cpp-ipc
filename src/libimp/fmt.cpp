@@ -19,12 +19,16 @@ LIBIMP_NAMESPACE_BEG_
  */
 namespace {
 
-span<char const> normalize(span<char const> a) {
+constexpr std::size_t roundup(std::size_t sz) noexcept {
+  return (sz & ~(fmt_context_aligned_size - 1)) + fmt_context_aligned_size;
+}
+
+span<char const> normalize(span<char const> const &a) {
   if (a.empty()) return {};
   return a.first(a.size() - (a.back() == '\0' ? 1 : 0));
 }
 
-span<char> smem_cpy(span<char> sbuf, span<char const> a) noexcept {
+span<char> smem_cpy(span<char> const &sbuf, span<char const> a) noexcept {
   if (sbuf.empty()) return {};
   a = normalize(a);
   auto sz = (std::min)(sbuf.size() - 1, a.size());
@@ -32,13 +36,13 @@ span<char> smem_cpy(span<char> sbuf, span<char const> a) noexcept {
   return sbuf.first(sz);
 }
 
-span<char> sbuf_cpy(span<char> sbuf, span<char const> a) noexcept {
+span<char> sbuf_cpy(span<char> sbuf, span<char const> const &a) noexcept {
   sbuf = smem_cpy(sbuf, a);
   *sbuf.end() = '\0';
   return sbuf;
 }
 
-span<char> sbuf_cat(span<char> sbuf, std::initializer_list<span<char const>> args) noexcept {
+span<char> sbuf_cat(span<char> const &sbuf, std::initializer_list<span<char const>> args) noexcept {
   std::size_t remain = sbuf.size();
   for (auto s : args) {
     remain -= smem_cpy(sbuf.last(remain), s).size();
@@ -49,21 +53,21 @@ span<char> sbuf_cat(span<char> sbuf, std::initializer_list<span<char const>> arg
 }
 
 span<char> local_fmt_str() noexcept {
-  thread_local std::array<char, 512> sbuf;
+  thread_local std::array<char, fmt_context_aligned_size> sbuf;
   return sbuf;
 }
 
-char const *as_cstr(span<char const> a) {
+char const *as_cstr(span<char const> const &a) {
   if (a.empty()) return "";
   if (a.back() == '\0') return a.data();
   return sbuf_cpy(local_fmt_str(), a).data();
 }
 
-span<char> fmt_of(span<char const> fstr, span<char const> s) {
+span<char> fmt_of(span<char const> const &fstr, span<char const> const &s) {
   return sbuf_cat(local_fmt_str(), {"%", fstr, s});
 }
 
-span<char> fmt_of_unsigned(span<char const> fstr, span<char const> l) {
+span<char> fmt_of_unsigned(span<char const> fstr, span<char const> const &l) {
   if (fstr.empty()) {
     return fmt_of(l, "u");
   }
@@ -77,7 +81,7 @@ span<char> fmt_of_unsigned(span<char const> fstr, span<char const> l) {
   }
 }
 
-span<char> fmt_of_signed(span<char const> fstr, span<char const> l) {
+span<char> fmt_of_signed(span<char const> fstr, span<char const> const &l) {
   if (fstr.empty()) {
     return fmt_of(l, "d");
   }
@@ -91,7 +95,7 @@ span<char> fmt_of_signed(span<char const> fstr, span<char const> l) {
   }
 }
 
-span<char> fmt_of_float(span<char const> fstr, span<char const> l) {
+span<char> fmt_of_float(span<char const> fstr, span<char const> const &l) {
   if (fstr.empty()) {
     return fmt_of(l, "f");
   }
@@ -106,125 +110,206 @@ span<char> fmt_of_float(span<char const> fstr, span<char const> l) {
 }
 
 template <typename A /*a fundamental or pointer type*/>
-std::string sprintf(span<char const> sfmt, A a) {
-  std::array<char, 512> sbuf;
-  auto sz = std::snprintf(sbuf.data(), sbuf.size(), sfmt.data(), a);
-  if (sz <= 0) return {};
-  if (sz < sbuf.size()) {
-    return std::string(sbuf.data(), sz);
+int sprintf(fmt_context &ctx, span<char const> const &sfmt, A a) {
+  for (;;) {
+    auto sbuf = ctx.buffer();
+    auto sz = std::snprintf(sbuf.data(), sbuf.size(), sfmt.data(), a);
+    if (sz <= 0) {
+      return sz;
+    }
+    if (sz < sbuf.size()) {
+      return ctx.expend(sz) ? sz : -1;
+    }
+    if (!ctx.resize(sz + 1)) {
+      return -1;
+    }
   }
-  std::string des;
-  des.resize(sz + 1);
-  if (std::snprintf(&des[0], des.size(), sfmt.data(), a) < 0) {
-    return {};
-  }
-  des.pop_back(); // remove the terminated null character
-  return des;
 }
 
 template <typename F /*a function pointer*/, 
           typename A /*a fundamental or pointer type*/>
-std::string sprintf(F fop, span<char const> fstr, span<char const> s, A a) noexcept {
+bool sprintf(fmt_context &ctx, F fop, span<char const> const &fstr, span<char const> const &s, A a) noexcept {
   LIBIMP_TRY {
-    return ::LIBIMP::sprintf(fop(fstr, s), a);
+    return ::LIBIMP::sprintf(ctx, fop(fstr, s), a) >= 0;
   } LIBIMP_CATCH(...) {
-    return {};
+    return false;
   }
 }
 
 } // namespace
 
-std::string to_string(char const *a, span<char const> fstr) noexcept {
-  if (a == nullptr) return {};
-  return ::LIBIMP::sprintf(fmt_of, fstr, "s", a);
+/// @brief The context of fmt.
+
+fmt_context::fmt_context(std::string &j) noexcept
+  : joined_(j)
+  , offset_(0) {}
+
+std::size_t fmt_context::capacity() noexcept {
+  return (offset_ < sbuf_.size()) ? sbuf_.size() : joined_.size();
 }
 
-std::string to_string(wchar_t a) noexcept {
+void fmt_context::reset() noexcept {
+  offset_ = 0;
+}
+
+bool fmt_context::finish() noexcept {
+  LIBIMP_TRY {
+    if (offset_ < sbuf_.size()) {
+      joined_.assign(sbuf_.data(), offset_);
+    } else {
+      joined_.resize(offset_);
+    }
+    return true;
+  } LIBIMP_CATCH(...) {
+    return false;
+  }
+}
+
+bool fmt_context::resize(std::size_t sz) noexcept {
+  LIBIMP_TRY {
+    if (sz < sbuf_.size()) {
+      return true;
+    }
+    joined_.resize(roundup(sz));
+    return true;
+  } LIBIMP_CATCH(...) {
+    return false;
+  }
+}
+
+span<char> fmt_context::buffer() noexcept {
+  if (offset_ < sbuf_.size()) {
+    return make_span(sbuf_).subspan(offset_);
+  } else {
+    return {&joined_[offset_], joined_.size() - offset_};
+  }
+}
+
+bool fmt_context::expend(std::size_t sz) noexcept {
+  if ((offset_ += sz) < sbuf_.size()) {
+    return true;
+  }
+  return (offset_ < joined_.size()) || resize(offset_);
+}
+
+bool fmt_context::append(std::string const &str) noexcept {
+  if ((buffer().size() < str.size()) && !resize(offset_ + str.size())) {
+    return false;
+  }
+  std::memcpy(buffer().data(), str.data(), str.size());
+  offset_ += str.size();
+  return true;
+}
+
+/// @brief To string conversion.
+
+bool to_string(fmt_context &ctx, char const *a) noexcept {
+  return to_string(ctx, a, {});
+}
+
+bool to_string(fmt_context &ctx, std::string const &a) noexcept {
+  return ctx.append(a);
+}
+
+bool to_string(fmt_context &ctx, char const *a, span<char const> fstr) noexcept {
+  if (a == nullptr) return false;
+  return ::LIBIMP::sprintf(ctx, fmt_of, fstr, "s", a);
+}
+
+bool to_string(fmt_context &ctx, char a) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of, {}, "c", a);
+}
+
+bool to_string(fmt_context &ctx, wchar_t a) noexcept {
   LIBIMP_TRY {
     std::string des;
     cvt_sstr(std::wstring{a}, des);
-    return des;
+    return ctx.append(des);
   } LIBIMP_CATCH(...) {
-    return {};
+    return false;
   }
 }
 
-std::string to_string(char16_t a) noexcept {
+bool to_string(fmt_context &ctx, char16_t a) noexcept {
   LIBIMP_TRY {
     std::string des;
     cvt_sstr(std::u16string{a}, des);
-    return des;
+    return ctx.append(des);
   } LIBIMP_CATCH(...) {
-    return {};
+    return false;
   }
 }
 
-std::string to_string(char32_t a) noexcept {
+bool to_string(fmt_context &ctx, char32_t a) noexcept {
   LIBIMP_TRY {
     std::string des;
     cvt_sstr(std::u32string{a}, des);
-    return des;
+    return ctx.append(des);
   } LIBIMP_CATCH(...) {
-    return {};
+    return false;
   }
 }
 
-std::string to_string(signed short a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_signed, fstr, "h", a);
+bool to_string(fmt_context &ctx, signed short a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_signed, fstr, "h", a);
 }
 
-std::string to_string(unsigned short a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_unsigned, fstr, "h", a);
+bool to_string(fmt_context &ctx, unsigned short a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_unsigned, fstr, "h", a);
 }
 
-std::string to_string(signed int a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_signed, fstr, "", a);
+bool to_string(fmt_context &ctx, signed int a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_signed, fstr, "", a);
 }
 
-std::string to_string(unsigned int a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_unsigned, fstr, "", a);
+bool to_string(fmt_context &ctx, unsigned int a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_unsigned, fstr, "", a);
 }
 
-std::string to_string(signed long a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_signed, fstr, "l", a);
+bool to_string(fmt_context &ctx, signed long a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_signed, fstr, "l", a);
 }
 
-std::string to_string(unsigned long a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_unsigned, fstr, "l", a);
+bool to_string(fmt_context &ctx, unsigned long a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_unsigned, fstr, "l", a);
 }
 
-std::string to_string(signed long long a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_signed, fstr, "ll", a);
+bool to_string(fmt_context &ctx, signed long long a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_signed, fstr, "ll", a);
 }
 
-std::string to_string(unsigned long long a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_unsigned, fstr, "ll", a);
+bool to_string(fmt_context &ctx, unsigned long long a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_unsigned, fstr, "ll", a);
 }
 
-std::string to_string(double a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_float, fstr, "", a);
+bool to_string(fmt_context &ctx, double a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_float, fstr, "", a);
 }
 
-std::string to_string(long double a, span<char const> fstr) noexcept {
-  return ::LIBIMP::sprintf(fmt_of_float, fstr, "L", a);
+bool to_string(fmt_context &ctx, long double a, span<char const> fstr) noexcept {
+  return ::LIBIMP::sprintf(ctx, fmt_of_float, fstr, "L", a);
+}
+
+bool to_string(fmt_context &ctx, std::nullptr_t) noexcept {
+  return ctx.append("null");
 }
 
 template <>
-std::string to_string<void, void>(void const volatile *a) noexcept {
+bool to_string<void, void>(fmt_context &ctx, void const volatile *a) noexcept {
   if (a == nullptr) {
-    return to_string(nullptr);
+    return to_string(ctx, nullptr);
   }
-  return ::LIBIMP::sprintf(fmt_of, "", "p", a);
+  return ::LIBIMP::sprintf(ctx, fmt_of, "", "p", a);
 }
 
-std::string to_string(std::tm const &a, span<char const> fstr) noexcept {
+bool to_string(fmt_context &ctx, std::tm const &a, span<char const> fstr) noexcept {
   if (fstr.empty()) {
     fstr = "%Y-%m-%d %H:%M:%S";
   }
   LIBIMP_TRY {
     std::ostringstream ss;
     ss << std::put_time(&a, as_cstr(fstr));
-    return ss.str();
+    return ctx.append(ss.str());
   } LIBIMP_CATCH(...) {
     return {};
   }

@@ -155,16 +155,16 @@ public:
   friend bool operator!=(result const &lhs, result const &rhs) noexcept { return lhs.code_ != rhs.code_; }
 };
 
-/// @brief Custom defined fmt_to_string method for imp::fmt
+/// @brief Custom defined fmt_to method for imp::fmt
 namespace detail {
 
-inline std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), result_code r) {
-  return fmt("[", (r ? "succ" : "fail"), ", value = ", *r, "]");
+inline bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result_code r) {
+  return fmt_to(ctx, "[", (r ? "succ" : "fail"), ", value = ", *r, "]");
 }
 
 template <typename T, typename D>
-std::string tag_invoke(decltype(::LIBIMP::fmt_to_string), result<T, D> r) {
-  return fmt("[", (r ? "succ" : "fail"), ", value = ", result<T, D>::default_traits_t::format(r), "]");
+bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result<T, D> r) {
+  return fmt_to(ctx, "[", (r ? "succ" : "fail"), ", value = ", result<T, D>::default_traits_t::format(r), "]");
 }
 
 } // namespace detail

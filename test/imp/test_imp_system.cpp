@@ -26,9 +26,6 @@ TEST(system, error_code) {
   imp::sys::error e_obj {err};
   EXPECT_EQ(err.value(), e_obj.value());
   auto e_msg = imp::fmt(imp::sys::error_msg(imp::sys::error_code()));
-  std::stringstream ss;
-  ss << imp::sys::error{};
-  EXPECT_EQ(e_msg, ss.str());
   EXPECT_EQ(e_msg, imp::fmt(imp::sys::error()));
   std::cout << e_msg << "\n";
 }
