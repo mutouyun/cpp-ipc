@@ -83,14 +83,16 @@ void fmt_multi_fmt_float(benchmark::State &state) {
 }
 
 void imp_fmt_chrono(benchmark::State &state) {
+  auto now = std::chrono::system_clock::now();
   for (auto _ : state) {
-    std::ignore = imp::fmt(std::chrono::system_clock::now());
+    std::ignore = imp::fmt(now);
   }
 }
 
 void fmt_fmt_chrono(benchmark::State &state) {
+  auto now = std::chrono::system_clock::now();
   for (auto _ : state) {
-    std::ignore = fmt::format("{}", std::chrono::system_clock::now());
+    std::ignore = fmt::format("{}", now);
   }
 }
 
