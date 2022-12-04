@@ -92,9 +92,23 @@ TEST(fmt, to_string) {
 }
 
 TEST(fmt, fmt) {
+  /// @brief hello world
   auto s = imp::fmt("hello", " ", "world", ".");
   EXPECT_EQ(s, "hello world.");
+
+  /// @brief chrono
   std::cout << imp::fmt('[', std::chrono::system_clock::now(), "] ", s) << "\n";
+
+  /// @brief long string
+  s = imp::fmt(imp::spec("1024")("hello world."));
+  EXPECT_EQ(s, "                                                                                                                                "
+               "                                                                                                                                "
+               "                                                                                                                                "
+               "                                                                                                                                "
+               "                                                                                                                                "
+               "                                                                                                                                "
+               "                                                                                                                                "
+               "                                                                                                                    hello world.");
 }
 
 namespace {
