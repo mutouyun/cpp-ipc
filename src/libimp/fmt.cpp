@@ -113,6 +113,9 @@ template <typename A /*a fundamental or pointer type*/>
 int sprintf(fmt_context &ctx, span<char const> const &sfmt, A a) {
   for (int sz = -1;;) {
     auto sbuf = ctx.buffer(sz + 1);
+    if (sbuf.size() < (sz + 1)) {
+      return -1;
+    }
     sz = std::snprintf(sbuf.data(), sbuf.size(), sfmt.data(), a);
     if (sz <= 0) {
       return sz;
