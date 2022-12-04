@@ -6,17 +6,26 @@
 LIBIMP_NAMESPACE_BEG_
 namespace log {
 
-std::string to_string(context &&ctx) noexcept {
+bool to_string(fmt_context &f_ctx, context &&l_ctx) noexcept {
   constexpr static char types[] = {
     'T', 'D', 'I', 'W', 'E', 'F',
   };
   LIBIMP_TRY {
-    auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(ctx.tp).time_since_epoch().count() % 1000;
-    return fmt("[", types[enum_cast(ctx.level)], "][", ctx.tp, ".", spec("03")(ms), "][", ctx.func, "] ", ctx.text);
-  } LIBIMP_CATCH(std::exception const &e) {
-    /// @remark [TBD] std::string constructor may throw an exception
-    return e.what();
+    auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(l_ctx.tp).time_since_epoch().count() % 1000;
+    return fmt_to(f_ctx, "[", types[enum_cast(l_ctx.level)], "][", l_ctx.tp, ".", spec("03")(ms), "][", l_ctx.func, "] ", l_ctx.text);
+  } LIBIMP_CATCH(std::exception const &) {
+    return false;
   }
+}
+
+std::string to_string(context &&ctx) noexcept {
+  std::string log_txt;
+  fmt_context f_ctx(log_txt);
+  if (!to_string(f_ctx, std::move(ctx))) {
+    return {};
+  }
+  f_ctx.finish();
+  return log_txt;
 }
 
 printer::operator bool() const noexcept {

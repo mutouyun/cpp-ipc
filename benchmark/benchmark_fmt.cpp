@@ -11,13 +11,26 @@ namespace {
 
 void imp_fmt_string(benchmark::State &state) {
   for (auto _ : state) {
-    std::ignore = imp::fmt("hello world. hello world. hello world. hello world. hello world.");
+    std::ignore = imp::fmt("hello world.hello world.hello world.hello world.hello world.");
+  }
+}
+
+void imp_fmt_multi_string(benchmark::State &state) {
+  for (auto _ : state) {
+    std::ignore = imp::fmt("hello world.", "hello world.", "hello world.", "hello world.", "hello world.");
   }
 }
 
 void fmt_format_string(benchmark::State &state) {
   for (auto _ : state) {
-    std::ignore = fmt::format("hello world. hello world. hello world. hello world. hello world.");
+    std::ignore = fmt::format("hello world.hello world.hello world.hello world.hello world.");
+  }
+}
+
+void fmt_format_multi_string(benchmark::State &state) {
+  for (auto _ : state) {
+    std::ignore = fmt::format("{}{}{}{}{}", 
+                              "hello world.", " hello world.", " hello world.", " hello world.", " hello world.");
   }
 }
 
@@ -27,9 +40,21 @@ void imp_fmt_int(benchmark::State &state) {
   }
 }
 
+void imp_fmt_multi_int(benchmark::State &state) {
+  for (auto _ : state) {
+    std::ignore = imp::fmt(654321, 654321, 654321, 654321, 654321);
+  }
+}
+
 void fmt_format_int(benchmark::State &state) {
   for (auto _ : state) {
     std::ignore = fmt::format("{}", 654321);
+  }
+}
+
+void fmt_format_multi_int(benchmark::State &state) {
+  for (auto _ : state) {
+    std::ignore = fmt::format("{}{}{}{}{}", 654321, 654321, 654321, 654321, 654321);
   }
 }
 
@@ -39,9 +64,21 @@ void imp_fmt_float(benchmark::State &state) {
   }
 }
 
+void imp_fmt_multi_float(benchmark::State &state) {
+  for (auto _ : state) {
+    std::ignore = imp::fmt(654.321, 654.321, 654.321, 654.321, 654.321);
+  }
+}
+
 void fmt_format_float(benchmark::State &state) {
   for (auto _ : state) {
     std::ignore = fmt::format("{}", 654.321);
+  }
+}
+
+void fmt_format_multi_float(benchmark::State &state) {
+  for (auto _ : state) {
+    std::ignore = fmt::format("{}{}{}{}{}", 654.321, 654.321, 654.321, 654.321, 654.321);
   }
 }
 
@@ -65,5 +102,13 @@ BENCHMARK(imp_fmt_int);
 BENCHMARK(fmt_format_int);
 BENCHMARK(imp_fmt_float);
 BENCHMARK(fmt_format_float);
+
+BENCHMARK(imp_fmt_multi_string);
+BENCHMARK(fmt_format_multi_string);
+BENCHMARK(imp_fmt_multi_int);
+BENCHMARK(fmt_format_multi_int);
+BENCHMARK(imp_fmt_multi_float);
+BENCHMARK(fmt_format_multi_float);
+
 BENCHMARK(imp_fmt_chrono);
 BENCHMARK(fmt_format_chrono);

@@ -49,10 +49,5 @@ bool operator!=(error const &lhs, error const &rhs) noexcept {
   return lhs.code() != rhs.code();
 }
 
-std::ostream &operator<<(std::ostream &o, error const &e) {
-  o << error_msg(e.code());
-  return o;
-}
-
 } // namespace sys
 LIBIMP_NAMESPACE_END_
