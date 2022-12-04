@@ -17,58 +17,57 @@ TEST(fmt, to_string) {
   std::string joined;
   imp::fmt_context ctx(joined);
 
+  auto check = [&](auto &&txt, auto &&...val) {
+    ctx.reset();
+    EXPECT_TRUE(imp::to_string(ctx, std::forward<decltype(val)>(val)...));
+    ctx.finish();
+    EXPECT_EQ(joined, std::forward<decltype(txt)>(txt));
+  };
+
   /// @brief string
-  EXPECT_TRUE(imp::to_string(ctx, "")); ctx.finish();
-  EXPECT_EQ(joined, "");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, "%what%")); ctx.finish();
-  EXPECT_EQ(joined, "%what%");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, "%what%", "10")); ctx.finish();
-  EXPECT_EQ(joined, "    %what%");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, "%what%", "-10")); ctx.finish();
-  EXPECT_EQ(joined, "%what%    ");
+  check("", "");
+  check("%what%", "%what%");
+  check("    %what%", "%what%", "10");
+  check("%what%    ", "%what%", "-10");
 
   /// @brief character
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 'A')); ctx.finish();
-  EXPECT_EQ(joined, "A");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, L'A')); ctx.finish();
-  EXPECT_EQ(joined, "A");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, u'A')); ctx.finish();
-  EXPECT_EQ(joined, "A");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, U'A')); ctx.finish();
-  EXPECT_EQ(joined, "A");
+  check("A", 'A');
+  check("A", L'A');
+  check("A", u'A');
+  check("A", U'A');
 
   /// @brief numeric
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (signed char)123)); ctx.finish(); EXPECT_EQ(joined, "123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (signed char)-321)); ctx.finish(); EXPECT_EQ(joined, "-65");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (unsigned char)123)); ctx.finish(); EXPECT_EQ(joined, "123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (unsigned char)321)); ctx.finish(); EXPECT_EQ(joined, "65");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (short)123)); ctx.finish(); EXPECT_EQ(joined, "123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (short)-321)); ctx.finish(); EXPECT_EQ(joined, "-321");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (unsigned short)123)); ctx.finish(); EXPECT_EQ(joined, "123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (unsigned short)321)); ctx.finish(); EXPECT_EQ(joined, "321");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (short)123123)); ctx.finish(); EXPECT_EQ(joined, "-7949");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (short)-321321)); ctx.finish(); EXPECT_EQ(joined, "6359");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (unsigned short)123123)); ctx.finish(); EXPECT_EQ(joined, "57587");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (unsigned short)321321)); ctx.finish(); EXPECT_EQ(joined, "59177");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123123)); ctx.finish(); EXPECT_EQ(joined, "123123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, -321321)); ctx.finish(); EXPECT_EQ(joined, "-321321");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123123u)); ctx.finish(); EXPECT_EQ(joined, "123123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 321321u)); ctx.finish(); EXPECT_EQ(joined, "321321");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123123ll)); ctx.finish(); EXPECT_EQ(joined, "123123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, -321321ll)); ctx.finish(); EXPECT_EQ(joined, "-321321");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123123ull)); ctx.finish(); EXPECT_EQ(joined, "123123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 321321ull)); ctx.finish(); EXPECT_EQ(joined, "321321");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123123, "x")); ctx.finish(); EXPECT_EQ(joined, "1e0f3");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123123u, "x")); ctx.finish(); EXPECT_EQ(joined, "1e0f3");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123123123123ll, "X")); ctx.finish(); EXPECT_EQ(joined, "1CAAB5C3B3");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123123123123ull, "X")); ctx.finish(); EXPECT_EQ(joined, "1CAAB5C3B3");
+  check("123"       , (signed char)123      );
+  check("-65"       , (signed char)-321     );
+  check("123"       , (unsigned char)123    );
+  check("65"        , (unsigned char)321    );
+  check("123"       , (short)123            );
+  check("-321"      , (short)-321           );
+  check("123"       , (unsigned short)123   );
+  check("321"       , (unsigned short)321   );
+  check("-7949"     , (short)123123         );
+  check("6359"      , (short)-321321        );
+  check("57587"     , (unsigned short)123123);
+  check("59177"     , (unsigned short)321321);
+  check("123123"    , 123123                );
+  check("-321321"   , -321321               );
+  check("123123"    , 123123u               );
+  check("321321"    , 321321u               );
+  check("123123"    , 123123ll              );
+  check("-321321"   , -321321ll             );
+  check("123123"    , 123123ull             );
+  check("321321"    , 321321ull             );
+  check("1e0f3"     , 123123, "x"           );
+  check("1e0f3"     , 123123u, "x"          );
+  check("1CAAB5C3B3", 123123123123ll, "X"   );
+  check("1CAAB5C3B3", 123123123123ull, "X"  );
 
   /// @brief floating point
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123.123f, ".3")); ctx.finish(); EXPECT_EQ(joined, "123.123");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123.123, "010.5")); ctx.finish(); EXPECT_EQ(joined, "0123.12300");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 123.123l, "010.6")); ctx.finish(); EXPECT_EQ(joined, "123.123000");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 1.5, "e")); ctx.finish(); EXPECT_EQ(joined, "1.500000e+00");
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 1.5, "E")); ctx.finish(); EXPECT_EQ(joined, "1.500000E+00");
+  check("123.123"     , 123.123f, ".3");
+  check("0123.12300"  , 123.123, "010.5");
+  check("123.123000"  , 123.123l, "010.6");
+  check("1.500000e+00", 1.5, "e");
+  check("1.500000E+00", 1.5, "E");
   double r = 0.0;
   ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 0.0/r)); ctx.finish();
   std::cout << joined << "\n";
@@ -76,7 +75,7 @@ TEST(fmt, to_string) {
   std::cout << joined << "\n";
 
   /// @brief pointer
-  ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, nullptr)); ctx.finish(); EXPECT_EQ(joined, "null");
+  check("null", nullptr);
   int *p = (int *)0x0f013a04;
   ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (void *)p)); ctx.finish();
   std::cout << joined << "\n";
