@@ -111,17 +111,15 @@ span<char> fmt_of_float(span<char const> fstr, span<char const> const &l) {
 
 template <typename A /*a fundamental or pointer type*/>
 int sprintf(fmt_context &ctx, span<char const> const &sfmt, A a) {
-  for (;;) {
-    auto sbuf = ctx.buffer();
-    auto sz = std::snprintf(sbuf.data(), sbuf.size(), sfmt.data(), a);
+  for (int sz = -1;;) {
+    auto sbuf = ctx.buffer(sz + 1);
+    sz = std::snprintf(sbuf.data(), sbuf.size(), sfmt.data(), a);
     if (sz <= 0) {
       return sz;
     }
     if (sz < sbuf.size()) {
-      return ctx.expend(sz) ? sz : -1;
-    }
-    if (!ctx.resize(sz + 1)) {
-      return -1;
+      ctx.expend(sz);
+      return sz;
     }
   }
 }
@@ -165,38 +163,35 @@ bool fmt_context::finish() noexcept {
   }
 }
 
-bool fmt_context::resize(std::size_t sz) noexcept {
+span<char> fmt_context::buffer(std::size_t sz) noexcept {
   LIBIMP_TRY {
-    if (sz < sbuf_.size()) {
-      return true;
+    if (offset_ < sbuf_.size()) {
+      if ((offset_ + sz) < sbuf_.size()) {
+        return make_span(sbuf_).subspan(offset_);
+      } else {
+        /// @remark switch the cache to std::string
+        joined_.assign(sbuf_.data(), offset_);
+        joined_.resize(roundup(offset_ + sz));
+      }
+    } else if ((offset_ + sz) >= joined_.size()) {
+      joined_.resize(roundup(offset_ + sz));
     }
-    joined_.resize(roundup(sz));
-    return true;
-  } LIBIMP_CATCH(...) {
-    return false;
-  }
-}
-
-span<char> fmt_context::buffer() noexcept {
-  if (offset_ < sbuf_.size()) {
-    return make_span(sbuf_).subspan(offset_);
-  } else {
     return {&joined_[offset_], joined_.size() - offset_};
+  } LIBIMP_CATCH(...) {
+    return {};
   }
 }
 
-bool fmt_context::expend(std::size_t sz) noexcept {
-  if ((offset_ += sz) < sbuf_.size()) {
-    return true;
-  }
-  return (offset_ < joined_.size()) || resize(offset_);
+void fmt_context::expend(std::size_t sz) noexcept {
+  offset_ += sz;
 }
 
 bool fmt_context::append(std::string const &str) noexcept {
-  if ((buffer().size() < str.size()) && !resize(offset_ + str.size())) {
+  auto sbuf = buffer(str.size());
+  if (sbuf.size() < str.size()) {
     return false;
   }
-  std::memcpy(buffer().data(), str.data(), str.size());
+  std::memcpy(sbuf.data(), str.data(), str.size());
   offset_ += str.size();
   return true;
 }

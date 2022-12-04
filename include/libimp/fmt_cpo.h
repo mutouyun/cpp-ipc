@@ -35,9 +35,8 @@ public:
   std::size_t capacity() noexcept;
   void reset() noexcept;
   bool finish() noexcept;
-  bool resize(std::size_t sz) noexcept;
-  span<char> buffer() noexcept;
-  bool expend(std::size_t sz) noexcept;
+  span<char> buffer(std::size_t sz) noexcept;
+  void expend(std::size_t sz) noexcept;
   bool append(std::string const &str) noexcept;
 };
 
