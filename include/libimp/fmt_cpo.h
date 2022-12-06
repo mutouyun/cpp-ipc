@@ -7,7 +7,6 @@
 #pragma once
 
 #include <string>
-#include <array>
 #include <cstddef>
 
 #include "libimp/def.h"
@@ -18,14 +17,10 @@
 
 LIBIMP_NAMESPACE_BEG_
 
-constexpr std::size_t fmt_context_aligned_size = 512U;
-
 /**
  * @brief The context of fmt.
  */
 class LIBIMP_EXPORT fmt_context {
-  std::array<char, fmt_context_aligned_size> sbuf_;
-
   std::string &joined_;
   std::size_t  offset_;
 

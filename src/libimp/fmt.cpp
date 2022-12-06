@@ -19,8 +19,18 @@ LIBIMP_NAMESPACE_BEG_
  */
 namespace {
 
-constexpr std::size_t roundup(std::size_t sz) noexcept {
-  return (sz & ~(fmt_context_aligned_size - 1)) + fmt_context_aligned_size;
+struct sfmt_policy {
+  constexpr static std::size_t aligned_size = 32U;
+};
+
+struct sbuf_policy {
+  constexpr static std::size_t aligned_size = 2048U;
+};
+
+template <typename Policy = sfmt_policy>
+span<char> local_fmt_sbuf() noexcept {
+  thread_local std::array<char, Policy::aligned_size> sbuf;
+  return sbuf;
 }
 
 span<char const> normalize(span<char const> const &a) {
@@ -52,19 +62,14 @@ span<char> sbuf_cat(span<char> const &sbuf, std::initializer_list<span<char cons
   return sbuf.first(sz);
 }
 
-span<char> local_fmt_str() noexcept {
-  thread_local std::array<char, fmt_context_aligned_size> sbuf;
-  return sbuf;
-}
-
 char const *as_cstr(span<char const> const &a) {
   if (a.empty()) return "";
   if (a.back() == '\0') return a.data();
-  return sbuf_cpy(local_fmt_str(), a).data();
+  return sbuf_cpy(local_fmt_sbuf(), a).data();
 }
 
 span<char> fmt_of(span<char const> const &fstr, span<char const> const &s) {
-  return sbuf_cat(local_fmt_str(), {"%", fstr, s});
+  return sbuf_cat(local_fmt_sbuf(), {"%", fstr, s});
 }
 
 span<char> fmt_of_unsigned(span<char const> fstr, span<char const> const &l) {
@@ -76,8 +81,8 @@ span<char> fmt_of_unsigned(span<char const> fstr, span<char const> const &l) {
     case 'o':
     case 'x':
     case 'X':
-    case 'u': return sbuf_cat(local_fmt_str(), {"%", fstr.first(fstr.size() - 1), l, fstr.last(1)});
-    default : return sbuf_cat(local_fmt_str(), {"%", fstr, l, "u"});
+    case 'u': return sbuf_cat(local_fmt_sbuf(), {"%", fstr.first(fstr.size() - 1), l, fstr.last(1)});
+    default : return sbuf_cat(local_fmt_sbuf(), {"%", fstr, l, "u"});
   }
 }
 
@@ -91,7 +96,7 @@ span<char> fmt_of_signed(span<char const> fstr, span<char const> const &l) {
     case 'x':
     case 'X':
     case 'u': return fmt_of_unsigned(fstr, l);
-    default : return sbuf_cat(local_fmt_str(), {"%", fstr, l, "d"});
+    default : return sbuf_cat(local_fmt_sbuf(), {"%", fstr, l, "d"});
   }
 }
 
@@ -104,8 +109,8 @@ span<char> fmt_of_float(span<char const> fstr, span<char const> const &l) {
     case 'e':
     case 'E':
     case 'g':
-    case 'G': return sbuf_cat(local_fmt_str(), {"%", fstr.first(fstr.size() - 1), l, fstr.last(1)});
-    default : return sbuf_cat(local_fmt_str(), {"%", fstr, l, "f"});
+    case 'G': return sbuf_cat(local_fmt_sbuf(), {"%", fstr.first(fstr.size() - 1), l, fstr.last(1)});
+    default : return sbuf_cat(local_fmt_sbuf(), {"%", fstr, l, "f"});
   }
 }
 
@@ -137,6 +142,10 @@ bool sprintf(fmt_context &ctx, F fop, span<char const> const &fstr, span<char co
   }
 }
 
+span<char> fmt_context_sbuf() noexcept {
+  return local_fmt_sbuf<sbuf_policy>();
+}
+
 } // namespace
 
 /// @brief The context of fmt.
@@ -146,7 +155,9 @@ fmt_context::fmt_context(std::string &j) noexcept
   , offset_(0) {}
 
 std::size_t fmt_context::capacity() noexcept {
-  return (offset_ < sbuf_.size()) ? sbuf_.size() : joined_.size();
+  return (offset_ < fmt_context_sbuf().size())
+                  ? fmt_context_sbuf().size()
+                  : joined_.size();
 }
 
 void fmt_context::reset() noexcept {
@@ -155,8 +166,8 @@ void fmt_context::reset() noexcept {
 
 bool fmt_context::finish() noexcept {
   LIBIMP_TRY {
-    if (offset_ < sbuf_.size()) {
-      joined_.assign(sbuf_.data(), offset_);
+    if (offset_ < fmt_context_sbuf().size()) {
+      joined_.assign(fmt_context_sbuf().data(), offset_);
     } else {
       joined_.resize(offset_);
     }
@@ -167,13 +178,18 @@ bool fmt_context::finish() noexcept {
 }
 
 span<char> fmt_context::buffer(std::size_t sz) noexcept {
+  auto roundup = [](std::size_t sz) noexcept {
+    constexpr std::size_t fmt_context_aligned_size = 512U;
+    return (sz & ~(fmt_context_aligned_size - 1)) + fmt_context_aligned_size;
+  };
+  auto sbuf = fmt_context_sbuf();
   LIBIMP_TRY {
-    if (offset_ < sbuf_.size()) {
-      if ((offset_ + sz) < sbuf_.size()) {
-        return make_span(sbuf_).subspan(offset_);
+    if (offset_ < sbuf.size()) {
+      if ((offset_ + sz) < sbuf.size()) {
+        return sbuf.subspan(offset_);
       } else {
         /// @remark switch the cache to std::string
-        joined_.assign(sbuf_.data(), offset_);
+        joined_.assign(sbuf.data(), offset_);
         joined_.resize(roundup(offset_ + sz));
       }
     } else if ((offset_ + sz) >= joined_.size()) {

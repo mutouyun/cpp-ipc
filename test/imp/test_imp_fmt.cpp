@@ -92,23 +92,20 @@ TEST(fmt, to_string) {
 }
 
 TEST(fmt, fmt) {
+  char const txt[] = "hello world.";
+
   /// @brief hello world
   auto s = imp::fmt("hello", " ", "world", ".");
-  EXPECT_EQ(s, "hello world.");
+  EXPECT_EQ(s, txt);
 
   /// @brief chrono
   std::cout << imp::fmt('[', std::chrono::system_clock::now(), "] ", s) << "\n";
 
   /// @brief long string
-  s = imp::fmt(imp::spec("1024")("hello world."));
-  EXPECT_EQ(s, "                                                                                                                                "
-               "                                                                                                                                "
-               "                                                                                                                                "
-               "                                                                                                                                "
-               "                                                                                                                                "
-               "                                                                                                                                "
-               "                                                                                                                                "
-               "                                                                                                                    hello world.");
+  s = imp::fmt(imp::spec("4096")(txt));
+  std::string test(4096, ' ');
+  std::memcpy(&test[test.size() - sizeof(txt) + 1], txt, sizeof(txt) - 1);
+  EXPECT_EQ(s, test);
 }
 
 namespace {
