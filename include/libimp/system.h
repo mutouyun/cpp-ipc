@@ -12,17 +12,16 @@
 
 #include "libimp/def.h"
 #include "libimp/export.h"
-#include "libimp/result.h"
-#include "libimp/fmt_cpo.h"
+#include "libimp/error.h"
 
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
 
 /**
- * @brief Get/Set the system error code
+ * @brief Get/Set the system error number
  */
-LIBIMP_EXPORT result_code error_code() noexcept;
-LIBIMP_EXPORT void error_code(result_code) noexcept;
+LIBIMP_EXPORT result_code error_no() noexcept;
+LIBIMP_EXPORT void error_no(result_code) noexcept;
 
 /**
  * @brief Gets a text description of the system error
@@ -30,29 +29,16 @@ LIBIMP_EXPORT void error_code(result_code) noexcept;
 LIBIMP_EXPORT std::string error_str(result_code) noexcept;
 
 /**
- * @brief A text description string with an error number attached
+ * @brief Identifies the operating system error category.
+ * @see https://en.cppreference.com/w/cpp/error/system_category
  */
-LIBIMP_EXPORT std::string error_msg(result_code) noexcept;
+LIBIMP_EXPORT error_category const &category() noexcept;
 
 /**
- * @brief The system error object.
+ * @brief A platform-dependent error code.
+ * @see https://en.cppreference.com/w/cpp/error/error_code
  */
-class LIBIMP_EXPORT error {
-  result_code r_code_;
-
-public:
-  explicit error() noexcept;
-  explicit error(result_code rc) noexcept;
-
-  result_code code() const noexcept;
-  std::uint64_t value() const noexcept;
-  explicit operator bool() const noexcept;
-
-  std::string str() const noexcept;
-
-  friend LIBIMP_EXPORT bool operator==(error const &lhs, error const &rhs) noexcept;
-  friend LIBIMP_EXPORT bool operator!=(error const &lhs, error const &rhs) noexcept;
-};
+LIBIMP_EXPORT error_code error() noexcept;
 
 /**
  * @brief Get system configuration information at run time
@@ -61,13 +47,6 @@ enum class info : std::int32_t {
   page_size,
 };
 LIBIMP_EXPORT result<std::int64_t> conf(info) noexcept;
-
-/**
- * @brief @brief Custom defined fmt_to method for imp::fmt
- */
-inline bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, error r) noexcept {
-  return fmt_to(ctx, error_msg(r.code()));
-}
 
 } // namespace sys
 LIBIMP_NAMESPACE_END_

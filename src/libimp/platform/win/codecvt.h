@@ -36,7 +36,7 @@ std::size_t cvt_cstr(char const *src, std::size_t slen, wchar_t *des, std::size_
   int cch_wc = (des == nullptr) ? 0 : (int)dlen;
   int size_needed = ::MultiByteToWideChar(CP_ACP, 0, src, (int)slen, des, cch_wc);
   if (size_needed <= 0) {
-    log.error("failed: MultiByteToWideChar(CP_ACP). error = ", sys::error_code());
+    log.error("failed: MultiByteToWideChar(CP_ACP). error = ", sys::error_no());
   }
   return size_needed;
 }
@@ -51,7 +51,7 @@ std::size_t cvt_cstr(wchar_t const *src, std::size_t slen, char *des, std::size_
   int cb_mb = (des == nullptr) ? 0 : (int)dlen;
   int size_needed = ::WideCharToMultiByte(CP_ACP, 0, src, (int)slen, des, cb_mb, NULL, NULL);
   if (size_needed <= 0) {
-    log.error("failed: WideCharToMultiByte(CP_ACP). error = ", sys::error_code());
+    log.error("failed: WideCharToMultiByte(CP_ACP). error = ", sys::error_no());
   }
   return size_needed;
 }

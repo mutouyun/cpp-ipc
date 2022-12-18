@@ -21,10 +21,10 @@ LIBIMP_NAMESPACE_BEG_
 namespace sys {
 
 /**
- * @brief Get the system error code
+ * @brief Get the system error number
  * https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
  */
-result_code error_code() noexcept {
+result_code error_no() noexcept {
   auto err = ::GetLastError();
   if (err == ERROR_SUCCESS) {
     return {ERROR_SUCCESS};
@@ -33,10 +33,10 @@ result_code error_code() noexcept {
 }
 
 /**
- * @brief Set the system error code
+ * @brief Set the system error number
  * https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setlasterror
  */
-void error_code(result_code code) noexcept {
+void error_no(result_code code) noexcept {
   DWORD err = code ? ERROR_SUCCESS : (DWORD)code.value();
   ::SetLastError(err);
 }

@@ -19,20 +19,20 @@ namespace sys {
 #endif
 
 /**
- * @brief Get the system error code
+ * @brief Get the system error number
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
-result_code error_code() noexcept {
+result_code error_no() noexcept {
   auto err = errno;
   if (err == ENOERR) return {ENOERR};
   return {false, std::uint64_t(err)};
 }
 
 /**
- * @brief Set the system error code
+ * @brief Set the system error number
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
-void error_code(result_code code) noexcept {
+void error_no(result_code code) noexcept {
   errno = code ? ENOERR : (int)code.value();
 }
 

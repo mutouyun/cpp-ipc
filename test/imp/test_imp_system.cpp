@@ -14,19 +14,16 @@
 #else
 #endif
 
-TEST(system, error_code) {
-  imp::sys::error_code({false, 111});
-  auto err = imp::sys::error_code();
+TEST(system, error_no) {
+  imp::sys::error_no({false, 111});
+  auto err = imp::sys::error_no();
   EXPECT_FALSE(err);
   EXPECT_EQ(err.value(), 111);
 
-  imp::sys::error_code({});
-  EXPECT_TRUE(imp::sys::error_code());
+  imp::sys::error_no({});
+  EXPECT_TRUE(imp::sys::error_no());
 
-  imp::sys::error e_obj {err};
-  EXPECT_EQ(err.value(), e_obj.value());
-  auto e_msg = imp::fmt(imp::sys::error_msg(imp::sys::error_code()));
-  EXPECT_EQ(e_msg, imp::fmt(imp::sys::error()));
+  auto e_msg = imp::sys::error_str(imp::sys::error_no());
   std::cout << e_msg << "\n";
 }
 
