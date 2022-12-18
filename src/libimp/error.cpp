@@ -13,8 +13,11 @@ namespace {
 
 class generic_error_category : public error_category {
 public:
+  std::string name() const {
+    return "generic";
+  }
   std::string message(result_code r) const {
-    return fmt("[", r.value(), (!r ? ", \"success\"]" : ", \"failure\"]"));
+    return fmt(r.value(), (!r ? ", \"success\"" : ", \"failure\""));
   }
 };
 
@@ -44,7 +47,7 @@ error_category const &error_code::category() const noexcept {
 }
 
 std::string error_code::message() const {
-  return ec_->message(r_code_);
+  return fmt("[", ec_->name(), ": ", ec_->message(r_code_), "]");
 }
 
 error_code::operator bool() const noexcept {

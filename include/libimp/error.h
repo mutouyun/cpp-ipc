@@ -28,6 +28,7 @@ public:
   virtual ~error_category() noexcept = default;
 
   /// @brief observer
+  virtual std::string name() const = 0;
   virtual std::string message(result_code r) const = 0;
 
   /// @brief comparison function
@@ -65,4 +66,14 @@ public:
   friend LIBIMP_EXPORT bool operator!=(error_code const &lhs, error_code const &rhs) noexcept;
 };
 
+/**
+ * @brief @brief Custom defined fmt_to method for imp::fmt
+ */
+namespace detail {
+
+inline bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, error_code r) noexcept {
+  return fmt_to(ctx, r.message());
+}
+
+} // namespace detail
 LIBIMP_NAMESPACE_END_
