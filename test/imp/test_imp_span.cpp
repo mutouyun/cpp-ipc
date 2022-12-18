@@ -20,7 +20,7 @@ TEST(span, span) {
   auto test_proc = [](auto &&buf, auto &&sp) {
     EXPECT_EQ(imp::countof(buf), sp.size());
     EXPECT_EQ(sizeof(buf[0]) * imp::countof(buf), sp.size_bytes());
-    for (int i = 0; i < sp.size(); ++i) {
+    for (std::size_t i = 0; i < sp.size(); ++i) {
       EXPECT_EQ(buf[i], sp[i]);
     }
   };

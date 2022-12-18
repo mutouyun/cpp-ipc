@@ -7,6 +7,7 @@
 #include <cstring>    // std::memcpy
 #include <algorithm>  // std::min
 #include <initializer_list>
+#include <cstdint>
 
 #include "libimp/codecvt.h"
 
@@ -116,16 +117,16 @@ span<char> fmt_of_float(span<char const> fstr, span<char const> const &l) {
 
 template <typename A /*a fundamental or pointer type*/>
 int sprintf(fmt_context &ctx, span<char const> const &sfmt, A a) {
-  for (int sz = -1;;) {
+  for (std::int32_t sz = -1;;) {
     auto sbuf = ctx.buffer(sz + 1);
-    if (sbuf.size() < (sz + 1)) {
+    if (sbuf.size() < std::size_t(sz + 1)) {
       return -1;
     }
     sz = std::snprintf(sbuf.data(), sbuf.size(), sfmt.data(), a);
     if (sz <= 0) {
       return sz;
     }
-    if (sz < sbuf.size()) {
+    if (std::size_t(sz) < sbuf.size()) {
       ctx.expend(sz);
       return sz;
     }

@@ -132,8 +132,6 @@ class result : public TypeTraits {
 public:
   using type_traits_t = TypeTraits;
 
-  result() noexcept = default;
-
   template <typename... A, 
             typename = is_not_match<result, A...>,
             typename = decltype(type_traits_t::init_code(std::declval<result_code &>()
