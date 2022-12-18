@@ -71,6 +71,8 @@ TEST(result, fmt) {
     EXPECT_EQ(imp::fmt(r3), "[succ, value = 0]");
   }
   {
+    imp::result<int> r0;
+    EXPECT_EQ(imp::fmt(r0), imp::fmt(imp::result_code()));
     imp::result<int> r1 {false, -123};
     EXPECT_EQ(imp::fmt(r1), imp::fmt("[fail, value = ", -123, "]"));
     imp::result<void *> r2 {&r1};
@@ -82,5 +84,7 @@ TEST(result, fmt) {
     EXPECT_EQ(imp::fmt(r4), imp::fmt("[fail, value = ", nullptr, ", code = 0]"));
     r4 = {nullptr, 1234};
     EXPECT_EQ(imp::fmt(r4), imp::fmt("[fail, value = ", nullptr, ", code = 1234]"));
+    imp::result<int *> r5;
+    EXPECT_EQ(imp::fmt(r5), "[fail, value = null, code = 0]");
   }
 }
