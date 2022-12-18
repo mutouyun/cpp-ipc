@@ -14,6 +14,7 @@
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
 #include "libimp/fmt.h"
+#include "libimp/generic.h"
 
 LIBIMP_NAMESPACE_BEG_
 
@@ -54,22 +55,35 @@ struct default_traits;
 } // namespace detail_result
 
 template <typename T, 
-          typename DefTraits = detail_result::default_traits<T>, 
-          typename = void>
+          typename TypeTraits = detail_result::default_traits<T>>
 class result;
 
 namespace detail_result {
 
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
-  constexpr static T value() noexcept { return 0; }
+  /// @brief Custom initialization.
+  constexpr static void init_code(result_code &code) noexcept {
+    code = {};
+  }
+  constexpr static void init_code(result_code &code, bool ok, T value) noexcept {
+    code = {ok, static_cast<result_type>(value)};
+  }
+  constexpr static void init_code(result_code &code, T value) noexcept {
+    init_code(code, true, value);
+  }
 
-  static result_type cast_to_code(T value) noexcept {
-    return static_cast<result_type>(value);
+  /// @brief Custom default value.
+  constexpr static T default_value() noexcept {
+    return 0;
   }
-  static T cast_from_code(result_type code) noexcept {
-    return static_cast<T>(code);
+
+  /// @brief Custom type conversions.
+  constexpr static T cast_from_code(result_code code) noexcept {
+    return static_cast<T>(code.value());
   }
+
+  /// @brief Custom formatted output.
   static std::string format(result<T> const &r) noexcept {
     return fmt(*r);
   }
@@ -77,14 +91,28 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
 
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
-  constexpr static T value() noexcept { return nullptr; }
+  /// @brief Custom initialization.
+  constexpr static void init_code(result_code &code, T value = default_value()) noexcept {
+    code = {default_value() != value, reinterpret_cast<result_type>(value)};
+  }
+  constexpr static void init_code(result_code &code, std::nullptr_t) noexcept {
+    code = {false, {}};
+  }
+  constexpr static void init_code(result_code &code, std::nullptr_t, result_type r) noexcept {
+    code = {false, r};
+  }
 
-  static result_type cast_to_code(T value) noexcept {
-    return reinterpret_cast<result_type>(value);
+  /// @brief Custom default value.
+  constexpr static T default_value() noexcept {
+    return nullptr;
   }
-  static T cast_from_code(result_type code) noexcept {
-    return reinterpret_cast<T>(code);
+
+  /// @brief Custom type conversions.
+  constexpr static T cast_from_code(result_code code) noexcept {
+    return code.ok() ? reinterpret_cast<T>(code.value()) : default_value();
   }
+
+  /// @brief Custom formatted output.
   static std::string format(result<T> const &r) noexcept {
     if LIBIMP_LIKELY(r) {
       return fmt(static_cast<void *>(*r));
@@ -95,53 +123,28 @@ struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
 
 } // namespace detail_result
 
-template <typename T, typename DefTraits>
-class result<T, DefTraits, std::enable_if_t<std::is_integral<T>::value>> {
+template <typename T, typename TypeTraits>
+class result : public TypeTraits {
 
+  /// @brief Internal data is stored using result_code.
   result_code code_;
 
 public:
-  using default_traits_t = DefTraits;
+  using type_traits_t = TypeTraits;
 
   result() noexcept = default;
 
-  result(T value) noexcept
-    : result(true, std::move(value)) {}
-
-  result(bool ok, T value) noexcept
-    : code_(ok, default_traits_t::cast_to_code(value)) {}
-
-  T value() const noexcept { return default_traits_t::cast_from_code(code_.value()); }
-  bool ok() const noexcept { return code_.ok(); }
-
-  T operator*() const noexcept {
-    return value();
-  }
-  explicit operator bool() const noexcept {
-    return ok();
+  template <typename... A, 
+            typename = is_not_match<result, A...>,
+            typename = decltype(type_traits_t::init_code(std::declval<result_code &>()
+                                                       , std::declval<A>()...))>
+  result(A &&... args) noexcept {
+    type_traits_t::init_code(code_, std::forward<A>(args)...);
   }
 
-  friend bool operator==(result const &lhs, result const &rhs) noexcept { return lhs.code_ == rhs.code_; }
-  friend bool operator!=(result const &lhs, result const &rhs) noexcept { return lhs.code_ != rhs.code_; }
-};
-
-template <typename T, typename DefTraits>
-class result<T, DefTraits, std::enable_if_t<std::is_pointer<T>::value>> {
-
-  result_code code_;
-
-public:
-  using default_traits_t = DefTraits;
-
-  result(T value = default_traits_t::value()) noexcept
-    : code_(default_traits_t::value() != value, 
-            default_traits_t::cast_to_code(value)) {}
-
-  result(std::nullptr_t, result_type code) noexcept
-    : code_(false, code) {}
-
-  T value() const noexcept { return code_.ok() ? default_traits_t::cast_from_code(code_.value()) : nullptr; }
   bool ok() const noexcept { return code_.ok(); }
+  T value() const noexcept { return type_traits_t::cast_from_code(code_); }
+
   result_type code_value() const noexcept { return code_.value(); }
 
   T operator*() const noexcept {
@@ -164,7 +167,7 @@ inline bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result_code
 
 template <typename T, typename D>
 bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result<T, D> r) {
-  return fmt_to(ctx, "[", (r ? "succ" : "fail"), ", value = ", result<T, D>::default_traits_t::format(r), "]");
+  return fmt_to(ctx, "[", (r ? "succ" : "fail"), ", value = ", result<T, D>::type_traits_t::format(r), "]");
 }
 
 } // namespace detail

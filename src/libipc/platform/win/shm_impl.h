@@ -20,7 +20,7 @@ using namespace ::LIBIMP;
 result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();
   auto h = mmap_open(name, size, type);
-  if (h == NULL) {
+  if (*h == NULL) {
     log.error("failed: mmap_open(name = ", name, ", size = ", size, ", type = ", type, ").");
     return {nullptr, h.code_value()};
   }

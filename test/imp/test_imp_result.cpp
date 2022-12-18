@@ -21,6 +21,11 @@ TEST(result, ok) {
   EXPECT_FALSE(ret);
   EXPECT_FALSE(ret.ok());
   EXPECT_EQ(*ret, 1234);
+
+  imp::result<int *> r2 {nullptr, 4321};
+  EXPECT_NE(r2, nullptr); // imp::result<int *>{nullptr}
+  EXPECT_EQ(*r2, nullptr);
+  EXPECT_FALSE(r2);
 }
 
 TEST(result, code) {
