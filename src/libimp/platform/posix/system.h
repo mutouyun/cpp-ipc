@@ -33,7 +33,7 @@ error_code_t error_no() noexcept {
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
 void error_no(error_code_t const &code) noexcept {
-  errno = (code == 0) ? ENOERR : (int)code.value();
+  errno = (code == 0) ? ENOERR : (int)code;
 }
 
 /**
@@ -76,7 +76,7 @@ result<std::int64_t> conf(info r) noexcept {
   }
   auto err = sys::error();
   log.error("info = ", enum_cast(r), ", error = ", err);
-  return {false, (int)err};
+  return {false, (int)err.code()};
 }
 
 } // namespace sys
