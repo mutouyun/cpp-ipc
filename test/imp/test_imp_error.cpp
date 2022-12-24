@@ -13,8 +13,8 @@ public:
   std::string name() const {
     return "custom";
   }
-  std::string message(imp::result_code r) const {
-    return !r ? "success" : "failure";
+  std::string message(imp::error_code_t const &r) const {
+    return (r == 0) ? "success" : "failure";
   }
 };
 

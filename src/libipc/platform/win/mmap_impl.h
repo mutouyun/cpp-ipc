@@ -78,7 +78,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     if (h == NULL) {
       auto err = sys::error();
       log.error("failed: OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, ", file, "). error = ", err);
-      return {nullptr, err.value()};
+      return {nullptr, err.code()};
     }
     return h;
   };
@@ -91,7 +91,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     if (h == NULL) {
       auto err = sys::error();
       log.error("failed: CreateFileMapping(PAGE_READWRITE | SEC_COMMIT, ", size, ", ", file, "). error = ", err);
-      return {nullptr, err.value()};
+      return {nullptr, err.code()};
     }
     return h;
   };
@@ -133,7 +133,7 @@ result<LPVOID> mmap_memof(HANDLE h) {
   if (mem == NULL) {
     auto err = sys::error();
     log.error("failed: MapViewOfFile(", h, ", FILE_MAP_ALL_ACCESS). error = ", err);
-    return {nullptr, err.value()};
+    return {nullptr, err.code()};
   }
   return mem;
 }
@@ -152,7 +152,7 @@ result<SIZE_T> mmap_sizeof(LPCVOID mem) {
   if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
     auto err = sys::error();
     log.error("failed: VirtualQuery(", mem, "). error = ", err);
-    return {false, (SIZE_T)err.value()};
+    return {false, (SIZE_T)err.code()};
   }
   return mem_info.RegionSize;
 }

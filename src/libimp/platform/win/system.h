@@ -24,20 +24,20 @@ namespace sys {
  * \brief Get the system error number
  * https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
  */
-result_code error_no() noexcept {
+error_code_t error_no() noexcept {
   auto err = ::GetLastError();
   if (err == ERROR_SUCCESS) {
     return {ERROR_SUCCESS};
   }
-  return {false, std::uint64_t(err)};
+  return error_code_t(err);
 }
 
 /**
  * \brief Set the system error number
  * https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setlasterror
  */
-void error_no(result_code code) noexcept {
-  DWORD err = code ? ERROR_SUCCESS : (DWORD)code.value();
+void error_no(error_code_t const &code) noexcept {
+  DWORD err = (code == 0) ? ERROR_SUCCESS : (DWORD)code;
   ::SetLastError(err);
 }
 
@@ -45,10 +45,10 @@ void error_no(result_code code) noexcept {
  * \brief Gets a text description of the system error
  * https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
  */
-std::string error_str(result_code code) noexcept {
+std::string error_str(error_code_t const &code) noexcept {
   LIBIMP_LOG_();
   LIBIMP_TRY {
-    DWORD err = (DWORD)code.value();
+    DWORD err = (DWORD)code;
     LPTSTR lpErrText = NULL;
     if (::FormatMessage(
           FORMAT_MESSAGE_ALLOCATE_BUFFER | 

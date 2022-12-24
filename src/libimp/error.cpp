@@ -16,8 +16,8 @@ public:
   std::string name() const {
     return "generic";
   }
-  std::string message(result_code r) const {
-    return fmt(r.value(), (!r ? ", \"success\"" : ", \"failure\""));
+  std::string message(error_code_t const &r) const {
+    return fmt(r, ((r == 0) ? ", \"success\"" : ", \"failure\""));
   }
 };
 
@@ -29,17 +29,13 @@ error_category const &generic_category() noexcept {
 }
 
 error_code::error_code() noexcept
-  : r_code_{}, ec_{&generic_category()} {}
+  : error_code{0, generic_category()} {}
 
-error_code::error_code(result_code r, error_category const &ec) noexcept
-  : r_code_{r}, ec_{&ec} {}
+error_code::error_code(error_code_t const &r, error_category const &ec) noexcept
+  : e_code_{r}, ec_{&ec} {}
 
-result_code error_code::code() const noexcept {
-  return r_code_;
-}
-
-result_type error_code::value() const noexcept {
-  return r_code_.value();
+error_code_t error_code::code() const noexcept {
+  return e_code_;
 }
 
 error_category const &error_code::category() const noexcept {
@@ -47,15 +43,15 @@ error_category const &error_code::category() const noexcept {
 }
 
 std::string error_code::message() const {
-  return fmt("[", ec_->name(), ": ", ec_->message(r_code_), "]");
+  return fmt("[", ec_->name(), ": ", ec_->message(e_code_), "]");
 }
 
 error_code::operator bool() const noexcept {
-  return !!r_code_;
+  return e_code_ != 0;
 }
 
 bool operator==(error_code const &lhs, error_code const &rhs) noexcept {
-  return (lhs.r_code_ == rhs.r_code_) && (*lhs.ec_ == *rhs.ec_);
+  return (lhs.e_code_ == rhs.e_code_) && (*lhs.ec_ == *rhs.ec_);
 }
 
 bool operator!=(error_code const &lhs, error_code const &rhs) noexcept {

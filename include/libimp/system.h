@@ -13,6 +13,7 @@
 #include "libimp/def.h"
 #include "libimp/export.h"
 #include "libimp/error.h"
+#include "libimp/result.h"
 
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
@@ -20,13 +21,13 @@ namespace sys {
 /**
  * \brief Get/Set the system error number
  */
-LIBIMP_EXPORT result_code error_no() noexcept;
-LIBIMP_EXPORT void error_no(result_code) noexcept;
+LIBIMP_EXPORT error_code_t error_no() noexcept;
+LIBIMP_EXPORT void error_no(error_code_t const &) noexcept;
 
 /**
  * \brief Gets a text description of the system error
  */
-LIBIMP_EXPORT std::string error_str(result_code) noexcept;
+LIBIMP_EXPORT std::string error_str(error_code_t const &) noexcept;
 
 /**
  * \brief Identifies the operating system error category.

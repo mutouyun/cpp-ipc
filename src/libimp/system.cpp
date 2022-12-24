@@ -15,8 +15,8 @@ public:
   std::string name() const {
     return "system";
   }
-  std::string message(::LIBIMP::result_code r) const {
-    return ::LIBIMP::fmt(r.value(), ::LIBIMP::sys::error_str(r));
+  std::string message(::LIBIMP::error_code_t const &r) const {
+    return ::LIBIMP::fmt(r, ::LIBIMP::sys::error_str(r));
   }
 };
 

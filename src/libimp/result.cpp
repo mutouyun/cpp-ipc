@@ -3,38 +3,26 @@
 #include "libimp/horrible_cast.h"
 
 LIBIMP_NAMESPACE_BEG_
-namespace {
-
-struct result_code_info {
-  std::uint64_t ok  : 1;
-  std::uint64_t code: 63;
-};
-
-std::uint64_t make_status(bool ok, std::uint64_t code) noexcept {
-  return horrible_cast<std::uint64_t>(result_code_info{(ok ? 1ull : 0ull), code});
-}
-
-result_code_info info_cast(std::uint64_t status) noexcept {
-  return horrible_cast<result_code_info>(status);
-}
-
-} // namespace
 
 result_code::result_code() noexcept
   : result_code(false, {}) {}
 
-result_code::result_code(std::uint64_t value) noexcept
+result_code::result_code(result_code_t value) noexcept
   : result_code(true, value) {}
 
-result_code::result_code(bool ok, std::uint64_t code) noexcept
-  : status_(make_status(ok, code)) {}
+result_code::result_code(result_type const &value) noexcept
+  : result_code(std::get<bool>(value), 
+                std::get<result_code_t>(value)) {}
 
-std::uint64_t result_code::value() const noexcept {
-  return info_cast(status_).code;
+result_code::result_code(bool ok, std::uint64_t code) noexcept
+  : status_(code, ok) {}
+
+result_code_t result_code::value() const noexcept {
+  return std::get<result_code_t>(status_);
 }
 
 bool result_code::ok() const noexcept {
-  return info_cast(status_).ok != 0;
+  return std::get<bool>(status_);
 }
 
 bool operator==(result_code const &lhs, result_code const &rhs) noexcept {

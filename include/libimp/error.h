@@ -7,13 +7,15 @@
 #pragma once
 
 #include <string>
+#include <cstdint>
 
 #include "libimp/def.h"
 #include "libimp/export.h"
-#include "libimp/result.h"
 #include "libimp/fmt_cpo.h"
 
 LIBIMP_NAMESPACE_BEG_
+
+using error_code_t = std::uint64_t;
 
 /**
  * \brief Serves as the base class for specific error category types.
@@ -29,7 +31,7 @@ public:
 
   /// \brief observer
   virtual std::string name() const = 0;
-  virtual std::string message(result_code r) const = 0;
+  virtual std::string message(error_code_t const &r) const = 0;
 
   /// \brief comparison function
   bool operator==(error_category const &rhs) const noexcept;
@@ -46,17 +48,16 @@ LIBIMP_EXPORT error_category const &generic_category() noexcept;
  * \see https://en.cppreference.com/w/cpp/error/error_code
  */
 class LIBIMP_EXPORT error_code {
-  result_code r_code_;
+  error_code_t e_code_;
   error_category const *ec_;
 
 public:
   /// \brief constructors
   error_code() noexcept;
-  error_code(result_code r, error_category const &ec) noexcept;
+  error_code(error_code_t const &r, error_category const &ec) noexcept;
 
   /// \brief observers
-  result_code code() const noexcept;
-  result_type value() const noexcept;
+  error_code_t code() const noexcept;
   error_category const &category() const noexcept;
   std::string message() const;
   explicit operator bool() const noexcept;

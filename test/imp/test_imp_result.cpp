@@ -90,4 +90,8 @@ TEST(result, fmt) {
     imp::result<int *> r5;
     EXPECT_EQ(imp::fmt(r5), "[fail, value = null, code = 0]");
   }
+  {
+    imp::result<std::int64_t> r1 {-123};
+    EXPECT_EQ(imp::fmt(r1), imp::fmt("[succ, value = ", -123, "]"));
+  }
 }

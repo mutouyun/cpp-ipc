@@ -19,25 +19,26 @@
 
 LIBIMP_NAMESPACE_BEG_
 
-using result_type = std::tuple<std::uint64_t, bool>;
+using result_code_t = std::uint64_t;
+using result_type   = std::tuple<result_code_t, bool>;
 
 /**
- * \brief Use the least significant (in Little-Endian) of 
- * a 64-bit unsigned integer to indicate success or failure,
- * so the data significant bit cannot exceed 63 bits.
+ * \class class LIBIMP_EXPORT result_code
+ * \brief Uses std::uint64_t as the default underlying type of error code.
  */
 class LIBIMP_EXPORT result_code {
   result_type status_;
 
 public:
   result_code() noexcept;
-  result_code(result_type value) noexcept;
-  result_code(bool ok, result_type value) noexcept;
+  result_code(result_code_t value) noexcept;
+  result_code(result_type const &value) noexcept;
+  result_code(bool ok, result_code_t value) noexcept;
 
-  result_type value() const noexcept;
+  result_code_t value() const noexcept;
   bool ok() const noexcept;
 
-  result_type operator*() const noexcept {
+  result_code_t operator*() const noexcept {
     return value();
   }
   explicit operator bool() const noexcept {
@@ -68,7 +69,7 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
     code = {};
   }
   constexpr static void init_code(result_code &code, bool ok, T value) noexcept {
-    code = {ok, static_cast<result_type>(value)};
+    code = {ok, static_cast<result_code_t>(value)};
   }
   constexpr static void init_code(result_code &code, T value) noexcept {
     init_code(code, true, value);
@@ -94,12 +95,12 @@ template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
   /// \brief Custom initialization.
   constexpr static void init_code(result_code &code, T value = default_value()) noexcept {
-    code = {default_value() != value, reinterpret_cast<result_type>(value)};
+    code = {default_value() != value, reinterpret_cast<result_code_t>(value)};
   }
   constexpr static void init_code(result_code &code, std::nullptr_t) noexcept {
     code = {false, {}};
   }
-  constexpr static void init_code(result_code &code, std::nullptr_t, result_type r) noexcept {
+  constexpr static void init_code(result_code &code, std::nullptr_t, result_code_t r) noexcept {
     code = {false, r};
   }
 
@@ -124,6 +125,10 @@ struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
 
 } // namespace detail_result
 
+/**
+ * \class class result
+ * \brief The generic wrapper for the result_code.
+ */
 template <typename T, typename TypeTraits>
 class result : public TypeTraits {
 
@@ -144,7 +149,7 @@ public:
   bool ok() const noexcept { return code_.ok(); }
   T value() const noexcept { return type_traits_t::cast_from_code(code_); }
 
-  result_type code_value() const noexcept { return code_.value(); }
+  result_code_t code_value() const noexcept { return code_.value(); }
 
   T operator*() const noexcept {
     return value();

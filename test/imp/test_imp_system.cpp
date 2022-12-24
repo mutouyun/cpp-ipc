@@ -15,13 +15,13 @@
 #endif
 
 TEST(system, error_no) {
-  imp::sys::error_no({false, 111});
+  imp::sys::error_no(111);
   auto err = imp::sys::error_no();
-  EXPECT_FALSE(err);
-  EXPECT_EQ(err.value(), 111);
+  EXPECT_FALSE(err == 0);
+  EXPECT_EQ(err, 111);
 
   imp::sys::error_no({});
-  EXPECT_TRUE(imp::sys::error_no());
+  EXPECT_TRUE(imp::sys::error_no() == 0);
 
   auto e_msg = imp::sys::error_str(imp::sys::error_no());
   std::cout << e_msg << "\n";
@@ -51,7 +51,7 @@ TEST(system, error_str) {
   {
     std::string s_txt;
     imp::cvt_sstr(u16_err, s_txt);
-    EXPECT_EQ(imp::sys::error_str({false, ERROR_INVALID_HANDLE}), s_txt);
+    EXPECT_EQ(imp::sys::error_str(ERROR_INVALID_HANDLE), s_txt);
   }
 #else
   EXPECT_EQ(imp::sys::error_str({false, 1234}), "Unknown error 1234");

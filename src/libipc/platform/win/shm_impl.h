@@ -34,7 +34,7 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   if (!sz) {
     log.error("failed: mmap_sizeof(", *mem, ").");
     mmap_close(*h);
-    return {nullptr, static_cast<result_type>(sz.value())};
+    return {nullptr, static_cast<result_code_t>(sz.value())};
   }
   return new shm_handle{std::move(name), *sz, *mem, *h};
 }
