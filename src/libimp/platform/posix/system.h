@@ -22,18 +22,18 @@ namespace sys {
  * \brief Get the system error number
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
-result_code error_no() noexcept {
+error_code_t error_no() noexcept {
   auto err = errno;
   if (err == ENOERR) return {ENOERR};
-  return {false, std::uint64_t(err)};
+  return error_code_t(err);
 }
 
 /**
  * \brief Set the system error number
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
-void error_no(result_code const &code) noexcept {
-  errno = code ? ENOERR : (int)code.value();
+void error_no(error_code_t const &code) noexcept {
+  errno = (code == 0) ? ENOERR : (int)code.value();
 }
 
 /**
@@ -41,19 +41,19 @@ void error_no(result_code const &code) noexcept {
  * https://man7.org/linux/man-pages/man3/strerror_l.3.html
  * https://manpages.ubuntu.com/manpages/xenial/en/man3/strerror.3.html
  */
-std::string error_str(result_code const &code) noexcept {
+std::string error_str(error_code_t const &code) noexcept {
   char msg_buf[256] {};
 #if ((_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600) && !_GNU_SOURCE)
   LIBIMP_LOG_();
-  if (::strerror_r((int)code.value(), msg_buf, sizeof(msg_buf)) != 0) {
-    log.error("failed: strerror_r(code = ", (int)code.value(), 
+  if (::strerror_r((int)code, msg_buf, sizeof(msg_buf)) != 0) {
+    log.error("failed: strerror_r(code = ", (int)code, 
                       ", buf, buf-size = ", sizeof(msg_buf), 
                       "). error = ", error_code());
     return {};
   }
   return msg_buf;
 #else
-  return ::strerror_r((int)code.value(), msg_buf, sizeof(msg_buf));
+  return ::strerror_r((int)code, msg_buf, sizeof(msg_buf));
 #endif
 }
 
@@ -76,7 +76,7 @@ result<std::int64_t> conf(info r) noexcept {
   }
   auto err = sys::error();
   log.error("info = ", enum_cast(r), ", error = ", err);
-  return {false, (int)err.value()};
+  return {false, (int)err};
 }
 
 } // namespace sys
