@@ -1,6 +1,6 @@
 /**
- * @file libimp/platform/gnuc/demangle.h
- * @author mutouyun (orz@orzz.org)
+ * \file libimp/platform/gnuc/demangle.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 
@@ -15,15 +15,15 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief The conventional way to obtain demangled symbol name.
- * @see https://www.boost.org/doc/libs/1_80_0/libs/core/doc/html/core/demangle.html
+ * \brief The conventional way to obtain demangled symbol name.
+ * \see https://www.boost.org/doc/libs/1_80_0/libs/core/doc/html/core/demangle.html
  * 
- * @param name the mangled name
- * @return std::string a human-readable demangled type name
+ * \param name the mangled name
+ * \return std::string a human-readable demangled type name
  */
 std::string demangle(span<char const> name) noexcept {
   LIBIMP_LOG_();
-  /// @see https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
+  /// \see https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
   std::size_t sz = name.size() + 1;
   char *buffer = static_cast<char *>(std::malloc(sz));
   int status = 0;

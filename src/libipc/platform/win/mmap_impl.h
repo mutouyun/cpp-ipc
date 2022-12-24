@@ -1,6 +1,6 @@
 /**
- * @file libipc/platform/win/mmap_impl.h
- * @author mutouyun (orz@orzz.org)
+ * \file libipc/platform/win/mmap_impl.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 
@@ -30,8 +30,8 @@ struct shm_handle {
 namespace {
 
 /**
- * @brief Closes an open object handle.
- * @see https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
+ * \brief Closes an open object handle.
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
  */
 result_code mmap_close(HANDLE h) {
   LIBIMP_LOG_();
@@ -48,17 +48,17 @@ result_code mmap_close(HANDLE h) {
 }
 
 /**
- * @brief Creates or opens a file mapping object for a specified file.
+ * \brief Creates or opens a file mapping object for a specified file.
  * 
- * @see https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-openfilemappinga
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-openfilemappinga
  *      https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createfilemappinga
  * 
- * @param file Specifies the name of the file mapping object
- * @param size Specifies the size required to create a file mapping object.
+ * \param file Specifies the name of the file mapping object
+ * \param size Specifies the size required to create a file mapping object.
  *             This size is ignored when opening an existing file mapping object
- * @param type Combinable open modes, create | open
+ * \param type Combinable open modes, create | open
  * 
- * @return File mapping object HANDLE, NULL on error
+ * \return File mapping object HANDLE, NULL on error
  */
 result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();
@@ -72,7 +72,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     return {};
   }
 
-  /// @brief Opens a named file mapping object.
+  /// \brief Opens a named file mapping object.
   auto try_open = [&]() -> result<HANDLE> {
     HANDLE h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, t_name.c_str());
     if (h == NULL) {
@@ -83,10 +83,10 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     return h;
   };
 
-  /// @brief Creates or opens a named or unnamed file mapping object for a specified file.
+  /// \brief Creates or opens a named or unnamed file mapping object for a specified file.
   auto try_create = [&]() -> result<HANDLE> {
     HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
-                                   /// @remark dwMaximumSizeHigh always 0 here.
+                                   /// \remark dwMaximumSizeHigh always 0 here.
                                    0, static_cast<DWORD>(size), t_name.c_str());
     if (h == NULL) {
       auto err = sys::error();
@@ -99,8 +99,8 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
   if (type == mode::open) {
     return try_open();
   } else if ((type == (mode::create | mode::open)) && (size == 0)) {
-    /// @remark CreateFileMapping may returns ERROR_INVALID_PARAMETER when dwMaximumSizeLow is zero.
-    /// @see CreateFileMapping (Windows CE 5.0)
+    /// \remark CreateFileMapping may returns ERROR_INVALID_PARAMETER when dwMaximumSizeLow is zero.
+    /// \see CreateFileMapping (Windows CE 5.0)
     ///      https://learn.microsoft.com/en-us/previous-versions/windows/embedded/aa517331(v=msdn.10)
     return try_open();
   } else if (!(type & mode::create)) {
@@ -109,7 +109,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
   }
   auto h = try_create();
   if (!h) return h;
-  /// @remark If the object exists before the function call, the function returns a handle to the existing object
+  /// \remark If the object exists before the function call, the function returns a handle to the existing object
   ///         (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.
   if ((type == mode::create) && (::GetLastError() == ERROR_ALREADY_EXISTS)) {
     log.info("the file being created already exists. file = ", file, ", type = ", type);
@@ -120,8 +120,8 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
 }
 
 /**
- * @brief Maps a view of a file mapping into the address space of a calling process.
- * @see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
+ * \brief Maps a view of a file mapping into the address space of a calling process.
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
  */
 result<LPVOID> mmap_memof(HANDLE h) {
   LIBIMP_LOG_();
@@ -139,8 +139,8 @@ result<LPVOID> mmap_memof(HANDLE h) {
 }
 
 /**
- * @brief Retrieves the size about a range of pages in the virtual address space of the calling process.
- * @see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualquery
+ * \brief Retrieves the size about a range of pages in the virtual address space of the calling process.
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualquery
  */
 result<SIZE_T> mmap_sizeof(LPCVOID mem) {
   LIBIMP_LOG_();
@@ -158,8 +158,8 @@ result<SIZE_T> mmap_sizeof(LPCVOID mem) {
 }
 
 /**
- * @brief Unmaps a mapped view of a file from the calling process's address space.
- * @see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-unmapviewoffile
+ * \brief Unmaps a mapped view of a file from the calling process's address space.
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-unmapviewoffile
  */
 result_code mmap_release(HANDLE h, LPCVOID mem) {
   LIBIMP_LOG_();

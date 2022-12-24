@@ -10,29 +10,29 @@ LIBIPC_NAMESPACE_BEG_
 #if defined(LIBIMP_CC_MSVC)
 # include <Windows.h>   // YieldProcessor
 /**
- * @brief Not for intel c++ compiler, so ignore http://software.intel.com/en-us/forums/topic/296168
- * @see http://msdn.microsoft.com/en-us/library/windows/desktop/ms687419(v=vs.85).aspx
+ * \brief Not for intel c++ compiler, so ignore http://software.intel.com/en-us/forums/topic/296168
+ * \see http://msdn.microsoft.com/en-us/library/windows/desktop/ms687419(v=vs.85).aspx
 */
 # define LIBIPC_LOCK_PAUSE_() YieldProcessor()
 #elif defined(LIBIMP_CC_GNUC)
 # if defined(LIBIMP_INSTR_X86_64)
 /**
- * @brief Intel(R) 64 and IA-32 Architectures Software Developer's Manual V2
+ * \brief Intel(R) 64 and IA-32 Architectures Software Developer's Manual V2
  *        PAUSE-Spin Loop Hint, 4-57
- * @see http://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.html?wapkw=instruction+set+reference
+ * \see http://www.intel.com/content/www/us/en/architecture-and-technology/64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.html?wapkw=instruction+set+reference
 */
 #   define LIBIPC_LOCK_PAUSE_() __asm__ __volatile__("pause")
 # elif defined(LIBIMP_INSTR_I64)
 /**
- * @brief Intel(R) Itanium(R) Architecture Developer's Manual, Vol.3
+ * \brief Intel(R) Itanium(R) Architecture Developer's Manual, Vol.3
  *        hint - Performance Hint, 3:145
- * @see http://www.intel.com/content/www/us/en/processors/itanium/itanium-architecture-vol-3-manual.html
+ * \see http://www.intel.com/content/www/us/en/processors/itanium/itanium-architecture-vol-3-manual.html
 */
 #   define LIBIPC_LOCK_PAUSE_() __asm__ __volatile__ ("hint @pause")
 # elif defined(LIBIMP_INSTR_ARM)
 /**
- * @brief ARM Architecture Reference Manuals (YIELD)
- * @see http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.subset.architecture.reference/index.html
+ * \brief ARM Architecture Reference Manuals (YIELD)
+ * \see http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.subset.architecture.reference/index.html
 */
 #   define LIBIPC_LOCK_PAUSE_() __asm__ __volatile__ ("yield")
 # endif
@@ -40,20 +40,20 @@ LIBIPC_NAMESPACE_BEG_
 
 #if !defined(LIBIPC_LOCK_PAUSE_)
 /**
- * @brief Just use a compiler fence, prevent compiler from optimizing loop
+ * \brief Just use a compiler fence, prevent compiler from optimizing loop
 */
 # define LIBIPC_LOCK_PAUSE_() std::atomic_signal_fence(std::memory_order_seq_cst)
 #endif /*!defined(LIBIPC_LOCK_PAUSE_)*/
 
 /**
- * @brief Gives hint to processor that improves performance of spin-wait loops.
+ * \brief Gives hint to processor that improves performance of spin-wait loops.
 */
 void pause() noexcept {
   LIBIPC_LOCK_PAUSE_();
 }
 
 /**
- * @brief Basic spin lock
+ * \brief Basic spin lock
 */
 
 void spin_lock::lock() noexcept {
@@ -66,14 +66,14 @@ void spin_lock::unlock() noexcept {
   lc_.store(0, std::memory_order_release);
 }
 
-/// @brief Constants for shared mode spin lock
+/// \brief Constants for shared mode spin lock
 enum : unsigned {
   w_mask = (std::numeric_limits<std::make_signed_t<unsigned>>::max)(), // b 0111 1111
   w_flag = w_mask + 1,                                                 // b 1000 0000
 };
 
 /**
- * @brief Support for shared mode spin lock
+ * \brief Support for shared mode spin lock
 */
 
 void rw_lock::lock() noexcept {

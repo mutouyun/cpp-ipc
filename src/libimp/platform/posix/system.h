@@ -1,6 +1,6 @@
 /**
- * @file libimp/platform/posix/system.h
- * @author mutouyun (orz@orzz.org)
+ * \file libimp/platform/posix/system.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 
@@ -19,7 +19,7 @@ namespace sys {
 #endif
 
 /**
- * @brief Get the system error number
+ * \brief Get the system error number
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
 result_code error_no() noexcept {
@@ -29,7 +29,7 @@ result_code error_no() noexcept {
 }
 
 /**
- * @brief Set the system error number
+ * \brief Set the system error number
  * https://man7.org/linux/man-pages/man3/errno.3.html
  */
 void error_no(result_code code) noexcept {
@@ -37,7 +37,7 @@ void error_no(result_code code) noexcept {
 }
 
 /**
- * @brief Gets a text description of the system error
+ * \brief Gets a text description of the system error
  * https://man7.org/linux/man-pages/man3/strerror_l.3.html
  * https://manpages.ubuntu.com/manpages/xenial/en/man3/strerror.3.html
  */
@@ -58,7 +58,7 @@ std::string error_str(result_code code) noexcept {
 }
 
 /**
- * @brief Gets configuration information at run time
+ * \brief Gets configuration information at run time
  * https://man7.org/linux/man-pages/man2/getpagesize.2.html
  * https://man7.org/linux/man-pages/man3/sysconf.3.html
  */

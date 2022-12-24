@@ -1,8 +1,8 @@
 /**
- * @file libimp/countof.h
- * @author mutouyun (orz@orzz.org)
- * @brief Returns the size of the given range
- * @date 2022-03-01
+ * \file libimp/countof.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Returns the size of the given range
+ * \date 2022-03-01
  */
 #pragma once
 
@@ -15,7 +15,7 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @see https://en.cppreference.com/w/cpp/iterator/size
+ * \see https://en.cppreference.com/w/cpp/iterator/size
 */
 
 namespace detail_countof {

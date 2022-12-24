@@ -1,6 +1,6 @@
 /**
- * @file libipc/platform/win/get_sa.h
- * @author mutouyun (orz@orzz.org)
+ * \file libipc/platform/win/get_sa.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 
@@ -15,8 +15,8 @@ LIBIPC_NAMESPACE_BEG_
 namespace detail {
 
 /**
- * @brief Create a SECURITY_ATTRIBUTES structure singleton
- * @see https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/aa379560(v=vs.85)
+ * \brief Create a SECURITY_ATTRIBUTES structure singleton
+ * \see https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/aa379560(v=vs.85)
  */
 inline LPSECURITY_ATTRIBUTES get_sa() {
   static struct initiator {

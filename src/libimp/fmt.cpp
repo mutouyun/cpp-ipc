@@ -14,8 +14,8 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief Format conversions helpers.
- * @see http://personal.ee.surrey.ac.uk/Personal/R.Bowden/C/printf.html
+ * \brief Format conversions helpers.
+ * \see http://personal.ee.surrey.ac.uk/Personal/R.Bowden/C/printf.html
  *      https://en.cppreference.com/w/cpp/io/c/fprintf
  */
 namespace {
@@ -149,7 +149,7 @@ span<char> fmt_context_sbuf() noexcept {
 
 } // namespace
 
-/// @brief The context of fmt.
+/// \brief The context of fmt.
 
 fmt_context::fmt_context(std::string &j) noexcept
   : joined_(j)
@@ -189,7 +189,7 @@ span<char> fmt_context::buffer(std::size_t sz) noexcept {
       if ((offset_ + sz) < sbuf.size()) {
         return sbuf.subspan(offset_);
       } else {
-        /// @remark switch the cache to std::string
+        /// \remark switch the cache to std::string
         joined_.assign(sbuf.data(), offset_);
         joined_.resize(roundup(offset_ + sz));
       }
@@ -216,7 +216,7 @@ bool fmt_context::append(std::string const &str) noexcept {
   return true;
 }
 
-/// @brief To string conversion.
+/// \brief To string conversion.
 
 bool to_string(fmt_context &ctx, char const *a) noexcept {
   return to_string(ctx, a, {});

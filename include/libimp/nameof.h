@@ -1,8 +1,8 @@
 /**
- * @file libimp/nameof.h
- * @author mutouyun (orz@orzz.org)
- * @brief Gets the name string of a type.
- * @date 2022-11-26
+ * \file libimp/nameof.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Gets the name string of a type.
+ * \date 2022-11-26
  */
 #pragma once
 
@@ -16,20 +16,20 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief The conventional way to obtain demangled symbol name.
- * @see https://www.boost.org/doc/libs/1_80_0/libs/core/doc/html/core/demangle.html
+ * \brief The conventional way to obtain demangled symbol name.
+ * \see https://www.boost.org/doc/libs/1_80_0/libs/core/doc/html/core/demangle.html
  * 
- * @param name the mangled name
- * @return std::string a human-readable demangled type name
+ * \param name the mangled name
+ * \return std::string a human-readable demangled type name
  */
 std::string demangle(span<char const> name) noexcept;
 
 /**
- * @brief Returns an implementation defined string containing the name of the type.
- * @see https://en.cppreference.com/w/cpp/types/type_info/name
+ * \brief Returns an implementation defined string containing the name of the type.
+ * \see https://en.cppreference.com/w/cpp/types/type_info/name
  * 
- * @tparam T a type
- * @return std::string a human-readable demangled type name
+ * \tparam T a type
+ * \return std::string a human-readable demangled type name
  */
 template <typename T>
 std::string nameof() noexcept {

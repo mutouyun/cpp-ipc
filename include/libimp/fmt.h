@@ -1,10 +1,10 @@
 /**
- * @file libimp/fmt.h
- * @author mutouyun (orz@orzz.org)
- * @brief String formatting.
- * @date 2022-11-26
+ * \file libimp/fmt.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief String formatting.
+ * \date 2022-11-26
  * 
- * @remarks The current performance is not high, 
+ * \remarks The current performance is not high, 
  * because I use std::sprintf directly for formatting for convenience.
  */
 #pragma once
@@ -25,7 +25,7 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief The format string reference wrapper.
+ * \brief The format string reference wrapper.
  */
 template <typename T>
 struct fmt_ref {
@@ -34,12 +34,12 @@ struct fmt_ref {
 };
 
 /**
- * @brief Conversion specifiers.
+ * \brief Conversion specifiers.
  * 
- * @remarks Just like printf, the format string is of the form
+ * \remarks Just like printf, the format string is of the form
  * [flags][field_width][.precision][conversion_character]
  * 
- * @see http://personal.ee.surrey.ac.uk/Personal/R.Bowden/C/printf.html
+ * \see http://personal.ee.surrey.ac.uk/Personal/R.Bowden/C/printf.html
  */
 template <std::size_t N>
 auto spec(char const (&fstr)[N]) noexcept {
@@ -50,10 +50,10 @@ auto spec(char const (&fstr)[N]) noexcept {
 }
 
 /**
- * @brief String formatting function.
+ * \brief String formatting function.
  * 
- * @param args arguments that support the fmt output
- * @return an empty string if the fmt output fails 
+ * \param args arguments that support the fmt output
+ * \return an empty string if the fmt output fails 
  */
 template <typename... A>
 LIBIMP_NODISCARD std::string fmt(A &&...args) {
@@ -65,13 +65,13 @@ LIBIMP_NODISCARD std::string fmt(A &&...args) {
   return {};
 }
 
-/// @brief String types.
+/// \brief String types.
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, char const *       a) noexcept;
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, std::string const &a) noexcept;
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, char const *       a, span<char const> fstr) noexcept;
        inline bool to_string(fmt_context &ctx, std::string const &a, span<char const> fstr) noexcept { return to_string(ctx, a.c_str(), fstr); }
 
-/// @brief Character to string conversion.
+/// \brief Character to string conversion.
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, char     a) noexcept;
 #if defined(LIBIMP_CPP_20)
        inline bool to_string(fmt_context &ctx, char8_t  a) noexcept { return to_string(ctx, (char)a); }
@@ -80,7 +80,7 @@ LIBIMP_EXPORT bool to_string(fmt_context &ctx, wchar_t  a) noexcept;
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, char16_t a) noexcept;
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, char32_t a) noexcept;
 
-/// @brief Conversion of numeric types to strings.
+/// \brief Conversion of numeric types to strings.
 LIBIMP_EXPORT bool to_string(fmt_context &ctx,   signed short     a, span<char const> fstr = {}) noexcept;
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, unsigned short     a, span<char const> fstr = {}) noexcept;
 LIBIMP_EXPORT bool to_string(fmt_context &ctx,   signed int       a, span<char const> fstr = {}) noexcept;
@@ -92,29 +92,29 @@ LIBIMP_EXPORT bool to_string(fmt_context &ctx, unsigned long long a, span<char c
        inline bool to_string(fmt_context &ctx,   signed char      a, span<char const> fstr = {}) noexcept { return to_string(ctx,      (int)a, fstr); }
        inline bool to_string(fmt_context &ctx, unsigned char      a, span<char const> fstr = {}) noexcept { return to_string(ctx, (unsigned)a, fstr); }
 
-/// @brief Conversion of floating point type to strings.
+/// \brief Conversion of floating point type to strings.
 LIBIMP_EXPORT bool to_string(fmt_context &ctx,      double a, span<char const> fstr = {}) noexcept;
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, long double a, span<char const> fstr = {}) noexcept;
        inline bool to_string(fmt_context &ctx, float       a, span<char const> fstr = {}) noexcept { return to_string(ctx, (double)a, fstr); }
 
-/// @brief Pointer.
+/// \brief Pointer.
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, std::nullptr_t) noexcept;
 template <typename T,
           typename = std::enable_if_t<std::is_same<T, void>::value>>
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, T const volatile *a) noexcept;
 
-/// @brief Date and time.
+/// \brief Date and time.
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, std::tm const &a, span<char const> fstr = {}) noexcept;
 
 namespace detail {
 
 /**
- * @brief Convert std::time_t to std::string.
- * @return an empty string if the conversion fails
+ * \brief Convert std::time_t to std::string.
+ * \return an empty string if the conversion fails
  */
 inline bool time_to_string(fmt_context &ctx, std::time_t tt, span<char const> fstr) noexcept {
 #if defined(LIBIMP_CC_MSVC)
-  /// @see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/localtime-s-localtime32-s-localtime64-s
+  /// \see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/localtime-s-localtime32-s-localtime64-s
   std::tm tm {};
   if (::localtime_s(&tm, &tt) != 0) {
     return {};
@@ -133,7 +133,7 @@ bool to_string(fmt_context &ctx, std::chrono::time_point<Clock, Duration> const 
 }
 
 /**
- * @brief Predefined fmt_to method
+ * \brief Predefined fmt_to method
  */
 namespace detail {
 

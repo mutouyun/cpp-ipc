@@ -1,6 +1,6 @@
 /**
- * @file libipc/platform/posix/shm_impl.h
- * @author mutouyun (orz@orzz.org)
+ * \file libipc/platform/posix/shm_impl.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 
@@ -54,7 +54,7 @@ result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
     return {};
   }
 
-  /// @brief Open the object for read-write access.
+  /// \brief Open the object for read-write access.
   int flag = O_RDWR;
   switch (type) {
   case mode::open:
@@ -73,7 +73,7 @@ result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
     return {};
   }
 
-  /// @brief Create/Open POSIX shared memory bject
+  /// \brief Create/Open POSIX shared memory bject
   return ::shm_open(name.c_str(), flag, S_IRUSR | S_IWUSR |
                                         S_IRGRP | S_IWGRP |
                                         S_IROTH | S_IWOTH);
@@ -81,7 +81,7 @@ result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
 
 result_code ftruncate_fd(int fd, std::size_t size) noexcept {
   LIBIMP_LOG_();
-  /// @see https://man7.org/linux/man-pages/man3/ftruncate.3p.html
+  /// \see https://man7.org/linux/man-pages/man3/ftruncate.3p.html
   if (::ftruncate(fd, size) != posix::succ) {
     auto err = sys::error();
     log.error("failed: ftruncate(", fd, ", ", size, "). error = ", err);
@@ -93,7 +93,7 @@ result_code ftruncate_fd(int fd, std::size_t size) noexcept {
 } // namespace
 
 /**
- * @see https://man7.org/linux/man-pages/man3/shm_open.3.html
+ * \see https://man7.org/linux/man-pages/man3/shm_open.3.html
  *      https://man7.org/linux/man-pages/man3/fstat.3p.html
  *      https://man7.org/linux/man-pages/man2/mmap.2.html
  */
@@ -112,25 +112,25 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
       if (pfd != nullptr) ::close(**pfd);
     }};
 
-  /// @brief Try to get the size of this fd
+  /// \brief Try to get the size of this fd
   struct stat st;
   if (::fstat(*fd, &st) == posix::failed) {
     log.error("failed: fstat(fd = ", *fd, "). error = ", sys::error());
     return {};
   }
 
-  /// @brief Truncate this fd to a specified length
+  /// \brief Truncate this fd to a specified length
   if (size == 0) {
     size = static_cast<std::size_t>(st.st_size);
     if (!ftruncate_fd(*fd, size)) return {};
   } else if (st.st_size > 0) {
-    /// @remark Based on the actual size.
+    /// \remark Based on the actual size.
     size = static_cast<std::size_t>(st.st_size);
   } else { // st.st_size <= 0
     if (!ftruncate_fd(*fd, size)) return {};
   }
 
-  /// @brief Creates a new mapping in the virtual address space of the calling process.
+  /// \brief Creates a new mapping in the virtual address space of the calling process.
   void *mem = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0);
   if (mem == MAP_FAILED) {
     log.error("failed: mmap(size = ", size, ", fd = ", *fd, "). error = ", sys::error());
@@ -140,7 +140,7 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
 }
 
 /**
- * @see https://man7.org/linux/man-pages/man2/mmap.2.html
+ * \see https://man7.org/linux/man-pages/man2/mmap.2.html
  */
 result_code shm_close(shm_t h) noexcept {
   LIBIMP_LOG_();
@@ -151,7 +151,7 @@ result_code shm_close(shm_t h) noexcept {
     log.error("failed: munmap(", shm->memp, ", ", shm->f_sz, "). error = ", err);
     return err.code();
   }
-  /// @brief no unlink the file.
+  /// \brief no unlink the file.
   delete shm;
   return {posix::succ};
 }

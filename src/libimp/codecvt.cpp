@@ -15,19 +15,19 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief The transform between local-character-set(UTF-8/GBK/...) and UTF-16/32.
+ * \brief The transform between local-character-set(UTF-8/GBK/...) and UTF-16/32.
  * 
  * Modified from UnicodeConverter.
  * Copyright (c) 2010. Jianhui Qin (http://blog.csdn.net/jhqin).
  * 
- * @remarks codecvt_utf8_utf16/std::wstring_convert is deprecated.
- * @see https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
+ * \remarks codecvt_utf8_utf16/std::wstring_convert is deprecated.
+ * \see https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
  *      https://stackoverflow.com/questions/42946335/deprecated-header-codecvt-replacement
  *      https://en.cppreference.com/w/cpp/locale/codecvt/in
 */
 namespace {
 
-/// @brief X-bit unicode transformation format
+/// \brief X-bit unicode transformation format
 enum class ufmt {
   utf8,
   utf16,
@@ -53,7 +53,7 @@ template <typename T, ufmt Fmt>
 constexpr bool utf_compatible_v = utf_compatible<T, Fmt>::value;
 
 /**
- * @brief UTF-32 --> UTF-8
+ * \brief UTF-32 --> UTF-8
  */
 template <typename T, typename U>
 auto cvt_char(T src, U* des, std::size_t dlen) noexcept
@@ -91,7 +91,7 @@ auto cvt_char(T src, U* des, std::size_t dlen) noexcept
 }
 
 /**
- * @brief UTF-8 --> UTF-32
+ * \brief UTF-8 --> UTF-32
  */
 template <typename T, typename U>
 auto cvt_char(T const *src, std::size_t slen, U &des) noexcept
@@ -138,7 +138,7 @@ auto cvt_char(T const *src, std::size_t slen, U &des) noexcept
 }
 
 /**
- * @brief UTF-32 --> UTF-16
+ * \brief UTF-32 --> UTF-16
  */
 template <typename T, typename U>
 auto cvt_char(T src, U *des, std::size_t dlen) noexcept
@@ -162,7 +162,7 @@ auto cvt_char(T src, U *des, std::size_t dlen) noexcept
 }
 
 /**
- * @brief UTF-16 --> UTF-32
+ * \brief UTF-16 --> UTF-32
 */
 template <typename T, typename U>
 auto cvt_char(T const *src, std::size_t slen, U &des)
@@ -188,7 +188,7 @@ auto cvt_char(T const *src, std::size_t slen, U &des)
 }
 
 /**
- * @brief UTF-16 --> UTF-8
+ * \brief UTF-16 --> UTF-8
 */
 template <typename T, typename U>
 auto cvt_char(T src, U *des, std::size_t dlen) noexcept
@@ -202,7 +202,7 @@ auto cvt_char(T src, U *des, std::size_t dlen) noexcept
 }
 
 /**
- * @brief UTF-8 --> UTF-16
+ * \brief UTF-8 --> UTF-16
 */
 template <typename T, typename U>
 auto cvt_char(T const *src, std::size_t slen, U &des)
@@ -218,7 +218,7 @@ auto cvt_char(T const *src, std::size_t slen, U &des)
 }
 
 /**
- * @brief UTF-32 string --> UTF-8/16 string
+ * \brief UTF-32 string --> UTF-8/16 string
 */
 template <typename T, typename U>
 auto cvt_cstr_utf(T const *src, std::size_t slen, U *des, std::size_t dlen) noexcept
@@ -247,7 +247,7 @@ auto cvt_cstr_utf(T const *src, std::size_t slen, U *des, std::size_t dlen) noex
 }
 
 /**
- * @brief UTF-8/16 string --> UTF-32 string
+ * \brief UTF-8/16 string --> UTF-32 string
 */
 template <typename T, typename U>
 auto cvt_cstr_utf(T const *src, std::size_t slen, U *des, std::size_t dlen) noexcept
@@ -276,7 +276,7 @@ auto cvt_cstr_utf(T const *src, std::size_t slen, U *des, std::size_t dlen) noex
 }
 
 /**
- * @brief UTF-8/16 string --> UTF-16/8 string
+ * \brief UTF-8/16 string --> UTF-16/8 string
 */
 template <typename T, typename U>
 auto cvt_cstr_utf(T const *src, std::size_t slen, U *des, std::size_t dlen) noexcept

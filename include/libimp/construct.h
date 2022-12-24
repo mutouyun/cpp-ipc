@@ -1,8 +1,8 @@
 /**
- * @file libimp/construct.h
- * @author mutouyun (orz@orzz.org)
- * @brief Construct an object from a memory buffer
- * @date 2022-02-27
+ * \file libimp/construct.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Construct an object from a memory buffer
+ * \date 2022-02-27
  */
 #pragma once
 
@@ -18,8 +18,8 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief Creates an object at a given address, like 'construct_at' in c++20
- * @see https://en.cppreference.com/w/cpp/memory/construct_at
+ * \brief Creates an object at a given address, like 'construct_at' in c++20
+ * \see https://en.cppreference.com/w/cpp/memory/construct_at
 */
 
 template <typename T, typename... A>
@@ -39,8 +39,8 @@ auto construct(void *p, A &&... args)
 }
 
 /**
- * @brief Destroys an object at a given address, like 'destroy_at' in c++17
- * @see https://en.cppreference.com/w/cpp/memory/destroy_at
+ * \brief Destroys an object at a given address, like 'destroy_at' in c++17
+ * \see https://en.cppreference.com/w/cpp/memory/destroy_at
 */
 
 template <typename T>

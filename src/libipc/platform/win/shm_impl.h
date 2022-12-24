@@ -1,6 +1,6 @@
 /**
- * @file libipc/platform/win/shm_impl.h
- * @author mutouyun (orz@orzz.org)
+ * \file libipc/platform/win/shm_impl.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 

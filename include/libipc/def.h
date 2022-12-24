@@ -1,8 +1,8 @@
 /**
- * @file libipc/def.h
- * @author mutouyun (orz@orzz.org)
- * @brief Define the trivial configuration information.
- * @date 2022-02-27
+ * \file libipc/def.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Define the trivial configuration information.
+ * \date 2022-02-27
  */
 #pragma once
 
@@ -15,7 +15,7 @@
 
 LIBIPC_NAMESPACE_BEG_
 
-/// @brief Constants.
+/// \brief Constants.
 
 struct prot {
   using type = std::uint32_t;

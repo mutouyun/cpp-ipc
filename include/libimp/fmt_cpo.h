@@ -1,8 +1,8 @@
 /**
- * @file libimp/fmt_cpo.h
- * @author mutouyun (orz@orzz.org)
- * @brief String formatting CPO.
- * @date 2022-11-28
+ * \file libimp/fmt_cpo.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief String formatting CPO.
+ * \date 2022-11-28
  */
 #pragma once
 
@@ -18,7 +18,7 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief The context of fmt.
+ * \brief The context of fmt.
  */
 class LIBIMP_EXPORT fmt_context {
   std::string &joined_;
@@ -36,7 +36,7 @@ public:
 };
 
 /**
- * @brief Supports custom fmt_to methods for imp::fmt.
+ * \brief Supports custom fmt_to methods for imp::fmt.
  */
 namespace detail {
 

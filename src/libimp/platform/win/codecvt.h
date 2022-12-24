@@ -1,6 +1,6 @@
 /**
- * @file libimp/platform/win/codecvt.h
- * @author mutouyun (orz@orzz.org)
+ * \file libimp/platform/win/codecvt.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 
@@ -14,7 +14,7 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @see https://docs.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
  *      https://docs.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
  * 
  *      CP_ACP       : The system default Windows ANSI code page.
@@ -57,7 +57,7 @@ std::size_t cvt_cstr(wchar_t const *src, std::size_t slen, char *des, std::size_
 }
 
 /**
- * @brief Used for char8_t (since C++20) to wchar_t conversion.
+ * \brief Used for char8_t (since C++20) to wchar_t conversion.
  * 
  * There is no ut to guarantee correctness (I'm a little lazy here), 
  * so if there are any bugs, please contact me in time.

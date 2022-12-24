@@ -1,7 +1,7 @@
 /**
- * @file libimp/horrible_cast.h
- * @author mutouyun (orz@orzz.org)
- * @date 2022-04-17
+ * \file libimp/horrible_cast.h
+ * \author mutouyun (orz@orzz.org)
+ * \date 2022-04-17
  */
 #pragma once
 

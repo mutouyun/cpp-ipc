@@ -1,8 +1,8 @@
 /**
- * @file libpmr/allocator.h
- * @author mutouyun (orz@orzz.org)
- * @brief A generic polymorphic memory allocator.
- * @date 2022-11-13
+ * \file libpmr/allocator.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief A generic polymorphic memory allocator.
+ * \date 2022-11-13
  */
 #pragma once
 
@@ -19,15 +19,15 @@
 LIBPMR_NAMESPACE_BEG_
 
 /**
- * @brief An allocator which exhibits different allocation behavior 
+ * \brief An allocator which exhibits different allocation behavior 
  * depending upon the memory resource from which it is constructed.
  * 
- * @remarks Unlike std::pmr::polymorphic_allocator, it does not 
+ * \remarks Unlike std::pmr::polymorphic_allocator, it does not 
  * rely on a specific inheritance relationship and only restricts 
  * the interface behavior of the incoming memory resource object to 
  * conform to std::pmr::memory_resource.
  * 
- * @see https://en.cppreference.com/w/cpp/memory/memory_resource
+ * \see https://en.cppreference.com/w/cpp/memory/memory_resource
  *      https://en.cppreference.com/w/cpp/memory/polymorphic_allocator
  */
 class LIBIMP_EXPORT allocator {
@@ -51,8 +51,8 @@ class LIBIMP_EXPORT allocator {
   class holder_memory_resource;
 
   /**
-   * @brief A memory resource pointer holder class for type erasure.
-   * @tparam MR memory resource type
+   * \brief A memory resource pointer holder class for type erasure.
+   * \tparam MR memory resource type
    */
   template <typename MR>
   class holder_memory_resource<MR, is_memory_resource<MR>> : public holder_base {
@@ -76,8 +76,8 @@ class LIBIMP_EXPORT allocator {
   };
 
   /**
-   * @brief An empty holding class used to calculate a reasonable memory size for the holder.
-   * @tparam MR cannot be converted to the type of memory resource
+   * \brief An empty holding class used to calculate a reasonable memory size for the holder.
+   * \tparam MR cannot be converted to the type of memory resource
    */
   template <typename MR, typename U>
   class holder_memory_resource : public holder_null {
@@ -100,8 +100,8 @@ public:
   allocator(allocator &&other) noexcept;
   allocator &operator=(allocator &&other) & noexcept;
 
-  /// @brief Constructs a allocator from a memory resource pointer
-  /// @remark The lifetime of the pointer must be longer than that of allocator.
+  /// \brief Constructs a allocator from a memory resource pointer
+  /// The lifetime of the pointer must be longer than that of allocator.
   template <typename T, typename = is_memory_resource<T>>
   allocator(T *p_mr) : allocator() {
     if (p_mr == nullptr) return;
@@ -112,7 +112,7 @@ public:
   bool valid() const noexcept;
   explicit operator bool() const noexcept;
 
-  /// @brief Allocate/deallocate memory.
+  /// \brief Allocate/deallocate memory.
   void *alloc(std::size_t s);
   void  free (void *p, std::size_t s);
 };

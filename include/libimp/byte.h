@@ -1,8 +1,8 @@
 /**
- * @file libimp/byte.h
- * @author mutouyun (orz@orzz.org)
- * @brief Define the byte type.
- * @date 2022-11-12
+ * \file libimp/byte.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Define the byte type.
+ * \date 2022-11-12
  */
 #pragma once
 
@@ -37,8 +37,8 @@ using is_not_byte =
 } // namespace detail
 
 /**
- * @brief A distinct type that implements the concept of byte as specified in the C++ language definition.
- * @see https://en.cppreference.com/w/cpp/types/byte
+ * \brief A distinct type that implements the concept of byte as specified in the C++ language definition.
+ * \see https://en.cppreference.com/w/cpp/types/byte
  */
 class byte {
   std::uint8_t bits_;
@@ -63,8 +63,8 @@ public:
 
 #ifdef LIBIMP_CPP_LIB_BYTE_
   explicit constexpr operator std::byte() const noexcept {
-    /// @brief C++17 relaxed enum class initialization rules.
-    /// @see https://en.cppreference.com/w/cpp/language/enum#enum_relaxed_init_cpp17
+    /// \brief C++17 relaxed enum class initialization rules.
+    /// \see https://en.cppreference.com/w/cpp/language/enum#enum_relaxed_init_cpp17
     return std::byte{bits_};
   }
 #endif // LIBIMP_CPP_LIB_BYTE_
@@ -79,7 +79,7 @@ public:
 };
 
 /**
- * @brief Non-member functions.
+ * \brief Non-member functions.
  */
 
 template <typename T, typename = detail::is_integral<T>>
@@ -87,7 +87,7 @@ constexpr T to_integer(byte b) noexcept {
   return T(b);
 }
 
-/// @brief std::operator<<, operator>>
+/// \brief std::operator<<, operator>>
 
 template <typename T, typename = detail::is_integral<T>>
 constexpr byte operator<<(byte b, T shift) noexcept {
@@ -99,7 +99,7 @@ constexpr byte operator>>(byte b, T shift) noexcept {
   return byte(to_integer<unsigned>(b) >> shift);
 }
 
-/// @brief std::operator<<=, operator>>=
+/// \brief std::operator<<=, operator>>=
 
 template <typename T, typename = detail::is_integral<T>>
 constexpr byte &operator<<=(byte &b, T shift) noexcept {
@@ -111,20 +111,20 @@ constexpr byte &operator>>=(byte &b, T shift) noexcept {
   return b = b >> shift;
 }
 
-/// @brief std::operator|, operator&, operator^, operator~
+/// \brief std::operator|, operator&, operator^, operator~
 
 constexpr byte operator|(byte l, byte r) noexcept { return byte(to_integer<unsigned>(l) | to_integer<unsigned>(r)); }
 constexpr byte operator&(byte l, byte r) noexcept { return byte(to_integer<unsigned>(l) & to_integer<unsigned>(r)); }
 constexpr byte operator^(byte l, byte r) noexcept { return byte(to_integer<unsigned>(l) ^ to_integer<unsigned>(r)); }
 constexpr byte operator~(byte b)         noexcept { return byte(~to_integer<unsigned>(b)); }
 
-/// @brief std::operator|=, operator&=, operator^=
+/// \brief std::operator|=, operator&=, operator^=
 
 constexpr byte &operator|=(byte &l, byte r) noexcept { return l = l | r; }
 constexpr byte &operator&=(byte &l, byte r) noexcept { return l = l & r; }
 constexpr byte &operator^=(byte &l, byte r) noexcept { return l = l ^ r; }
 
-/// @brief Cast pointer to byte*.
+/// \brief Cast pointer to byte*.
 
 template <typename T, typename = detail::is_not_byte<T>>
 byte *byte_cast(T *p) noexcept {
@@ -136,7 +136,7 @@ byte const *byte_cast(T const *p) noexcept {
   return reinterpret_cast<byte const *>(p);
 }
 
-/// @brief Cast byte* to a pointer of another type.
+/// \brief Cast byte* to a pointer of another type.
 
 template <typename T, typename = detail::is_not_byte<T>>
 T *byte_cast(byte *p) noexcept {
@@ -155,8 +155,8 @@ U *byte_cast(byte const *p) noexcept {
   return reinterpret_cast<U *>(p);
 }
 
-/// @brief Converts a span into a view of its underlying bytes.
-/// @see https://en.cppreference.com/w/cpp/container/span/as_bytes
+/// \brief Converts a span into a view of its underlying bytes.
+/// \see https://en.cppreference.com/w/cpp/container/span/as_bytes
 
 template <typename T, 
           typename Byte = typename std::conditional<std::is_const<T>::value, byte const, byte>::type>
@@ -164,7 +164,7 @@ auto as_bytes(span<T> s) noexcept -> span<Byte> {
   return {byte_cast(s.data()), s.size_bytes()};
 }
 
-/// @brief Custom defined fmt_to method for imp::fmt
+/// \brief Custom defined fmt_to method for imp::fmt
 namespace detail {
 
 inline bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, ::LIBIMP::byte b) {

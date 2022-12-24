@@ -1,8 +1,8 @@
 /**
- * @file libipc/spin_lock.h
- * @author mutouyun (orz@orzz.org)
- * @brief Define spin locks
- * @date 2022-02-27
+ * \file libipc/spin_lock.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Define spin locks
+ * \date 2022-02-27
  */
 #pragma once
 
@@ -18,12 +18,12 @@
 LIBIPC_NAMESPACE_BEG_
 
 /**
- * @brief Gives hint to processor that improves performance of spin-wait loops.
+ * \brief Gives hint to processor that improves performance of spin-wait loops.
 */
 LIBIMP_EXPORT void pause() noexcept;
 
 /**
- * @brief Yield to other threads
+ * \brief Yield to other threads
 */
 
 template <typename K>
@@ -60,7 +60,7 @@ inline void sleep(K &k) {
 }
 
 /**
- * @brief Basic spin lock
+ * \brief Basic spin lock
 */
 class LIBIMP_EXPORT spin_lock {
   std::atomic<unsigned> lc_ {0};
@@ -71,7 +71,7 @@ public:
 };
 
 /**
- * @brief Support for shared mode spin lock
+ * \brief Support for shared mode spin lock
 */
 class LIBIMP_EXPORT rw_lock {
   std::atomic<unsigned> lc_ {0};

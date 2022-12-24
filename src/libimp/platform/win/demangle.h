@@ -1,6 +1,6 @@
 /**
- * @file libimp/platform/win/demangle.h
- * @author mutouyun (orz@orzz.org)
+ * \file libimp/platform/win/demangle.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 

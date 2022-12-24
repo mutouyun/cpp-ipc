@@ -1,6 +1,6 @@
 /**
- * @file libimp/platform/win/system.h
- * @author mutouyun (orz@orzz.org)
+ * \file libimp/platform/win/system.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 
@@ -21,7 +21,7 @@ LIBIMP_NAMESPACE_BEG_
 namespace sys {
 
 /**
- * @brief Get the system error number
+ * \brief Get the system error number
  * https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror
  */
 result_code error_no() noexcept {
@@ -33,7 +33,7 @@ result_code error_no() noexcept {
 }
 
 /**
- * @brief Set the system error number
+ * \brief Set the system error number
  * https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-setlasterror
  */
 void error_no(result_code code) noexcept {
@@ -42,7 +42,7 @@ void error_no(result_code code) noexcept {
 }
 
 /**
- * @brief Gets a text description of the system error
+ * \brief Gets a text description of the system error
  * https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
  */
 std::string error_str(result_code code) noexcept {
@@ -81,7 +81,7 @@ std::string error_str(result_code code) noexcept {
 }
 
 /**
- * @brief Retrieves information about the current system
+ * \brief Retrieves information about the current system
  * https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsysteminfo
  * https://docs.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getnativesysteminfo
  */

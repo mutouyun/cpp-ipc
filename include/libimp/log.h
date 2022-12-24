@@ -1,8 +1,8 @@
 /**
- * @file libimp/log.h
- * @author mutouyun (orz@orzz.org)
- * @brief Simple log output component.
- * @date 2022-05-22
+ * \file libimp/log.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Simple log output component.
+ * \date 2022-05-22
  */
 #pragma once
 
@@ -39,7 +39,7 @@ struct context {
 LIBIMP_EXPORT std::string to_string(context &&) noexcept;
 LIBIMP_EXPORT bool to_string(fmt_context &ctx, context &&) noexcept;
 
-/// @brief Custom defined fmt_to method for imp::fmt
+/// \brief Custom defined fmt_to method for imp::fmt
 template <typename T>
 bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, context &&arg) noexcept {
   return ::LIBIMP::log::to_string(ctx, std::move(arg));
@@ -121,7 +121,7 @@ public:
   printer() noexcept = default;
 
   template <typename T, 
-            /// @remark generic constructor may shadow the default copy constructor
+            /// \remark generic constructor may shadow the default copy constructor
             typename = std::enable_if_t<!std::is_same<printer, T>::value>>
   printer(T &p) noexcept
     : objp_  (static_cast<void *>(&p))
@@ -131,17 +131,17 @@ public:
   void output(context) noexcept;
 };
 
-/// @brief Standard console output.
+/// \brief Standard console output.
 class LIBIMP_EXPORT std_t {
 public:
   void output(log::level, std::string &&) noexcept;
 };
 
-/// @brief Standard console output object.
+/// \brief Standard console output object.
 LIBIMP_EXPORT extern std_t std_out;
 
 /**
- * @brief Log information grips.
+ * \brief Log information grips.
  */
 class grip {
   printer printer_;
@@ -160,7 +160,7 @@ class grip {
         fmt(std::forward<A>(args)...),
       };
     } LIBIMP_CATCH(std::exception const &e) {
-      /// @remark [TBD] std::string constructor may throw an exception
+      /// \remark [TBD] std::string constructor may throw an exception
       ctx = {
         level::failed, std::chrono::system_clock::now(), func_, e.what(),
       };

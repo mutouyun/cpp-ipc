@@ -1,8 +1,8 @@
 /**
- * @file libimp/span.h
- * @author mutouyun (orz@orzz.org)
- * @brief Describes an object that can refer to a contiguous sequence of objects
- * @date 2022-10-16
+ * \file libimp/span.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Describes an object that can refer to a contiguous sequence of objects
+ * \date 2022-10-16
  */
 #pragma once
 
@@ -28,7 +28,7 @@
 LIBIMP_NAMESPACE_BEG_
 namespace detail {
 
-/// @brief Helper trait for span.
+/// \brief Helper trait for span.
 
 template <typename From, typename To>
 using array_convertible = std::is_convertible<From(*)[], To(*)[]>;
@@ -56,9 +56,9 @@ using is_sized_sentinel_for =
   typename std::enable_if<std::is_convertible<decltype(std::declval<S>() - std::declval<I>()), 
                           std::ptrdiff_t>::value>::type;
 
-/// @brief Obtain the address represented by p 
+/// \brief Obtain the address represented by p 
 ///        without forming a reference to the object pointed to by p.
-/// @see https://en.cppreference.com/w/cpp/memory/to_address
+/// \see https://en.cppreference.com/w/cpp/memory/to_address
 
 template<typename T>
 constexpr T *to_address(T *ptr) noexcept {
@@ -76,8 +76,8 @@ constexpr auto to_address(T const &ptr)
 } // namespace detail
 
 /**
- * @brief A simple implementation of span.
- * @see https://en.cppreference.com/w/cpp/container/span
+ * \brief A simple implementation of span.
+ * \see https://en.cppreference.com/w/cpp/container/span
  */
 template <typename T>
 class span {
@@ -205,7 +205,7 @@ public:
   }
 };
 
-/// @brief Support for span equals comparison.
+/// \brief Support for span equals comparison.
 
 template <typename T, typename U, 
           typename = decltype(std::declval<T>() == std::declval<U>())>
@@ -219,9 +219,9 @@ bool operator==(span<T> a, span<U> b) noexcept {
   return true;
 }
 
-/// @brief Constructs an object of type T and wraps it in a span.
+/// \brief Constructs an object of type T and wraps it in a span.
 /// Before C++17, template argument deduction for class templates was not supported.
-/// @see https://en.cppreference.com/w/cpp/language/template_argument_deduction
+/// \see https://en.cppreference.com/w/cpp/language/template_argument_deduction
 
 template <typename T>
 auto make_span(T *arr, std::size_t count) noexcept -> span<T> {

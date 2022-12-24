@@ -1,6 +1,6 @@
 /**
- * @file libipc/platform/posix/mmap.h
- * @author mutouyun (orz@orzz.org)
+ * \file libipc/platform/posix/mmap.h
+ * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 

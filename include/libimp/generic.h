@@ -1,8 +1,8 @@
 /**
- * @file libimp/generic.h
- * @author mutouyun (orz@orzz.org)
- * @brief Tools for generic programming.
- * @date 2022-03-01
+ * \file libimp/generic.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Tools for generic programming.
+ * \date 2022-03-01
  */
 #pragma once
 
@@ -14,15 +14,15 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
- * @brief Utility metafunction that maps a sequence of any types to the type void
- * @see https://en.cppreference.com/w/cpp/types/void_t
+ * \brief Utility metafunction that maps a sequence of any types to the type void
+ * \see https://en.cppreference.com/w/cpp/types/void_t
 */
 template <typename...>
 using void_t = void;
 
 /**
- * @brief A general pattern for supporting customisable functions
- * @see https://www.open-std.org/jtc1/sc22/WG21/docs/papers/2019/p1895r0.pdf
+ * \brief A general pattern for supporting customisable functions
+ * \see https://www.open-std.org/jtc1/sc22/WG21/docs/papers/2019/p1895r0.pdf
 */
 namespace detail {
 
@@ -42,8 +42,8 @@ struct tag_invoke_t {
 constexpr detail::tag_invoke_t tag_invoke {};
 
 /**
- * @brief Circumventing forwarding reference may override copy and move constructs.
- * @see https://mpark.github.io/programming/2014/06/07/beware-of-perfect-forwarding-constructors/
+ * \brief Circumventing forwarding reference may override copy and move constructs.
+ * \see https://mpark.github.io/programming/2014/06/07/beware-of-perfect-forwarding-constructors/
  */
 namespace detail {
 

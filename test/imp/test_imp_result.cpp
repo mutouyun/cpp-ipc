@@ -1,5 +1,6 @@
 
 #include <sstream>
+#include <cstdint>
 
 #include "gtest/gtest.h"
 
@@ -75,8 +76,10 @@ TEST(result, fmt) {
     EXPECT_EQ(imp::fmt(r0), imp::fmt(imp::result_code()));
     imp::result<int> r1 {false, -123};
     EXPECT_EQ(imp::fmt(r1), imp::fmt("[fail, value = ", -123, "]"));
+
     imp::result<void *> r2 {&r1};
     EXPECT_EQ(imp::fmt(r2), imp::fmt("[succ, value = ", (void *)&r1, "]"));
+
     int aaa {};
     imp::result<int *> r3 {&aaa};
     EXPECT_EQ(imp::fmt(r3), imp::fmt("[succ, value = ", (void *)&aaa, "]"));

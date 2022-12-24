@@ -1,13 +1,14 @@
 /**
- * @file libimp/result.h
- * @author mutouyun (orz@orzz.org)
- * @brief Define the return value type with a status code
- * @date 2022-04-17
+ * \file libimp/result.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Define the return value type with a status code
+ * \date 2022-04-17
  */
 #pragma once
 
 #include <type_traits>
 #include <string>
+#include <tuple>
 #include <cstdint>
 
 #include "libimp/def.h"
@@ -18,10 +19,10 @@
 
 LIBIMP_NAMESPACE_BEG_
 
-using result_type = std::uint64_t;
+using result_type = std::tuple<std::uint64_t, bool>;
 
 /**
- * @brief Use the least significant (in Little-Endian) of 
+ * \brief Use the least significant (in Little-Endian) of 
  * a 64-bit unsigned integer to indicate success or failure,
  * so the data significant bit cannot exceed 63 bits.
  */
@@ -62,7 +63,7 @@ namespace detail_result {
 
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
-  /// @brief Custom initialization.
+  /// \brief Custom initialization.
   constexpr static void init_code(result_code &code) noexcept {
     code = {};
   }
@@ -73,17 +74,17 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
     init_code(code, true, value);
   }
 
-  /// @brief Custom default value.
+  /// \brief Custom default value.
   constexpr static T default_value() noexcept {
     return 0;
   }
 
-  /// @brief Custom type conversions.
+  /// \brief Custom type conversions.
   constexpr static T cast_from_code(result_code code) noexcept {
     return static_cast<T>(code.value());
   }
 
-  /// @brief Custom formatted output.
+  /// \brief Custom formatted output.
   static std::string format(result<T> const &r) noexcept {
     return fmt(*r);
   }
@@ -91,7 +92,7 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> {
 
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
-  /// @brief Custom initialization.
+  /// \brief Custom initialization.
   constexpr static void init_code(result_code &code, T value = default_value()) noexcept {
     code = {default_value() != value, reinterpret_cast<result_type>(value)};
   }
@@ -102,17 +103,17 @@ struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
     code = {false, r};
   }
 
-  /// @brief Custom default value.
+  /// \brief Custom default value.
   constexpr static T default_value() noexcept {
     return nullptr;
   }
 
-  /// @brief Custom type conversions.
+  /// \brief Custom type conversions.
   constexpr static T cast_from_code(result_code code) noexcept {
     return code.ok() ? reinterpret_cast<T>(code.value()) : default_value();
   }
 
-  /// @brief Custom formatted output.
+  /// \brief Custom formatted output.
   static std::string format(result<T> const &r) noexcept {
     if LIBIMP_LIKELY(r) {
       return fmt(static_cast<void *>(*r));
@@ -126,7 +127,7 @@ struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> {
 template <typename T, typename TypeTraits>
 class result : public TypeTraits {
 
-  /// @brief Internal data is stored using result_code.
+  /// \brief Internal data is stored using result_code.
   result_code code_;
 
 public:
@@ -156,7 +157,7 @@ public:
   friend bool operator!=(result const &lhs, result const &rhs) noexcept { return lhs.code_ != rhs.code_; }
 };
 
-/// @brief Custom defined fmt_to method for imp::fmt
+/// \brief Custom defined fmt_to method for imp::fmt
 namespace detail {
 
 inline bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result_code r) {

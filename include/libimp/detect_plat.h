@@ -1,12 +1,12 @@
 /**
- * @file libimp/detect_plat.h
- * @author mutouyun (orz@orzz.org)
- * @brief Define platform detection related interfaces.
- * @date 2022-02-27
+ * \file libimp/detect_plat.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Define platform detection related interfaces.
+ * \date 2022-02-27
  */
 #pragma once
 
-/// @brief OS check.
+/// \brief OS check.
 
 #if defined(WINCE) || defined(_WIN32_WCE)
 # define LIBIMP_OS_WINCE
@@ -35,7 +35,7 @@
 # define LIBIMP_OS_WIN
 #endif
 
-/// @brief Compiler check.
+/// \brief Compiler check.
 
 #if defined(_MSC_VER)
 # define LIBIMP_CC_MSVC      _MSC_VER
@@ -48,8 +48,8 @@
 # error "This compiler is unsupported."
 #endif
 
-/// @brief Instruction set.
-/// @see https://sourceforge.net/p/predef/wiki/Architectures/
+/// \brief Instruction set.
+/// \see https://sourceforge.net/p/predef/wiki/Architectures/
 
 #if defined(_M_X64) || defined(_M_AMD64) || \
     defined(__x86_64__) || defined(__x86_64) || \
@@ -74,7 +74,7 @@
 # define LIBIMP_INSTR_ARM
 #endif
 
-/// @brief Byte order.
+/// \brief Byte order.
 
 #if defined(__BYTE_ORDER__)
 # define LIBIMP_ENDIAN_BIG   (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
@@ -84,7 +84,7 @@
 # define LIBIMP_ENDIAN_LIT   (1)
 #endif
 
-/// @brief C++ version.
+/// \brief C++ version.
 
 #if (__cplusplus >= 202002L) && !defined(LIBIMP_CPP_20)
 # define LIBIMP_CPP_20
@@ -102,7 +102,7 @@
 # error "This C++ version is unsupported."
 #endif
 
-/// @brief C++ attributes.
+/// \brief C++ attributes.
 
 #if defined(__has_cpp_attribute)
 # if __has_cpp_attribute(fallthrough)
@@ -165,7 +165,7 @@
 #endif
 
 #if !defined(LIBIMP_NODISCARD)
-/// @see https://stackoverflow.com/questions/4226308/msvc-equivalent-of-attribute-warn-unused-result
+/// \see https://stackoverflow.com/questions/4226308/msvc-equivalent-of-attribute-warn-unused-result
 # if defined(LIBIMP_CC_GNUC) && (LIBIMP_CC_GNUC >= 4)
 #   define LIBIMP_NODISCARD __attribute__((warn_unused_result))
 # elif defined(LIBIMP_CC_MSVC) && (LIBIMP_CC_MSVC >= 1700)
@@ -175,7 +175,7 @@
 # endif
 #endif
 
-/// @see https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_exceptions.html
+/// \see https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_exceptions.html
 ///      https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros
 ///      https://stackoverflow.com/questions/6487013/programmatically-determine-whether-exceptions-are-enabled
 #if defined(__cpp_exceptions) && __cpp_exceptions || \

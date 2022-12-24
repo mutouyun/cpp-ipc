@@ -1,8 +1,8 @@
 /**
- * @file libpmr/def.h
- * @author mutouyun (orz@orzz.org)
- * @brief Define the trivial configuration information for memory resources.
- * @date 2022-11-13
+ * \file libpmr/def.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Define the trivial configuration information for memory resources.
+ * \date 2022-11-13
  */
 #pragma once
 
@@ -12,6 +12,6 @@
 
 LIBPMR_NAMESPACE_BEG_
 
-/// @brief Constants.
+/// \brief Constants.
 
 LIBPMR_NAMESPACE_END_

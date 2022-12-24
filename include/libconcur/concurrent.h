@@ -1,8 +1,8 @@
 /**
- * @file libconcur/concurrent.h
- * @author mutouyun (orz@orzz.org)
- * @brief Define different policies for concurrent queue.
- * @date 2022-11-07
+ * \file libconcur/concurrent.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Define different policies for concurrent queue.
+ * \date 2022-11-07
  */
 #pragma once
 
@@ -17,10 +17,10 @@
 
 LIBCONCUR_NAMESPACE_BEG_
 
-/// @brief The queue index type.
+/// \brief The queue index type.
 using index_t = std::uint32_t;
 
-/// @brief Multiplicity of the relationship.
+/// \brief Multiplicity of the relationship.
 namespace relation {
 
 class single {};
@@ -28,7 +28,7 @@ class multi  {};
 
 } // namespace relation
 
-/// @brief Transmission mode
+/// \brief Transmission mode
 namespace trans {
 
 class unicast   {};
@@ -36,52 +36,52 @@ class broadcast {};
 
 } // namespace trans
 
-/// @brief Determines whether type T can be implicitly converted to type U.
+/// \brief Determines whether type T can be implicitly converted to type U.
 template <typename T, typename U>
 using is_convertible = typename std::enable_if<std::is_convertible<T *, U *>::value>::type;
 
-/// @brief Check whether the context type is valid.
+/// \brief Check whether the context type is valid.
 template <typename T>
 using is_context = decltype(typename std::enable_if<std::is_convertible<decltype(
   std::declval<T>().valid()), bool>::value>::type(), 
   std::declval<index_t>() % std::declval<T>().circ_size);
 
 /**
- * @brief Calculate the corresponding queue position modulo the index value.
+ * \brief Calculate the corresponding queue position modulo the index value.
  * 
- * @tparam C a context type
- * @param ctx a context object
- * @param idx a context array index
- * @return index_t - a corresponding queue position
+ * \tparam C a context type
+ * \param ctx a context object
+ * \param idx a context array index
+ * \return index_t - a corresponding queue position
  */
 template <typename C, typename = is_context<C>>
 constexpr index_t trunc_index(C const &ctx, index_t idx) noexcept {
-  /// @remark `circ_size == 2^N` => `idx & (circ_size - 1)`
+  /// \remark `circ_size == 2^N` => `idx & (circ_size - 1)`
   return ctx.valid() ? (idx % ctx.circ_size) : 0;
 }
 
-/// @brief Producer algorithm implementation.
+/// \brief Producer algorithm implementation.
 template <typename TransModT, typename RelationT>
 struct producer;
 
-/// @brief Consumer algorithm implementation.
+/// \brief Consumer algorithm implementation.
 template <typename TransModT, typename RelationT>
 struct consumer;
 
 /**
- * @brief Algorithm definition under unicast transmission model.
+ * \brief Algorithm definition under unicast transmission model.
  * 
- * @ref A bounded wait-free(almost) zero-copy MPMC queue written in C++11.
+ * \ref A bounded wait-free(almost) zero-copy MPMC queue written in C++11.
  * Modified from MengRao/WFMPMC.
  * Copyright (c) 2018. Meng Rao (https://github.com/MengRao/WFMPMC).
 */
 
-/// @brief Single-write producer model implementation.
+/// \brief Single-write producer model implementation.
 template <>
 struct producer<trans::unicast, relation::single> {
 
   struct context_impl {
-    /// @brief Write index.
+    /// \brief Write index.
     alignas(cache_line_size) index_t w_idx {0};
   };
 
@@ -93,26 +93,26 @@ struct producer<trans::unicast, relation::single> {
     auto w_cur = trunc_index(ctx, w_idx);
     auto &elem = elems[w_cur];
     auto f_ct  = elem.get_flag();
-    /// @remark Verify index.
+    /// \remark Verify index.
     if ((f_ct != state::invalid_value) && 
         (f_ct != w_idx)) {
       return false; // full
     }
-    /// @remark Get a valid index and iterate backwards.
+    /// \remark Get a valid index and iterate backwards.
     ctx.w_idx += 1;
-    /// @remark Set data & flag.
+    /// \remark Set data & flag.
     elem.set_data(std::forward<U>(src));
     elem.set_flag(static_cast<index_t>(~w_idx));
     return true;
   }
 };
 
-/// @brief Multi-write producer model implementation.
+/// \brief Multi-write producer model implementation.
 template <>
 struct producer<trans::unicast, relation::multi> {
 
   struct context_impl {
-    /// @brief Write index.
+    /// \brief Write index.
     alignas(cache_line_size) std::atomic<index_t> w_idx {0};
   };
 
@@ -125,16 +125,16 @@ struct producer<trans::unicast, relation::multi> {
       auto w_cur = trunc_index(ctx, w_idx);
       auto &elem = elems[w_cur];
       auto f_ct  = elem.get_flag();
-      /// @remark Verify index.
+      /// \remark Verify index.
       if ((f_ct != state::invalid_value) && 
           (f_ct != w_idx)) {
         return false; // full
       }
-      /// @remark Get a valid index and iterate backwards.
+      /// \remark Get a valid index and iterate backwards.
       if (!ctx.w_idx.compare_exchange_weak(w_idx, w_idx + 1, std::memory_order_acq_rel)) {
         continue;
       }
-      /// @remark Set data & flag.
+      /// \remark Set data & flag.
       elem.set_data(std::forward<U>(src));
       elem.set_flag(static_cast<index_t>(~w_idx));
       return true;
@@ -142,12 +142,12 @@ struct producer<trans::unicast, relation::multi> {
   }
 };
 
-/// @brief Single-read consumer model implementation.
+/// \brief Single-read consumer model implementation.
 template <>
 struct consumer<trans::unicast, relation::single> {
 
   struct context_impl {
-    /// @brief Read index.
+    /// \brief Read index.
     alignas(cache_line_size) index_t r_idx {0};
   };
 
@@ -159,25 +159,25 @@ struct consumer<trans::unicast, relation::single> {
     auto r_cur = trunc_index(ctx, r_idx);
     auto &elem = elems[r_cur];
     auto f_ct  = elem.get_flag();
-    /// @remark Verify index.
+    /// \remark Verify index.
     if (f_ct != static_cast<index_t>(~r_idx)) {
       return false; // empty
     }
-    /// @remark Get a valid index and iterate backwards.
+    /// \remark Get a valid index and iterate backwards.
     ctx.r_idx += 1;
-    /// @remark Get data & set flag.
+    /// \remark Get data & set flag.
     des = elem.get_data();
     elem.set_flag(r_idx + static_cast<index_t>(elems.size()));
     return true;
   }
 };
 
-/// @brief Multi-read consumer model implementation.
+/// \brief Multi-read consumer model implementation.
 template <>
 struct consumer<trans::unicast, relation::multi> {
 
   struct context_impl {
-    /// @brief Read index.
+    /// \brief Read index.
     alignas(cache_line_size) std::atomic<index_t> r_idx {0};
   };
 
@@ -190,15 +190,15 @@ struct consumer<trans::unicast, relation::multi> {
       auto r_cur = trunc_index(ctx, r_idx);
       auto &elem = elems[r_cur];
       auto f_ct  = elem.get_flag();
-      /// @remark Verify index.
+      /// \remark Verify index.
       if (f_ct != static_cast<index_t>(~r_idx)) {
         return false; // empty
       }
-      /// @remark Get a valid index and iterate backwards.
+      /// \remark Get a valid index and iterate backwards.
       if (!ctx.r_idx.compare_exchange_weak(r_idx, r_idx + 1, std::memory_order_acq_rel)) {
         continue;
       }
-      /// @remark Get data & set flag.
+      /// \remark Get data & set flag.
       des = elem.get_data();
       elem.set_flag(r_idx + static_cast<index_t>(elems.size()));
       return true;
@@ -207,41 +207,41 @@ struct consumer<trans::unicast, relation::multi> {
 };
 
 /**
- * @brief Algorithm definition under broadcast transmission model.
+ * \brief Algorithm definition under broadcast transmission model.
 */
 
-/// @brief Single-write producer model implementation.
+/// \brief Single-write producer model implementation.
 template <>
 struct producer<trans::broadcast, relation::single> {
 };
 
-/// @brief Multi-write producer model implementation.
+/// \brief Multi-write producer model implementation.
 template <>
 struct producer<trans::broadcast, relation::multi> {
 };
 
-/// @brief Single-read consumer model implementation.
+/// \brief Single-read consumer model implementation.
 template <>
 struct consumer<trans::broadcast, relation::single> {
 };
 
-/// @brief Multi-read consumer model implementation.
+/// \brief Multi-read consumer model implementation.
 template <>
 struct consumer<trans::broadcast, relation::multi> {
 };
 
 /**
- * @brief Producer-consumer implementation.
+ * \brief Producer-consumer implementation.
  * 
- * @tparam TransModT transmission mode (trans::unicast/trans::broadcast)
- * @tparam ProdModT producer relationship model (relation::single/relation::multi)
- * @tparam ConsModT consumer relationship model (relation::single/relation::multi)
+ * \tparam TransModT transmission mode (trans::unicast/trans::broadcast)
+ * \tparam ProdModT producer relationship model (relation::single/relation::multi)
+ * \tparam ConsModT consumer relationship model (relation::single/relation::multi)
  */
 template <typename TransModT, typename ProdModT, typename ConsModT>
 struct prod_cons : producer<TransModT, ProdModT>
                  , consumer<TransModT, ConsModT> {
 
-  /// @brief Mixing producer and consumer context definitions.
+  /// \brief Mixing producer and consumer context definitions.
   struct context : producer<TransModT, ProdModT>::context_impl
                  , consumer<TransModT, ConsModT>::context_impl {
     index_t const circ_size;
@@ -254,7 +254,7 @@ struct prod_cons : producer<TransModT, ProdModT>
       : circ_size(static_cast<index_t>(elems.size())) {}
 
     constexpr bool valid() const noexcept {
-      /// @remark circ_size must be a power of two.
+      /// \remark circ_size must be a power of two.
       return (circ_size > 1) && ((circ_size & (circ_size - 1)) == 0);
     }
   };

@@ -1,8 +1,8 @@
 /**
- * @file libconcur/element.h
- * @author mutouyun (orz@orzz.org)
- * @brief Define concurrent queue element abstraction.
- * @date 2022-11-19
+ * \file libconcur/element.h
+ * \author mutouyun (orz@orzz.org)
+ * \brief Define concurrent queue element abstraction.
+ * \date 2022-11-19
  */
 #pragma once
 
@@ -20,11 +20,11 @@
 LIBCONCUR_NAMESPACE_BEG_
 namespace state {
 
-/// @brief The state flag type for the queue element.
+/// \brief The state flag type for the queue element.
 using flag_t = std::uint64_t;
 
 enum : flag_t {
-  /// @brief The invalid state value.
+  /// \brief The invalid state value.
   invalid_value = (std::numeric_limits<flag_t>::max)(),
 };
 
@@ -32,12 +32,12 @@ enum : flag_t {
 
 template <typename T>
 class element {
-  /// @brief Committed flag.
+  /// \brief Committed flag.
   alignas(cache_line_size) std::atomic<state::flag_t> f_ct_;
-  /// @brief The user data segment.
+  /// \brief The user data segment.
   T data_;
 
-  /// @brief Disable copy & move.
+  /// \brief Disable copy & move.
   element(element const &) = delete;
   element &operator=(element const &) = delete;
 

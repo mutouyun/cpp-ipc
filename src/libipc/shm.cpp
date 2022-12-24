@@ -12,7 +12,7 @@
 
 LIBIPC_NAMESPACE_BEG_
 
-/// @brief C style shared memory access interface implementation.
+/// \brief C style shared memory access interface implementation.
 
 void *shm_get(shm_t h) noexcept {
   LIBIMP_LOG_();
@@ -44,7 +44,7 @@ std::string shm_name(shm_t h) noexcept {
   return shm->file;
 }
 
-/// @brief The shared memory object.
+/// \brief The shared memory object.
 
 shared_memory::shared_memory() noexcept
   : shm_(nullptr) {}
