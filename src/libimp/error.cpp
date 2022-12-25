@@ -17,7 +17,7 @@ public:
     return "generic";
   }
   std::string message(error_code_t const &r) const {
-    if (r == error_code_t(-1)) {
+    if (r == error_number_limit) {
       return "0, \"failure\"";
     }
     if (r == error_code_t(0)) {

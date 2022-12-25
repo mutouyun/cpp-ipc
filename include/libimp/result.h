@@ -42,7 +42,7 @@ struct generic_traits {
 
   /// \brief Custom initialization.
   constexpr static void init_code(storage_t &code) noexcept {
-    code = {0, -1/*make a default error code*/};
+    code = {0, error_number_limit/*make a default error code*/};
   }
   constexpr static void init_code(storage_t &code, T value, error_code const &ec) noexcept {
     code = {value, ec};
@@ -66,12 +66,39 @@ struct generic_traits {
   }
 };
 
+template <typename ___>
+struct default_traits<void, ___> {
+  /// \typedef Use the `error_code` as the storage type.
+  using storage_t = error_code;
+
+  /// \brief Custom initialization.
+  constexpr static void init_code(storage_t &code) noexcept {
+    code = error_number_limit/*make a default error code*/;
+  }
+  constexpr static void init_code(storage_t &code, error_code const &ec) noexcept {
+    code = ec;
+  }
+
+  /// \brief Custom type data acquisition.
+  constexpr static bool get_ok(storage_t const &code) noexcept {
+    return !code;
+  }
+  constexpr static error_code get_error(storage_t const &code) noexcept {
+    return code;
+  }
+
+  /// \brief Custom formatted output.
+  static std::string format(result<void> const &r) noexcept {
+    return fmt("error = ", r.error());
+  }
+};
+
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> : generic_traits<T> {
   /// \brief Custom initialization.
   constexpr static void init_code(storage_t &code, T value, bool ok) noexcept {
-    code = {value, static_cast<error_code_t>(ok ?  0 : 
-                    ((value == default_value()) ? -1 : value))};
+    code = {value, static_cast<error_code_t>(ok ? 0 : 
+                    ((value == default_value()) ? error_number_limit : value))};
   }
   using generic_traits<T>::init_code;
 
@@ -146,12 +173,44 @@ public:
   friend bool operator!=(result const &lhs, result const &rhs) noexcept { return !(lhs == rhs); }
 };
 
+template <typename TypeTraits>
+class result<void, TypeTraits> {
+public:
+  using type_traits_t = TypeTraits;
+  using storage_t     = typename type_traits_t::storage_t;
+
+private:
+  storage_t code_; ///< internal data
+
+public:
+  template <typename... A, 
+            typename = is_not_match<result, A...>,
+            typename = decltype(type_traits_t::init_code(std::declval<storage_t &>()
+                                                       , std::declval<A>()...))>
+  result(A &&... args) noexcept {
+    type_traits_t::init_code(code_, std::forward<A>(args)...);
+  }
+
+  bool       ok   () const noexcept { return type_traits_t::get_ok   (code_); }
+  error_code error() const noexcept { return type_traits_t::get_error(code_); }
+
+  explicit operator bool() const noexcept { return ok   (); }
+
+  friend bool operator==(result const &lhs, result const &rhs) noexcept { return lhs.code_ == rhs.code_; }
+  friend bool operator!=(result const &lhs, result const &rhs) noexcept { return !(lhs == rhs); }
+};
+
 /// \brief Custom defined fmt_to method for imp::fmt
 namespace detail {
 
 template <typename T, typename D>
 bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result<T, D> r) {
   return fmt_to(ctx, (r ? "succ" : "fail"), ", value = ", result<T, D>::type_traits_t::format(r));
+}
+
+template <typename D>
+bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result<void, D> r) {
+  return fmt_to(ctx, (r ? "succ" : "fail"), ", ", result<void, D>::type_traits_t::format(r));
 }
 
 } // namespace detail

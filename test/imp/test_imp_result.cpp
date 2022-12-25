@@ -48,6 +48,16 @@ TEST(result, ok) {
   EXPECT_TRUE(ret.ok());
   EXPECT_EQ(ret.value(), 4321);
 
+  imp::result<void> r1;
+  EXPECT_FALSE(r1);
+  r1 = 0;
+  EXPECT_TRUE(r1);
+  r1 = {};
+  EXPECT_FALSE(r1);
+  r1 = 9999;
+  EXPECT_FALSE(r1);
+  EXPECT_EQ(r1.error(), 9999);
+
   imp::result<int *> r2 {nullptr, 4321};
   EXPECT_NE(r2, nullptr); // imp::result<int *>{nullptr}
   EXPECT_EQ(*r2, nullptr);
@@ -101,5 +111,12 @@ TEST(result, fmt) {
   {
     imp::result<std::int64_t> r1 {-123};
     EXPECT_EQ(imp::fmt(r1), imp::fmt("succ, value = ", -123));
+  }
+  {
+    imp::result<void> r1;
+    EXPECT_EQ(imp::fmt(r1), "fail, error = [generic: 0, \"failure\"]");
+    r1 = 0;
+    EXPECT_TRUE(r1);
+    EXPECT_EQ(imp::fmt(r1), "succ, error = [generic: 0, \"success\"]");
   }
 }
