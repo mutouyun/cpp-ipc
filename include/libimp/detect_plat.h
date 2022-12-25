@@ -183,14 +183,20 @@
 #endif
 
 #if !defined(LIBIMP_ASSUME)
-# if defined(LIBIMP_CC_CLANG) && __has_builtin(__builtin_assume)
-/// \see https://clang.llvm.org/docs/LanguageExtensions.html#langext-builtin-assume
-#   define LIBIMP_ASSUME(...) __builtin_assume(__VA_ARGS__)
-# elif defined(LIBIMP_CC_GNUC) && __has_builtin(__builtin_unreachable)
-/// \see https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html#index-_005f_005fbuiltin_005funreachable
-#   define LIBIMP_ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (false)
-# elif defined(LIBIMP_CC_MSVC)
-/// \see https://learn.microsoft.com/en-us/cpp/intrinsics/assume?view=msvc-140
+# if defined(__has_builtin)
+#   if __has_builtin(__builtin_assume)
+      /// \see https://clang.llvm.org/docs/LanguageExtensions.html#langext-builtin-assume
+#     define LIBIMP_ASSUME(...) __builtin_assume(__VA_ARGS__)
+#   elif __has_builtin(__builtin_unreachable)
+      /// \see https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html#index-_005f_005fbuiltin_005funreachable
+#     define LIBIMP_ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (false)
+#   endif
+# endif
+#endif
+
+#if !defined(LIBIMP_ASSUME)
+# if defined(LIBIMP_CC_MSVC)
+    /// \see https://learn.microsoft.com/en-us/cpp/intrinsics/assume?view=msvc-140
 #   define LIBIMP_ASSUME(...) __assume(__VA_ARGS__)
 # else
 #   define LIBIMP_ASSUME(...)
