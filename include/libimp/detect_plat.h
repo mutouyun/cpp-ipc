@@ -44,6 +44,9 @@
 # define LIBIMP_CC_MSVC_2019 1920
 #elif defined(__GNUC__)
 # define LIBIMP_CC_GNUC __GNUC__
+# if defined(__clang__)
+#   define LIBIMP_CC_CLANG
+#endif
 #else
 # error "This compiler is unsupported."
 #endif
@@ -103,6 +106,7 @@
 #endif
 
 /// \brief C++ attributes.
+/// \see https://en.cppreference.com/w/cpp/language/attributes
 
 #if defined(__has_cpp_attribute)
 # if __has_cpp_attribute(fallthrough)
@@ -119,6 +123,9 @@
 # endif
 # if __has_cpp_attribute(nodiscard)
 #   define LIBIMP_NODISCARD [[nodiscard]]
+# endif
+# if __has_cpp_attribute(assume)
+#   define LIBIMP_ASSUME(...) [[assume(__VA_ARGS__)]]
 # endif
 #endif
 
@@ -172,6 +179,21 @@
 #   define LIBIMP_NODISCARD _Check_return_
 # else
 #   define LIBIMP_NODISCARD
+# endif
+#endif
+
+#if !defined(LIBIMP_ASSUME)
+# if defined(LIBIMP_CC_CLANG) && __has_builtin(__builtin_assume)
+/// \see https://clang.llvm.org/docs/LanguageExtensions.html#langext-builtin-assume
+#   define LIBIMP_ASSUME(...) __builtin_assume(__VA_ARGS__)
+# elif defined(LIBIMP_CC_GNUC) && __has_builtin(__builtin_unreachable)
+/// \see https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html#index-_005f_005fbuiltin_005funreachable
+#   define LIBIMP_ASSUME(...) do { if (!(__VA_ARGS__)) __builtin_unreachable(); } while (false)
+# elif defined(LIBIMP_CC_MSVC)
+/// \see https://learn.microsoft.com/en-us/cpp/intrinsics/assume?view=msvc-140
+#   define LIBIMP_ASSUME(...) __assume(__VA_ARGS__)
+# else
+#   define LIBIMP_ASSUME(...)
 # endif
 #endif
 
