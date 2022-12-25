@@ -88,54 +88,38 @@ struct default_traits<void, ___> {
   }
 
   /// \brief Custom formatted output.
-  static std::string format(result<void> const &r) noexcept {
-    return fmt("error = ", r.error());
-  }
+  static std::string format(result<void> const &r);
 };
 
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> : generic_traits<T> {
   /// \brief Custom initialization.
-  constexpr static void init_code(storage_t &code, T value, bool ok) noexcept {
+  constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
+                                  T value, bool ok) noexcept {
     code = {value, static_cast<error_code_t>(ok ? 0 : 
-                    ((value == default_value()) ? error_number_limit : value))};
+                                  ((value == 0) ? error_number_limit : value))};
   }
   using generic_traits<T>::init_code;
 
-  /// \brief Custom default value.
-  constexpr static T default_value() noexcept {
-    return 0;
-  }
-
   /// \brief Custom formatted output.
-  static std::string format(result<T> const &r) noexcept {
-    return fmt(*r);
-  }
+  static std::string format(result<T> const &r) noexcept;
 };
 
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> : generic_traits<T> {
   /// \brief Custom initialization.
-  constexpr static void init_code(storage_t &code, std::nullptr_t, error_code const &ec) noexcept {
+  constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
+                                  std::nullptr_t, error_code const &ec) noexcept {
     code = {nullptr, ec};
   }
-  constexpr static void init_code(storage_t &code, std::nullptr_t) noexcept {
+  constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
+                                  std::nullptr_t) noexcept {
     code = {nullptr, -1};
   }
   using generic_traits<T>::init_code;
 
-  /// \brief Custom default value.
-  constexpr static T default_value() noexcept {
-    return nullptr;
-  }
-
   /// \brief Custom formatted output.
-  static std::string format(result<T> const &r) noexcept {
-    if LIBIMP_LIKELY(r) {
-      return fmt(static_cast<void *>(*r));
-    }
-    return fmt(static_cast<void *>(*r), ", error = ", r.error());
-  }
+  static std::string format(result<T> const &r) noexcept;
 };
 
 } // namespace detail_result
@@ -194,14 +178,34 @@ public:
   bool       ok   () const noexcept { return type_traits_t::get_ok   (code_); }
   error_code error() const noexcept { return type_traits_t::get_error(code_); }
 
-  explicit operator bool() const noexcept { return ok   (); }
+  explicit operator bool() const noexcept { return ok(); }
 
   friend bool operator==(result const &lhs, result const &rhs) noexcept { return lhs.code_ == rhs.code_; }
   friend bool operator!=(result const &lhs, result const &rhs) noexcept { return !(lhs == rhs); }
 };
 
 /// \brief Custom defined fmt_to method for imp::fmt
-namespace detail {
+namespace detail_result {
+
+template <typename ___>
+std::string default_traits<void, ___>::format(result<void> const &r) {
+  return fmt("error = ", r.error());
+}
+
+template <typename T>
+std::string default_traits<T, std::enable_if_t<std::is_integral<T>::value>>
+          ::format(result<T> const &r) noexcept {
+  return fmt(*r);
+}
+
+template <typename T>
+std::string default_traits<T, std::enable_if_t<std::is_pointer<T>::value>>
+          ::format(result<T> const &r) noexcept {
+  if LIBIMP_LIKELY(r) {
+    return fmt(static_cast<void *>(*r));
+  }
+  return fmt(static_cast<void *>(*r), ", error = ", r.error());
+}
 
 template <typename T, typename D>
 bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result<T, D> r) {
@@ -213,5 +217,5 @@ bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, result<void, D> r)
   return fmt_to(ctx, (r ? "succ" : "fail"), ", ", result<void, D>::type_traits_t::format(r));
 }
 
-} // namespace detail
+} // namespace detail_result
 LIBIMP_NAMESPACE_END_
