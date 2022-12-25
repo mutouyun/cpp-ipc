@@ -8,6 +8,7 @@
 
 #include <string>
 #include <cstddef>
+#include <array>
 
 #include "libimp/def.h"
 #include "libimp/generic.h"
@@ -18,9 +19,12 @@
 LIBIMP_NAMESPACE_BEG_
 
 /**
+ * \class class LIBIMP_EXPORT fmt_context
  * \brief The context of fmt.
  */
 class LIBIMP_EXPORT fmt_context {
+  std::array<char, 2048U> sbuf_; ///< stack buffer
+
   std::string &joined_;
   std::size_t  offset_;
 

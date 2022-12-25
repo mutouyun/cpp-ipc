@@ -22,19 +22,19 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   auto h = mmap_open(name, size, type);
   if (*h == NULL) {
     log.error("failed: mmap_open(name = ", name, ", size = ", size, ", type = ", type, ").");
-    return {nullptr, h.code_value()};
+    return {nullptr, h.error()};
   }
   auto mem = mmap_memof(*h);
   if (*mem == NULL) {
     log.error("failed: mmap_memof(", *h, ").");
     mmap_close(*h);
-    return {nullptr, mem.code_value()};
+    return {nullptr, mem.error()};
   }
   auto sz = mmap_sizeof(*mem);
   if (!sz) {
     log.error("failed: mmap_sizeof(", *mem, ").");
     mmap_close(*h);
-    return {nullptr, static_cast<result_code_t>(sz.value())};
+    return {nullptr, sz.error()};
   }
   return new shm_handle{std::move(name), *sz, *mem, *h};
 }

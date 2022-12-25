@@ -17,7 +17,13 @@ public:
     return "generic";
   }
   std::string message(error_code_t const &r) const {
-    return fmt(r, ((r == 0) ? ", \"success\"" : ", \"failure\""));
+    if (r == error_code_t(-1)) {
+      return "0, \"failure\"";
+    }
+    if (r == error_code_t(0)) {
+      return "0, \"success\"";
+    }
+    return fmt(r, ", \"failure\"");
   }
 };
 
@@ -30,6 +36,9 @@ error_category const &generic_category() noexcept {
 
 error_code::error_code() noexcept
   : error_code{0, generic_category()} {}
+
+error_code::error_code(error_code_t const &r) noexcept
+  : error_code{r, generic_category()} {}
 
 error_code::error_code(error_code_t const &r, error_category const &ec) noexcept
   : e_code_{r}, ec_{&ec} {}

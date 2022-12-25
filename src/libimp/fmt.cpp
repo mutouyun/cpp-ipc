@@ -24,10 +24,6 @@ struct sfmt_policy {
   constexpr static std::size_t aligned_size = 32U;
 };
 
-struct sbuf_policy {
-  constexpr static std::size_t aligned_size = 2048U;
-};
-
 template <typename Policy = sfmt_policy>
 span<char> local_fmt_sbuf() noexcept {
   thread_local std::array<char, Policy::aligned_size> sbuf;
@@ -143,10 +139,6 @@ bool sprintf(fmt_context &ctx, F fop, span<char const> const &fstr, span<char co
   }
 }
 
-span<char> fmt_context_sbuf() noexcept {
-  return local_fmt_sbuf<sbuf_policy>();
-}
-
 } // namespace
 
 /// \brief The context of fmt.
@@ -156,9 +148,7 @@ fmt_context::fmt_context(std::string &j) noexcept
   , offset_(0) {}
 
 std::size_t fmt_context::capacity() noexcept {
-  return (offset_ < fmt_context_sbuf().size())
-                  ? fmt_context_sbuf().size()
-                  : joined_.size();
+  return (offset_ < sbuf_.size()) ? sbuf_.size() : joined_.size();
 }
 
 void fmt_context::reset() noexcept {
@@ -167,8 +157,8 @@ void fmt_context::reset() noexcept {
 
 bool fmt_context::finish() noexcept {
   LIBIMP_TRY {
-    if (offset_ < fmt_context_sbuf().size()) {
-      joined_.assign(fmt_context_sbuf().data(), offset_);
+    if (offset_ < sbuf_.size()) {
+      joined_.assign(sbuf_.data(), offset_);
     } else {
       joined_.resize(offset_);
     }
@@ -183,7 +173,7 @@ span<char> fmt_context::buffer(std::size_t sz) noexcept {
     constexpr std::size_t fmt_context_aligned_size = 512U;
     return (sz & ~(fmt_context_aligned_size - 1)) + fmt_context_aligned_size;
   };
-  auto sbuf = fmt_context_sbuf();
+  auto sbuf = make_span(sbuf_);
   LIBIMP_TRY {
     if (offset_ < sbuf.size()) {
       if ((offset_ + sz) < sbuf.size()) {

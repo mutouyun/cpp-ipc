@@ -54,6 +54,7 @@ class LIBIMP_EXPORT error_code {
 public:
   /// \brief constructors
   error_code() noexcept;
+  error_code(error_code_t const &r) noexcept;
   error_code(error_code_t const &r, error_category const &ec) noexcept;
 
   /// \brief observers

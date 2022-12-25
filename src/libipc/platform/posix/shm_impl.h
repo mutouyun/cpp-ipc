@@ -74,9 +74,17 @@ result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
   }
 
   /// \brief Create/Open POSIX shared memory bject
-  return ::shm_open(name.c_str(), flag, S_IRUSR | S_IWUSR |
-                                        S_IRGRP | S_IWGRP |
-                                        S_IROTH | S_IWOTH);
+  int fd = ::shm_open(name.c_str(), flag, S_IRUSR | S_IWUSR |
+                                          S_IRGRP | S_IWGRP |
+                                          S_IROTH | S_IWOTH);
+  if (fd == posix::failed) {
+    auto err = sys::error();
+    log.error("failed: shm_open(name = ", name, 
+                             ", type = ", type, 
+                           "). error = ", err);
+    return err;
+  }
+  return fd;
 }
 
 result_code ftruncate_fd(int fd, std::size_t size) noexcept {
@@ -85,9 +93,9 @@ result_code ftruncate_fd(int fd, std::size_t size) noexcept {
   if (::ftruncate(fd, size) != posix::succ) {
     auto err = sys::error();
     log.error("failed: ftruncate(", fd, ", ", size, "). error = ", err);
-    return err.code();
+    return err;
   }
-  return {posix::succ};
+  return posix::succ;
 }
 
 } // namespace
@@ -100,12 +108,8 @@ result_code ftruncate_fd(int fd, std::size_t size) noexcept {
 result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();
   auto fd = shm_open_fd(name, type);
-  if (!fd) return {};
-  if (*fd == posix::failed) {
-    log.error("failed: shm_open(name = ", name, 
-                             ", type = ", type, 
-                           "). error = ", sys::error());
-    return {};
+  if (!fd) {
+    return fd.error();
   }
   LIBIMP_UNUSED auto guard = std::unique_ptr<decltype(fd), void (*)(decltype(fd) *)> {
     &fd, [](decltype(fd) *pfd) {
@@ -115,26 +119,30 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   /// \brief Try to get the size of this fd
   struct stat st;
   if (::fstat(*fd, &st) == posix::failed) {
-    log.error("failed: fstat(fd = ", *fd, "). error = ", sys::error());
-    return {};
+    auto err = sys::error();
+    log.error("failed: fstat(fd = ", *fd, "). error = ", err);
+    return err;
   }
 
   /// \brief Truncate this fd to a specified length
   if (size == 0) {
     size = static_cast<std::size_t>(st.st_size);
-    if (!ftruncate_fd(*fd, size)) return {};
+    auto ret = ftruncate_fd(*fd, size);
+    if (!ret) return ret.error();
   } else if (st.st_size > 0) {
     /// \remark Based on the actual size.
     size = static_cast<std::size_t>(st.st_size);
   } else { // st.st_size <= 0
-    if (!ftruncate_fd(*fd, size)) return {};
+    auto ret = ftruncate_fd(*fd, size);
+    if (!ret) return ret.error();
   }
 
   /// \brief Creates a new mapping in the virtual address space of the calling process.
   void *mem = ::mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0);
   if (mem == MAP_FAILED) {
-    log.error("failed: mmap(size = ", size, ", fd = ", *fd, "). error = ", sys::error());
-    return {};
+    auto err = sys::error();
+    log.error("failed: mmap(size = ", size, ", fd = ", *fd, "). error = ", err);
+    return err;
   }
   return new shm_handle{std::move(name), size, mem};
 }
@@ -149,11 +157,11 @@ result_code shm_close(shm_t h) noexcept {
   if (::munmap(shm->memp, shm->f_sz) == posix::failed) {
     auto err = sys::error();
     log.error("failed: munmap(", shm->memp, ", ", shm->f_sz, "). error = ", err);
-    return err.code();
+    return err;
   }
   /// \brief no unlink the file.
   delete shm;
-  return {posix::succ};
+  return posix::succ;
 }
 
 LIBIPC_NAMESPACE_END_
