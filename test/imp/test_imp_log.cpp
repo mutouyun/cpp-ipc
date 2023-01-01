@@ -1,23 +1,24 @@
 
 #include <iostream>
+#include <string>
 
 #include "gtest/gtest.h"
 
 #include "libimp/log.h"
 
 TEST(log, detail) {
-  EXPECT_EQ(imp::detail_log::has_fn_output_v<int>, imp::detail_log::out_none);
+  EXPECT_EQ(imp::log::detail::has_fn_output_v<int>, imp::log::detail::out_none);
 
   struct foo {
     int info(std::string);
   };
-  EXPECT_EQ(imp::detail_log::has_fn_output_v<foo>, imp::detail_log::out_none);
+  EXPECT_EQ(imp::log::detail::has_fn_output_v<foo>, imp::log::detail::out_none);
 
   struct bar {
     int info(char const *);
     void output(imp::log::level, std::string &&);
   };
-  EXPECT_EQ(imp::detail_log::has_fn_output_v<bar>, imp::detail_log::out_string);
+  EXPECT_EQ(imp::log::detail::has_fn_output_v<bar>, imp::log::detail::out_string);
 
   struct str {
     str(std::string const &);
@@ -25,11 +26,11 @@ TEST(log, detail) {
   struct foo_bar {
     void output(imp::log::level, str);
   };
-  EXPECT_EQ(imp::detail_log::has_fn_output_v<foo_bar>, imp::detail_log::out_string);
+  EXPECT_EQ(imp::log::detail::has_fn_output_v<foo_bar>, imp::log::detail::out_string);
 
-  auto vt_int = imp::detail_log::traits<int>::make_vtable();
+  auto vt_int = imp::log::detail::traits<int>::make_vtable();
   EXPECT_NE(vt_int, nullptr);
-  EXPECT_NO_THROW(vt_int->output(nullptr, imp::log::context{}));
+  EXPECT_NO_THROW(vt_int->output(nullptr, imp::log::level::error, ""));
 
   struct log {
     std::string what;
@@ -37,13 +38,13 @@ TEST(log, detail) {
       if (l == imp::log::level::error) what += s + '\n';
     }
   } ll;
-  auto vt_log = imp::detail_log::traits<log>::make_vtable();
+  auto vt_log = imp::log::detail::traits<log>::make_vtable();
   EXPECT_NE(vt_log, nullptr);
 
-  vt_log->output(&ll, imp::log::context{imp::log::level::info , std::chrono::system_clock::now(), __func__, "123"});
-  vt_log->output(&ll, imp::log::context{imp::log::level::error, std::chrono::system_clock::now(), __func__, "321"});
-  vt_log->output(&ll, imp::log::context{imp::log::level::info , std::chrono::system_clock::now(), __func__, "654"});
-  vt_log->output(&ll, imp::log::context{imp::log::level::error, std::chrono::system_clock::now(), __func__, "456"});
+  vt_log->output(&ll, imp::log::level::info, "123");
+  vt_log->output(&ll, imp::log::level::info, "321");
+  vt_log->output(&ll, imp::log::level::info, "654");
+  vt_log->output(&ll, imp::log::level::info, "456");
   std::cout << ll.what << "\n";
   SUCCEED();
 }
@@ -60,15 +61,15 @@ TEST(log, log_printer) {
   } ll;
 
   imp::log::printer pt = ll;
-  pt.output({imp::log::level::info , std::chrono::system_clock::now(), __func__, "hello "});
-  pt.output({imp::log::level::error, std::chrono::system_clock::now(), __func__, "failed: "});
-  pt.output({imp::log::level::info , std::chrono::system_clock::now(), __func__, "log-pt"});
-  pt.output({imp::log::level::error, std::chrono::system_clock::now(), __func__, "whatever"});
+  pt.output(imp::log::context<char const *>{imp::log::level::info , std::chrono::system_clock::now(), __func__, "hello "});
+  pt.output(imp::log::context<char const *>{imp::log::level::error, std::chrono::system_clock::now(), __func__, "failed: "});
+  pt.output(imp::log::context<char const *>{imp::log::level::info , std::chrono::system_clock::now(), __func__, "log-pt"});
+  pt.output(imp::log::context<char const *>{imp::log::level::error, std::chrono::system_clock::now(), __func__, "whatever"});
   std::cout << ll.i << "\n";
   std::cout << ll.e << "\n";
 
   imp::log::printer ps = imp::log::std_out;
-  ps.output({imp::log::level::info, std::chrono::system_clock::now(), __func__, "hello world"});
+  ps.output(imp::log::context<char const *>{imp::log::level::info, std::chrono::system_clock::now(), __func__, "hello world"});
   SUCCEED();
 }
 

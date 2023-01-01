@@ -39,9 +39,7 @@ public:
   bool append(std::string const &str) noexcept;
 };
 
-/**
- * \brief Supports custom fmt_to methods for imp::fmt.
- */
+/// \brief Supports custom fmt_to methods for imp::fmt.
 namespace detail {
 
 class fmt_to_t {
