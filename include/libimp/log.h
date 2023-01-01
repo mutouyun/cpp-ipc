@@ -85,12 +85,6 @@ std::string context_to_string(context<T...> const &l_ctx) noexcept {
 
 namespace detail {
 
-/// \brief Custom defined fmt_to method for imp::fmt
-template <typename... T>
-bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &f_ctx, context<T...> const &l_ctx) noexcept {
-  return ::LIBIMP::log::to_string(f_ctx, l_ctx);
-}
-
 enum out_type : unsigned {
   out_none    = 0x0,
   out_string  = 0x1,
@@ -136,6 +130,12 @@ public:
     return &vt;
   }
 };
+
+/// \brief Custom defined fmt_to method for imp::fmt
+template <typename... T>
+bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &f_ctx, context<T...> const &l_ctx) noexcept {
+  return ::LIBIMP::log::context_to_string(f_ctx, l_ctx);
+}
 
 } // namespace detail
 
