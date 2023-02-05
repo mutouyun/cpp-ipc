@@ -10,20 +10,35 @@
 #include <type_traits>
 
 #include "libimp/def.h"
+#include "libimp/detect_plat.h"
 
 LIBIMP_NAMESPACE_BEG_
 
 /**
  * \brief Utility metafunction that maps a sequence of any types to the type void
  * \see https://en.cppreference.com/w/cpp/types/void_t
-*/
+ */
 template <typename...>
 using void_t = void;
 
 /**
+ * \brief To indicate that the contained object should be constructed in-place.
+ * \see https://en.cppreference.com/w/cpp/utility/in_place
+ */
+#if defined(LIBIMP_CPP_17)
+using std::in_place_t;
+using std::in_place;
+#else /*!LIBIMP_CPP_17*/
+struct in_place_t {
+  explicit in_place_t() = default;
+};
+constexpr in_place_t in_place {};
+#endif/*!LIBIMP_CPP_17*/
+
+/**
  * \brief A general pattern for supporting customisable functions
  * \see https://www.open-std.org/jtc1/sc22/WG21/docs/papers/2019/p1895r0.pdf
-*/
+ */
 namespace detail {
 
 void tag_invoke();

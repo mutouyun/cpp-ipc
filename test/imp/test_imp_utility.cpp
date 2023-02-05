@@ -10,6 +10,7 @@
 #include "libimp/countof.h"
 #include "libimp/horrible_cast.h"
 #include "libimp/detect_plat.h"
+#include "libimp/generic.h"
 
 TEST(utility, construct) {
   struct Foo {
@@ -125,3 +126,11 @@ TEST(utility, horrible_cast) {
 
   // imp::horrible_cast<std::uint32_t>(0ll);
 }
+
+#if defined(LIBIMP_CPP_17)
+TEST(utility, in_place) {
+  EXPECT_TRUE((std::is_same<std::in_place_t, imp::in_place_t>::value));
+  [](imp::in_place_t) {}(std::in_place);
+  [](std::in_place_t) {}(imp::in_place);
+}
+#endif/*LIBIMP_CPP_17*/
