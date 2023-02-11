@@ -80,12 +80,18 @@ class mutex {
         }
     }
 
+    static pthread_mutex_t const &zero_mem() {
+        static const pthread_mutex_t tmp{};
+        return tmp;
+    }
+
 public:
     mutex() = default;
     ~mutex() = default;
 
     static void init() {
         // Avoid exception problems caused by static member initialization order.
+        zero_mem();
         curr_prog::get();
     }
 
@@ -98,9 +104,8 @@ public:
     }
 
     bool valid() const noexcept {
-        static const char tmp[sizeof(pthread_mutex_t)] {};
         return (shm_ != nullptr) && (ref_ != nullptr) && (mutex_ != nullptr)
-            && (std::memcmp(tmp, mutex_, sizeof(pthread_mutex_t)) != 0);
+            && (std::memcmp(&zero_mem(), mutex_, sizeof(pthread_mutex_t)) != 0);
     }
 
     bool open(char const *name) noexcept {
