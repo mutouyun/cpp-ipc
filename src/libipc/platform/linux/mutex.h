@@ -125,8 +125,8 @@ class mutex {
         IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
-            it = curr_prog::get().mutex_handles.emplace(name, 
-                              curr_prog::shm_data::init{name}).first;
+            it = info.mutex_handles.emplace(name, 
+                  curr_prog::shm_data::init{name}).first;
         }
         mutex_ = &it->second.mtx;
         ref_   = &it->second.ref;
@@ -135,19 +135,25 @@ class mutex {
     template <typename F>
     void release_mutex(ipc::string const &name, F &&clear) {
         if (name.empty()) return;
-        IPC_UNUSED_ std::lock_guard<std::mutex> guard {curr_prog::get().lock};
-        auto it = curr_prog::get().mutex_handles.find(name);
-        if (it == curr_prog::get().mutex_handles.end()) {
+        auto &info = curr_prog::get();
+        IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
+        auto it = info.mutex_handles.find(name);
+        if (it == info.mutex_handles.end()) {
             return;
         }
         if (clear()) {
-            curr_prog::get().mutex_handles.erase(it);
+            info.mutex_handles.erase(it);
         }
     }
 
 public:
     mutex() = default;
     ~mutex() = default;
+
+    static void init() {
+        // Avoid exception problems caused by static member initialization order.
+        curr_prog::get();
+    }
 
     a0_mtx_t const *native() const noexcept {
         return valid() ? mutex_->native() : nullptr;

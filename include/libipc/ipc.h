@@ -19,6 +19,8 @@ enum : unsigned {
 
 template <typename Flag>
 struct IPC_EXPORT chan_impl {
+    static ipc::handle_t inited();
+
     static bool connect   (ipc::handle_t * ph, char const * name, unsigned mode);
     static bool reconnect (ipc::handle_t * ph, unsigned mode);
     static void disconnect(ipc::handle_t h);
@@ -41,7 +43,7 @@ class chan_wrapper {
 private:
     using detail_t = chan_impl<Flag>;
 
-    ipc::handle_t h_ = nullptr;
+    ipc::handle_t h_ = detail_t::inited();
     unsigned mode_   = ipc::sender;
     bool connected_  = false;
 

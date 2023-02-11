@@ -631,6 +631,12 @@ using policy_t = ipc::policy::choose<ipc::circ::elem_array, Flag>;
 namespace ipc {
 
 template <typename Flag>
+ipc::handle_t chan_impl<Flag>::inited() {
+    ipc::detail::waiter::init();
+    return nullptr;
+}
+
+template <typename Flag>
 bool chan_impl<Flag>::connect(ipc::handle_t * ph, char const * name, unsigned mode) {
     return detail_impl<policy_t<Flag>>::connect(ph, name, mode & receiver);
 }
