@@ -19,6 +19,8 @@ class waiter {
     std::atomic<bool>    quit_ {false};
 
 public:
+    static void init();
+
     waiter() = default;
     waiter(char const *name) {
         open(name);

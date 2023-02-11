@@ -21,6 +21,8 @@ public:
     mutex() noexcept = default;
     ~mutex() noexcept = default;
 
+    static void init() {}
+
     HANDLE native() const noexcept {
         return h_;
     }
