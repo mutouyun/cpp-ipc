@@ -42,6 +42,9 @@ namespace detail_expected {
 
 template <typename T, typename E>
 struct data_union {
+  using const_value_t = typename std::add_const<T>::type;
+  using const_error_t = typename std::add_const<E>::type;
+
   union {
     T value_;  ///< the expected value
     E error_;  ///< the unexpected value
@@ -60,10 +63,22 @@ struct data_union {
 
   void destruct_value() noexcept { destroy(&value_); }
   void destruct_error() noexcept { destroy(&error_); }
+
+  const_value_t & value() const &  noexcept { return value_; }
+  T &             value() &        noexcept { return value_; }
+  const_value_t &&value() const && noexcept { return std::move(value_); }
+  T &&            value() &&       noexcept { return std::move(value_); }
+
+  const_error_t & error() const &  noexcept { return error_; }
+  E &             error() &        noexcept { return error_; }
+  const_error_t &&error() const && noexcept { return std::move(error_); }
+  E &&            error() &&       noexcept { return std::move(error_); }
 };
 
 template <typename E>
 struct data_union<void, E> {
+  using const_error_t = typename std::add_const<E>::type;
+
   alignas(E) std::array<byte, sizeof(E)> error_;  ///< the unexpected value
 
   data_union(data_union const &) = delete;
@@ -80,6 +95,11 @@ struct data_union<void, E> {
 
   void destruct_value() noexcept {}
   void destruct_error() noexcept { destroy(reinterpret_cast<E *>(&error_)); }
+
+  const_error_t & error() const &  noexcept { return *reinterpret_cast<E *>(error_.data()); }
+  E &             error() &        noexcept { return *reinterpret_cast<E *>(error_.data()); }
+  const_error_t &&error() const && noexcept { return std::move(*reinterpret_cast<E *>(error_.data())); }
+  E &&            error() &&       noexcept { return std::move(*reinterpret_cast<E *>(error_.data())); }
 };
 
 template <typename T, typename E>
@@ -120,32 +140,27 @@ struct value_getter : data_union<T, E> {
 
   value_getter(S const &other) : data_union<T, E>(nullptr) {
     if (bool(static_cast<S &>(other))) {
-      construct<data_union<T, E>>(this, in_place, other.value_);
+      construct<data_union<T, E>>(this, in_place, other.value());
     } else {
-      construct<data_union<T, E>>(this, unexpected, other.error_);
+      construct<data_union<T, E>>(this, unexpected, other.error());
     }
   }
 
   value_getter(S &&other) : data_union<T, E>(nullptr) {
     if (bool(static_cast<S &>(other))) {
-      construct<data_union<T, E>>(this, in_place, std::move(other.value_));
+      construct<data_union<T, E>>(this, in_place, std::move(other).value());
     } else {
-      construct<data_union<T, E>>(this, unexpected, std::move(other.error_));
+      construct<data_union<T, E>>(this, unexpected, std::move(other).error());
     }
   }
 
-  T const & value() const &  noexcept { return this->value_; }
-  T &       value()       &  noexcept { return this->value_; }
-  T const &&value() const && noexcept { return std::move(this->value_); }
-  T &&      value()       && noexcept { return std::move(this->value_); }
+  T const *operator->() const noexcept { return std::addressof(this->value()); }
+  T *      operator->()       noexcept { return std::addressof(this->value()); }
 
-  T const *operator->() const noexcept { return std::addressof(this->value_); }
-  T *      operator->()       noexcept { return std::addressof(this->value_); }
-
-  T const & operator*() const &  noexcept { return this->value_; }
-  T &       operator*()       &  noexcept { return this->value_; }
-  T const &&operator*() const && noexcept { return std::move(this->value_); }
-  T &&      operator*()       && noexcept { return std::move(this->value_); }
+  T const & operator*() const &  noexcept { return this->value(); }
+  T &       operator*()       &  noexcept { return this->value(); }
+  T const &&operator*() const && noexcept { return std::move(this->value()); }
+  T &&      operator*()       && noexcept { return std::move(this->value()); }
 
   template <typename U>
   T value_or(U &&def) const & {
@@ -159,7 +174,23 @@ struct value_getter : data_union<T, E> {
   template <typename... A>
   T &emplace(A &&...args) {
     static_cast<S *>(this)->reconstruct(in_place, std::forward<A>(args)...);
-    return this->value_;
+    return this->value();
+  }
+
+  void swap(S &other) {
+    if (bool(*static_cast<S *>(this)) && bool(other)) {
+      std::swap(this->value(), other.value());
+    } else if (!*static_cast<S *>(this) && !other) {
+      std::swap(this->error(), other.error());
+    } else if (!*static_cast<S *>(this) && bool(other)) {
+      E err(std::move(this->error()));
+      this->emplace(std::move(other.value()));
+      other.reconstruct(unexpected, std::move(err));
+    } else /*if (bool(*this) && !other)*/ {
+      E err(std::move(other.error()));
+      other.emplace(std::move(this->value()));
+      static_cast<S *>(this)->reconstruct(unexpected, std::move(err));
+    }
   }
 };
 
@@ -171,7 +202,7 @@ struct value_getter<S, void, E> : data_union<void, E> {
     if (bool(static_cast<S &>(other))) {
       construct<data_union<T, E>>(this, in_place);
     } else {
-      construct<data_union<T, E>>(this, unexpected, other.error_);
+      construct<data_union<T, E>>(this, unexpected, other.error());
     }
   }
 
@@ -179,12 +210,28 @@ struct value_getter<S, void, E> : data_union<void, E> {
     if (bool(static_cast<S &>(other))) {
       construct<data_union<T, E>>(this, in_place);
     } else {
-      construct<data_union<T, E>>(this, unexpected, std::move(other.error_));
+      construct<data_union<T, E>>(this, unexpected, std::move(other).error());
     }
   }
 
   void emplace() noexcept {
     static_cast<S *>(this)->reconstruct(in_place);
+  }
+
+  void swap(S &other) {
+    if (bool(*static_cast<S *>(this)) && bool(other)) {
+      return;
+    } else if (!*static_cast<S *>(this) && !other) {
+      std::swap(this->error(), other.error());
+    } else if (!*static_cast<S *>(this) && bool(other)) {
+      E err(std::move(this->error()));
+      this->emplace();
+      other.reconstruct(unexpected, std::move(err));
+    } else /*if (bool(*this) && !other)*/ {
+      E err(std::move(other.error()));
+      other.emplace();
+      static_cast<S *>(this)->reconstruct(unexpected, std::move(err));
+    }
   }
 };
 
@@ -220,19 +267,6 @@ struct storage : value_getter<storage<T, E>, T, E> {
     return this->has_value();
   }
 
-  typename std::add_const<E>::type &error() const & noexcept {
-    return this->error_;
-  }
-  E &error() & noexcept {
-    return this->error_;
-  }
-  typename std::add_const<E>::type &&error() const && noexcept {
-    return std::move(this->error_);
-  }
-  E &&error() && noexcept {
-    return std::move(this->error_);
-  }
-
 protected:
   friend getter_t;
 
@@ -242,6 +276,42 @@ protected:
     construct<storage>(this, std::forward<A>(args)...);
   }
 };
+
+/// \brief The invoke forwarding helper.
+
+template <typename F, typename... A>
+auto invoke(F &&f, A &&...args) noexcept(
+     noexcept(std::forward<F>(f)(std::forward<A>(args)...)))
+  -> decltype(std::forward<F>(f)(std::forward<A>(args)...)) {
+  return std::forward<F>(f)(std::forward<A>(args)...);
+}
+
+template <typename F, typename... A>
+auto invoke(F &&f, A &&...args) noexcept(
+     noexcept(std::forward<F>(f)()))
+  -> decltype(std::forward<F>(f)()) {
+  return std::forward<F>(f)();
+}
+
+/// \brief and_then helper.
+
+template <typename E, typename F,
+          typename R = decltype(invoke(std::declval<F>(), *std::declval<E>()))>
+R and_then(E &&exp, F &&f) {
+  static_assert(is_specialized<expected, R>::value, "F must return an `expected`.");
+  return bool(exp) ? invoke(std::forward<F>(f), *std::forward<E>(exp))
+                   : R(unexpected, std::forward<E>(exp).error());
+}
+
+/// \brief or_else helper.
+
+template <typename E, typename F,
+          typename R = decltype(invoke(std::declval<F>(), std::declval<E>().error()))>
+R or_else(E &&exp, F &&f) {
+  static_assert(is_specialized<expected, R>::value, "F must return an `expected`.");
+  return bool(exp) ? std::forward<E>(exp)
+                   : invoke(std::forward<F>(f), std::forward<E>(exp).error());
+}
 
 } // namespace detail_expected
 

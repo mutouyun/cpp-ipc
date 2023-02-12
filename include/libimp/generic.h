@@ -75,4 +75,13 @@ using is_not_match =
   typename std::enable_if<!detail::is_same_first<T, 
   typename std::decay<A>::type...>::value>::type;
 
+/**
+ * \brief Determines whether a type is specialized from a particular template.
+ */
+template <template <typename...> class Tt, typename T>
+struct is_specialized : std::false_type {};
+
+template <template <typename...> class Tt, typename... A>
+struct is_specialized<Tt, Tt<A...>> : std::true_type {};
+
 LIBIMP_NAMESPACE_END_
