@@ -138,19 +138,12 @@ template <typename S, typename T, typename E>
 struct value_getter : data_union<T, E> {
   using data_union<T, E>::data_union;
 
-  value_getter(S const &other) : data_union<T, E>(nullptr) {
-    if (bool(static_cast<S &>(other))) {
-      construct<data_union<T, E>>(this, in_place, other.value());
+  template <typename U>
+  value_getter(U &&other) : data_union<T, E>(nullptr) {
+    if (other) {
+      construct<data_union<T, E>>(this, in_place, std::forward<U>(other).value());
     } else {
-      construct<data_union<T, E>>(this, unexpected, other.error());
-    }
-  }
-
-  value_getter(S &&other) : data_union<T, E>(nullptr) {
-    if (bool(static_cast<S &>(other))) {
-      construct<data_union<T, E>>(this, in_place, std::move(other).value());
-    } else {
-      construct<data_union<T, E>>(this, unexpected, std::move(other).error());
+      construct<data_union<T, E>>(this, unexpected, std::forward<U>(other).error());
     }
   }
 
@@ -198,19 +191,12 @@ template <typename S, typename E>
 struct value_getter<S, void, E> : data_union<void, E> {
   using data_union<void, E>::data_union;
 
-  value_getter(S const &other) : data_union<T, E>(nullptr) {
-    if (bool(static_cast<S &>(other))) {
+  template <typename U>
+  value_getter(U &&other) : data_union<T, E>(nullptr) {
+    if (other) {
       construct<data_union<T, E>>(this, in_place);
     } else {
-      construct<data_union<T, E>>(this, unexpected, other.error());
-    }
-  }
-
-  value_getter(S &&other) : data_union<T, E>(nullptr) {
-    if (bool(static_cast<S &>(other))) {
-      construct<data_union<T, E>>(this, in_place);
-    } else {
-      construct<data_union<T, E>>(this, unexpected, std::move(other).error());
+      construct<data_union<T, E>>(this, unexpected, std::forward<U>(other).error());
     }
   }
 
@@ -235,6 +221,9 @@ struct value_getter<S, void, E> : data_union<void, E> {
   }
 };
 
+/**
+ * \brief Define the expected storage.
+ */
 template <typename T, typename E>
 struct storage : value_getter<storage<T, E>, T, E> {
   using getter_t = value_getter<storage<T, E>, T, E>;
@@ -256,6 +245,16 @@ struct storage : value_getter<storage<T, E>, T, E> {
     , has_value_(other.has_value_) {}
 
   storage(storage &&other)
+    : getter_t(std::move(other))
+    , has_value_(std::exchange(other.has_value_, false)) {}
+
+  template <typename T_, typename E_>
+  storage(storage<T_, E_> const &other)
+    : getter_t(other)
+    , has_value_(other.has_value_) {}
+
+  template <typename T_, typename E_>
+  storage(storage<T_, E_> &&other)
     : getter_t(std::move(other))
     , has_value_(std::exchange(other.has_value_, false)) {}
 
@@ -314,5 +313,80 @@ R or_else(E &&exp, F &&f) {
 }
 
 } // namespace detail_expected
+
+/**
+ * \class template <typename T, typename E> expected
+ * \brief Provides a way to store either of two values.
+ */
+template <typename T, typename E>
+class expected : public detail_expected::storage<typename std::remove_cv<T>::type, E> {
+ public:
+  using value_type = typename std::remove_cv<T>::type;
+  using error_type = E;
+
+  using detail_expected::storage<value_type, E>::storage;
+
+  expected(expected const &) = default;
+  expected(expected &&) = default;
+
+  expected()
+    : detail_expected::storage<value_type, E>(in_place) {}
+  
+  expected &operator=(expected other) {
+    this->swap(other);
+    return *this;
+  }
+
+  // Monadic operations
+
+  template <typename F>
+  auto and_then(F &&f) & {
+    return detail_expected::and_then(*this, std::forward<F>(f));
+  }
+
+  template <typename F>
+  auto and_then(F &&f) const & {
+    return detail_expected::and_then(*this, std::forward<F>(f));
+  }
+
+  template <typename F>
+  auto and_then(F &&f) && {
+    return detail_expected::and_then(std::move(*this), std::forward<F>(f));
+  }
+
+  template <typename F>
+  auto or_else(F &&f) & {
+    return detail_expected::or_else(*this, std::forward<F>(f));
+  }
+
+  template <typename F>
+  auto or_else(F &&f) const & {
+    return detail_expected::or_else(*this, std::forward<F>(f));
+  }
+
+  template <typename F>
+  auto or_else(F &&f) && {
+    return detail_expected::or_else(std::move(*this), std::forward<F>(f));
+  }
+};
+
+// Compares
+
+template <typename T1, typename E1, typename T2, typename E2>
+bool operator==(expected<T1, E1> const &lhs, expected<T2, E2> const &rhs) {
+  return (lhs.has_value() == rhs.has_value())
+      && (lhs.has_value() ? *lhs == *rhs : lhs.error() == rhs.error());
+}
+
+template <typename E1, typename E2>
+bool operator==(expected<void, E1> const &lhs, expected<void, E2> const &rhs) {
+  return (lhs.has_value() == rhs.has_value())
+      && (lhs.has_value() || lhs.error() == rhs.error());
+}
+
+template <typename T1, typename E1, typename T2, typename E2>
+bool operator!=(expected<T1, E1> const &lhs, expected<T2, E2> const &rhs) {
+  return !(lhs == rhs);
+}
 
 LIBIMP_NAMESPACE_END_
