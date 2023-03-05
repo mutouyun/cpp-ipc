@@ -246,7 +246,8 @@ struct storage : value_getter<storage<T, E>, T, E> {
 
   storage(storage &&other)
     : getter_t(std::move(other))
-    , has_value_(std::exchange(other.has_value_, false)) {}
+    /// After construction, has_value() is equal to other.has_value().
+    , has_value_(other.has_value_) {}
 
   template <typename T_, typename E_>
   storage(storage<T_, E_> const &other)
@@ -256,7 +257,8 @@ struct storage : value_getter<storage<T, E>, T, E> {
   template <typename T_, typename E_>
   storage(storage<T_, E_> &&other)
     : getter_t(std::move(other))
-    , has_value_(std::exchange(other.has_value_, false)) {}
+    /// After construction, has_value() is equal to other.has_value().
+    , has_value_(other.has_value_) {}
 
   bool has_value() const noexcept {
     return has_value_;
@@ -331,7 +333,7 @@ class expected : public detail_expected::storage<typename std::remove_cv<T>::typ
 
   expected()
     : detail_expected::storage<value_type, E>(in_place) {}
-  
+
   expected &operator=(expected other) {
     this->swap(other);
     return *this;
