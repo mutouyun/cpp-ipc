@@ -134,3 +134,21 @@ TEST(utility, in_place) {
   [](std::in_place_t) {}(imp::in_place);
 }
 #endif/*LIBIMP_CPP_17*/
+
+TEST(utility, copy_cvref) {
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int   , long>, long   >()));
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int & , long>, long & >()));
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int &&, long>, long &&>()));
+
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int const   , long>, long const   >()));
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int const & , long>, long const & >()));
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int const &&, long>, long const &&>()));
+
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int volatile   , long>, long volatile   >()));
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int volatile & , long>, long volatile & >()));
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int volatile &&, long>, long volatile &&>()));
+
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int const volatile   , long>, long const volatile   >()));
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int const volatile & , long>, long const volatile & >()));
+  EXPECT_TRUE((std::is_same<imp::copy_cvref_t<int const volatile &&, long>, long const volatile &&>()));
+}

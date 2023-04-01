@@ -84,4 +84,42 @@ struct is_specialized : std::false_type {};
 template <template <typename...> class Tt, typename... A>
 struct is_specialized<Tt, Tt<A...>> : std::true_type {};
 
+/**
+ * \brief Copy the cv qualifier and reference of the source type to the target type.
+ */
+template <typename Src, typename Des>
+struct copy_cvref {
+  using type = Des;
+};
+
+template <typename Src, typename Des>
+struct copy_cvref<Src const, Des> {
+  using type = typename std::add_const<Des>::type;
+};
+
+template <typename Src, typename Des>
+struct copy_cvref<Src volatile, Des> {
+  using type = typename std::add_volatile<Des>::type;
+};
+
+template <typename Src, typename Des>
+struct copy_cvref<Src const volatile, Des> {
+  using type = typename std::add_cv<Des>::type;
+};
+
+template <typename Src, typename Des>
+struct copy_cvref<Src &, Des> {
+  using type = typename std::add_lvalue_reference<
+               typename copy_cvref<Src, Des>::type>::type;
+};
+
+template <typename Src, typename Des>
+struct copy_cvref<Src &&, Des> {
+  using type = typename std::add_rvalue_reference<
+               typename copy_cvref<Src, Des>::type>::type;
+};
+
+template <typename Src, typename Des>
+using copy_cvref_t = typename copy_cvref<Src, Des>::type;
+
 LIBIMP_NAMESPACE_END_
