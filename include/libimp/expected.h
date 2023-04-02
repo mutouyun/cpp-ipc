@@ -192,11 +192,11 @@ struct value_getter<S, void, E> : data_union<void, E> {
   using data_union<void, E>::data_union;
 
   template <typename U>
-  value_getter(U &&other) : data_union<T, E>(nullptr) {
+  value_getter(U &&other) : data_union<void, E>(nullptr) {
     if (other) {
-      construct<data_union<T, E>>(this, in_place);
+      construct<data_union<void, E>>(this, in_place);
     } else {
-      construct<data_union<T, E>>(this, unexpected, std::forward<U>(other).error());
+      construct<data_union<void, E>>(this, unexpected, std::forward<U>(other).error());
     }
   }
 
