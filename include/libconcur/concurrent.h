@@ -8,6 +8,7 @@
 
 #include <type_traits>
 #include <atomic>
+#include <array>
 #include <cstdint>
 
 #include "libimp/span.h"
@@ -17,7 +18,7 @@
 
 LIBCONCUR_NAMESPACE_BEG_
 
-/// \brief The queue index type.
+/// \typedef The queue index type.
 using index_t = std::uint32_t;
 
 /// \brief Multiplicity of the relationship.
@@ -31,7 +32,12 @@ class multi  {};
 /// \brief Transmission mode
 namespace trans {
 
-class unicast   {};
+/// \brief In this transmission mode, the message transmission is similar to a queue. 
+/// When the receiving side is not timely enough, the sending side will be unable to write data.
+class unicast {};
+
+/// \brief In this transmission mode, the message will be perceived by each receiver. 
+/// When the receiving side is not timely enough, the sending side will overwrite unread data.
 class broadcast {};
 
 } // namespace trans
@@ -56,7 +62,7 @@ using is_context = decltype(typename std::enable_if<std::is_convertible<decltype
  */
 template <typename C, typename = is_context<C>>
 constexpr index_t trunc_index(C const &ctx, index_t idx) noexcept {
-  /// \remark `circ_size == 2^N` => `idx & (circ_size - 1)`
+  // `circ_size == 2^N` => `idx & (circ_size - 1)`
   return ctx.valid() ? (idx % ctx.circ_size) : 0;
 }
 
@@ -81,8 +87,8 @@ template <>
 struct producer<trans::unicast, relation::single> {
 
   struct context_impl {
-    /// \brief Write index.
-    alignas(cache_line_size) index_t w_idx {0};
+    index_t w_idx {0}; ///< write index
+    private: padding<decltype(w_idx)> ___;
   };
 
   template <typename T, typename C, typename U, 
@@ -93,14 +99,14 @@ struct producer<trans::unicast, relation::single> {
     auto w_cur = trunc_index(ctx, w_idx);
     auto &elem = elems[w_cur];
     auto f_ct  = elem.get_flag();
-    /// \remark Verify index.
+    // Verify index.
     if ((f_ct != state::invalid_value) && 
         (f_ct != w_idx)) {
       return false; // full
     }
-    /// \remark Get a valid index and iterate backwards.
+    // Get a valid index and iterate backwards.
     ctx.w_idx += 1;
-    /// \remark Set data & flag.
+    // Set data & flag.
     elem.set_data(std::forward<U>(src));
     elem.set_flag(static_cast<index_t>(~w_idx));
     return true;
@@ -112,8 +118,8 @@ template <>
 struct producer<trans::unicast, relation::multi> {
 
   struct context_impl {
-    /// \brief Write index.
-    alignas(cache_line_size) std::atomic<index_t> w_idx {0};
+    std::atomic<index_t> w_idx {0}; ///< write index
+    private: padding<decltype(w_idx)> ___;
   };
 
   template <typename T, typename C, typename U, 
@@ -125,16 +131,16 @@ struct producer<trans::unicast, relation::multi> {
       auto w_cur = trunc_index(ctx, w_idx);
       auto &elem = elems[w_cur];
       auto f_ct  = elem.get_flag();
-      /// \remark Verify index.
+      // Verify index.
       if ((f_ct != state::invalid_value) && 
           (f_ct != w_idx)) {
         return false; // full
       }
-      /// \remark Get a valid index and iterate backwards.
+      // Get a valid index and iterate backwards.
       if (!ctx.w_idx.compare_exchange_weak(w_idx, w_idx + 1, std::memory_order_acq_rel)) {
         continue;
       }
-      /// \remark Set data & flag.
+      // Set data & flag.
       elem.set_data(std::forward<U>(src));
       elem.set_flag(static_cast<index_t>(~w_idx));
       return true;
@@ -147,8 +153,8 @@ template <>
 struct consumer<trans::unicast, relation::single> {
 
   struct context_impl {
-    /// \brief Read index.
-    alignas(cache_line_size) index_t r_idx {0};
+    index_t r_idx {0}; ///< read index
+    private: padding<decltype(r_idx)> ___;
   };
 
   template <typename T, typename C, typename U, 
@@ -159,15 +165,15 @@ struct consumer<trans::unicast, relation::single> {
     auto r_cur = trunc_index(ctx, r_idx);
     auto &elem = elems[r_cur];
     auto f_ct  = elem.get_flag();
-    /// \remark Verify index.
+    // Verify index.
     if (f_ct != static_cast<index_t>(~r_idx)) {
       return false; // empty
     }
-    /// \remark Get a valid index and iterate backwards.
+    // Get a valid index and iterate backwards.
     ctx.r_idx += 1;
-    /// \remark Get data & set flag.
-    des = elem.get_data();
-    elem.set_flag(r_idx + static_cast<index_t>(elems.size()));
+    // Get data & set flag.
+    des = LIBCONCUR::get(elem);
+    elem.set_flag(r_idx + static_cast<index_t>(elems.size())/*avoid overflow*/);
     return true;
   }
 };
@@ -177,8 +183,8 @@ template <>
 struct consumer<trans::unicast, relation::multi> {
 
   struct context_impl {
-    /// \brief Read index.
-    alignas(cache_line_size) std::atomic<index_t> r_idx {0};
+    std::atomic<index_t> r_idx {0}; ///< read index
+    private: padding<decltype(r_idx)> ___;
   };
 
   template <typename T, typename C, typename U, 
@@ -190,17 +196,17 @@ struct consumer<trans::unicast, relation::multi> {
       auto r_cur = trunc_index(ctx, r_idx);
       auto &elem = elems[r_cur];
       auto f_ct  = elem.get_flag();
-      /// \remark Verify index.
+      // Verify index.
       if (f_ct != static_cast<index_t>(~r_idx)) {
         return false; // empty
       }
-      /// \remark Get a valid index and iterate backwards.
+      // Get a valid index and iterate backwards.
       if (!ctx.r_idx.compare_exchange_weak(r_idx, r_idx + 1, std::memory_order_acq_rel)) {
         continue;
       }
-      /// \remark Get data & set flag.
-      des = elem.get_data();
-      elem.set_flag(r_idx + static_cast<index_t>(elems.size()));
+      // Get data & set flag.
+      des = LIBCONCUR::get(elem);
+      elem.set_flag(r_idx + static_cast<index_t>(elems.size())/*avoid overflow*/);
       return true;
     }
   }
@@ -220,12 +226,8 @@ template <>
 struct producer<trans::broadcast, relation::multi> {
 };
 
-/// \brief Single-read consumer model implementation.
-template <>
-struct consumer<trans::broadcast, relation::single> {
-};
-
 /// \brief Multi-read consumer model implementation.
+// Single-read consumer model is not required.
 template <>
 struct consumer<trans::broadcast, relation::multi> {
 };
@@ -254,7 +256,7 @@ struct prod_cons : producer<TransModT, ProdModT>
       : circ_size(static_cast<index_t>(elems.size())) {}
 
     constexpr bool valid() const noexcept {
-      /// \remark circ_size must be a power of two.
+      // circ_size must be a power of two.
       return (circ_size > 1) && ((circ_size & (circ_size - 1)) == 0);
     }
   };

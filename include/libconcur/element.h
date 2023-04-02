@@ -8,32 +8,50 @@
 
 #include <atomic>
 #include <utility>
-#include <limits>   // std::numeric_limits
 #include <cstdint>
 #include <exception>
 
 #include "libimp/detect_plat.h"
 #include "libimp/log.h"
+#include "libimp/byte.h"
+#include "libimp/generic.h"
 
 #include "libconcur/def.h"
 
 LIBCONCUR_NAMESPACE_BEG_
 namespace state {
 
-/// \brief The state flag type for the queue element.
+/// \typedef The state flag type for the queue element.
 using flag_t = std::uint64_t;
 
 enum : flag_t {
   /// \brief The invalid state value.
-  invalid_value = (std::numeric_limits<flag_t>::max)(),
+  invalid_value = ~flag_t(0),
 };
 
 } // namespace state
 
+/// \brief Define the padding type.
+template <typename T>
+using padding = std::array<::LIBIMP::byte, (cache_line_size - sizeof(T))>;
+
+/**
+ * \class template <typename T> element
+ * \brief User-defined type element wrapper.
+ * Wrapper for wrapping user-defined types as elements.
+ * 
+ * @tparam T - User-defined type.
+ */
 template <typename T>
 class element {
+
+  template <typename E>
+  friend auto get(E &&elem) noexcept;
+
   /// \brief Committed flag.
-  alignas(cache_line_size) std::atomic<state::flag_t> f_ct_;
+  std::atomic<state::flag_t> f_ct_;
+  padding<decltype(f_ct_)> ___;
+
   /// \brief The user data segment.
   T data_;
 
@@ -42,6 +60,8 @@ class element {
   element &operator=(element const &) = delete;
 
 public:
+  using value_type = T;
+
   template <typename... A>
   element(A &&... args) 
     noexcept(noexcept(T{std::forward<A>(args)...}))
@@ -60,10 +80,6 @@ public:
     }
   }
 
-  T &&get_data() noexcept {
-    return std::move(data_);
-  }
-
   void set_flag(state::flag_t flag) noexcept {
     f_ct_.store(flag, std::memory_order_release);
   }
@@ -72,5 +88,10 @@ public:
     return f_ct_.load(std::memory_order_acquire);
   }
 };
+
+template <typename E>
+auto get(E &&elem) noexcept {
+  return static_cast<imp::copy_cvref_t<E, typename std::decay<E>::type::value_type>>(elem.data_);
+}
 
 LIBCONCUR_NAMESPACE_END_
