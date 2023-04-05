@@ -143,7 +143,7 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
 
 } // namespace
 
-TEST(concurrent, prod_cons) {
+TEST(concurrent, unicast_prod_cons) {
   using namespace concur;
 
   /// @brief 1-1

@@ -25,8 +25,12 @@ namespace state {
 using flag_t = std::uint64_t;
 
 enum : flag_t {
-  /// \brief The invalid state value.
   invalid_value = ~flag_t(0),
+  committed     = ~flag_t(1),
+  dequeued      = ~flag_t(2),
+
+  enqueue_mask  = invalid_value << 32,
+  commit_mask   = committed << 32,
 };
 
 } // namespace state
@@ -80,8 +84,14 @@ public:
     }
   }
 
-  void set_flag(state::flag_t flag) noexcept {
-    f_ct_.store(flag, std::memory_order_release);
+  void set_flag(state::flag_t flag, 
+                std::memory_order const order = std::memory_order_release) noexcept {
+    f_ct_.store(flag, order);
+  }
+
+  bool cas_flag(state::flag_t &expected, state::flag_t flag, 
+                std::memory_order const order = std::memory_order_acq_rel) noexcept {
+    return f_ct_.compare_exchange_weak(expected, flag, order);
   }
 
   state::flag_t get_flag() const noexcept {
