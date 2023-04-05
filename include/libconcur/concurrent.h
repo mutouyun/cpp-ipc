@@ -44,26 +44,26 @@ class broadcast {};
 
 /// \brief Determines whether type T can be implicitly converted to type U.
 template <typename T, typename U>
-using is_convertible = typename std::enable_if<std::is_convertible<T *, U *>::value>::type;
+using is_convertible = std::enable_if_t<std::is_convertible<T *, U *>::value, bool>;
 
-/// \brief Check whether the context type is valid.
+/// \brief Check whether the elems header type is valid.
 template <typename T>
-using is_context = decltype(typename std::enable_if<std::is_convertible<decltype(
-  std::declval<T>().valid()), bool>::value>::type(), 
-  std::declval<index_t>() % std::declval<T>().circ_size);
+using is_elems_header = decltype(
+  std::declval<index_t>() % std::declval<T>().circ_size, 
+  std::enable_if_t<std::is_convertible<decltype(std::declval<T>().valid()), bool>::value, bool>{});
 
 /**
  * \brief Calculate the corresponding queue position modulo the index value.
  * 
- * \tparam C a context type
- * \param ctx a context object
- * \param idx a context array index
+ * \tparam H a elems header type
+ * \param hdr a elems header object
+ * \param idx a elems array index
  * \return index_t - a corresponding queue position
  */
-template <typename C, typename = is_context<C>>
-constexpr index_t trunc_index(C const &ctx, index_t idx) noexcept {
+template <typename H, is_elems_header<H> = true>
+constexpr index_t trunc_index(H const &hdr, index_t idx) noexcept {
   // `circ_size == 2^N` => `idx & (circ_size - 1)`
-  return ctx.valid() ? (idx % ctx.circ_size) : 0;
+  return hdr.valid() ? (idx % hdr.circ_size) : 0;
 }
 
 /// \brief Producer algorithm implementation.
@@ -86,17 +86,17 @@ struct consumer;
 template <>
 struct producer<trans::unicast, relation::single> {
 
-  struct context_impl {
+  struct header_impl {
     index_t w_idx {0}; ///< write index
     private: padding<decltype(w_idx)> ___;
   };
 
-  template <typename T, typename C, typename U, 
-            typename = is_context<C>,
-            typename = is_convertible<C, context_impl>>
-  static bool enqueue(::LIBIMP::span<element<T>> elems, C &ctx, U &&src) noexcept {
-    auto w_idx = ctx.w_idx;
-    auto w_cur = trunc_index(ctx, w_idx);
+  template <typename T, typename H, typename U, 
+            is_elems_header<H> = true,
+            is_convertible<H, header_impl> = true>
+  static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, U &&src) noexcept {
+    auto w_idx = hdr.w_idx;
+    auto w_cur = trunc_index(hdr, w_idx);
     auto &elem = elems[w_cur];
     auto f_ct  = elem.get_flag();
     // Verify index.
@@ -105,7 +105,7 @@ struct producer<trans::unicast, relation::single> {
       return false; // full
     }
     // Get a valid index and iterate backwards.
-    ctx.w_idx += 1;
+    hdr.w_idx += 1;
     // Set data & flag.
     elem.set_data(std::forward<U>(src));
     elem.set_flag(static_cast<index_t>(~w_idx));
@@ -117,18 +117,18 @@ struct producer<trans::unicast, relation::single> {
 template <>
 struct producer<trans::unicast, relation::multi> {
 
-  struct context_impl {
+  struct header_impl {
     std::atomic<index_t> w_idx {0}; ///< write index
     private: padding<decltype(w_idx)> ___;
   };
 
-  template <typename T, typename C, typename U, 
-            typename = is_context<C>,
-            typename = is_convertible<C, context_impl>>
-  static bool enqueue(::LIBIMP::span<element<T>> elems, C &ctx, U &&src) noexcept {
-    auto w_idx = ctx.w_idx.load(std::memory_order_acquire);
+  template <typename T, typename H, typename U, 
+            is_elems_header<H> = true,
+            is_convertible<H, header_impl> = true>
+  static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, U &&src) noexcept {
+    auto w_idx = hdr.w_idx.load(std::memory_order_acquire);
     for (;;) {
-      auto w_cur = trunc_index(ctx, w_idx);
+      auto w_cur = trunc_index(hdr, w_idx);
       auto &elem = elems[w_cur];
       auto f_ct  = elem.get_flag();
       // Verify index.
@@ -137,7 +137,7 @@ struct producer<trans::unicast, relation::multi> {
         return false; // full
       }
       // Get a valid index and iterate backwards.
-      if (!ctx.w_idx.compare_exchange_weak(w_idx, w_idx + 1, std::memory_order_acq_rel)) {
+      if (!hdr.w_idx.compare_exchange_weak(w_idx, w_idx + 1, std::memory_order_acq_rel)) {
         continue;
       }
       // Set data & flag.
@@ -152,17 +152,17 @@ struct producer<trans::unicast, relation::multi> {
 template <>
 struct consumer<trans::unicast, relation::single> {
 
-  struct context_impl {
+  struct header_impl {
     index_t r_idx {0}; ///< read index
     private: padding<decltype(r_idx)> ___;
   };
 
-  template <typename T, typename C, typename U, 
-            typename = is_context<C>,
-            typename = is_convertible<C, context_impl>>
-  static bool dequeue(::LIBIMP::span<element<T>> elems, C &ctx, U &des) noexcept {
-    auto r_idx = ctx.r_idx;
-    auto r_cur = trunc_index(ctx, r_idx);
+  template <typename T, typename H, typename U, 
+            is_elems_header<H> = true,
+            is_convertible<H, header_impl> = true>
+  static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, U &des) noexcept {
+    auto r_idx = hdr.r_idx;
+    auto r_cur = trunc_index(hdr, r_idx);
     auto &elem = elems[r_cur];
     auto f_ct  = elem.get_flag();
     // Verify index.
@@ -170,7 +170,7 @@ struct consumer<trans::unicast, relation::single> {
       return false; // empty
     }
     // Get a valid index and iterate backwards.
-    ctx.r_idx += 1;
+    hdr.r_idx += 1;
     // Get data & set flag.
     des = LIBCONCUR::get(elem);
     elem.set_flag(r_idx + static_cast<index_t>(elems.size())/*avoid overflow*/);
@@ -182,18 +182,18 @@ struct consumer<trans::unicast, relation::single> {
 template <>
 struct consumer<trans::unicast, relation::multi> {
 
-  struct context_impl {
+  struct header_impl {
     std::atomic<index_t> r_idx {0}; ///< read index
     private: padding<decltype(r_idx)> ___;
   };
 
-  template <typename T, typename C, typename U, 
-            typename = is_context<C>,
-            typename = is_convertible<C, context_impl>>
-  static bool dequeue(::LIBIMP::span<element<T>> elems, C &ctx, U &des) noexcept {
-    auto r_idx = ctx.r_idx.load(std::memory_order_acquire);
+  template <typename T, typename H, typename U, 
+            is_elems_header<H> = true,
+            is_convertible<H, header_impl> = true>
+  static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, U &des) noexcept {
+    auto r_idx = hdr.r_idx.load(std::memory_order_acquire);
     for (;;) {
-      auto r_cur = trunc_index(ctx, r_idx);
+      auto r_cur = trunc_index(hdr, r_idx);
       auto &elem = elems[r_cur];
       auto f_ct  = elem.get_flag();
       // Verify index.
@@ -201,7 +201,7 @@ struct consumer<trans::unicast, relation::multi> {
         return false; // empty
       }
       // Get a valid index and iterate backwards.
-      if (!ctx.r_idx.compare_exchange_weak(r_idx, r_idx + 1, std::memory_order_acq_rel)) {
+      if (!hdr.r_idx.compare_exchange_weak(r_idx, r_idx + 1, std::memory_order_acq_rel)) {
         continue;
       }
       // Get data & set flag.
@@ -227,7 +227,7 @@ struct producer<trans::broadcast, relation::multi> {
 };
 
 /// \brief Multi-read consumer model implementation.
-// Single-read consumer model is not required.
+/// Single-read consumer model is not required.
 template <>
 struct consumer<trans::broadcast, relation::multi> {
 };
@@ -243,16 +243,16 @@ template <typename TransModT, typename ProdModT, typename ConsModT>
 struct prod_cons : producer<TransModT, ProdModT>
                  , consumer<TransModT, ConsModT> {
 
-  /// \brief Mixing producer and consumer context definitions.
-  struct context : producer<TransModT, ProdModT>::context_impl
-                 , consumer<TransModT, ConsModT>::context_impl {
+  /// \brief Mixing producer and consumer header definitions.
+  struct header : producer<TransModT, ProdModT>::header_impl
+                , consumer<TransModT, ConsModT>::header_impl {
     index_t const circ_size;
 
-    constexpr context(index_t cs) noexcept
+    constexpr header(index_t cs) noexcept
       : circ_size(cs) {}
 
     template <typename T>
-    constexpr context(::LIBIMP::span<element<T>> elems) noexcept
+    constexpr header(::LIBIMP::span<element<T>> elems) noexcept
       : circ_size(static_cast<index_t>(elems.size())) {}
 
     constexpr bool valid() const noexcept {
