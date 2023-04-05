@@ -99,8 +99,9 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
 
   concur::element<std::uint64_t> circ[32] {};
   PC pc;
-  typename PC::header ctx {imp::make_span(circ)};
-  ASSERT_TRUE(ctx.valid());
+  typename concur::traits<PC>::header hdr {imp::make_span(circ)};
+  typename concur::traits<PC>::context ctx {};
+  ASSERT_TRUE(hdr.valid());
 
   std::atomic<std::uint64_t> sum {0};
   std::atomic<std::size_t> running {np};
@@ -108,7 +109,7 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
   auto prod_call = [&](std::size_t n) {
     for (std::uint32_t i = 1; i <= loop_size; ++i) {
       std::this_thread::yield();
-      while (!pc.enqueue(imp::make_span(circ), ctx, i)) {
+      while (!pc.enqueue(imp::make_span(circ), hdr, ctx, i)) {
         std::this_thread::yield();
       }
       if (i % (loop_size / 10) == 0) {
@@ -121,7 +122,7 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
     for (;;) {
       std::this_thread::yield();
       std::uint64_t i;
-      while (!pc.dequeue(imp::make_span(circ), ctx, i)) {
+      while (!pc.dequeue(imp::make_span(circ), hdr, ctx, i)) {
         if (running == 0) return;
         std::this_thread::yield();
       }

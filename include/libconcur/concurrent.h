@@ -12,6 +12,7 @@
 #include <cstdint>
 
 #include "libimp/span.h"
+#include "libimp/generic.h"
 
 #include "libconcur/def.h"
 #include "libconcur/element.h"
@@ -20,6 +21,71 @@ LIBCONCUR_NAMESPACE_BEG_
 
 /// \typedef The queue index type.
 using index_t = std::uint32_t;
+
+namespace detail_concurrent {
+
+template <typename T, typename = void>
+struct has_header : std::false_type {};
+template <typename T>
+struct has_header<T, ::LIBIMP::void_t<typename T::header>>
+  : std::true_type {};
+
+template <typename T, typename = void>
+struct has_header_impl : std::false_type {};
+template <typename T>
+struct has_header_impl<T, ::LIBIMP::void_t<typename T::header_impl>>
+  : std::true_type {};
+
+template <typename T, typename = void>
+struct has_context : std::false_type {};
+template <typename T>
+struct has_context<T, ::LIBIMP::void_t<typename T::context>>
+  : std::true_type {};
+
+template <typename T, typename = void>
+struct has_context_impl : std::false_type {};
+template <typename T>
+struct has_context_impl<T, ::LIBIMP::void_t<typename T::context_impl>>
+  : std::true_type {};
+
+template <typename T, bool = has_header<T>{}
+                    , bool = has_header_impl<T>{}>
+struct traits_header {
+  struct header {};
+};
+
+template <typename T, bool HasH>
+struct traits_header<T, true, HasH> {
+  using header = typename T::header;
+};
+
+template <typename T>
+struct traits_header<T, false, true> {
+  using header = typename T::header_impl;
+};
+
+template <typename T, bool = has_context<T>{}
+                    , bool = has_context_impl<T>{}>
+struct traits_context {
+  struct context {};
+};
+
+template <typename T, bool HasH>
+struct traits_context<T, true, HasH> {
+  using context = typename T::context;
+};
+
+template <typename T>
+struct traits_context<T, false, true> {
+  using context = typename T::context_impl;
+};
+
+} // namespace detail_concurrent
+
+/// \typedef Utility template for extracting object type internal traits.
+template <typename T>
+struct traits : detail_concurrent::traits_header<T>
+              , detail_concurrent::traits_context<T> {};
 
 /// \brief Multiplicity of the relationship.
 namespace relation {
@@ -91,10 +157,10 @@ struct producer<trans::unicast, relation::single> {
     private: padding<decltype(w_idx)> ___;
   };
 
-  template <typename T, typename H, typename U, 
+  template <typename T, typename H, typename C, typename U, 
             is_elems_header<H> = true,
             is_convertible<H, header_impl> = true>
-  static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, U &&src) noexcept {
+  static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
     auto w_idx = hdr.w_idx;
     auto w_cur = trunc_index(hdr, w_idx);
     auto &elem = elems[w_cur];
@@ -122,10 +188,10 @@ struct producer<trans::unicast, relation::multi> {
     private: padding<decltype(w_idx)> ___;
   };
 
-  template <typename T, typename H, typename U, 
+  template <typename T, typename H, typename C, typename U, 
             is_elems_header<H> = true,
             is_convertible<H, header_impl> = true>
-  static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, U &&src) noexcept {
+  static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
     auto w_idx = hdr.w_idx.load(std::memory_order_acquire);
     for (;;) {
       auto w_cur = trunc_index(hdr, w_idx);
@@ -157,10 +223,10 @@ struct consumer<trans::unicast, relation::single> {
     private: padding<decltype(r_idx)> ___;
   };
 
-  template <typename T, typename H, typename U, 
+  template <typename T, typename H, typename C, typename U, 
             is_elems_header<H> = true,
             is_convertible<H, header_impl> = true>
-  static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, U &des) noexcept {
+  static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &des) noexcept {
     auto r_idx = hdr.r_idx;
     auto r_cur = trunc_index(hdr, r_idx);
     auto &elem = elems[r_cur];
@@ -187,10 +253,10 @@ struct consumer<trans::unicast, relation::multi> {
     private: padding<decltype(r_idx)> ___;
   };
 
-  template <typename T, typename H, typename U, 
+  template <typename T, typename H, typename C, typename U, 
             is_elems_header<H> = true,
             is_convertible<H, header_impl> = true>
-  static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, U &des) noexcept {
+  static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &des) noexcept {
     auto r_idx = hdr.r_idx.load(std::memory_order_acquire);
     for (;;) {
       auto r_cur = trunc_index(hdr, r_idx);
@@ -252,7 +318,7 @@ struct prod_cons : producer<TransModT, ProdModT>
       : circ_size(cs) {}
 
     template <typename T>
-    constexpr header(::LIBIMP::span<element<T>> elems) noexcept
+    constexpr header(::LIBIMP::span<element<T>> const &elems) noexcept
       : circ_size(static_cast<index_t>(elems.size())) {}
 
     constexpr bool valid() const noexcept {
