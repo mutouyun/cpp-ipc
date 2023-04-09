@@ -289,8 +289,10 @@ template <>
 struct producer<trans::broadcast, relation::single> {
 
   struct header_impl {
-    std::atomic<index_t> w_idx {0}; ///< write index
-    private: padding<decltype(w_idx)> ___;
+    public : std::atomic<index_t> w_idx {0}; ///< write index
+    private: padding<decltype(w_idx)> ___1;
+    public : std::atomic<index_t> w_beg {0}; ///< write begin index
+    private: padding<decltype(w_beg)> ___2;
   };
 
   template <typename T, typename H, typename C, typename U, 
@@ -298,19 +300,18 @@ struct producer<trans::broadcast, relation::single> {
             is_convertible<H, header_impl> = true>
   static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
     auto w_idx = hdr.w_idx.load(std::memory_order_acquire);
+    auto w_beg = hdr.w_beg.load(std::memory_order_relaxed);
     auto w_cur = trunc_index(hdr, w_idx);
     auto &elem = elems[w_cur];
-    auto f_ct  = elem.get_flag();
-    // Verify index.
-    if ((f_ct != state::invalid_value) && 
-        (f_ct != state::dequeued)) {
-      return false; // full
+    // Move the queue head index.
+    if (w_beg + hdr.circ_size <= w_idx) {
+      hdr.w_beg.fetch_add(1, std::memory_order_release);
     }
     // Get a valid index and iterate backwards.
     hdr.w_idx.fetch_add(1, std::memory_order_release);
     // Set data & flag.
     elem.set_flag(w_idx | state::enqueue_mask);
-    elem.set_data(std::forward<U>(src));
+    elem.set_data(std::forward<U>(src));  // Here should not be interrupted.
     elem.set_flag(w_idx | state::commit_mask);
     return true;
   }
@@ -335,32 +336,36 @@ struct consumer<trans::broadcast, relation::multi> {
             is_convertible<C, context_impl> = true,
             std::enable_if_t<std::is_nothrow_copy_assignable<U>::value, bool> = true>
   static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, C &ctx, U &des) noexcept {
-    auto r_idx = ctx.r_idx;
-    auto w_idx = static_cast<index_t>(hdr.w_idx.load(std::memory_order_relaxed));
-    auto r_cur = trunc_index(hdr, r_idx);
-    auto const &elem = elems[r_cur];
+    auto w_idx = hdr.w_idx.load(std::memory_order_relaxed);
     // Verify index.
-    if ((ctx.w_lst != state::invalid_value) &&
-        (ctx.w_lst + hdr.circ_size > w_idx)) {
+    if (ctx.w_lst == w_idx) {
       return false; // not ready
     }
+    // Obtain the queue head index if we need.
+    auto w_beg = hdr.w_beg.load(std::memory_order_relaxed);
+    if ((ctx.r_idx <  w_beg) || 
+        (ctx.r_idx >= w_beg + hdr.circ_size)) {
+      ctx.r_idx = w_beg;
+    }
+    auto r_cur = trunc_index(hdr, ctx.r_idx);
+    auto &elem = elems[r_cur];
     auto f_ct = elem.get_flag();
     if (f_ct == state::invalid_value) {
       return false; // empty
     }
     // Try getting data.
     for (;;) {
-      if (f_ct & state::enqueue_mask == state::enqueue_mask) {
+      if ((f_ct & state::enqueue_mask) == state::enqueue_mask) {
         return false; // unreadable
       }
       des = LIBCONCUR::get(elem);
       // Correct data can be obtained only if 
       // the elem data is not modified during the getting process.
-      if (elem.cas_flag(f_ct, state::dequeued)) break;
+      if (elem.cas_flag(f_ct, f_ct)) break;
     }
+    ctx.w_lst = (f_ct & ~state::enqueue_mask) + 1;
     // Get a valid index and iterate backwards.
     ctx.r_idx += 1;
-    ctx.w_lst = w_idx;
     return true;
   }
 };
@@ -393,6 +398,10 @@ struct prod_cons : producer<TransModT, ProdModT>
       return (circ_size > 1) && ((circ_size & (circ_size - 1)) == 0);
     }
   };
+
+  /// \brief Mixing producer and consumer context definitions.
+  struct context : traits<producer<TransModT, ProdModT>>::context
+                 , traits<consumer<TransModT, ConsModT>>::context {};
 };
 
 LIBCONCUR_NAMESPACE_END_

@@ -91,7 +91,7 @@ TEST(concurrent, trunc_index) {
 namespace {
 
 template <typename PC>
-void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
+void test_unicast(std::size_t np, std::size_t nc, std::size_t k) {
   LIBIMP_LOG_();
   log.info("\n\tStart with: ", imp::nameof<PC>(), ", ", np, " producers, ", nc, " consumers...");
 
@@ -100,13 +100,13 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
   concur::element<std::uint64_t> circ[32] {};
   PC pc;
   typename concur::traits<PC>::header hdr {imp::make_span(circ)};
-  typename concur::traits<PC>::context ctx {};
   ASSERT_TRUE(hdr.valid());
 
   std::atomic<std::uint64_t> sum {0};
   std::atomic<std::size_t> running {np};
 
   auto prod_call = [&](std::size_t n) {
+    typename concur::traits<PC>::context ctx {};
     for (std::uint32_t i = 1; i <= loop_size; ++i) {
       std::this_thread::yield();
       while (!pc.enqueue(imp::make_span(circ), hdr, ctx, i)) {
@@ -119,6 +119,7 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
     --running;
   };
   auto cons_call = [&] {
+    typename concur::traits<PC>::context ctx {};
     for (;;) {
       std::this_thread::yield();
       std::uint64_t i;
@@ -143,23 +144,88 @@ void test_concur(std::size_t np, std::size_t nc, std::size_t k) {
 
 } // namespace
 
-TEST(concurrent, unicast_prod_cons) {
+TEST(concurrent, unicast) {
   using namespace concur;
 
   /// @brief 1-1
-  test_concur<prod_cons<trans::unicast, relation::single, relation::single>>(1, 1, 1);
-  test_concur<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 1, 1);
-  test_concur<prod_cons<trans::unicast, relation::multi , relation::single>>(1, 1, 1);
-  test_concur<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::single, relation::single>>(1, 1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::single>>(1, 1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 1, 1);
 
   /// @brief 8-1
-  test_concur<prod_cons<trans::unicast, relation::multi , relation::single>>(8, 1, 1);
-  test_concur<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::single>>(8, 1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 1, 1);
 
   /// @brief 1-8
-  test_concur<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 8, 1);
-  test_concur<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 8, 1);
+  test_unicast<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 8, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 8, 1);
 
   /// @brief 8-8
-  test_concur<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 8, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 8, 1);
+}
+
+namespace {
+
+template <typename PC>
+void test_broadcast(std::size_t np, std::size_t nc, std::size_t k) {
+  LIBIMP_LOG_();
+
+  concur::element<std::uint64_t> circ[32] {};
+  PC pc;
+  typename concur::traits<PC>::header hdr {imp::make_span(circ)};
+  ASSERT_TRUE(hdr.valid());
+
+  auto push_one = [&, ctx = typename concur::traits<PC>::context{}](std::uint32_t i) mutable {
+    return pc.enqueue(imp::make_span(circ), hdr, ctx, i);
+  };
+  auto pop_one = [&, ctx = typename concur::traits<PC>::context{}]() mutable {
+    std::uint64_t i;
+    if (pc.dequeue(imp::make_span(circ), hdr, ctx, i)) {
+      return i;
+    }
+    return (std::uint64_t)-1;
+  };
+  auto pop_one_2 = pop_one;
+
+  // empty queue pop
+  ASSERT_EQ(pop_one(), (std::uint64_t)-1);
+
+  // test one push & pop
+  for (int i = 0; i < 32; ++i) {
+    ASSERT_TRUE(push_one(i));
+    ASSERT_EQ(pop_one(), i);
+  }
+  for (int i = 0; i < 100; ++i) {
+    ASSERT_TRUE(push_one(i));
+    ASSERT_EQ(pop_one(), i);
+  }
+  ASSERT_EQ(pop_one(), (std::uint64_t)-1);
+
+  // test loop push & pop
+  for (int i = 0; i < 10; ++i) ASSERT_TRUE(push_one(i));
+  for (int i = 0; i < 10; ++i) ASSERT_EQ(pop_one(), i);
+  ASSERT_EQ(pop_one(), (std::uint64_t)-1);
+
+  // other loop pop
+  for (int i = 0; i < 32; ++i) ASSERT_TRUE(push_one(i));
+  for (int i = 0; i < 32; ++i) ASSERT_EQ(pop_one_2(), i);
+  ASSERT_EQ(pop_one_2(), (std::uint64_t)-1);
+
+  // overwrite
+  ASSERT_TRUE(push_one(123));
+  for (int i = 1; i < 32; ++i) {
+    ASSERT_EQ(pop_one(), i);
+  }
+  ASSERT_EQ(pop_one(), 123);
+  ASSERT_EQ(pop_one(), (std::uint64_t)-1);
+}
+
+} // namespace
+
+TEST(concurrent, broadcast) {
+  using namespace concur;
+
+  /// @brief 1-1
+  test_broadcast<prod_cons<trans::broadcast, relation::single, relation::multi>>(1, 1, 1);
 }

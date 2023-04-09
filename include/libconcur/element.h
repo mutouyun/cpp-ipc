@@ -26,11 +26,8 @@ using flag_t = std::uint64_t;
 
 enum : flag_t {
   invalid_value = ~flag_t(0),
-  committed     = ~flag_t(1),
-  dequeued      = ~flag_t(2),
-
   enqueue_mask  = invalid_value << 32,
-  commit_mask   = committed << 32,
+  commit_mask   = ~flag_t(1) << 32,
 };
 
 } // namespace state
