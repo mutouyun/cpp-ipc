@@ -50,8 +50,8 @@ template <typename T>
 struct has_context_impl<T, ::LIBIMP::void_t<typename T::context_impl>>
   : std::true_type {};
 
-template <typename T, bool = has_header<T>{}
-                    , bool = has_header_impl<T>{}>
+template <typename T, bool = has_header<T>::value
+                    , bool = has_header_impl<T>::value>
 struct traits_header {
   struct header {};
 };
@@ -66,8 +66,8 @@ struct traits_header<T, false, true> {
   using header = typename T::header_impl;
 };
 
-template <typename T, bool = has_context<T>{}
-                    , bool = has_context_impl<T>{}>
+template <typename T, bool = has_context<T>::value
+                    , bool = has_context_impl<T>::value>
 struct traits_context {
   struct context {};
 };
@@ -112,13 +112,20 @@ class broadcast {};
 
 /// \brief Determines whether type T can be implicitly converted to type U.
 template <typename T, typename U>
-using is_convertible = typename std::enable_if<std::is_convertible<T *, U *>::value, bool>::type;
+using convertible = std::enable_if_t<std::is_convertible<T *, U *>::value, bool>;
 
 /// \brief Check whether the elems header type is valid.
+template <typename T, typename = void>
+struct is_elems_header : std::false_type {};
 template <typename T>
-using is_elems_header = decltype(
-  std::declval<index_t>() % std::declval<T>().circ_size, 
-  std::enable_if_t<std::is_convertible<decltype(std::declval<T>().valid()), bool>::value, bool>{});
+struct is_elems_header<T, ::LIBIMP::void_t<
+    decltype(std::declval<index_t>() % std::declval<T>().circ_size), 
+    std::enable_if_t<std::is_convertible<decltype(std::declval<T>().valid()), bool>::value>>>
+  : std::true_type {};
+
+/// \brief Utility template for verifying elems header type.
+template <typename T>
+using verify_elems_header = std::enable_if_t<is_elems_header<T>::value, bool>;
 
 /**
  * \brief Calculate the corresponding queue position modulo the index value.
@@ -128,7 +135,7 @@ using is_elems_header = decltype(
  * \param idx a elems array index
  * \return index_t - a corresponding queue position
  */
-template <typename H, is_elems_header<H> = true>
+template <typename H, verify_elems_header<H> = true>
 constexpr index_t trunc_index(H const &hdr, index_t idx) noexcept {
   // `circ_size == 2^N` => `idx & (circ_size - 1)`
   return hdr.valid() ? (idx % hdr.circ_size) : 0;
@@ -160,8 +167,8 @@ struct producer<trans::unicast, relation::single> {
   };
 
   template <typename T, typename H, typename C, typename U, 
-            is_elems_header<H> = true,
-            is_convertible<H, header_impl> = true>
+            verify_elems_header<H> = true,
+            convertible<H, header_impl> = true>
   static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
     auto w_idx = hdr.w_idx;
     auto w_cur = trunc_index(hdr, w_idx);
@@ -191,8 +198,8 @@ struct producer<trans::unicast, relation::multi> {
   };
 
   template <typename T, typename H, typename C, typename U, 
-            is_elems_header<H> = true,
-            is_convertible<H, header_impl> = true>
+            verify_elems_header<H> = true,
+            convertible<H, header_impl> = true>
   static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
     auto w_idx = hdr.w_idx.load(std::memory_order_acquire);
     for (;;) {
@@ -226,8 +233,8 @@ struct consumer<trans::unicast, relation::single> {
   };
 
   template <typename T, typename H, typename C, typename U, 
-            is_elems_header<H> = true,
-            is_convertible<H, header_impl> = true,
+            verify_elems_header<H> = true,
+            convertible<H, header_impl> = true,
             std::enable_if_t<std::is_nothrow_move_assignable<U>::value, bool> = true>
   static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &des) noexcept {
     auto r_idx = hdr.r_idx;
@@ -257,8 +264,8 @@ struct consumer<trans::unicast, relation::multi> {
   };
 
   template <typename T, typename H, typename C, typename U, 
-            is_elems_header<H> = true,
-            is_convertible<H, header_impl> = true,
+            verify_elems_header<H> = true,
+            convertible<H, header_impl> = true,
             std::enable_if_t<std::is_nothrow_move_assignable<U>::value, bool> = true>
   static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &des) noexcept {
     auto r_idx = hdr.r_idx.load(std::memory_order_acquire);
@@ -303,8 +310,8 @@ struct producer<trans::broadcast, relation::single> {
   };
 
   template <typename T, typename H, typename C, typename U, 
-            is_elems_header<H> = true,
-            is_convertible<H, header_impl> = true>
+            verify_elems_header<H> = true,
+            convertible<H, header_impl> = true>
   static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
     auto w_idx = hdr.w_idx.load(std::memory_order_acquire);
     auto w_beg = hdr.w_beg.load(std::memory_order_relaxed);
@@ -341,8 +348,8 @@ struct producer<trans::broadcast, relation::multi> {
   };
 
   template <typename T, typename H, typename C, typename U, 
-            is_elems_header<H> = true,
-            is_convertible<H, header_impl> = true>
+            verify_elems_header<H> = true,
+            convertible<H, header_impl> = true>
   static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
     auto w_flags = hdr.w_flags.load(std::memory_order_acquire);
     index_t w_idx;
@@ -377,13 +384,11 @@ private:
   }
 
   constexpr static index_t get_begin(state::flag_t flags) noexcept {
-    constexpr auto index_bits = sizeof(index_t) * CHAR_BIT;
-    return index_t(flags >> index_bits);
+    return index_t(flags >> (sizeof(index_t) * CHAR_BIT));
   }
 
   constexpr static state::flag_t make_flags(index_t idx, index_t beg) noexcept {
-    constexpr auto index_bits = sizeof(index_t) * CHAR_BIT;
-    return state::flag_t(idx) | (state::flag_t(beg) << index_bits);
+    return state::flag_t(idx) | (state::flag_t(beg) << (sizeof(index_t) * CHAR_BIT));
   }
 };
 
@@ -398,8 +403,8 @@ struct consumer<trans::broadcast, relation::multi> {
   };
 
   template <typename T, typename H, typename C, typename U, 
-            is_elems_header<H> = true,
-            is_convertible<C, context_impl> = true,
+            verify_elems_header<H> = true,
+            convertible<C, context_impl> = true,
             std::enable_if_t<std::is_nothrow_copy_assignable<U>::value, bool> = true>
   static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, C &ctx, U &des) noexcept {
     index_t w_idx, w_beg;

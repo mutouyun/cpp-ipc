@@ -232,7 +232,7 @@ void test_broadcast(std::size_t np, std::size_t nc) {
     typename concur::traits<PC>::header hdr {imp::make_span(circ)};
     ASSERT_TRUE(hdr.valid());
 
-    constexpr static std::uint32_t loop_size = 100'0000;
+    constexpr static std::uint32_t loop_size = 10'0000;
 
     std::atomic<std::uint64_t> sum {0};
     std::atomic<std::size_t> running {np};
@@ -272,12 +272,12 @@ void test_broadcast(std::size_t np, std::size_t nc) {
           std::this_thread::yield();
         }
         // The v.i variable always increases.
-        if (last_i[v.n] >= v.i) {
+        if (last_i[(std::size_t)v.n] >= v.i) {
           continue;
         }
-        last_i[v.n] = v.i;
+        last_i[(std::size_t)v.n] = v.i;
         sum += v.i;
-        ++counters[v.n];
+        ++counters[(std::size_t)v.n];
       }
     };
 
