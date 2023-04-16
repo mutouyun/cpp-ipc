@@ -31,7 +31,7 @@ TEST(concurrent, trunc_index) {
     }
   };
 
-  /// @brief circ-size = 0
+  /// \brief circ-size = 0
   EXPECT_EQ(concur::trunc_index(header{0}, 0), 0);
   EXPECT_EQ(concur::trunc_index(header{0}, 1), 0);
   EXPECT_EQ(concur::trunc_index(header{0}, 2), 0);
@@ -39,7 +39,7 @@ TEST(concurrent, trunc_index) {
   EXPECT_EQ(concur::trunc_index(header{0}, 111), 0);
   EXPECT_EQ(concur::trunc_index(header{0}, -1), 0);
 
-  /// @brief circ-size = 1
+  /// \brief circ-size = 1
   EXPECT_EQ(concur::trunc_index(header{1}, 0), 0);
   EXPECT_EQ(concur::trunc_index(header{1}, 1), 0);
   EXPECT_EQ(concur::trunc_index(header{1}, 2), 0);
@@ -47,7 +47,7 @@ TEST(concurrent, trunc_index) {
   EXPECT_EQ(concur::trunc_index(header{1}, 111), 0);
   EXPECT_EQ(concur::trunc_index(header{1}, -1), 0);
 
-  /// @brief circ-size = 2
+  /// \brief circ-size = 2
   EXPECT_EQ(concur::trunc_index(header{2}, 0), 0);
   EXPECT_EQ(concur::trunc_index(header{2}, 1), 1);
   EXPECT_EQ(concur::trunc_index(header{2}, 2), 0);
@@ -55,7 +55,7 @@ TEST(concurrent, trunc_index) {
   EXPECT_EQ(concur::trunc_index(header{2}, 111), 1);
   EXPECT_EQ(concur::trunc_index(header{2}, -1), 1);
 
-  /// @brief circ-size = 10
+  /// \brief circ-size = 10
   EXPECT_EQ(concur::trunc_index(header{10}, 0), 0);
   EXPECT_EQ(concur::trunc_index(header{10}, 1), 0);
   EXPECT_EQ(concur::trunc_index(header{10}, 2), 0);
@@ -63,7 +63,7 @@ TEST(concurrent, trunc_index) {
   EXPECT_EQ(concur::trunc_index(header{10}, 111), 0);
   EXPECT_EQ(concur::trunc_index(header{10}, -1), 0);
 
-  /// @brief circ-size = 16
+  /// \brief circ-size = 16
   EXPECT_EQ(concur::trunc_index(header{16}, 0), 0);
   EXPECT_EQ(concur::trunc_index(header{16}, 1), 1);
   EXPECT_EQ(concur::trunc_index(header{16}, 2), 2);
@@ -71,7 +71,7 @@ TEST(concurrent, trunc_index) {
   EXPECT_EQ(concur::trunc_index(header{16}, 111), 15);
   EXPECT_EQ(concur::trunc_index(header{16}, -1), 15);
 
-  /// @brief circ-size = (index_t)-1
+  /// \brief circ-size = (index_t)-1
   EXPECT_EQ(concur::trunc_index(header{(concur::index_t)-1}, 0), 0);
   EXPECT_EQ(concur::trunc_index(header{(concur::index_t)-1}, 1), 0);
   EXPECT_EQ(concur::trunc_index(header{(concur::index_t)-1}, 2), 0);
@@ -79,7 +79,7 @@ TEST(concurrent, trunc_index) {
   EXPECT_EQ(concur::trunc_index(header{(concur::index_t)-1}, 111), 0);
   EXPECT_EQ(concur::trunc_index(header{(concur::index_t)-1}, -1), 0);
 
-  /// @brief circ-size = 2147483648 (2^31)
+  /// \brief circ-size = 2147483648 (2^31)
   EXPECT_EQ(concur::trunc_index(header{2147483648u}, 0), 0);
   EXPECT_EQ(concur::trunc_index(header{2147483648u}, 1), 1);
   EXPECT_EQ(concur::trunc_index(header{2147483648u}, 2), 2);
@@ -91,7 +91,7 @@ TEST(concurrent, trunc_index) {
 namespace {
 
 template <typename PC>
-void test_unicast(std::size_t np, std::size_t nc, std::size_t k) {
+void test_unicast(std::size_t np, std::size_t nc) {
   LIBIMP_LOG_();
   log.info("\n\tStart with: ", imp::nameof<PC>(), ", ", np, " producers, ", nc, " consumers...");
 
@@ -139,7 +139,7 @@ void test_unicast(std::size_t np, std::size_t nc, std::size_t k) {
   for (auto &p : prods) p.join();
   for (auto &c : conss) c.join();
 
-  EXPECT_EQ(sum, k * np * (loop_size * std::uint64_t(loop_size + 1)) / 2);
+  EXPECT_EQ(sum, np * (loop_size * std::uint64_t(loop_size + 1)) / 2);
 }
 
 } // namespace
@@ -147,28 +147,28 @@ void test_unicast(std::size_t np, std::size_t nc, std::size_t k) {
 TEST(concurrent, unicast) {
   using namespace concur;
 
-  /// @brief 1-1
-  test_unicast<prod_cons<trans::unicast, relation::single, relation::single>>(1, 1, 1);
-  test_unicast<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 1, 1);
-  test_unicast<prod_cons<trans::unicast, relation::multi , relation::single>>(1, 1, 1);
-  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 1, 1);
+  /// \brief 1-1
+  test_unicast<prod_cons<trans::unicast, relation::single, relation::single>>(1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::single>>(1, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 1);
 
-  /// @brief 8-1
-  test_unicast<prod_cons<trans::unicast, relation::multi , relation::single>>(8, 1, 1);
-  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 1, 1);
+  /// \brief 8-1
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::single>>(8, 1);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 1);
 
-  /// @brief 1-8
-  test_unicast<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 8, 1);
-  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 8, 1);
+  /// \brief 1-8
+  test_unicast<prod_cons<trans::unicast, relation::single, relation::multi >>(1, 8);
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(1, 8);
 
-  /// @brief 8-8
-  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 8, 1);
+  /// \brief 8-8
+  test_unicast<prod_cons<trans::unicast, relation::multi , relation::multi >>(8, 8);
 }
 
 namespace {
 
 template <typename PC>
-void test_broadcast(std::size_t np, std::size_t nc, std::size_t k) {
+void test_broadcast(std::size_t np, std::size_t nc) {
   LIBIMP_LOG_();
   {
     concur::element<std::uint64_t> circ[32] {};
@@ -243,11 +243,18 @@ void test_broadcast(std::size_t np, std::size_t nc, std::size_t k) {
       for (std::uint32_t i = 1; i <= loop_size; ++i) {
         std::this_thread::yield();
         counters[n] = 0;
-        do {
+        for (std::uint32_t k = 1;; ++k) {
           ASSERT_TRUE(pc.enqueue(imp::make_span(circ), hdr, ctx, Data{n, i}));
-          std::this_thread::yield();
           // We need to wait for the consumer to consume the data.
-        } while (counters[n] < nc);
+          if (counters[n] >= nc) {
+            break;
+          }
+          std::this_thread::yield();
+          if (k % (loop_size / 10) == 0) {
+            log.info("[", n, "] put count: ", i, ", retry: ", k, ", counters: ", counters[n]);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          }
+        }
         if (i % (loop_size / 10) == 0) {
           log.info("[", n, "] put count: ", i);
         }
@@ -282,7 +289,7 @@ void test_broadcast(std::size_t np, std::size_t nc, std::size_t k) {
     for (auto &p : prods) p.join();
     for (auto &c : conss) c.join();
 
-    EXPECT_EQ(sum, k * np * (loop_size * std::uint64_t(loop_size + 1)) / 2);
+    EXPECT_EQ(sum, np * nc * (loop_size * std::uint64_t(loop_size + 1)) / 2);
   }
 }
 
@@ -291,6 +298,17 @@ void test_broadcast(std::size_t np, std::size_t nc, std::size_t k) {
 TEST(concurrent, broadcast) {
   using namespace concur;
 
-  /// @brief 1-1
-  test_broadcast<prod_cons<trans::broadcast, relation::single, relation::multi>>(1, 1, 1);
+  /// \brief 1-1
+  test_broadcast<prod_cons<trans::broadcast, relation::single, relation::multi>>(1, 1);
+  test_broadcast<prod_cons<trans::broadcast, relation::multi , relation::multi>>(1, 1);
+
+  /// \brief 8-1
+  test_broadcast<prod_cons<trans::broadcast, relation::multi , relation::multi>>(8, 1);
+
+  /// \brief 1-8
+  test_broadcast<prod_cons<trans::broadcast, relation::single, relation::multi>>(1, 8);
+  test_broadcast<prod_cons<trans::broadcast, relation::multi , relation::multi>>(1, 8);
+
+  /// \brief 8-8
+  test_broadcast<prod_cons<trans::broadcast, relation::multi , relation::multi>>(8, 8);
 }

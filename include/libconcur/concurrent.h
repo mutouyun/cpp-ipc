@@ -9,7 +9,9 @@
 #include <type_traits>
 #include <atomic>
 #include <array>
+#include <tuple>
 #include <cstdint>
+#include <climits>
 
 #include "libimp/span.h"
 #include "libimp/generic.h"
@@ -110,7 +112,7 @@ class broadcast {};
 
 /// \brief Determines whether type T can be implicitly converted to type U.
 template <typename T, typename U>
-using is_convertible = std::enable_if_t<std::is_convertible<T *, U *>::value, bool>;
+using is_convertible = typename std::enable_if<std::is_convertible<T *, U *>::value, bool>::type;
 
 /// \brief Check whether the elems header type is valid.
 template <typename T>
@@ -289,10 +291,15 @@ template <>
 struct producer<trans::broadcast, relation::single> {
 
   struct header_impl {
-    public : std::atomic<index_t> w_idx {0}; ///< write index
-    private: padding<decltype(w_idx)> ___1;
-    public : std::atomic<index_t> w_beg {0}; ///< write begin index
-    private: padding<decltype(w_beg)> ___2;
+    std::atomic<index_t> w_idx {0}; ///< write index
+    std::atomic<index_t> w_beg {0}; ///< write begin index
+    private: padding<std::tuple<decltype(w_idx), decltype(w_beg)>> ___;
+
+  public:
+    void get(index_t &idx, index_t &beg) const noexcept {
+      idx = w_idx.load(std::memory_order_relaxed);
+      beg = w_beg.load(std::memory_order_relaxed);
+    }
   };
 
   template <typename T, typename H, typename C, typename U, 
@@ -319,7 +326,66 @@ struct producer<trans::broadcast, relation::single> {
 
 /// \brief Multi-write producer model implementation.
 template <>
-struct producer<trans::broadcast, relation::multi> {};
+struct producer<trans::broadcast, relation::multi> {
+
+  struct header_impl {
+    std::atomic<state::flag_t> w_flags {0}; ///< write flags, combined current and starting index.
+    private: padding<decltype(w_flags)> ___;
+
+  public:
+    void get(index_t &idx, index_t &beg) const noexcept {
+      auto w_flags = this->w_flags.load(std::memory_order_relaxed);
+      idx = get_index(w_flags);
+      beg = get_begin(w_flags);
+    }
+  };
+
+  template <typename T, typename H, typename C, typename U, 
+            is_elems_header<H> = true,
+            is_convertible<H, header_impl> = true>
+  static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
+    auto w_flags = hdr.w_flags.load(std::memory_order_acquire);
+    index_t w_idx;
+    for (;;) {
+      w_idx = get_index(w_flags);
+      auto w_beg = get_begin(w_flags);
+      // Move the queue head index.
+      if (w_beg + hdr.circ_size <= w_idx) {
+        w_beg += 1;
+      }
+      // Update flags.
+      auto n_flags = make_flags(w_idx + 1/*iterate backwards*/, w_beg);
+      if (hdr.w_flags.compare_exchange_weak(w_flags, n_flags, std::memory_order_acq_rel)) {
+        break;
+      }
+    }
+    // Get element.
+    auto w_cur = trunc_index(hdr, w_idx);
+    auto &elem = elems[w_cur];
+    // Set data & flag.
+    elem.set_flag(w_idx | state::enqueue_mask);
+    elem.set_data(std::forward<U>(src));  // Here should not be interrupted.
+    elem.set_flag(w_idx | state::commit_mask);
+    return true;
+  }
+
+private:
+  friend struct producer::header_impl;
+
+  constexpr static index_t get_index(state::flag_t flags) noexcept {
+    return index_t(flags);
+  }
+
+  constexpr static index_t get_begin(state::flag_t flags) noexcept {
+    constexpr auto index_bits = sizeof(index_t) * CHAR_BIT;
+    return index_t(flags >> index_bits);
+  }
+
+  constexpr static state::flag_t make_flags(index_t idx, index_t beg) noexcept {
+    constexpr auto index_bits = sizeof(index_t) * CHAR_BIT;
+    return state::flag_t(idx) | (state::flag_t(beg) << index_bits);
+  }
+};
 
 /// \brief Multi-read consumer model implementation.
 /// Single-read consumer model is not required.
@@ -336,13 +402,13 @@ struct consumer<trans::broadcast, relation::multi> {
             is_convertible<C, context_impl> = true,
             std::enable_if_t<std::is_nothrow_copy_assignable<U>::value, bool> = true>
   static bool dequeue(::LIBIMP::span<element<T>> elems, H &hdr, C &ctx, U &des) noexcept {
-    auto w_idx = hdr.w_idx.load(std::memory_order_relaxed);
+    index_t w_idx, w_beg;
+    hdr.get(w_idx, w_beg);
     // Verify index.
     if (ctx.w_lst == w_idx) {
       return false; // not ready
     }
     // Obtain the queue head index if we need.
-    auto w_beg = hdr.w_beg.load(std::memory_order_relaxed);
     if ((ctx.r_idx <  w_beg) || 
         (ctx.r_idx >= w_beg + hdr.circ_size)) {
       ctx.r_idx = w_beg;
