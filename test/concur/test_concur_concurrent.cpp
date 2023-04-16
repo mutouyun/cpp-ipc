@@ -227,7 +227,7 @@ void test_broadcast(std::size_t np, std::size_t nc) {
       std::uint64_t n;
       std::uint64_t i;
     };
-    concur::element<Data> circ[32] {};
+    concur::element<Data> circ[256] {};
     PC pc;
     typename concur::traits<PC>::header hdr {imp::make_span(circ)};
     ASSERT_TRUE(hdr.valid());
@@ -251,7 +251,7 @@ void test_broadcast(std::size_t np, std::size_t nc) {
           }
           std::this_thread::yield();
           if (k % (loop_size / 10) == 0) {
-            log.info("[", n, "] put count: ", i, ", retry: ", k, ", counters: ", counters[n]);
+            log.info("[", n, "] put count: ", i, ", retry: ", k, ", counter: ", counters[n]);
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
           }
         }
@@ -272,7 +272,7 @@ void test_broadcast(std::size_t np, std::size_t nc) {
           std::this_thread::yield();
         }
         // The v.i variable always increases.
-        if (last_i[(std::size_t)v.n] >= v.i) {
+        if (last_i[(std::size_t)v.n] != (v.i - 1)) {
           continue;
         }
         last_i[(std::size_t)v.n] = v.i;
