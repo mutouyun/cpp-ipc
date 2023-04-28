@@ -47,7 +47,7 @@ class LIBIMP_EXPORT allocator {
     bool  valid() const noexcept override { return false; }
   };
 
-  template <typename MemRes, typename = void>
+  template <typename MemRes, typename = bool>
   class holder_memory_resource;
 
   /**
@@ -55,7 +55,7 @@ class LIBIMP_EXPORT allocator {
    * \tparam MR memory resource type
    */
   template <typename MR>
-  class holder_memory_resource<MR, is_memory_resource<MR>> : public holder_base {
+  class holder_memory_resource<MR, verify_memory_resource<MR>> : public holder_base {
     MR *p_mem_res_;
 
   public:
@@ -102,7 +102,7 @@ public:
 
   /// \brief Constructs a allocator from a memory resource pointer
   /// The lifetime of the pointer must be longer than that of allocator.
-  template <typename T, typename = is_memory_resource<T>>
+  template <typename T, verify_memory_resource<T> = true>
   allocator(T *p_mr) : allocator() {
     if (p_mr == nullptr) return;
     ::LIBIMP::construct<holder_memory_resource<T>>(holder_.data(), p_mr);

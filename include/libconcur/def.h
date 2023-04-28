@@ -29,6 +29,8 @@ enum : std::size_t {
 #else
     64,
 #endif
+
+  default_circle_buffer_size = 1024,
 };
 
 LIBCONCUR_NAMESPACE_END_

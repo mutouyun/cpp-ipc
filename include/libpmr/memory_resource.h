@@ -35,9 +35,9 @@ struct has_deallocate<T,
   > : std::true_type {};
 
 template <typename T>
-using is_memory_resource = 
-  typename std::enable_if<has_allocate  <T>::value && 
-                          has_deallocate<T>::value>::type;
+using verify_memory_resource = 
+  std::enable_if_t<has_allocate  <T>::value && 
+                   has_deallocate<T>::value, bool>;
 
 /**
  * \brief A memory resource that uses the 
