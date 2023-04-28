@@ -38,8 +38,8 @@ private:
       : header_(std::forward<U>(model)) {}
 
     /// \brief element<value_type> elements[0];
-    element<value_type> *elements() noexcept {
-      return &elements_start_;
+    ::LIBIMP::span<element<value_type>> elements() noexcept {
+      return {&elements_start_, header_.circ_size};
     }
   };
 
@@ -74,6 +74,29 @@ public:
                  MR *memory_resource = ::LIBPMR::new_delete_resource::get()) noexcept
     : data_allocator_(memory_resource)
     , data_(init(circ_size)) {}
+
+  template <typename MR, ::LIBPMR::verify_memory_resource<T> = true>
+  explicit queue(MR *memory_resource) noexcept
+    : queue(default_circle_buffer_size, memory_resource) {}
+
+  bool valid() const noexcept {
+    return data_ != nullptr;
+  }
+
+  explicit operator bool() const noexcept {
+    return valid();
+  }
+
+  template <typename U>
+  bool push(U &&value) noexcept {
+    if (!valid()) return false;
+    return data_->model_.enqueue(data_->elements(), data_->header_, context_, std::forward<U>(value));
+  }
+
+  bool pop(value_type &value) noexcept {
+    if (!valid()) return false;
+    return data_->model_.dequeue(data_->elements(), data_->header_, context_, value);
+  }
 };
 
 LIBCONCUR_NAMESPACE_END_
