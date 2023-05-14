@@ -533,7 +533,7 @@ static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
     auto& rc = info_of(h)->recv_cache();
     for (;;) {
         // pop a new message
-        typename queue_t::value_t msg;
+        typename queue_t::value_t msg {};
         if (!wait_for(info_of(h)->rd_waiter_, [que, &msg] {
                 return !que->pop(msg);
             }, tm)) {
