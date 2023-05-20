@@ -50,9 +50,9 @@ void *allocator::alloc(std::size_t s) {
   return get_holder().alloc(s);
 }
 
-void allocator::free(void *p, std::size_t s) {
+void allocator::dealloc(void *p, std::size_t s) {
   if (!valid()) return;
-  get_holder().free(p, s);
+  get_holder().dealloc(p, s);
 }
 
 LIBPMR_NAMESPACE_END_

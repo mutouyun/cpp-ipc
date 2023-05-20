@@ -36,14 +36,14 @@ class LIBIMP_EXPORT allocator {
   public:
     virtual ~holder_base() noexcept = default;
     virtual void *alloc(std::size_t) = 0;
-    virtual void  free (void *, std::size_t) = 0;
+    virtual void  dealloc(void *, std::size_t) = 0;
     virtual bool  valid() const noexcept = 0;
   };
 
   class holder_null : public holder_base {
   public:
     void *alloc(std::size_t) override { return nullptr; }
-    void  free (void *, std::size_t) override {}
+    void  dealloc(void *, std::size_t) override {}
     bool  valid() const noexcept override { return false; }
   };
 
@@ -66,7 +66,7 @@ class LIBIMP_EXPORT allocator {
       return p_mem_res_->allocate(s);
     }
 
-    void free(void *p, std::size_t s) override {
+    void dealloc(void *p, std::size_t s) override {
       p_mem_res_->deallocate(p, s);
     }
   
@@ -114,7 +114,7 @@ public:
 
   /// \brief Allocate/deallocate memory.
   void *alloc(std::size_t s);
-  void  free (void *p, std::size_t s);
+  void  dealloc(void *p, std::size_t s);
 };
 
 LIBPMR_NAMESPACE_END_
