@@ -14,7 +14,7 @@
 #include "libimp/system.h"
 #include "libimp/log.h"
 #include "libimp/codecvt.h"
-#include "libimp/enum_cast.h"
+#include "libimp/underlyof.h"
 #include "libimp/detect_plat.h"
 
 LIBIMP_NAMESPACE_BEG_
@@ -94,7 +94,7 @@ result<std::int64_t> conf(info r) noexcept {
     return (std::int64_t)info.dwPageSize;
   }
   default:
-    log.error("invalid info = ", enum_cast(r));
+    log.error("invalid info = ", underlyof(r));
     return {};
   }
 }

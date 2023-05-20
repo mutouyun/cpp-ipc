@@ -15,7 +15,7 @@
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
 #include "libimp/export.h"
-#include "libimp/enum_cast.h"
+#include "libimp/underlyof.h"
 #include "libimp/fmt.h"
 #include "libimp/generic.h"
 
@@ -60,7 +60,7 @@ bool context_to_string(fmt_context &f_ctx, context<T...> const &l_ctx) noexcept 
   LIBIMP_TRY {
     auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(l_ctx.tp).time_since_epoch().count() % 1000;
     return detail::unfold_tuple_fmt_to(f_ctx, l_ctx.params, std::index_sequence_for<T...>{},
-                                      "[", types[enum_cast(l_ctx.level)], "]"
+                                      "[", types[underlyof(l_ctx.level)], "]"
                                       "[", l_ctx.tp, ".", spec("03")(ms), "]"
                                       "[", l_ctx.func, "] ");
   } LIBIMP_CATCH(...) {
@@ -185,7 +185,7 @@ class grip {
 
   template <typename... A>
   grip &output(log::level l, A &&... args) noexcept {
-    if (!printer_ || (enum_cast(l) < enum_cast(level_limit_))) {
+    if (!printer_ || (underlyof(l) < underlyof(level_limit_))) {
       return *this;
     }
     printer_.output(context<A &&...> {

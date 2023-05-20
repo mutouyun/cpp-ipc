@@ -71,11 +71,11 @@ result<std::int64_t> conf(info r) noexcept {
     break;
   }
   default:
-    log.error("invalid info = ", enum_cast(r));
+    log.error("invalid info = ", underlyof(r));
     return {};
   }
   auto err = sys::error();
-  log.error("info = ", enum_cast(r), ", error = ", err);
+  log.error("info = ", underlyof(r), ", error = ", err);
   return {false, (int)err.code()};
 }
 
