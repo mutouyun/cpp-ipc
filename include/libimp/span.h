@@ -19,6 +19,8 @@
 
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
+#include "libimp/countof.h"
+#include "libimp/dataof.h"
 
 #if defined(LIBIMP_CPP_20) && defined(__cpp_lib_span)
 #include <span>
@@ -55,6 +57,10 @@ template <typename S, typename I>
 using is_sized_sentinel_for = 
   typename std::enable_if<std::is_convertible<decltype(std::declval<S>() - std::declval<I>()), 
                           std::ptrdiff_t>::value>::type;
+
+template <typename T>
+using is_continuous_container =
+  decltype(dataof(std::declval<T>()), countof(std::declval<T>()));
 
 /// \brief Obtain the address represented by p 
 ///        without forming a reference to the object pointed to by p.
@@ -118,6 +124,15 @@ public:
   constexpr span(It first, End last) noexcept(noexcept(last - first))
     : ptr_   (detail::to_address(first))
     , extent_(static_cast<size_type>(last - first)) {}
+
+  template <typename U,
+            typename = detail::is_continuous_container<U>,
+            typename = detail::is_array_convertible<std::remove_pointer_t<
+              decltype(dataof(std::declval<U>()))>, element_type>>
+  constexpr span(U &&u) noexcept(noexcept(dataof (std::forward<U>(u)), 
+                                          countof(std::forward<U>(u))))
+    : ptr_   (dataof (std::forward<U>(u)))
+    , extent_(countof(std::forward<U>(u))) {}
 
   template <typename U, std::size_t E,
             typename = detail::is_array_convertible<U, element_type>>

@@ -43,7 +43,7 @@ private:
     data(U &&model) noexcept
       : header_(std::forward<U>(model)) {
       auto elements = this->elements();
-      decltype(elements)::size_type i = 0;
+      typename decltype(elements)::size_type i = 0;
       LIBIMP_TRY {
         for (; i < elements.size(); ++i) {
           (void)::LIBIMP::construct<element<value_type>>(&elements[i]);

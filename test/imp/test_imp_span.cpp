@@ -61,3 +61,15 @@ TEST(span, fmt) {
   EXPECT_EQ(imp::fmt(imp::span<int>{}), "");
   EXPECT_EQ(imp::fmt(imp::make_span({1, 3, 2, 4, 5, 6, 7})), "1 3 2 4 5 6 7");
 }
+
+TEST(span, construct) {
+  struct test_imp_span_construct {
+    /* data */
+    int  size() const noexcept { return sizeof(this); }
+    auto Data() const noexcept { return this; }
+  } d1;
+  imp::span<test_imp_span_construct const> sp {d1};
+  // imp::span<int const> spp {d1};
+  EXPECT_EQ(sp.size(), d1.size());
+  EXPECT_EQ(sp.data(), d1.Data());
+}
