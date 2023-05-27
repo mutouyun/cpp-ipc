@@ -8,6 +8,7 @@
 #include "libimp/construct.h"
 #include "libimp/pimpl.h"
 #include "libimp/countof.h"
+#include "libimp/dataof.h"
 #include "libimp/horrible_cast.h"
 #include "libimp/detect_plat.h"
 #include "libimp/generic.h"
@@ -100,9 +101,27 @@ TEST(utility, countof) {
 
   std::vector<int> vec {1, 2, 3, 4, 5};
   int arr[] {7, 6, 5, 4, 3, 2, 1};
+  auto il = {9, 7, 6, 4, 3, 1, 5};
   EXPECT_EQ(imp::countof(sv) , sv.Size());
   EXPECT_EQ(imp::countof(vec), vec.size());
   EXPECT_EQ(imp::countof(arr), sizeof(arr) / sizeof(arr[0]));
+  EXPECT_EQ(imp::countof(il) , il.size());
+}
+
+TEST(utility, dataof) {
+  struct {
+    constexpr int *Data() const noexcept { return (int *)this; }
+  } sv;
+  EXPECT_FALSE(imp::detail_dataof::trait_has_data<decltype(sv)>::value);
+  EXPECT_TRUE (imp::detail_dataof::trait_has_Data<decltype(sv)>::value);
+
+  std::vector<int> vec {1, 2, 3, 4, 5};
+  int arr[] {7, 6, 5, 4, 3, 2, 1};
+  auto il = {9, 7, 6, 4, 3, 1, 5};
+  EXPECT_EQ(imp::dataof(sv) , sv.Data());
+  EXPECT_EQ(imp::dataof(vec), vec.data());
+  EXPECT_EQ(imp::dataof(arr), arr);
+  EXPECT_EQ(imp::dataof(il) , il.begin());
 }
 
 TEST(utility, horrible_cast) {
