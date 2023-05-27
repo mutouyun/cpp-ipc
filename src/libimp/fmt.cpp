@@ -196,7 +196,7 @@ void fmt_context::expend(std::size_t sz) noexcept {
   offset_ += sz;
 }
 
-bool fmt_context::append(std::string const &str) noexcept {
+bool fmt_context::append(span<char const> const &str) noexcept {
   auto sbuf = buffer(str.size());
   if (sbuf.size() < str.size()) {
     return false;

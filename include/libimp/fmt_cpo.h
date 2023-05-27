@@ -36,7 +36,7 @@ public:
   bool finish() noexcept;
   span<char> buffer(std::size_t sz) noexcept;
   void expend(std::size_t sz) noexcept;
-  bool append(std::string const &str) noexcept;
+  bool append(span<char const> const &str) noexcept;
 };
 
 /// \brief Supports custom fmt_to methods for imp::fmt.
