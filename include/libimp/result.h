@@ -139,7 +139,7 @@ private:
 
 public:
   template <typename... A, 
-            typename = is_not_match<result, A...>,
+            typename = not_match<result, A...>,
             typename = decltype(type_traits_t::init_code(std::declval<storage_t &>()
                                                        , std::declval<A>()...))>
   result(A &&... args) noexcept {
@@ -168,7 +168,7 @@ private:
 
 public:
   template <typename... A, 
-            typename = is_not_match<result, A...>,
+            typename = not_match<result, A...>,
             typename = decltype(type_traits_t::init_code(std::declval<storage_t &>()
                                                        , std::declval<A>()...))>
   result(A &&... args) noexcept {

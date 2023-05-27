@@ -13,12 +13,11 @@ namespace {
 /**
  * \brief Check that bytes is not 0 and that the alignment is a power of two.
  */
-bool verify_args(::LIBIMP::log::grip &log, std::size_t bytes, std::size_t alignment) noexcept {
+bool verify_args(std::size_t bytes, std::size_t alignment) noexcept {
   if (bytes == 0) {
     return false;
   }
   if ((alignment == 0) || (alignment & (alignment - 1)) != 0) {
-    log.error("invalid bytes = ", bytes, ", alignment = ", alignment);
     return false;
   }
   return true;
@@ -47,7 +46,8 @@ new_delete_resource *new_delete_resource::get() noexcept {
  */
 void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) noexcept {
   LIBIMP_LOG_();
-  if (!verify_args(log, bytes, alignment)) {
+  if (!verify_args(bytes, alignment)) {
+    log.error("invalid bytes = ", bytes, ", alignment = ", alignment);
     return nullptr;
   }
 #if defined(LIBIMP_CPP_17)
@@ -89,7 +89,8 @@ void new_delete_resource::deallocate(void *p, std::size_t bytes, std::size_t ali
   if (p == nullptr) {
     return;
   }
-  if (!verify_args(log, bytes, alignment)) {
+  if (!verify_args(bytes, alignment)) {
+    log.error("invalid bytes = ", bytes, ", alignment = ", alignment);
     return;
   }
 #if defined(LIBIMP_CPP_17)

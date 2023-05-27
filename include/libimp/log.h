@@ -83,115 +83,55 @@ std::string context_to_string(context<T...> const &l_ctx) noexcept {
   }
 }
 
-namespace detail {
-
-enum out_type : unsigned {
-  out_none    = 0x0,
-  out_string  = 0x1,
-};
-
-template <typename T>
-class has_fn_output {
-  static std::integral_constant<out_type, out_none> check(...);
-
-  template <typename U, typename = decltype(std::declval<U &>().output(log::level::trace, std::declval<std::string>()))>
-  static std::integral_constant<out_type, out_string> check(U *u);
-
-public:
-  using type = decltype(check(static_cast<T *>(nullptr)));
-};
-
-template <typename T>
-constexpr out_type has_fn_output_v = has_fn_output<T>::type::value;
-
-struct vtable_t {
-  void (*output)(void *, log::level, std::string &&);
-};
-
-template <typename T>
-class traits {
-  template <typename U>
-  static auto make_fn_output() noexcept
-    -> std::enable_if_t<(has_fn_output_v<U> == out_none), decltype(vtable_t{}.output)> {
-    return [](void *, log::level, std::string &&) {};
-  }
-
-  template <typename U>
-  static auto make_fn_output() noexcept
-    -> std::enable_if_t<(has_fn_output_v<U> == out_string), decltype(vtable_t{}.output)> {
-    return [](void *p, log::level lev, std::string &&str) {
-      static_cast<U *>(p)->output(lev, std::move(str));
-    };
-  }
-
-public:
-  static auto make_vtable() noexcept {
-    static vtable_t vt { make_fn_output<T>() };
-    return &vt;
-  }
-};
-
-} // namespace detail
-
-class printer {
-  void *objp_ {nullptr};
-  detail::vtable_t *vtable_ {nullptr};
-
-public:
-  printer() noexcept = default;
-
-  template <typename T, 
-            typename = is_not_match<printer, T>>
-  printer(T &p) noexcept
-    : objp_  (static_cast<void *>(&p))
-    , vtable_(detail::traits<T>::make_vtable()) {}
-
-  explicit operator bool() const noexcept {
-    return (objp_ != nullptr) && (vtable_ != nullptr);
-  }
-
-  template <typename... T>
-  void output(context<T...> const &ctx) noexcept {
-    if (!*this) return;
-    LIBIMP_TRY {
-      vtable_->output(objp_, ctx.level, context_to_string(ctx));
-    } LIBIMP_CATCH(...) {}
-  }
-};
-
-/// \class class LIBIMP_EXPORT std_t
-/// \brief Standard console output.
-class LIBIMP_EXPORT std_t {
-public:
-  void output(log::level, std::string &&) noexcept;
-};
-
 /// \brief Standard console output object.
-LIBIMP_EXPORT extern std_t std_out;
+inline auto &make_std_out() noexcept {
+  static auto std_out = [](auto const &ctx) {
+    auto s = context_to_string(ctx);
+    switch (ctx.level) {
+    case level::trace:
+    case level::debug:
+    case level::info:
+      std::fprintf(stdout, "%s\n", s.c_str());
+      break;
+    case level::warning:
+    case level::error:
+    case level::failed:
+      std::fprintf(stderr, "%s\n", s.c_str());
+      break;
+    default:
+      break;
+    }
+  };
+  return std_out;
+}
 
 /**
  * \brief Log information grips.
  */
+template <typename Outputer>
 class grip {
-  printer printer_;
+  Outputer out_;
   char const *func_;
   level level_limit_;
 
   template <typename... A>
   grip &output(log::level l, A &&... args) noexcept {
-    if (!printer_ || (underlyof(l) < underlyof(level_limit_))) {
+    if (underlyof(l) < underlyof(level_limit_)) {
       return *this;
     }
-    printer_.output(context<A &&...> {
-      l, std::chrono::system_clock::now(), func_,
-      std::forward_as_tuple(std::forward<A>(args)...),
-    });
+    LIBIMP_TRY {
+      out_(context<A &&...> {
+        l, std::chrono::system_clock::now(), func_,
+        std::forward_as_tuple(std::forward<A>(args)...),
+      });
+    } LIBIMP_CATCH(...) {}
     return *this;
   }
 
 public:
-  grip(char const *func, printer printer = std_out, level level_limit = level::info) noexcept 
-    : printer_    (printer)
+  template <typename O>
+  grip(char const *func, O &&out, level level_limit) noexcept 
+    : out_        (std::forward<O>(out))
     , func_       (func)
     , level_limit_(level_limit) {}
 
@@ -203,7 +143,20 @@ public:
   template <typename... A> grip &failed (A &&...args) noexcept { return output(log::level::failed , std::forward<A>(args)...); }
 };
 
+template <typename O>
+inline auto make_grip(char const *func, O &&out, level level_limit = level::info) noexcept {
+  return grip<std::decay_t<O>>(func, std::forward<O>(out), level_limit);
+}
+
+inline auto make_grip(char const *func, level level_limit = level::info) noexcept {
+  return make_grip(func, make_std_out(), level_limit);
+}
+
+inline auto make_grip(char const */*ignore*/, char const *func, level level_limit = level::info) noexcept {
+  return make_grip(func, make_std_out(), level_limit);
+}
+
 } // namespace log
 LIBIMP_NAMESPACE_END_
 
-#define LIBIMP_LOG_(...) ::LIBIMP::log::grip log(__func__,##__VA_ARGS__)
+#define LIBIMP_LOG_(...) auto log = ::LIBIMP::log::make_grip(__func__,##__VA_ARGS__)

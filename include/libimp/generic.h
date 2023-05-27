@@ -71,9 +71,9 @@ struct is_same_first<T, T> : std::true_type {};
 } // namespace detail
 
 template <typename T, typename... A>
-using is_not_match = 
+using not_match = 
   typename std::enable_if<!detail::is_same_first<T, 
-  typename std::decay<A>::type...>::value>::type;
+  typename std::decay<A>::type...>::value, bool>::type;
 
 /**
  * \brief Determines whether a type is specialized from a particular template.

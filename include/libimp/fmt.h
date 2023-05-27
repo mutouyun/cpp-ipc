@@ -13,6 +13,7 @@
 #include <utility>
 #include <type_traits>
 #include <chrono>   // std::chrono::time_point
+#include <tuple>
 #include <cstddef>
 #include <ctime>    // std::tm, std::localtime
 
@@ -161,6 +162,16 @@ bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, span<T> s) {
     if (!fmt_to(ctx, ' ', s[i])) return false;
   }
   return true;
+}
+
+template <typename Tp, std::size_t... I>
+bool unfold_tuple_fmt_to(fmt_context &ctx, Tp const &tp, std::index_sequence<I...>) {
+  return fmt_to(ctx, std::get<I>(tp)...);
+}
+
+template <typename... T>
+bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &ctx, std::tuple<T...> const &tp) {
+  return unfold_tuple_fmt_to(ctx, tp, std::index_sequence_for<T...>{});
 }
 
 } // namespace detail
