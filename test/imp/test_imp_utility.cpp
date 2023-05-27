@@ -110,7 +110,7 @@ TEST(utility, countof) {
 
 TEST(utility, dataof) {
   struct {
-    constexpr int *Data() const noexcept { return (int *)this; }
+    int *Data() const noexcept { return (int *)this; }
   } sv;
   EXPECT_FALSE(imp::detail_dataof::trait_has_data<decltype(sv)>::value);
   EXPECT_TRUE (imp::detail_dataof::trait_has_Data<decltype(sv)>::value);
