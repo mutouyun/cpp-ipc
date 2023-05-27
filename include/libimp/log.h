@@ -152,7 +152,7 @@ inline auto make_grip(char const *func, level level_limit = level::info) noexcep
   return make_grip(func, make_std_out(), level_limit);
 }
 
-inline auto make_grip(char const */*ignore*/, char const *func, level level_limit = level::info) noexcept {
+inline auto make_grip(char const * /*ignore*/, char const *func, level level_limit = level::info) noexcept {
   return make_grip(func, make_std_out(), level_limit);
 }
 
