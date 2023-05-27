@@ -131,12 +131,6 @@ public:
   }
 };
 
-/// \brief Custom defined fmt_to method for imp::fmt
-template <typename... T>
-bool tag_invoke(decltype(::LIBIMP::fmt_to), fmt_context &f_ctx, context<T...> const &l_ctx) noexcept {
-  return ::LIBIMP::log::context_to_string(f_ctx, l_ctx);
-}
-
 } // namespace detail
 
 class printer {

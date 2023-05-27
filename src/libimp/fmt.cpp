@@ -197,12 +197,14 @@ void fmt_context::expend(std::size_t sz) noexcept {
 }
 
 bool fmt_context::append(span<char const> const &str) noexcept {
-  auto sbuf = buffer(str.size());
-  if (sbuf.size() < str.size()) {
+  auto sz = str.size();
+  if (str.back() == '\0') --sz;
+  auto sbuf = buffer(sz);
+  if (sbuf.size() < sz) {
     return false;
   }
-  std::memcpy(sbuf.data(), str.data(), str.size());
-  offset_ += str.size();
+  std::memcpy(sbuf.data(), str.data(), sz);
+  offset_ += sz;
   return true;
 }
 
