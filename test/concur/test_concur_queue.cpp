@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 
 #include "libconcur/queue.h"
+#include "libimp/log.h"
 
 using namespace concur;
 
@@ -13,8 +14,11 @@ TEST(queue, construct) {
   EXPECT_EQ(q1.approx_size(), 0);
 }
 
-TEST(queue, push_pop) {
-  using queue_t = queue<int>;
+namespace {
+
+template <typename PR, typename CR>
+void test_queue_basic() {
+  using queue_t = queue<int, PR, CR>;
   queue_t q1;
   EXPECT_TRUE(q1.valid());
   EXPECT_TRUE(q1.empty());
@@ -32,17 +36,17 @@ TEST(queue, push_pop) {
 
   int count = 0;
   auto push = [&q1, &count](int i) {
-    EXPECT_TRUE(q1.push(i));
-    EXPECT_FALSE(q1.empty());
+    ASSERT_TRUE(q1.push(i));
+    ASSERT_FALSE(q1.empty());
     ++count;
-    EXPECT_EQ(q1.approx_size(), count);
+    ASSERT_EQ(q1.approx_size(), count);
   };
   auto pop = [&q1, &count](int i) {
     int value;
-    EXPECT_TRUE(q1.pop(value));
-    EXPECT_EQ(value, i);
+    ASSERT_TRUE(q1.pop(value));
+    ASSERT_EQ(value, i);
     --count;
-    EXPECT_EQ(q1.approx_size(), count);
+    ASSERT_EQ(q1.approx_size(), count);
   };
 
   for (int i = 0; i < 1000; ++i) {
@@ -55,8 +59,26 @@ TEST(queue, push_pop) {
   for (int i = 0; i < default_circle_buffer_size; ++i) {
     push(i);
   }
-  EXPECT_FALSE(q1.push(65536));
+  ASSERT_FALSE(q1.push(65536));
   for (int i = 0; i < default_circle_buffer_size; ++i) {
     pop(i);
   }
 }
+
+} // namespace
+
+TEST(queue, push_pop) {
+  test_queue_basic<relation::single, relation::single>();
+  test_queue_basic<relation::single, relation::multi >();
+  test_queue_basic<relation::multi , relation::multi >();
+}
+
+namespace {
+
+template <typename PR, typename CR>
+void test_queue(std::size_t np, std::size_t nc) {
+  LIBIMP_LOG_();
+
+}
+
+} // namespace
