@@ -40,7 +40,7 @@ private:
     ::LIBIMP::aligned<element<value_type>> elements_start_;
 
     template <typename U>
-    data(U &&model) noexcept
+    data(U &&model)
       : header_(std::forward<U>(model)) {
       auto elements = this->elements();
       typename decltype(elements)::size_type i = 0;
@@ -52,6 +52,7 @@ private:
         for (decltype(i) k = 0; k < i; ++k) {
           (void)::LIBIMP::destroy<element<value_type>>(&elements[k]);
         }
+        throw;
       }
     }
 
@@ -79,21 +80,23 @@ private:
     if (!data_allocator_) {
       return nullptr;
     }
+    void *data_ptr = nullptr;
     LIBIMP_TRY {
-      auto data_ptr = data_allocator_.alloc(data::size_of(circ_size));
+      data_ptr = data_allocator_.alloc(data::size_of(circ_size));
       if (data_ptr == nullptr) {
         return nullptr;
       }
       return ::LIBIMP::construct<data>(data_ptr, circ_size);
     } LIBIMP_CATCH(...) {
+      data_allocator_.dealloc(data_ptr, data::size_of(circ_size));
       return nullptr;
     }
   }
 
   ::LIBPMR::allocator data_allocator_;
-  std::atomic<size_type> size_;
+  std::atomic<size_type> size_ {0};
   data *data_;
-  typename concur::traits<model_type>::context context_;
+  typename concur::traits<model_type>::context context_ {};
 
 public:
   queue(queue const &) = delete;
