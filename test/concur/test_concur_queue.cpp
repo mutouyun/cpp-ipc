@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <atomic>
 #include <array>
+#include <thread>
 
 #include "gtest/gtest.h"
 
