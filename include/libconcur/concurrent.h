@@ -457,14 +457,14 @@ struct prod_cons : producer<TransModT, ProdModT>
                 , traits<consumer<TransModT, ConsModT>>::header {
     index_t const circ_size;
 
-    constexpr header(index_t cs) noexcept
+    header(index_t cs) noexcept
       : circ_size(cs) {}
 
     template <typename T>
-    constexpr header(::LIBIMP::span<element<T>> const &elems) noexcept
+    header(::LIBIMP::span<element<T>> const &elems) noexcept
       : circ_size(static_cast<index_t>(elems.size())) {}
 
-    constexpr bool valid() const noexcept {
+    bool valid() const noexcept {
       // circ_size must be a power of two.
       return (circ_size > 1) && ((circ_size & (circ_size - 1)) == 0);
     }
