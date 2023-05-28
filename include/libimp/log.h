@@ -114,8 +114,15 @@ class grip {
   char const *func_;
   level level_limit_;
 
+public:
+  template <typename O>
+  grip(char const *func, O &&out, level level_limit) noexcept 
+    : out_        (std::forward<O>(out))
+    , func_       (func)
+    , level_limit_(level_limit) {}
+
   template <typename... A>
-  grip &output(log::level l, A &&... args) noexcept {
+  grip const &operator()(log::level l, A &&... args) const noexcept {
     if (underlyof(l) < underlyof(level_limit_)) {
       return *this;
     }
@@ -128,19 +135,12 @@ class grip {
     return *this;
   }
 
-public:
-  template <typename O>
-  grip(char const *func, O &&out, level level_limit) noexcept 
-    : out_        (std::forward<O>(out))
-    , func_       (func)
-    , level_limit_(level_limit) {}
-
-  template <typename... A> grip &trace  (A &&...args) noexcept { return output(log::level::trace  , std::forward<A>(args)...); }
-  template <typename... A> grip &debug  (A &&...args) noexcept { return output(log::level::debug  , std::forward<A>(args)...); }
-  template <typename... A> grip &info   (A &&...args) noexcept { return output(log::level::info   , std::forward<A>(args)...); }
-  template <typename... A> grip &warning(A &&...args) noexcept { return output(log::level::warning, std::forward<A>(args)...); }
-  template <typename... A> grip &error  (A &&...args) noexcept { return output(log::level::error  , std::forward<A>(args)...); }
-  template <typename... A> grip &failed (A &&...args) noexcept { return output(log::level::failed , std::forward<A>(args)...); }
+  template <typename... A> grip const &trace  (A &&...args) const noexcept { return (*this)(log::level::trace  , std::forward<A>(args)...); }
+  template <typename... A> grip const &debug  (A &&...args) const noexcept { return (*this)(log::level::debug  , std::forward<A>(args)...); }
+  template <typename... A> grip const &info   (A &&...args) const noexcept { return (*this)(log::level::info   , std::forward<A>(args)...); }
+  template <typename... A> grip const &warning(A &&...args) const noexcept { return (*this)(log::level::warning, std::forward<A>(args)...); }
+  template <typename... A> grip const &error  (A &&...args) const noexcept { return (*this)(log::level::error  , std::forward<A>(args)...); }
+  template <typename... A> grip const &failed (A &&...args) const noexcept { return (*this)(log::level::failed , std::forward<A>(args)...); }
 };
 
 template <typename O>

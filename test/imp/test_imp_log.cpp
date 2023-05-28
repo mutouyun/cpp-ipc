@@ -23,7 +23,7 @@ TEST(log, custom) {
     std::string i;
     std::string e;
   } ll_data;
-  auto ll = [&ll_data](auto &&ctx) mutable {
+  auto ll = [&ll_data](auto &&ctx) {
     auto s = imp::fmt(ctx.params);
     if (ctx.level == imp::log::level::error) ll_data.e += s + " ";
     else
