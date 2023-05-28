@@ -37,4 +37,4 @@ add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 
 target_link_libraries(${PROJECT_NAME}
   benchmark_main fmt
-  imp ipc)
+  imp pmr ipc)
