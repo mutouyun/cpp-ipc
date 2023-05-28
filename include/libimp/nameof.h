@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "libimp/def.h"
+#include "libimp/export.h"
 #include "libimp/span.h"
 
 LIBIMP_NAMESPACE_BEG_
@@ -22,7 +23,7 @@ LIBIMP_NAMESPACE_BEG_
  * \param name the mangled name
  * \return std::string a human-readable demangled type name
  */
-std::string demangle(span<char const> name) noexcept;
+LIBIMP_EXPORT std::string demangle(span<char const> name) noexcept;
 
 /**
  * \brief Returns an implementation defined string containing the name of the type.
