@@ -75,3 +75,61 @@ TEST(shm, shared_memory) {
 
   EXPECT_TRUE(ipc::shm_close(*shm_r));
 }
+
+#if 0
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <string.h>
+
+#include "test_util.h"
+
+TEST(shm, sock) {
+  auto reader = test::subproc([] {
+    int lfd = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in ser {};
+    ser.sin_family = AF_INET;
+    ser.sin_addr.s_addr = htonl(INADDR_ANY);
+    ser.sin_port = htons(8888);
+    bind(lfd, (struct sockaddr *)&ser, sizeof(ser));
+    printf("reader prepared...\n");
+    struct sockaddr_in cli {};
+    socklen_t cli_len = sizeof(cli);
+    char c {'\0'};
+    printf("reading...\n");
+    for (;;) {
+      recvfrom(lfd, &c, sizeof(c), 0, (struct sockaddr *)&cli, &cli_len);
+      printf("read %c\n", c);
+      sendto(lfd, &c, sizeof(c), 0, (struct sockaddr *)&cli, cli_len);
+      if (c == 'Z') break;
+    }
+    close(lfd);
+  });
+
+  auto writer = test::subproc([] {
+    int sfd = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in ser {};
+    ser.sin_family = AF_INET;
+    ser.sin_addr.s_addr = htonl(INADDR_ANY);
+    ser.sin_port = htons(8888);
+
+    printf("writer prepared...\n");
+    sleep(1);
+
+    for (char c = 'A'; c <= 'Z'; ++c) {
+      printf("write %c\n", c);
+      sendto(sfd, &c, sizeof(c), 0, (struct sockaddr *)&ser, sizeof(ser));
+      struct sockaddr_in cli {};
+      socklen_t len = sizeof(cli);
+      char n {};
+      recvfrom(sfd, &n, sizeof(n), 0, (struct sockaddr *)&cli, &len);
+      printf("echo %c\n", c);
+    }
+    close(sfd);
+  });
+
+  test::join_subproc(writer);
+  test::join_subproc(reader);
+}
+#endif

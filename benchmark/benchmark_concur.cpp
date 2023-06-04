@@ -10,6 +10,29 @@
 
 namespace {
 
+void concur_queue_rtt(benchmark::State &state) {
+  using namespace concur;
+  queue<std::int64_t, relation::single, relation::single> que [2];
+  std::atomic_bool stop = false;
+  auto producer = std::async(std::launch::async, [&stop, &que] {
+    for (std::int64_t i = 0; !stop.load(std::memory_order_relaxed); ++i) {
+      std::int64_t n {};
+      while (!que[0].pop(n)) ;
+      (void)que[1].push(i);
+    }
+  });
+
+  for (auto _ : state) {
+    (void)que[0].push(0);
+    std::int64_t n {};
+    while (!que[1].pop(n)) ;
+  }
+
+  stop = true;
+  (void)que[0].push(0);
+  producer.wait();
+}
+
 void concur_queue_1v1(benchmark::State &state) {
   using namespace concur;
   queue<std::int64_t, relation::single, relation::single> que;
@@ -62,5 +85,6 @@ void concur_queue_NvN(benchmark::State &state) {
 
 } // namespace
 
+BENCHMARK(concur_queue_rtt);
 BENCHMARK(concur_queue_1v1);
 BENCHMARK(concur_queue_NvN)->ThreadRange(1, 16);
