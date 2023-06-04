@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 
 #include <string.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <mqueue.h>
 
@@ -94,6 +95,47 @@ struct mqueue_reader {
     test::join_subproc(pid_);
   }
 } mq_r__;
+
+struct pipe_reader {
+  pid_t pid_ {-1};
+
+  pipe_reader() {
+    auto shm = ipc::shared_memory("shm-pipe_reader", sizeof(flag_t));
+    shm.as<flag_t>()->store(false, std::memory_order_relaxed);
+
+    pid_ = test::subproc([this] {
+      auto shm = ipc::shared_memory("shm-pipe_reader", sizeof(flag_t));
+      auto flag = shm.as<flag_t>();
+      printf("pipe_reader start.\n");
+      mkfifo("/tmp/shm-pipe.w", S_IFIFO|0666);
+      mkfifo("/tmp/shm-pipe.r", S_IFIFO|0666);
+      int wfd = open("/tmp/shm-pipe.w", O_RDWR);
+      int rfd = open("/tmp/shm-pipe.r", O_RDWR);
+      while (!flag->load(std::memory_order_relaxed)) {
+        char n {};
+        // read
+        read(wfd, &n, sizeof(n));
+        // write
+        write(rfd, &n, sizeof(n));
+      }
+      printf("pipe_reader exit.\n");
+      close(wfd);
+      close(rfd);
+    });
+  }
+
+  ~pipe_reader() {
+    auto shm = ipc::shared_memory("shm-pipe_reader", sizeof(flag_t));
+    shm.as<flag_t>()->store(true, std::memory_order_seq_cst);
+    {
+      mqd_t wfd = open("/tmp/shm-pipe.w", O_WRONLY);
+      char n {};
+      write(wfd, &n, sizeof(n));
+      close(wfd);
+    }
+    test::join_subproc(pid_);
+  }
+} pipe_r__;
 
 struct sock_reader {
   pid_t pid_ {-1};
@@ -227,6 +269,20 @@ void ipc_mqueue_rtt(benchmark::State &state) {
   mq_close(rfd);
 }
 
+void ipc_npipe_rtt(benchmark::State &state) {
+  int wfd = open("/tmp/shm-pipe.w", O_WRONLY);
+  int rfd = open("/tmp/shm-pipe.r", O_RDONLY);
+  for (auto _ : state) {
+    char n {};
+    // write
+    write(wfd, &n, sizeof(n));
+    // read
+    read(rfd, &n, sizeof(n));
+  }
+  close(wfd);
+  close(rfd);
+}
+
 void ipc_sock_rtt(benchmark::State &state) {
   auto sfd = sock_r__.start_client();
   for (auto _ : state) {
@@ -259,5 +315,6 @@ void ipc_udp_rtt(benchmark::State &state) {
 
 BENCHMARK(ipc_eventfd_rtt);
 BENCHMARK(ipc_mqueue_rtt);
+BENCHMARK(ipc_npipe_rtt);
 BENCHMARK(ipc_sock_rtt);
 BENCHMARK(ipc_udp_rtt);

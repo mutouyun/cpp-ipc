@@ -80,56 +80,56 @@ TEST(shm, shared_memory) {
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "test_util.h"
 
-TEST(shm, sock) {
-  auto reader = test::subproc([] {
-    int lfd = socket(AF_INET, SOCK_DGRAM, 0);
-    struct sockaddr_in ser {};
-    ser.sin_family = AF_INET;
-    ser.sin_addr.s_addr = htonl(INADDR_ANY);
-    ser.sin_port = htons(8888);
-    bind(lfd, (struct sockaddr *)&ser, sizeof(ser));
-    printf("reader prepared...\n");
-    struct sockaddr_in cli {};
-    socklen_t cli_len = sizeof(cli);
-    char c {'\0'};
-    printf("reading...\n");
-    for (;;) {
-      recvfrom(lfd, &c, sizeof(c), 0, (struct sockaddr *)&cli, &cli_len);
-      printf("read %c\n", c);
-      sendto(lfd, &c, sizeof(c), 0, (struct sockaddr *)&cli, cli_len);
-      if (c == 'Z') break;
-    }
-    close(lfd);
-  });
-
+TEST(shm, pipe) {
   auto writer = test::subproc([] {
-    int sfd = socket(AF_INET, SOCK_DGRAM, 0);
-    struct sockaddr_in ser {};
-    ser.sin_family = AF_INET;
-    ser.sin_addr.s_addr = htonl(INADDR_ANY);
-    ser.sin_port = htons(8888);
-
+    mkfifo("/tmp/shm-pipe.w", S_IFIFO|0666);
+    // mkfifo("/tmp/shm-pipe.r", S_IFIFO|0666);
+    int wfd = open("/tmp/shm-pipe.w", O_WRONLY);
+    // int rfd = open("/tmp/shm-pipe.r", O_RDONLY);
     printf("writer prepared...\n");
-    sleep(1);
-
     for (char c = 'A'; c <= 'Z'; ++c) {
-      printf("write %c\n", c);
-      sendto(sfd, &c, sizeof(c), 0, (struct sockaddr *)&ser, sizeof(ser));
-      struct sockaddr_in cli {};
-      socklen_t len = sizeof(cli);
-      char n {};
-      recvfrom(sfd, &n, sizeof(n), 0, (struct sockaddr *)&cli, &len);
-      printf("echo %c\n", c);
+      sleep(1);
+      printf("\nwrite %c\n", c);
+      write(wfd, &c, sizeof(c));
+      // char n {};
+      // read(rfd, &n, sizeof(n));
+      // printf("write echo %c\n", n);
     }
-    close(sfd);
+    close(wfd);
+    // close(rfd);
   });
+
+  auto reader_maker = [](int k) {
+    return [k] {
+      printf("r%d prepared...\n", k);
+      sleep(1);
+      int wfd = open("/tmp/shm-pipe.w", O_RDONLY);
+      // int rfd = open("/tmp/shm-pipe.r", O_WRONLY);
+      for (;;) {
+        char n {};
+        read(wfd, &n, sizeof(n));
+        printf("r%d %c\n", k, n);
+        // write(rfd, &n, sizeof(n));
+        if (n == 'Z') break;
+      }
+      close(wfd);
+      // close(rfd);
+    };
+  };
+
+  auto r1 = test::subproc(reader_maker(1));
+  auto r2 = test::subproc(reader_maker(2));
 
   test::join_subproc(writer);
-  test::join_subproc(reader);
+  test::join_subproc(r1);
+  test::join_subproc(r2);
 }
 #endif
