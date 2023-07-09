@@ -5,12 +5,14 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
+#include <sys/inotify.h>
 #include <netinet/in.h>
 
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <mqueue.h>
+#include <stdio.h>
 
 #include <atomic>
 
@@ -247,6 +249,60 @@ struct udp_reader {
   }
 } udp_r__;
 
+struct inotify_reader {
+  pid_t pid_ {-1};
+
+  inotify_reader() {
+    auto shm = ipc::shared_memory("shm-inotify_reader", sizeof(flag_t));
+    shm.as<flag_t>()->store(false, std::memory_order_relaxed);
+    fclose(fopen("/tmp/shm-inotify.0", "w"));
+    fclose(fopen("/tmp/shm-inotify.1", "w"));
+    pid_ = test::subproc([this] {
+      auto shm  = ipc::shared_memory("shm-inotify_reader", sizeof(flag_t));
+      auto flag = shm.as<flag_t>();
+      auto shm_rt = ipc::shared_memory("shm-inotify_reader.0", sizeof(flag_t));
+      auto shm_wt = ipc::shared_memory("shm-inotify_reader.1", sizeof(flag_t));
+      auto f_rt = shm_rt.as<flag_t>();
+      auto f_wt = shm_wt.as<flag_t>();
+      int ifd = inotify_init();
+      int iwd = inotify_add_watch(ifd, "/tmp/shm-inotify.0", IN_OPEN | IN_CLOSE);
+      // auto wf = fopen("/tmp/shm-inotify.1", "w");
+      printf("inotify_reader start.\n");
+      while (!flag->load(std::memory_order_relaxed)) {
+        // read
+        if (!f_rt->exchange(false, std::memory_order_acquire)) {
+          struct inotify_event e {};
+          read(ifd, &e, sizeof(e));
+        }
+        // write
+        f_wt->store(true, std::memory_order_release);
+        fclose(fopen("/tmp/shm-inotify.1", "r"));
+        // char c {'A'};
+        // fwrite(&c, 1, 1, wf);
+        // fflush(wf);
+      }
+      // fclose(wf);
+      inotify_rm_watch(ifd, iwd);
+      close(ifd);
+      printf("inotify_reader exit.\n");
+    });
+  }
+
+  ~inotify_reader() {
+    auto shm = ipc::shared_memory("shm-inotify_reader", sizeof(flag_t));
+    shm.as<flag_t>()->store(true, std::memory_order_seq_cst);
+    auto shm_rt = ipc::shared_memory("shm-inotify_reader.0", sizeof(flag_t));
+    shm_rt.as<flag_t>()->store(true, std::memory_order_seq_cst);
+    fclose(fopen("/tmp/shm-inotify.0", "r"));
+    // auto rf = fopen("/tmp/shm-inotify.0", "w");
+    // char c {'A'};
+    // fwrite(&c, 1, 1, rf);
+    // fflush(rf);
+    // fclose(rf);
+    test::join_subproc(pid_);
+  }
+} inotify_r__;
+
 void ipc_eventfd_rtt(benchmark::State &state) {
   for (auto _ : state) {
     uint64_t n = 1;
@@ -311,6 +367,32 @@ void ipc_udp_rtt(benchmark::State &state) {
   close(sfd);
 }
 
+void ipc_inotify_rtt(benchmark::State &state) {
+  auto shm_rt = ipc::shared_memory("shm-inotify_reader.0", sizeof(flag_t));
+  auto shm_wt = ipc::shared_memory("shm-inotify_reader.1", sizeof(flag_t));
+  auto f_rt = shm_rt.as<flag_t>();
+  auto f_wt = shm_wt.as<flag_t>();
+  int ifd = inotify_init();
+  int iwd = inotify_add_watch(ifd, "/tmp/shm-inotify.1", IN_OPEN | IN_CLOSE);
+  // auto rf = fopen("/tmp/shm-inotify.0", "w");
+  for (auto _ : state) {
+    // write
+    f_rt->store(true, std::memory_order_release);
+    fclose(fopen("/tmp/shm-inotify.0", "r"));
+    // char c {'A'};
+    // fwrite(&c, 1, 1, rf);
+    // fflush(rf);
+    // read
+    if (!f_wt->exchange(false, std::memory_order_acquire)) {
+      struct inotify_event e {};
+      read(ifd, &e, sizeof(e));
+    }
+  }
+  // fclose(rf);
+  inotify_rm_watch(ifd, iwd);
+  close(ifd);
+}
+
 } // namespace
 
 BENCHMARK(ipc_eventfd_rtt);
@@ -318,3 +400,4 @@ BENCHMARK(ipc_mqueue_rtt);
 BENCHMARK(ipc_npipe_rtt);
 BENCHMARK(ipc_sock_rtt);
 BENCHMARK(ipc_udp_rtt);
+BENCHMARK(ipc_inotify_rtt);

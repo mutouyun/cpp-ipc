@@ -76,7 +76,9 @@ TEST(shm, shared_memory) {
   EXPECT_TRUE(ipc::shm_close(*shm_r));
 }
 
-#if 0
+#include <libimp/detect_plat.h>
+
+#if defined(LIBIMP_OS_LINUX)
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
@@ -129,6 +131,49 @@ TEST(shm, pipe) {
   auto r2 = test::subproc(reader_maker(2));
 
   test::join_subproc(writer);
+  test::join_subproc(r1);
+  test::join_subproc(r2);
+}
+
+#include <sys/inotify.h>
+#include <stdio.h>
+
+TEST(shm, event) {
+  fclose(fopen("/tmp/shm-event", "w"));
+
+  auto sender = test::subproc([] {
+    printf("sender prepared...\n");
+    auto fd = fopen("/tmp/shm-event", "w");
+    for (int i = 0; i < 10; ++i) {
+      sleep(1);
+      printf("\nwrite %d\n", i);
+      char c {'A'};
+      fwrite(&c, 1, 1, fd);
+      fflush(fd);
+    }
+    fclose(fd);
+  });
+
+  auto reader_maker = [](int k) {
+    return [k] {
+      printf("r%d prepared...\n", k);
+      sleep(1);
+      int ifd = inotify_init();
+      int iwd = inotify_add_watch(ifd, "/tmp/shm-event", IN_MODIFY);
+      for (int i = 0; i < 10; ++i) {
+        struct inotify_event e {};
+        read(ifd, &e, sizeof(e));
+        printf("r%d %u\n", k, e.mask);
+      }
+      inotify_rm_watch(ifd, iwd);
+      close(ifd);
+    };
+  };
+
+  auto r1 = test::subproc(reader_maker(1));
+  auto r2 = test::subproc(reader_maker(2));
+
+  test::join_subproc(sender);
   test::join_subproc(r1);
   test::join_subproc(r2);
 }
