@@ -1,3 +1,5 @@
+#include <libimp/detect_plat.h>
+#if defined(LIBIMP_OS_LINUX)
 
 #include <sys/eventfd.h>
 #include <sys/syscall.h>
@@ -20,7 +22,7 @@
 
 #include "test_util.h"
 
-#include "libipc/shm.h"
+#include <libipc/shm.h>
 
 namespace {
 
@@ -401,3 +403,4 @@ BENCHMARK(ipc_npipe_rtt);
 BENCHMARK(ipc_sock_rtt);
 BENCHMARK(ipc_udp_rtt);
 BENCHMARK(ipc_inotify_rtt);
+#endif
