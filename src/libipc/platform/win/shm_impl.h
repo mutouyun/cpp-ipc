@@ -39,7 +39,7 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   return new shm_handle{std::move(name), *sz, *mem, *h};
 }
 
-result_code shm_close(shm_t h) noexcept {
+result<void> shm_close(shm_t h) noexcept {
   LIBIMP_LOG_();
   if (h == nullptr) {
     log.error("shm handle is null.");

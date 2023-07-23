@@ -3,7 +3,7 @@
 
 #include "libipc/shm.h"
 
-TEST(shm, create_close) {
+TEST(shm, open_close) {
   EXPECT_FALSE(ipc::shm_open("hello-ipc-shm", 1024, ipc::mode::none));
 
   auto shm1 = ipc::shm_open("hello-ipc-shm", 1024, ipc::mode::create | ipc::mode::open);
@@ -77,7 +77,6 @@ TEST(shm, shared_memory) {
 }
 
 #include <libimp/detect_plat.h>
-
 #if defined(LIBIMP_OS_LINUX)
 #include <sys/socket.h>
 #include <sys/un.h>

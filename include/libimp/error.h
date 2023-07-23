@@ -17,6 +17,7 @@ LIBIMP_NAMESPACE_BEG_
 
 using error_code_t = std::uint64_t;
 constexpr error_code_t error_number_limit = error_code_t(-1);
+constexpr error_code_t no_error = 0;
 
 /**
  * \brief Serves as the base class for specific error category types.

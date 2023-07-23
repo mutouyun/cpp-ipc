@@ -150,7 +150,7 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
 /**
  * \see https://man7.org/linux/man-pages/man2/mmap.2.html
  */
-result_code shm_close(shm_t h) noexcept {
+result<void> shm_close(shm_t h) noexcept {
   LIBIMP_LOG_();
   auto shm = valid(h);
   if (shm == nullptr) return {};
@@ -161,7 +161,7 @@ result_code shm_close(shm_t h) noexcept {
   }
   /// \brief no unlink the file.
   delete shm;
-  return posix::succ;
+  return no_error;
 }
 
 LIBIPC_NAMESPACE_END_

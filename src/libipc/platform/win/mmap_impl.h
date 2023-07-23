@@ -33,7 +33,7 @@ namespace {
  * \brief Closes an open object handle.
  * \see https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
  */
-result_code mmap_close(HANDLE h) {
+result<void> mmap_close(HANDLE h) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
@@ -44,7 +44,7 @@ result_code mmap_close(HANDLE h) {
     log.error("failed: CloseHandle(", h, "). error = ", err);
     return err;
   }
-  return ERROR_SUCCESS;
+  return no_error;
 }
 
 /**
@@ -161,7 +161,7 @@ result<SIZE_T> mmap_sizeof(LPCVOID mem) {
  * \brief Unmaps a mapped view of a file from the calling process's address space.
  * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-unmapviewoffile
  */
-result_code mmap_release(HANDLE h, LPCVOID mem) {
+result<void> mmap_release(HANDLE h, LPCVOID mem) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
