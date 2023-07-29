@@ -53,12 +53,12 @@ result<void> mmap_close(HANDLE h) {
  * \see https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-openfilemappinga
  *      https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createfilemappinga
  * 
- * \param file Specifies the name of the file mapping object
+ * \param file Specifies the name of the file mapping object.
  * \param size Specifies the size required to create a file mapping object.
- *             This size is ignored when opening an existing file mapping object
- * \param type Combinable open modes, create | open
+ *             This size is ignored when opening an existing file mapping object.
+ * \param type Combinable open modes, create | open.
  * 
- * \return File mapping object HANDLE, NULL on error
+ * \return File mapping object HANDLE, NULL on error.
  */
 result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();

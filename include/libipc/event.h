@@ -19,7 +19,7 @@ LIBIPC_NAMESPACE_BEG_
 struct evt_handle;
 using evt_t = evt_handle *;
 
-/// \brief Create a new event object with a name.
+/// \brief Creates or opens a named event object.
 LIBIMP_EXPORT ::LIBIMP::result<evt_t> evt_open(std::string name) noexcept;
 
 /// \brief Close the event object.
@@ -32,8 +32,10 @@ LIBIMP_EXPORT std::string evt_name(evt_t) noexcept;
 /// \brief Sets the event object to the signaled state.
 LIBIMP_EXPORT ::LIBIMP::result<void> evt_set(evt_t) noexcept;
 
-/// \brief Waits until one of the specified event objects is in the signaled state.
+/// \brief Waits until the specified object is in the signaled state or the time-out interval elapses.
 LIBIMP_EXPORT ::LIBIMP::result<bool> evt_wait(evt_t, std::int64_t ms) noexcept;
+
+/// \brief Waits until one or all of the specified objects are in the signaled state or the time-out interval elapses.
 LIBIMP_EXPORT ::LIBIMP::result<bool> evt_wait(::LIBIMP::span<evt_t>, std::int64_t ms) noexcept;
 
 /**
