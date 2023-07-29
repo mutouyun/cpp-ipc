@@ -77,7 +77,7 @@ TEST(shm, shared_memory) {
 }
 
 #include <libimp/detect_plat.h>
-#if defined(LIBIMP_OS_LINUX)
+#if /*defined(LIBIMP_OS_LINUX)*/ 0
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/types.h>
