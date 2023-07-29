@@ -80,13 +80,19 @@ struct trait<C, false, false> {
   constexpr static T const *dataof(std::initializer_list<T> il) noexcept {
     return il.begin();
   }
+  template <typename T>
+  constexpr static T const *dataof(T const *p) noexcept {
+    return p;
+  }
 };
 
 } // namespace detail_dataof
 
-template <typename T, typename R = detail_dataof::trait<std::remove_cv_t<std::remove_reference_t<T>>>>
-constexpr auto dataof(T &&c) noexcept(noexcept(R::dataof(std::forward<T>(c)))) {
-  return R::dataof(std::forward<T>(c));
+template <typename C, 
+          typename T = detail_dataof::trait<std::remove_cv_t<std::remove_reference_t<C>>>, 
+          typename R = decltype(T::dataof(std::declval<C>()))>
+constexpr R dataof(C &&c) noexcept(noexcept(T::dataof(std::forward<C>(c)))) {
+  return T::dataof(std::forward<C>(c));
 }
 
 LIBIMP_NAMESPACE_END_

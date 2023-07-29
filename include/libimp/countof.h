@@ -71,9 +71,11 @@ struct trait<C, false, true> {
 
 } // namespace detail_countof
 
-template <typename C, typename R = detail_countof::trait<C>>
-constexpr auto countof(C const &c) noexcept(noexcept(R::countof(c))) {
-  return R::countof(c);
+template <typename C, 
+          typename T = detail_countof::trait<C>, 
+          typename R = decltype(T::countof(std::declval<C const &>()))>
+constexpr R countof(C const &c) noexcept(noexcept(T::countof(c))) {
+  return T::countof(c);
 }
 
 LIBIMP_NAMESPACE_END_
