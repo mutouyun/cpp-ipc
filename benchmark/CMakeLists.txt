@@ -14,8 +14,8 @@ FetchContent_Declare(googlebenchmark
   GIT_REPOSITORY https://github.com/google/benchmark.git
   GIT_TAG        v1.7.0
 )
-set(BENCHMARK_ENABLE_TESTING OFF)
-set(BENCHMARK_ENABLE_INSTALL OFF)
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
 add_definitions(-DBENCHMARK_STATIC_DEFINE)
 FetchContent_MakeAvailable(googlebenchmark)
 

@@ -6,6 +6,9 @@ if(NOT MSVC)
     -Wno-missing-field-initializers 
     -Wno-unused-variable 
     -Wno-unused-function)
+else()
+  add_compile_options(
+    /wd4723)
 endif()
 
 FetchContent_Declare(googletest
@@ -14,9 +17,9 @@ FetchContent_Declare(googletest
 )
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 if (LIBIPC_USE_STATIC_CRT)
-  set(gtest_force_shared_crt OFF)
+  set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
 else()
-  set(gtest_force_shared_crt ON)
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 endif()
 FetchContent_MakeAvailable(googletest)
 
