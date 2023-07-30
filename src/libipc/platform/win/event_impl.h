@@ -42,7 +42,10 @@ bool is_valid(evt_t evt) noexcept {
 result<evt_t> evt_open(std::string name) noexcept {
   LIBIMP_LOG_();
   auto t_name = detail::to_tstring(name);
-  auto h = ::CreateEvent(detail::get_sa(), FALSE, FALSE, t_name.c_str());
+  auto h = ::CreateEvent(detail::get_sa(), 
+                        /*bManualReset*/ FALSE, 
+                        /*bInitialState*/FALSE, 
+                        /*lpName*/       t_name.c_str());
   if (h == NULL) {
     auto err = sys::error();
     log.error("failed: CreateEvent(FALSE, FALSE, ", name, "). error = ", err);
@@ -119,7 +122,7 @@ result<bool> evt_wait(evt_t evt, std::int64_t ms) noexcept {
  * \brief Waits until one or all of the specified objects are in the signaled state or the time-out interval elapses.
  * \see https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitformultipleobjects
  */
-result<bool> evt_wait(::LIBIMP::span<evt_t> evts, std::int64_t ms) noexcept {
+result<bool> evt_wait(::LIBIMP::span<evt_t const> evts, std::int64_t ms) noexcept {
   LIBIMP_LOG_();
   if (evts.empty()) {
     log.error("evts handle is empty.");

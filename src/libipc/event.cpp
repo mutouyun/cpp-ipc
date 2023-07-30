@@ -2,8 +2,6 @@
 #include "libimp/log.h"
 
 #include "libimp/detect_plat.h"
-
-#include "libimp/detect_plat.h"
 #if defined(LIBIMP_OS_WIN)
 # include "libipc/platform/win/event_impl.h"
 #else

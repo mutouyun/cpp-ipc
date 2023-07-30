@@ -36,7 +36,7 @@ LIBIMP_EXPORT ::LIBIMP::result<void> evt_set(evt_t) noexcept;
 LIBIMP_EXPORT ::LIBIMP::result<bool> evt_wait(evt_t, std::int64_t ms) noexcept;
 
 /// \brief Waits until one or all of the specified objects are in the signaled state or the time-out interval elapses.
-LIBIMP_EXPORT ::LIBIMP::result<bool> evt_wait(::LIBIMP::span<evt_t>, std::int64_t ms) noexcept;
+LIBIMP_EXPORT ::LIBIMP::result<bool> evt_wait(::LIBIMP::span<evt_t const>, std::int64_t ms) noexcept;
 
 /**
  * \brief The event object.
