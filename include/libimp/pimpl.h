@@ -24,7 +24,7 @@ struct is_comfortable {
 };
 
 template <typename T, typename... A>
-auto make(A &&... args) -> std::enable_if_t<is_comfortable<T>::value, T *> {
+auto make(A &&...args) -> std::enable_if_t<is_comfortable<T>::value, T *> {
   T *buf {};
   // construct an object using memory of a pointer
   construct<T>(&buf, std::forward<A>(args)...);
@@ -42,7 +42,7 @@ auto clear(T *p) noexcept -> std::enable_if_t<is_comfortable<T>::value> {
 }
 
 template <typename T, typename... A>
-auto make(A &&... args) -> std::enable_if_t<!is_comfortable<T>::value, T *> {
+auto make(A &&...args) -> std::enable_if_t<!is_comfortable<T>::value, T *> {
   return new T{std::forward<A>(args)...};
 }
 
@@ -60,7 +60,7 @@ template <typename T>
 class Obj {
 public:
   template <typename... A>
-  static T *make(A &&... args) {
+  static T *make(A &&...args) {
     return pimpl::make<T>(std::forward<A>(args)...);
   }
 

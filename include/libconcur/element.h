@@ -64,7 +64,7 @@ public:
   using value_type = T;
 
   template <typename... A>
-  element(A &&... args) 
+  element(A &&...args) 
     noexcept(noexcept(T{std::forward<A>(args)...}))
     : f_ct_{state::invalid_value}
     , data_{std::forward<A>(args)...} {}

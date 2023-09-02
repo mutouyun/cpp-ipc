@@ -122,7 +122,7 @@ public:
     , level_limit_(level_limit) {}
 
   template <typename... A>
-  grip const &operator()(log::level l, A &&... args) const noexcept {
+  grip const &operator()(log::level l, A &&...args) const noexcept {
     if (underlyof(l) < underlyof(level_limit_)) {
       return *this;
     }

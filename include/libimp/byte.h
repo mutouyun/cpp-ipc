@@ -44,8 +44,7 @@ class byte {
   std::uint8_t bits_;
 
 public:
-  constexpr byte() noexcept
-    : byte(0) {}
+  byte() noexcept = default;
 
   template <typename T, typename = detail::is_integral<T>>
   constexpr byte(T v) noexcept

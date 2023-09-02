@@ -23,7 +23,7 @@ LIBIMP_NAMESPACE_BEG_
 */
 
 template <typename T, typename... A>
-auto construct(void *p, A &&... args)
+auto construct(void *p, A &&...args)
   -> std::enable_if_t<::std::is_constructible<T, A...>::value, T *> {
 #if defined(LIBIMP_CPP_20)
   return std::construct_at(static_cast<T *>(p), std::forward<A>(args)...);
@@ -33,7 +33,7 @@ auto construct(void *p, A &&... args)
 }
 
 template <typename T, typename... A>
-auto construct(void *p, A &&... args)
+auto construct(void *p, A &&...args)
   -> std::enable_if_t<!::std::is_constructible<T, A...>::value, T *> {
   return ::new (p) T{std::forward<A>(args)...};
 }

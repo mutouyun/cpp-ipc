@@ -8,71 +8,71 @@
 
 TEST(allocator, construct) {
   pmr::allocator alc;
-  EXPECT_FALSE(alc.valid());
-  EXPECT_FALSE(alc);
+  SUCCEED();
 }
 
-TEST(allocator, construct_with_memory_resource) {
-  pmr::new_delete_resource mem_res;
-  pmr::allocator alc {&mem_res};
-  EXPECT_TRUE(alc.valid());
-  EXPECT_TRUE(alc);
-
-  auto p = alc.alloc(128);
+TEST(allocator, construct_value_initialization) {
+  pmr::allocator alc{};
+  auto p = alc.allocate(128);
   EXPECT_NE(p, nullptr);
-  EXPECT_NO_THROW(alc.dealloc(p, 128));
+  EXPECT_NO_THROW(alc.deallocate(p, 128));
 }
+
+namespace {
+
+class dummy_resource {
+public:
+  void *allocate(std::size_t, std::size_t = 0) noexcept {
+    return nullptr;
+  }
+  void deallocate(void *, std::size_t, std::size_t = 0) noexcept {
+    return;
+  }
+};
+
+} // namespace
 
 TEST(allocator, construct_copy_move) {
   pmr::new_delete_resource mem_res;
+  dummy_resource dummy_res;
+  pmr::allocator alc1{&mem_res}, alc2{&dummy_res};
+  auto p = alc1.allocate(128);
+  ASSERT_NE(p, nullptr);
+  ASSERT_NO_THROW(alc1.deallocate(p, 128));
+  ASSERT_EQ(alc2.allocate(128), nullptr);
 
-  pmr::allocator alc1 {&mem_res}, alc2;
-  EXPECT_TRUE (alc1.valid());
-  EXPECT_TRUE (alc1);
-  EXPECT_FALSE(alc2.valid());
-  EXPECT_FALSE(alc2);
+  pmr::allocator alc3{alc1}, alc4{alc2}, alc5{std::move(alc1)};
 
-  pmr::allocator alc3 {alc1}, alc4{alc2}, alc5 {std::move(alc1)};
-  EXPECT_TRUE (alc3.valid());
-  EXPECT_TRUE (alc3);
-  EXPECT_FALSE(alc4.valid());
-  EXPECT_FALSE(alc4);
-  EXPECT_TRUE (alc5.valid());
-  EXPECT_TRUE (alc5);
-  EXPECT_FALSE(alc1.valid());
-  EXPECT_FALSE(alc1);
+  p = alc3.allocate(128);
+  ASSERT_NE(p, nullptr);
+  ASSERT_NO_THROW(alc3.deallocate(p, 128));
+
+  ASSERT_EQ(alc4.allocate(128), nullptr);
+
+  p = alc5.allocate(128);
+  ASSERT_NE(p, nullptr);
+  ASSERT_NO_THROW(alc5.deallocate(p, 128));
 }
 
 TEST(allocator, swap) {
   pmr::new_delete_resource mem_res;
-
-  pmr::allocator alc1 {&mem_res}, alc2;
-  EXPECT_TRUE (alc1.valid());
-  EXPECT_TRUE (alc1);
-  EXPECT_FALSE(alc2.valid());
-  EXPECT_FALSE(alc2);
-
+  dummy_resource dummy_res;
+  pmr::allocator alc1{&mem_res}, alc2{&dummy_res};
   alc1.swap(alc2);
-  EXPECT_FALSE(alc1.valid());
-  EXPECT_FALSE(alc1);
-  EXPECT_TRUE (alc2.valid());
-  EXPECT_TRUE (alc2);
+  auto p = alc2.allocate(128);
+  ASSERT_NE(p, nullptr);
+  ASSERT_NO_THROW(alc2.deallocate(p, 128));
+  ASSERT_EQ(alc1.allocate(128), nullptr);
 }
 
 TEST(allocator, invalid_alloc_free) {
-  pmr::new_delete_resource mem_res;
+  pmr::allocator alc1;
+  EXPECT_EQ(alc1.allocate(0), nullptr);
+  EXPECT_NO_THROW(alc1.deallocate(nullptr, 128));
+  EXPECT_NO_THROW(alc1.deallocate(nullptr, 0));
+  EXPECT_NO_THROW(alc1.deallocate(&alc1, 0));
+}
 
-  pmr::allocator alc1 {&mem_res}, alc2;
-  EXPECT_EQ(alc1.alloc(0), nullptr);
-  EXPECT_NO_THROW(alc1.dealloc(nullptr, 128));
-  EXPECT_NO_THROW(alc1.dealloc(nullptr, 0));
-  EXPECT_NO_THROW(alc1.dealloc(&alc1, 0));
-
-  EXPECT_EQ(alc2.alloc(0), nullptr);
-  EXPECT_NO_THROW(alc2.dealloc(nullptr, 128));
-  EXPECT_NO_THROW(alc2.dealloc(nullptr, 0));
-  EXPECT_NO_THROW(alc2.dealloc(&alc1, 0));
-
-  EXPECT_EQ(alc2.alloc(1024), nullptr);
-  EXPECT_NO_THROW(alc2.dealloc(&alc1, sizeof(alc1)));
+TEST(allocator, sizeof) {
+  EXPECT_EQ(sizeof(pmr::allocator), sizeof(void *) * 2);
 }

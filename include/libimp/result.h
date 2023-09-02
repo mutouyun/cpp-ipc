@@ -142,7 +142,7 @@ public:
             typename = not_match<result, A...>,
             typename = decltype(type_traits_t::init_code(std::declval<storage_t &>()
                                                        , std::declval<A>()...))>
-  result(A &&... args) noexcept {
+  result(A &&...args) noexcept {
     type_traits_t::init_code(code_, std::forward<A>(args)...);
   }
 
@@ -171,7 +171,7 @@ public:
             typename = not_match<result, A...>,
             typename = decltype(type_traits_t::init_code(std::declval<storage_t &>()
                                                        , std::declval<A>()...))>
-  result(A &&... args) noexcept {
+  result(A &&...args) noexcept {
     type_traits_t::init_code(code_, std::forward<A>(args)...);
   }
 

@@ -77,18 +77,15 @@ private:
   };
 
   data *init(index_t circ_size) noexcept {
-    if (!data_allocator_) {
-      return nullptr;
-    }
     void *data_ptr = nullptr;
     LIBIMP_TRY {
-      data_ptr = data_allocator_.alloc(data::size_of(circ_size));
+      data_ptr = data_allocator_.allocate(data::size_of(circ_size));
       if (data_ptr == nullptr) {
         return nullptr;
       }
       return ::LIBIMP::construct<data>(data_ptr, circ_size);
     } LIBIMP_CATCH(...) {
-      data_allocator_.dealloc(data_ptr, data::size_of(circ_size));
+      data_allocator_.deallocate(data_ptr, data::size_of(circ_size));
       return nullptr;
     }
   }
@@ -128,7 +125,7 @@ public:
     if (valid()) {
       auto sz = data_->byte_size();
       (void)::LIBIMP::destroy<data>(data_);
-      data_allocator_.dealloc(data_, sz);
+      data_allocator_.deallocate(data_, sz);
     }
   }
 
@@ -148,7 +145,7 @@ public:
     : data_model(default_circle_buffer_size) {}
 
   bool valid() const noexcept {
-    return (data_ != nullptr) && data_allocator_.valid();
+    return data_ != nullptr;
   }
 
   explicit operator bool() const noexcept {
