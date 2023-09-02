@@ -5,6 +5,7 @@
 
 #include <libipc/event.h>
 
+#if !defined(LIBIMP_OS_LINUX)
 TEST(event, open_close) {
   auto evt = ipc::evt_open("test");
   ASSERT_TRUE(evt);
@@ -97,3 +98,4 @@ TEST(event, unicast_multi) {
   ASSERT_TRUE(ipc::evt_close(*evt3));
   ASSERT_EQ(success, 1);
 }
+#endif

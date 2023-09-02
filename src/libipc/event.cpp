@@ -7,6 +7,7 @@
 #else
 #endif
 
+#if !defined(LIBIMP_OS_LINUX)
 LIBIPC_NAMESPACE_BEG_
 
 /// \brief C style event access interface implementation.
@@ -23,3 +24,4 @@ std::string evt_name(evt_t evt) noexcept {
 /// \brief The event object.
 
 LIBIPC_NAMESPACE_END_
+#endif

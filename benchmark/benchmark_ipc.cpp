@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/inotify.h>
 #include <netinet/in.h>
+#include <errno.h>
 
 #include <string.h>
 #include <unistd.h>
@@ -72,14 +73,27 @@ struct mqueue_reader {
       auto shm = ipc::shared_memory("shm-mqueue_reader", sizeof(flag_t));
       auto flag = shm.as<flag_t>();
       printf("mqueue_reader start.\n");
-      mqd_t wfd = mq_open("/mqueue-wfd", O_RDONLY);
-      mqd_t rfd = mq_open("/mqueue-rfd", O_WRONLY);
+      mq_unlink("/mqueue-wfd");
+      mq_unlink("/mqueue-rfd");
+      struct mq_attr attr = {0, 10, 1, 0};
+      mqd_t wfd = mq_open("/mqueue-wfd", O_CREAT | O_RDONLY, 0666, &attr);
+      mqd_t rfd = mq_open("/mqueue-rfd", O_CREAT | O_WRONLY, 0666, &attr);
+      if (wfd < 0 || rfd < 0) {
+        printf("mq_open error. errno = %d\n", errno);
+        return;
+      }
       while (!flag->load(std::memory_order_relaxed)) {
         char n {};
         // read
-        mq_receive(wfd, &n, sizeof(n), nullptr);
+        if (mq_receive(wfd, &n, sizeof(n), nullptr) < 0) {
+          printf("mq_receive error. errno = %d\n", errno);
+          return;
+        }
         // write
-        mq_send(rfd, &n, sizeof(n), 0);
+        if (mq_send(rfd, &n, sizeof(n), 0) < 0) {
+          printf("mq_send error. errno = %d\n", errno);
+          return;
+        }
       }
       printf("mqueue_reader exit.\n");
       mq_close(wfd);
@@ -91,9 +105,16 @@ struct mqueue_reader {
     auto shm = ipc::shared_memory("shm-mqueue_reader", sizeof(flag_t));
     shm.as<flag_t>()->store(true, std::memory_order_seq_cst);
     {
-      mqd_t wfd = mq_open("/mqueue-wfd", O_WRONLY);
+      mqd_t wfd = mq_open("/mqueue-wfd", O_EXCL | O_WRONLY, 0666, NULL);
+      if (wfd < 0) {
+        printf("mq_open error. errno = %d\n", errno);
+        return;
+      }
       char n {};
-      mq_send(wfd, &n, sizeof(n), 0);
+      if (mq_send(wfd, &n, sizeof(n), 0) < 0) {
+        printf("mq_send error. errno = %d\n", errno);
+        return;
+      }
       mq_close(wfd);
     }
     test::join_subproc(pid_);
@@ -314,14 +335,24 @@ void ipc_eventfd_rtt(benchmark::State &state) {
 }
 
 void ipc_mqueue_rtt(benchmark::State &state) {
-  mqd_t wfd = mq_open("/mqueue-wfd", O_WRONLY);
-  mqd_t rfd = mq_open("/mqueue-rfd", O_RDONLY);
+  mqd_t wfd = mq_open("/mqueue-wfd", O_EXCL | O_WRONLY, 0666, NULL);
+  mqd_t rfd = mq_open("/mqueue-rfd", O_EXCL | O_RDONLY, 0666, NULL);
+  if (wfd < 0 || rfd < 0) {
+    printf("mq_open error. errno = %d\n", errno);
+    return;
+  }
   for (auto _ : state) {
     char n {};
     // write
-    mq_send(wfd, &n, sizeof(n), 0);
+    if (mq_send(wfd, &n, sizeof(n), 0) < 0) {
+      printf("mq_send error. errno = %d\n", errno);
+      return;
+    }
     // read
-    mq_receive(rfd, &n, sizeof(n), nullptr);
+    if (mq_receive(rfd, &n, sizeof(n), nullptr) < 0) {
+      printf("mq_receive error. errno = %d\n", errno);
+      return;
+    }
   }
   mq_close(wfd);
   mq_close(rfd);
