@@ -13,7 +13,7 @@
 #include <cstddef>  // std::nullptr_t
 
 #include "libimp/def.h"
-#include "libimp/construct.h"
+#include "libimp/uninitialized.h"
 #include "libimp/generic.h"
 #include "libimp/byte.h"
 

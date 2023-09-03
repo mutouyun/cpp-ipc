@@ -10,7 +10,7 @@
 #include <array>
 
 #include "libimp/export.h"
-#include "libimp/construct.h"
+#include "libimp/uninitialized.h"
 #include "libimp/byte.h"
 
 #include "libpmr/def.h"

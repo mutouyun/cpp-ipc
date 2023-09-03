@@ -11,7 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "libimp/construct.h"
+#include "libimp/uninitialized.h"
 #include "libimp/detect_plat.h"
 #include "libimp/aligned.h"
 

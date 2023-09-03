@@ -1,7 +1,7 @@
 /**
- * \file libimp/construct.h
+ * \file libimp/uninitialized.h
  * \author mutouyun (orz@orzz.org)
- * \brief Construct an object from a memory buffer
+ * \brief Uninitialized memory algorithms.
  * \date 2022-02-27
  */
 #pragma once
@@ -14,6 +14,7 @@
 
 #include "libimp/def.h"
 #include "libimp/detect_plat.h"
+#include "libimp/horrible_cast.h"
 
 LIBIMP_NAMESPACE_BEG_
 
@@ -65,6 +66,44 @@ void *destroy(T (*p)[N]) noexcept {
   for (auto &elem : *p) destroy(std::addressof(elem));
 #endif
   return p;
+}
+
+/**
+ * \brief Destroys a range of objects.
+ * \see https://en.cppreference.com/w/cpp/memory/destroy
+*/
+template <typename ForwardIt>
+void destroy(ForwardIt first, ForwardIt last) noexcept {
+#if defined(LIBIMP_CPP_17)
+  std::destroy(first, last);
+#else
+  for (; first != last; ++first) {
+    destroy(std::addressof(*first));
+  }
+#endif
+}
+
+/**
+ * \brief Constructs objects by default-initialization 
+ * in an uninitialized area of memory, defined by a start and a count.
+ * \see https://en.cppreference.com/w/cpp/memory/uninitialized_default_construct_n
+*/
+template <typename ForwardIt, typename Size>
+ForwardIt uninitialized_default_construct_n(ForwardIt first, Size n) {
+#if defined(LIBIMP_CPP_17)
+  return std::uninitialized_default_construct_n(first, n);
+#else
+  using T = typename std::iterator_traits<ForwardIt>::value_type;
+  ForwardIt current = first;
+  LIBIMP_TRY {
+    for (; n > 0; (void) ++current, --n)
+      ::new (horrible_cast<void *>(std::addressof(*current))) T;
+    return current;
+  } LIBIMP_CATCH(...) {
+    destroy(first, current);
+    LIBIMP_THROW(, first);
+  }
+#endif
 }
 
 LIBIMP_NAMESPACE_END_

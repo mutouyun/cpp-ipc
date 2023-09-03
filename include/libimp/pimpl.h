@@ -10,7 +10,7 @@
 #include <type_traits>
 #include <cstdint>
 
-#include "libimp/construct.h"
+#include "libimp/uninitialized.h"
 #include "libimp/def.h"
 
 LIBIMP_NAMESPACE_BEG_

@@ -22,6 +22,12 @@ template <typename...>
 using void_t = void;
 
 /**
+ * \brief A type-list for generic programming.
+*/
+template <typename...>
+struct types {};
+
+/**
  * \brief To indicate that the contained object should be constructed in-place.
  * \see https://en.cppreference.com/w/cpp/utility/in_place
  */

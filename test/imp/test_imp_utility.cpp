@@ -5,7 +5,7 @@
 
 #include "gtest/gtest.h"
 
-#include "libimp/construct.h"
+#include "libimp/uninitialized.h"
 #include "libimp/pimpl.h"
 #include "libimp/countof.h"
 #include "libimp/dataof.h"
