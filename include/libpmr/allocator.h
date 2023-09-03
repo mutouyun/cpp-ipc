@@ -62,16 +62,18 @@ class LIBIMP_EXPORT allocator {
    */
   template <typename MR>
   class holder_mr<MR, verify_memory_resource<MR>> : public holder_mr<MR, void> {
+    using base_t = holder_mr<MR, void>;
+
   public:
     holder_mr(MR *p_mr) noexcept
-      : holder_mr<MR, void>{p_mr} {}
+      : base_t{p_mr} {}
 
     void *alloc(std::size_t s, std::size_t a) const override {
-      return res_->allocate(s, a);
+      return base_t::res_->allocate(s, a);
     }
 
     void dealloc(void *p, std::size_t s, std::size_t a) const override {
-      res_->deallocate(p, s, a);
+      base_t::res_->deallocate(p, s, a);
     }
   };
 
