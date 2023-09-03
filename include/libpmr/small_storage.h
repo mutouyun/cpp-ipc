@@ -207,6 +207,7 @@ struct holder_info {
   std::size_t sizeof_type;
   std::size_t count;
   void (*copy)(allocator const &, void const *s, void *d);
+  void (*dest)(void *p, std::size_t n) noexcept;
 };
 
 template <typename Value, typename Construct>
@@ -260,6 +261,9 @@ public:
       if (dst.value_ptr_ == nullptr) return;
       dst.info_ = src.info_;
     };
+    info_.dest = [](void *p, std::size_t n) noexcept {
+      ::LIBIMP::destroy_n(static_cast<Value *>(p), n);
+    };
   }
 
   bool valid() const noexcept override {
@@ -292,23 +296,21 @@ public:
 
   void move_to(allocator const &, void *p) noexcept override {
     auto *des = ::LIBIMP::construct<holder>(p);
-    if (value_ptr_ == nullptr) {
-      return;
-    }
+    if (!valid()) return;
     std::swap(value_ptr_, des->value_ptr_);
     std::swap(info_, des->info_);
   }
 
   void copy_to(allocator const &alloc, void *p) const noexcept(false) override {
     auto *des = ::LIBIMP::construct<holder>(p);
-    if (value_ptr_ == nullptr) {
-      return;
-    }
+    if (!valid()) return;
     info_.copy(alloc, this, des);
   }
 
   void destroy(allocator const &alloc) noexcept override {
-    alloc.deallocate(::LIBIMP::destroy(value_ptr_), info_.sizeof_type * info_.count);
+    if (!valid()) return;
+    info_.dest(value_ptr_, count());
+    alloc.deallocate(value_ptr_, sizeof_heap());
   }
 };
 

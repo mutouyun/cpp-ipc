@@ -84,6 +84,21 @@ void destroy(ForwardIt first, ForwardIt last) noexcept {
 }
 
 /**
+ * \brief Destroys a number of objects in a range.
+ * \see https://en.cppreference.com/w/cpp/memory/destroy_n
+*/
+template <typename ForwardIt, typename Size>
+ForwardIt destroy_n(ForwardIt first, Size n) noexcept {
+#if defined(LIBIMP_CPP_17)
+  return std::destroy_n(first, n);
+#else
+  for (; n > 0; (void) ++first, --n)
+    destroy(std::addressof(*first));
+  return first;
+#endif
+}
+
+/**
  * \brief Constructs objects by default-initialization 
  * in an uninitialized area of memory, defined by a start and a count.
  * \see https://en.cppreference.com/w/cpp/memory/uninitialized_default_construct_n
