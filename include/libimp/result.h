@@ -1,7 +1,7 @@
 /**
  * \file libimp/result.h
  * \author mutouyun (orz@orzz.org)
- * \brief Define the return value type with a status code
+ * \brief Define the return value type with a status code.
  * \date 2022-04-17
  */
 #pragma once

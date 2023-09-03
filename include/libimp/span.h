@@ -1,7 +1,7 @@
 /**
  * \file libimp/span.h
  * \author mutouyun (orz@orzz.org)
- * \brief Describes an object that can refer to a contiguous sequence of objects
+ * \brief Describes an object that can refer to a contiguous sequence of objects.
  * \date 2022-10-16
  */
 #pragma once

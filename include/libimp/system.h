@@ -1,7 +1,7 @@
 /**
  * \file libimp/system.h
  * \author mutouyun (orz@orzz.org)
- * \brief Isolation and encapsulation of system APIs
+ * \brief Isolation and encapsulation of system APIs.
  * \date 2022-08-07
  */
 #pragma once

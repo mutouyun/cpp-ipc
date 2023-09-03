@@ -1,7 +1,7 @@
 /**
  * \file libimp/underlyof.h
  * \author mutouyun (orz@orzz.org)
- * \brief Returns the underlying type of the given enum
+ * \brief Returns the underlying type of the given enum.
  * \date 2022-03-01
  */
 #pragma once

@@ -1,7 +1,7 @@
 /**
  * \file libimp/export.h
  * \author mutouyun (orz@orzz.org)
- * \brief Define the symbol export interfaces
+ * \brief Define the symbol export interfaces.
  * \date 2022-02-27
  */
 #pragma once

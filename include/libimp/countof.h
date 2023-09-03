@@ -1,7 +1,7 @@
 /**
  * \file libimp/countof.h
  * \author mutouyun (orz@orzz.org)
- * \brief Returns the size of the given range
+ * \brief Returns the size of the given range.
  * \date 2022-03-01
  */
 #pragma once

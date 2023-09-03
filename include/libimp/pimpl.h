@@ -1,7 +1,7 @@
 /**
  * \file libimp/pimpl.h
  * \author mutouyun (orz@orzz.org)
- * \brief Pointer To Implementation (pImpl) idiom
+ * \brief Pointer To Implementation (pImpl) idiom.
  * \date 2022-02-27
  */
 #pragma once

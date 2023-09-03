@@ -1,7 +1,7 @@
 /**
  * \file libimp/codecvt.h
  * \author mutouyun (orz@orzz.org)
- * \brief Character set conversion interface
+ * \brief Character set conversion interface.
  * \date 2022-08-07
  */
 #pragma once

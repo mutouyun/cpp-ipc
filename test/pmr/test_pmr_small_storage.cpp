@@ -11,6 +11,7 @@ TEST(small_storage, holder_construct) {
   pmr::holder<int, true>();
   pmr::holder<int, false>();
   pmr::holder<void, true>();
+  pmr::holder<void, false>();
   SUCCEED();
 }
 
@@ -19,21 +20,25 @@ TEST(small_storage, holder_copy_move_construct) {
   EXPECT_FALSE((std::is_copy_constructible<pmr::holder<int, true>>::value));
   EXPECT_FALSE((std::is_copy_constructible<pmr::holder<int, false>>::value));
   EXPECT_FALSE((std::is_copy_constructible<pmr::holder<void, true>>::value));
+  EXPECT_FALSE((std::is_copy_constructible<pmr::holder<void, false>>::value));
 
   EXPECT_FALSE(std::is_copy_assignable<pmr::holder_null>::value);
   EXPECT_FALSE((std::is_copy_assignable<pmr::holder<int, true>>::value));
   EXPECT_FALSE((std::is_copy_assignable<pmr::holder<int, false>>::value));
   EXPECT_FALSE((std::is_copy_assignable<pmr::holder<void, true>>::value));
+  EXPECT_FALSE((std::is_copy_assignable<pmr::holder<void, false>>::value));
 
   EXPECT_FALSE(std::is_move_constructible<pmr::holder_null>::value);
   EXPECT_FALSE((std::is_move_constructible<pmr::holder<int, true>>::value));
   EXPECT_FALSE((std::is_move_constructible<pmr::holder<int, false>>::value));
   EXPECT_FALSE((std::is_move_constructible<pmr::holder<void, true>>::value));
+  EXPECT_FALSE((std::is_move_constructible<pmr::holder<void, false>>::value));
 
   EXPECT_FALSE(std::is_move_assignable<pmr::holder_null>::value);
   EXPECT_FALSE((std::is_move_assignable<pmr::holder<int, true>>::value));
   EXPECT_FALSE((std::is_move_assignable<pmr::holder<int, false>>::value));
   EXPECT_FALSE((std::is_move_assignable<pmr::holder<void, true>>::value));
+  EXPECT_FALSE((std::is_move_assignable<pmr::holder<void, false>>::value));
 }
 
 TEST(small_storage, holder_copy_move) {
@@ -46,7 +51,7 @@ TEST(small_storage, holder_copy_move) {
 
   pmr::allocator alc;
   pmr::holder<foo, true> h1(alc, 1);
-  pmr::holder<foo, true> h2, h3; // uninitialized
+  pmr::holder<foo, true> h2, h3;
   h1.copy_to(alc, &h2);
   EXPECT_EQ(static_cast<foo *>(h1.get())->i, 1);
   EXPECT_EQ(static_cast<foo *>(h2.get())->i, 1);
@@ -58,7 +63,7 @@ TEST(small_storage, holder_copy_move) {
   h3.destroy(alc);
 
   pmr::holder<foo, false> h4(alc, 1);
-  pmr::holder<foo, false> h5, h6; // uninitialized
+  pmr::holder<foo, false> h5, h6;
   h4.copy_to(alc, &h5);
   EXPECT_EQ(static_cast<foo *>(h4.get())->i, 1);
   EXPECT_EQ(static_cast<foo *>(h5.get())->i, 1);
@@ -70,7 +75,7 @@ TEST(small_storage, holder_copy_move) {
   h6.destroy(alc);
 
   pmr::holder<void, true> h7(alc, ::LIBIMP::types<int>{}, 10);
-  pmr::holder<void, true> h8, h9; // uninitialized
+  pmr::holder<void, true> h8, h9;
   h7.copy_to(alc, &h8);
   EXPECT_EQ(h7.count(), 10);
   EXPECT_EQ(h8.count(), 10);
@@ -80,6 +85,18 @@ TEST(small_storage, holder_copy_move) {
   h7.destroy(alc);
   h8.destroy(alc);
   h9.destroy(alc);
+
+  pmr::holder<void, false> h10(alc, ::LIBIMP::types<int>{}, 10);
+  pmr::holder<void, false> h11, h12;
+  h10.copy_to(alc, &h11);
+  EXPECT_EQ(h10.count(), 10);
+  EXPECT_EQ(h11.count(), 10);
+  h10.move_to(alc, &h12);
+  EXPECT_EQ(h10.count(), 0);
+  EXPECT_EQ(h12.count(), 10);
+  h10.destroy(alc);
+  h11.destroy(alc);
+  h12.destroy(alc);
 }
 
 TEST(small_storage, construct) {

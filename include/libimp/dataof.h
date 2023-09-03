@@ -1,7 +1,7 @@
 /**
  * \file libimp/dataof.h
  * \author mutouyun (orz@orzz.org)
- * \brief Returns the data pointer of the given range
+ * \brief Returns the data pointer of the given range.
  * \date 2023-05-27
  */
 #pragma once
