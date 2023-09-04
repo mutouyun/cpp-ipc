@@ -27,18 +27,18 @@ TEST(byte, construct) {
 
 TEST(byte, compare) {
   {
-    imp::byte b1, b2;
+    imp::byte b1{}, b2{};
     EXPECT_EQ(b1, b2);
   }
   {
-    imp::byte b1, b2(321);
+    imp::byte b1{}, b2(321);
     EXPECT_NE(b1, b2);
   }
 }
 
 TEST(byte, fmt) {
   {
-    imp::byte b1, b2(31);
+    imp::byte b1{}, b2(31);
     EXPECT_EQ(imp::fmt(b1), "00");
     EXPECT_EQ(imp::fmt(b2), "1f");
     EXPECT_EQ(imp::fmt(imp::spec("03X")(b2)), "01F");
