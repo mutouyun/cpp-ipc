@@ -18,35 +18,17 @@
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
 
-/**
- * \brief Get/Set the system error number
- */
-LIBIMP_EXPORT error_code_t error_no() noexcept;
-LIBIMP_EXPORT void error_no(error_code_t const &) noexcept;
+/// \brief A platform-dependent error code.
+LIBIMP_EXPORT std::error_code error() noexcept;
 
-/**
- * \brief Gets a text description of the system error
- */
-LIBIMP_EXPORT std::string error_str(error_code_t const &) noexcept;
-
-/**
- * \brief Identifies the operating system error category.
- * \see https://en.cppreference.com/w/cpp/error/system_category
- */
-LIBIMP_EXPORT error_category const &category() noexcept;
-
-/**
- * \brief A platform-dependent error code.
- * \see https://en.cppreference.com/w/cpp/error/error_code
- */
-LIBIMP_EXPORT error_code error() noexcept;
-
-/**
- * \brief Get system configuration information at run time
- */
+/// \enum The name of the `conf()` argument used to inquire about its value.
+/// \brief Certain options are supported, 
+/// or what the value is of certain configurable constants or limits.
 enum class info : std::int32_t {
   page_size,
 };
+
+/// \brief Get system configuration information at run time.
 LIBIMP_EXPORT result<std::int64_t> conf(info) noexcept;
 
 } // namespace sys

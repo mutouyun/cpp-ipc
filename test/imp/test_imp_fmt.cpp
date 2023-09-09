@@ -25,19 +25,19 @@ TEST(fmt, to_string) {
     EXPECT_EQ(joined, std::forward<decltype(txt)>(txt));
   };
 
-  /// @brief string
+  /// \brief string
   check("", "");
   check("%what%", "%what%");
   check("    %what%", "%what%", "10");
   check("%what%    ", "%what%", "-10");
 
-  /// @brief character
+  /// \brief character
   check("A", 'A');
   check("A", L'A');
   check("A", u'A');
   check("A", U'A');
 
-  /// @brief numeric
+  /// \brief numeric
   check("123"       , (signed char)123      );
   check("-65"       , (signed char)-321     );
   check("123"       , (unsigned char)123    );
@@ -63,7 +63,7 @@ TEST(fmt, to_string) {
   check("1CAAB5C3B3", 123123123123ll, "X"   );
   check("1CAAB5C3B3", 123123123123ull, "X"  );
 
-  /// @brief floating point
+  /// \brief floating point
   check("123.123"     , 123.123f, ".3");
   check("0123.12300"  , 123.123, "010.5");
   check("123.123000"  , 123.123l, "010.6");
@@ -75,13 +75,13 @@ TEST(fmt, to_string) {
   ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, 1.0/r)); ctx.finish();
   std::cout << joined << "\n";
 
-  /// @brief pointer
+  /// \brief pointer
   check("null", nullptr);
   int *p = (int *)0x0f013a04;
   ctx.reset(); EXPECT_TRUE(imp::to_string(ctx, (void *)p)); ctx.finish();
   std::cout << joined << "\n";
 
-  /// @brief date and time
+  /// \brief date and time
   auto tp = std::chrono::system_clock::now();
   auto tt = std::chrono::system_clock::to_time_t(tp);
   auto tm = *std::localtime(&tt);
@@ -95,14 +95,14 @@ TEST(fmt, to_string) {
 TEST(fmt, fmt) {
   char const txt[] = "hello world.";
 
-  /// @brief hello world
+  /// \brief hello world
   auto s = imp::fmt("hello", " ", "world", ".");
   EXPECT_EQ(s, txt);
 
-  /// @brief chrono
+  /// \brief chrono
   std::cout << imp::fmt('[', std::chrono::system_clock::now(), "] ", s) << "\n";
 
-  /// @brief long string
+  /// \brief long string
   s = imp::fmt(imp::spec("4096")(txt));
   std::string test(4096, ' ');
   std::memcpy(&test[test.size() - sizeof(txt) + 1], txt, sizeof(txt) - 1);

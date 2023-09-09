@@ -44,7 +44,7 @@ result<void> mmap_close(HANDLE h) {
     log.error("failed: CloseHandle(", h, "). error = ", err);
     return err;
   }
-  return no_error;
+  return std::error_code{};
 }
 
 /**

@@ -50,15 +50,15 @@ TEST(result, ok) {
 
   imp::result<void> r1;
   EXPECT_FALSE(r1);
-  r1 = 0;
+  r1 = std::error_code{};
   EXPECT_TRUE(r1);
   r1 = {};
   EXPECT_FALSE(r1);
-  r1 = 9999;
+  r1 = std::error_code{9999, std::generic_category()};
   EXPECT_FALSE(r1);
-  EXPECT_EQ(r1.error(), 9999);
+  EXPECT_EQ(r1.error().value(), 9999);
 
-  imp::result<int *> r2 {nullptr, 4321};
+  imp::result<int *> r2 {nullptr, std::error_code{4321, std::generic_category()}};
   EXPECT_NE(r2, nullptr); // imp::result<int *>{nullptr}
   EXPECT_EQ(*r2, nullptr);
   EXPECT_FALSE(r2);
@@ -103,7 +103,7 @@ TEST(result, fmt) {
     EXPECT_EQ(imp::fmt(r3), imp::fmt("succ, value = ", (void *)&aaa));
     imp::result<int *> r4 {nullptr};
     EXPECT_EQ(imp::fmt(r4), imp::fmt("fail, value = ", nullptr, ", error = [generic: 0, \"failure\"]"));
-    r4 = {nullptr, 1234};
+    r4 = {nullptr, std::error_code{1234, std::generic_category()}};
     EXPECT_EQ(imp::fmt(r4), imp::fmt("fail, value = ", nullptr, ", error = [generic: 1234, \"failure\"]"));
     imp::result<int *> r5;
     EXPECT_EQ(imp::fmt(r5), "fail, value = null, error = [generic: 0, \"failure\"]");
@@ -115,7 +115,7 @@ TEST(result, fmt) {
   {
     imp::result<void> r1;
     EXPECT_EQ(imp::fmt(r1), "fail, error = [generic: 0, \"failure\"]");
-    r1 = 0;
+    r1 = std::error_code{};
     EXPECT_TRUE(r1);
     EXPECT_EQ(imp::fmt(r1), "succ, error = [generic: 0, \"success\"]");
   }

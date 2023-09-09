@@ -161,7 +161,7 @@ result<void> shm_close(shm_t h) noexcept {
   }
   /// \brief no unlink the file.
   delete shm;
-  return no_error;
+  return std::error_code{};
 }
 
 LIBIPC_NAMESPACE_END_

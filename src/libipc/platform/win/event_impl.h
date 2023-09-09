@@ -70,7 +70,7 @@ result<void> evt_close(evt_t evt) noexcept {
     log.error("failed: CloseHandle(", evt->h_event, "). error = ", err);
     return err;
   }
-  return no_error;
+  return std::error_code{};
 }
 
 /**
@@ -88,7 +88,7 @@ result<void> evt_set(evt_t evt) noexcept {
     log.error("failed: SetEvent(", evt->h_event, "). error = ", err);
     return err;
   }
-  return no_error;
+  return std::error_code{};
 }
 
 /**

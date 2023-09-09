@@ -38,19 +38,19 @@ namespace detail_result {
 template <typename T>
 struct generic_traits {
   /// \typedef Combine data and valid identifiers with a tuple.
-  using storage_t = std::tuple<T, error_code>;
+  using storage_t = std::tuple<T, std::error_code>;
 
   /// \brief Custom initialization.
   constexpr static void init_code(storage_t &code) noexcept {
-    code = {0, error_number_limit/*make a default error code*/};
+    code = {0, std::make_error_code(std::errc::invalid_argument)};
   }
-  constexpr static void init_code(storage_t &code, T value, error_code const &ec) noexcept {
+  constexpr static void init_code(storage_t &code, T value, std::error_code const &ec) noexcept {
     code = {value, ec};
   }
   constexpr static void init_code(storage_t &code, T value) noexcept {
     code = {value, {}};
   }
-  constexpr static void init_code(storage_t &code, error_code const &ec) noexcept {
+  constexpr static void init_code(storage_t &code, std::error_code const &ec) noexcept {
     code = {{}, ec};
   }
 
@@ -61,7 +61,7 @@ struct generic_traits {
   constexpr static bool get_ok(storage_t const &code) noexcept {
     return !std::get<1>(code);
   }
-  constexpr static error_code get_error(storage_t const &code) noexcept {
+  constexpr static std::error_code get_error(storage_t const &code) noexcept {
     return std::get<1>(code);
   }
 };
@@ -69,13 +69,13 @@ struct generic_traits {
 template <typename ___>
 struct default_traits<void, ___> {
   /// \typedef Use the `error_code` as the storage type.
-  using storage_t = error_code;
+  using storage_t = std::error_code;
 
   /// \brief Custom initialization.
   constexpr static void init_code(storage_t &code) noexcept {
-    code = error_number_limit/*make a default error code*/;
+    code = std::make_error_code(std::errc::invalid_argument);
   }
-  constexpr static void init_code(storage_t &code, error_code const &ec) noexcept {
+  constexpr static void init_code(storage_t &code, std::error_code const &ec) noexcept {
     code = ec;
   }
 
@@ -83,7 +83,7 @@ struct default_traits<void, ___> {
   constexpr static bool get_ok(storage_t const &code) noexcept {
     return !code;
   }
-  constexpr static error_code get_error(storage_t const &code) noexcept {
+  constexpr static std::error_code get_error(storage_t const &code) noexcept {
     return code;
   }
 
@@ -96,8 +96,7 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> : generic
   /// \brief Custom initialization.
   constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
                                   T value, bool ok) noexcept {
-    code = {value, static_cast<error_code_t>(ok ? 0 : 
-                                  ((value == 0) ? error_number_limit : value))};
+    code = {value, ok ? std::error_code() : std::make_error_code(std::errc::invalid_argument)};
   }
   using generic_traits<T>::init_code;
 
@@ -109,12 +108,12 @@ template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> : generic_traits<T> {
   /// \brief Custom initialization.
   constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
-                                  std::nullptr_t, error_code const &ec) noexcept {
+                                  std::nullptr_t, std::error_code const &ec) noexcept {
     code = {nullptr, ec};
   }
   constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
                                   std::nullptr_t) noexcept {
-    code = {nullptr, -1};
+    code = {nullptr, std::make_error_code(std::errc::invalid_argument)};
   }
   using generic_traits<T>::init_code;
 
@@ -146,9 +145,9 @@ public:
     type_traits_t::init_code(code_, std::forward<A>(args)...);
   }
 
-  T          value() const noexcept { return type_traits_t::get_value(code_); }
-  bool       ok   () const noexcept { return type_traits_t::get_ok   (code_); }
-  error_code error() const noexcept { return type_traits_t::get_error(code_); }
+  T               value() const noexcept { return type_traits_t::get_value(code_); }
+  bool            ok   () const noexcept { return type_traits_t::get_ok   (code_); }
+  std::error_code error() const noexcept { return type_traits_t::get_error(code_); }
 
          T operator *   () const noexcept { return value(); }
   explicit operator bool() const noexcept { return ok   (); }
@@ -175,8 +174,8 @@ public:
     type_traits_t::init_code(code_, std::forward<A>(args)...);
   }
 
-  bool       ok   () const noexcept { return type_traits_t::get_ok   (code_); }
-  error_code error() const noexcept { return type_traits_t::get_error(code_); }
+  bool            ok   () const noexcept { return type_traits_t::get_ok   (code_); }
+  std::error_code error() const noexcept { return type_traits_t::get_error(code_); }
 
   explicit operator bool() const noexcept { return ok(); }
 

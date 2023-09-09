@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include "libimp/def.h"
+#include "libimp/detect_plat.h"
 
 LIBIMP_NAMESPACE_BEG_
 
@@ -73,6 +74,6 @@ struct scope_exit_helper {
 } // namespace detail
 
 #define LIBIMP_SCOPE_EXIT($val) \
-  auto $val = ::LIBIMP::detail::scope_exit_helper{}
+  LIBIMP_UNUSED auto $val = ::LIBIMP::detail::scope_exit_helper{}
 
 LIBIMP_NAMESPACE_END_
