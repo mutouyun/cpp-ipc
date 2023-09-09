@@ -454,7 +454,7 @@ public:
 template <std::size_t N>
 class small_storage {
 
-  static_assert(N > sizeof(holder<int, false>), "N must be greater than sizeof(holder<int, false>)");
+  static_assert(N >= sizeof(holder<void *, false>), "N must be greater than sizeof(holder<void *, false>)");
 
   alignas(std::max_align_t) std::array<::LIBIMP::byte, N> storage_;
 
@@ -467,11 +467,11 @@ public:
   }
 
   holder_base *get_holder() noexcept {
-    return static_cast<holder_base *>(storage_.data());
+    return reinterpret_cast<holder_base *>(storage_.data());
   }
 
   holder_base const *get_holder() const noexcept {
-    return static_cast<holder_base const *>(storage_.data());
+    return reinterpret_cast<holder_base const *>(storage_.data());
   }
 
   bool valid() const noexcept {

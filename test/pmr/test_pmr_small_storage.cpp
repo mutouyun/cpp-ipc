@@ -99,5 +99,21 @@ TEST(small_storage, holder_copy_move) {
   h12.destroy(alc);
 }
 
+TEST(small_storage, sizeof) {
+  EXPECT_EQ(sizeof(pmr::holder_null), sizeof(void *));
+  EXPECT_EQ(sizeof(pmr::holder<int, true>), sizeof(void *) + imp::round_up(sizeof(int), alignof(void *)));
+  EXPECT_EQ(sizeof(pmr::holder<int, false>), sizeof(void *) + sizeof(void *));
+  EXPECT_EQ(sizeof(pmr::holder<void, true>), sizeof(void *) + sizeof(void *) + sizeof(pmr::detail::holder_info));
+  EXPECT_EQ(sizeof(pmr::holder<void, false>), sizeof(void *) + sizeof(void *));
+
+  // pmr::small_storage<4> s1;
+  EXPECT_EQ(sizeof(pmr::small_storage<16>)  , 16);
+  EXPECT_EQ(sizeof(pmr::small_storage<64>)  , 64);
+  EXPECT_EQ(sizeof(pmr::small_storage<512>) , 512);
+  EXPECT_EQ(sizeof(pmr::small_storage<4096>), 4096);
+}
+
 TEST(small_storage, construct) {
+  pmr::small_storage<64> ss;
+  SUCCEED();
 }
