@@ -51,7 +51,7 @@ result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
   LIBIMP_LOG_();
   if (name.empty()) {
     log.error("name is empty.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
 
   /// \brief Open the object for read-write access.
@@ -70,7 +70,7 @@ result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
     break;
   default:
     log.error("mode type is invalid. type = ", type);
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
 
   /// \brief Create/Open POSIX shared memory bject
@@ -153,7 +153,9 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
 result<void> shm_close(shm_t h) noexcept {
   LIBIMP_LOG_();
   auto shm = valid(h);
-  if (shm == nullptr) return {};
+  if (shm == nullptr) {
+    return std::make_error_code(std::errc::invalid_argument);
+  }
   if (::munmap(shm->memp, shm->f_sz) == posix::failed) {
     auto err = sys::error();
     log.error("failed: munmap(", shm->memp, ", ", shm->f_sz, "). error = ", err);

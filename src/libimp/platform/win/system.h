@@ -19,7 +19,6 @@
 
 LIBIMP_NAMESPACE_BEG_
 namespace sys {
-namespace {
 
 /**
  * \brief Gets a text description of the system error
@@ -56,8 +55,6 @@ std::string error_string(DWORD code) noexcept {
   return {};
 }
 
-} // namespace
-
 /**
  * \brief Get the system error number.
  * \see https://en.cppreference.com/w/cpp/error/system_category
@@ -82,7 +79,7 @@ result<std::int64_t> conf(info r) noexcept {
   }
   default:
     log.error("invalid info = ", underlyof(r));
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
 }
 

@@ -49,7 +49,7 @@ result<evt_t> evt_open(std::string name) noexcept {
   if (h == NULL) {
     auto err = sys::error();
     log.error("failed: CreateEvent(FALSE, FALSE, ", name, "). error = ", err);
-    return {nullptr, err};
+    return err;
   }
   return new evt_handle{std::move(name), h};
 }
@@ -99,7 +99,7 @@ result<bool> evt_wait(evt_t evt, std::int64_t ms) noexcept {
   LIBIMP_LOG_();
   if (!is_valid(evt)) {
     log.error("handle is null.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   DWORD dwMilliseconds = (ms < 0) ? INFINITE : static_cast<DWORD>(ms);
   auto r = ::WaitForSingleObject(evt->h_event, dwMilliseconds);
@@ -115,7 +115,7 @@ result<bool> evt_wait(evt_t evt, std::int64_t ms) noexcept {
   }
   auto err = sys::error();
   log.error("failed: WaitForSingleObject(", evt->h_event, ", ", dwMilliseconds, "). error = ", err);
-  return {false, err};
+  return err;
 }
 
 /**
@@ -126,14 +126,14 @@ result<bool> evt_wait(::LIBIMP::span<evt_t const> evts, std::int64_t ms) noexcep
   LIBIMP_LOG_();
   if (evts.empty()) {
     log.error("evts handle is empty.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   // Conversion of the event handle array to the windows handle array.
   std::vector<HANDLE> handles(evts.size());
   for (std::size_t i = 0; i < evts.size(); ++i) {
     if (!is_valid(evts[i])) {
       log.error("handle is null.");
-      return {};
+      return std::make_error_code(std::errc::invalid_argument);
     }
     handles[i] = evts[i]->h_event;
   }
@@ -152,7 +152,7 @@ result<bool> evt_wait(::LIBIMP::span<evt_t const> evts, std::int64_t ms) noexcep
   }
   auto err = sys::error();
   log.error("failed: WaitForMultipleObjects(", handles.size(), ", ", dwMilliseconds, "). error = ", err);
-  return {false, err};
+  return err;
 }
 
 LIBIPC_NAMESPACE_END_

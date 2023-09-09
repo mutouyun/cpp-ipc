@@ -22,19 +22,19 @@ result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noex
   auto h = mmap_open(name, size, type);
   if (*h == NULL) {
     log.error("failed: mmap_open(name = ", name, ", size = ", size, ", type = ", type, ").");
-    return {nullptr, h.error()};
+    return h.error();
   }
   auto mem = mmap_memof(*h);
   if (*mem == NULL) {
     log.error("failed: mmap_memof(", *h, ").");
     mmap_close(*h);
-    return {nullptr, mem.error()};
+    return mem.error();
   }
   auto sz = mmap_sizeof(*mem);
   if (!sz) {
     log.error("failed: mmap_sizeof(", *mem, ").");
     mmap_close(*h);
-    return {nullptr, sz.error()};
+    return sz.error();
   }
   return new shm_handle{std::move(name), *sz, *mem, *h};
 }
@@ -43,7 +43,7 @@ result<void> shm_close(shm_t h) noexcept {
   LIBIMP_LOG_();
   if (h == nullptr) {
     log.error("shm handle is null.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   auto shm = static_cast<shm_handle *>(h);
   auto ret = mmap_release(shm->h_fmap, shm->memp);

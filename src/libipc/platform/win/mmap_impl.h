@@ -37,7 +37,7 @@ result<void> mmap_close(HANDLE h) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   if (!::CloseHandle(h)) {
     auto err = sys::error();
@@ -64,12 +64,12 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
   LIBIMP_LOG_();
   if (file.empty()) {
     log.error("file name is empty.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   auto t_name = detail::to_tstring(file);
   if (t_name.empty()) {
     log.error("file name is empty. (TCHAR conversion failed)");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
 
   /// \brief Opens a named file mapping object.
@@ -78,7 +78,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     if (h == NULL) {
       auto err = sys::error();
       log.error("failed: OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, ", file, "). error = ", err);
-      return {nullptr, err};
+      return err;
     }
     return h;
   };
@@ -91,7 +91,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     if (h == NULL) {
       auto err = sys::error();
       log.error("failed: CreateFileMapping(PAGE_READWRITE | SEC_COMMIT, ", size, ", ", file, "). error = ", err);
-      return {nullptr, err};
+      return err;
     }
     return h;
   };
@@ -105,7 +105,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     return try_open();
   } else if (!(type & mode::create)) {
     log.error("mode type is invalid. type = ", type);
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   auto h = try_create();
   if (!h) return h;
@@ -114,7 +114,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
   if ((type == mode::create) && (::GetLastError() == ERROR_ALREADY_EXISTS)) {
     log.info("the file being created already exists. file = ", file, ", type = ", type);
     mmap_close(*h);
-    return {};
+    return sys::error();
   }
   return h;
 }
@@ -127,13 +127,13 @@ result<LPVOID> mmap_memof(HANDLE h) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   LPVOID mem = ::MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, 0);
   if (mem == NULL) {
     auto err = sys::error();
     log.error("failed: MapViewOfFile(", h, ", FILE_MAP_ALL_ACCESS). error = ", err);
-    return {nullptr, err};
+    return err;
   }
   return mem;
 }
@@ -146,13 +146,13 @@ result<SIZE_T> mmap_sizeof(LPCVOID mem) {
   LIBIMP_LOG_();
   if (mem == NULL) {
     log.error("memory pointer is null.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   MEMORY_BASIC_INFORMATION mem_info {};
   if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
     auto err = sys::error();
     log.error("failed: VirtualQuery(", mem, "). error = ", err);
-    return {false, err};
+    return err;
   }
   return mem_info.RegionSize;
 }
@@ -165,11 +165,11 @@ result<void> mmap_release(HANDLE h, LPCVOID mem) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   if (mem == NULL) {
     log.error("memory pointer is null.");
-    return {};
+    return std::make_error_code(std::errc::invalid_argument);
   }
   if (!::UnmapViewOfFile(mem)) {
     log.warning("failed: UnmapViewOfFile. error = ", sys::error());
