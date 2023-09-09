@@ -59,4 +59,17 @@ public:
   }
 };
 
+/**
+ * \brief Rounds up the given value to the given alignment.
+ * \tparam T The type of the value.
+ * \param value The value to be rounded up.
+ * \param alignment The alignment to be rounded up to.
+ * \return The rounded up value.
+ * \see https://stackoverflow.com/questions/3407012/c-rounding-up-to-the-nearest-multiple-of-a-number
+*/
+template <typename T>
+constexpr T round_up(T value, T alignment) noexcept {
+  return (value + alignment - 1) & ~(alignment - 1);
+}
+
 LIBIMP_NAMESPACE_END_
