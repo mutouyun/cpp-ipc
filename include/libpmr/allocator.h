@@ -54,6 +54,10 @@ class LIBIMP_EXPORT allocator {
   public:
     holder_mr(MR *p_mr) noexcept
       : res_(p_mr) {}
+
+    // [MSVC 19] error C2259: 'pmr::allocator::holder_mr<void *,bool>': cannot instantiate abstract class.
+    void *alloc(std::size_t s, std::size_t a) const override { return nullptr; }
+    void dealloc(void *p, std::size_t s, std::size_t a) const override {}
   };
 
   /**
