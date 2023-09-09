@@ -10,5 +10,5 @@ TEST(error, error_code) {
   std::error_code ecode;
   EXPECT_FALSE(ecode);
   std::cout << ecode.message() << "\n";
-  EXPECT_EQ(ecode.message(), "[generic: 0, \"success\"]");
+  EXPECT_EQ(ecode.message(), "Success");
 }

@@ -102,11 +102,11 @@ TEST(result, fmt) {
     imp::result<int *> r3 {&aaa};
     EXPECT_EQ(imp::fmt(r3), imp::fmt("succ, value = ", (void *)&aaa));
     imp::result<int *> r4 {nullptr};
-    EXPECT_EQ(imp::fmt(r4), imp::fmt("fail, value = ", nullptr, ", error = [generic: 0, \"failure\"]"));
+    EXPECT_EQ(imp::fmt(r4), imp::fmt("fail, value = ", nullptr, ", error = [-1: Unknown error -1]"));
     r4 = {nullptr, std::error_code{1234, std::generic_category()}};
-    EXPECT_EQ(imp::fmt(r4), imp::fmt("fail, value = ", nullptr, ", error = [generic: 1234, \"failure\"]"));
+    EXPECT_EQ(imp::fmt(r4), imp::fmt("fail, value = ", nullptr, ", error = [1234: Unknown error 1234]"));
     imp::result<int *> r5;
-    EXPECT_EQ(imp::fmt(r5), "fail, value = null, error = [generic: 0, \"failure\"]");
+    EXPECT_EQ(imp::fmt(r5), "fail, value = null, error = [-1: Unknown error -1]");
   }
   {
     imp::result<std::int64_t> r1 {-123};
@@ -114,9 +114,9 @@ TEST(result, fmt) {
   }
   {
     imp::result<void> r1;
-    EXPECT_EQ(imp::fmt(r1), "fail, error = [generic: 0, \"failure\"]");
+    EXPECT_EQ(imp::fmt(r1), "fail, error = [-1: Unknown error -1]");
     r1 = std::error_code{};
     EXPECT_TRUE(r1);
-    EXPECT_EQ(imp::fmt(r1), "succ, error = [generic: 0, \"success\"]");
+    EXPECT_EQ(imp::fmt(r1), "succ, error = [0: Success]");
   }
 }

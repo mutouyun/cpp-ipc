@@ -42,7 +42,7 @@ struct generic_traits {
 
   /// \brief Custom initialization.
   constexpr static void init_code(storage_t &code) noexcept {
-    code = {0, std::make_error_code(std::errc::invalid_argument)};
+    code = {0, std::error_code(-1, std::generic_category())};
   }
   constexpr static void init_code(storage_t &code, T value, std::error_code const &ec) noexcept {
     code = {value, ec};
@@ -73,7 +73,7 @@ struct default_traits<void, ___> {
 
   /// \brief Custom initialization.
   constexpr static void init_code(storage_t &code) noexcept {
-    code = std::make_error_code(std::errc::invalid_argument);
+    code = std::error_code(-1, std::generic_category());
   }
   constexpr static void init_code(storage_t &code, std::error_code const &ec) noexcept {
     code = ec;
@@ -96,7 +96,7 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> : generic
   /// \brief Custom initialization.
   constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
                                   T value, bool ok) noexcept {
-    code = {value, ok ? std::error_code() : std::make_error_code(std::errc::invalid_argument)};
+    code = {value, ok ? std::error_code() : std::error_code(-1, std::generic_category())};
   }
   using generic_traits<T>::init_code;
 
@@ -113,7 +113,7 @@ struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> : generic_
   }
   constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
                                   std::nullptr_t) noexcept {
-    code = {nullptr, std::make_error_code(std::errc::invalid_argument)};
+    code = {nullptr, std::error_code(-1, std::generic_category())};
   }
   using generic_traits<T>::init_code;
 
