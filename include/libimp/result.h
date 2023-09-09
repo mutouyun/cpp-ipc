@@ -42,7 +42,7 @@ struct generic_traits {
 
   /// \brief Custom initialization.
   constexpr static void init_code(storage_t &code) noexcept {
-    code = {0, std::error_code(-1, std::generic_category())};
+    code = {{}, std::error_code(-1, std::generic_category())};
   }
   constexpr static void init_code(storage_t &code, T value, std::error_code const &ec) noexcept {
     code = {value, ec};

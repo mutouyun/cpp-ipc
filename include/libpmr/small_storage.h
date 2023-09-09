@@ -208,7 +208,7 @@ struct holder_info {
   std::size_t sizeof_type;
   std::size_t count;
   void (*copy)(allocator const &, void const *s, void *d);
-  void (*dest)(void *p, std::size_t n) noexcept;
+  void (*dest)(void *p, std::size_t n);
 };
 
 template <typename Value, typename Construct>
@@ -454,7 +454,7 @@ public:
 template <std::size_t N>
 class small_storage {
 
-  static_assert(N > holder<int, false>, "N must be greater than sizeof(holder<int, false>)");
+  static_assert(N > sizeof(holder<int, false>), "N must be greater than sizeof(holder<int, false>)");
 
   alignas(std::max_align_t) std::array<::LIBIMP::byte, N> storage_;
 
