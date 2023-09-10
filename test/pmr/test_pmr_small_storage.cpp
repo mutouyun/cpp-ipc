@@ -74,17 +74,24 @@ TEST(small_storage, holder_copy_move) {
   h5.destroy(alc);
   h6.destroy(alc);
 
-  pmr::holder<void, true> h7(alc, ::LIBIMP::types<int>{}, 10);
-  pmr::holder<void, true> h8, h9;
-  h7.copy_to(alc, &h8);
-  EXPECT_EQ(h7.count(), 10);
-  EXPECT_EQ(h8.count(), 10);
-  h7.move_to(alc, &h9);
-  EXPECT_EQ(h7.count(), 0);
-  EXPECT_EQ(h9.count(), 10);
-  h7.destroy(alc);
-  h8.destroy(alc);
-  h9.destroy(alc);
+  void *ph1 = std::malloc(pmr::holder<void, true>::full_sizeof<int>(10));
+  void *ph2 = std::malloc(pmr::holder<void, true>::full_sizeof<int>(10));
+  void *ph3 = std::malloc(pmr::holder<void, true>::full_sizeof<int>(10));
+  auto *h7 = ::new (ph1) pmr::holder<void, true>(alc, ::LIBIMP::types<int>{}, 10);
+  auto *h8 = ::new (ph2) pmr::holder<void, true>;
+  auto *h9 = ::new (ph2) pmr::holder<void, true>;
+  h7->copy_to(alc, h8);
+  EXPECT_EQ(h7->count(), 10);
+  EXPECT_EQ(h8->count(), 10);
+  h7->move_to(alc, h9);
+  EXPECT_EQ(h7->count(), 0);
+  EXPECT_EQ(h9->count(), 10);
+  h7->destroy(alc);
+  h8->destroy(alc);
+  h9->destroy(alc);
+  std::free(ph1);
+  std::free(ph2);
+  std::free(ph3);
 
   pmr::holder<void, false> h10(alc, ::LIBIMP::types<int>{}, 10);
   pmr::holder<void, false> h11, h12;
