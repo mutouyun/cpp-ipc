@@ -103,7 +103,7 @@ TEST(small_storage, sizeof) {
   EXPECT_EQ(sizeof(pmr::holder_null), sizeof(void *));
   EXPECT_EQ(sizeof(pmr::holder<int, true>), sizeof(void *) + imp::round_up(sizeof(int), alignof(void *)));
   EXPECT_EQ(sizeof(pmr::holder<int, false>), sizeof(void *) + sizeof(void *));
-  EXPECT_EQ(sizeof(pmr::holder<void, true>), sizeof(void *) + sizeof(void *) + sizeof(pmr::detail::holder_info));
+  EXPECT_EQ(sizeof(pmr::holder<void, true>), sizeof(void *) + sizeof(pmr::detail::holder_info));
   EXPECT_EQ(sizeof(pmr::holder<void, false>), sizeof(void *) + sizeof(void *));
 
   // pmr::small_storage<4> s1;
@@ -115,5 +115,38 @@ TEST(small_storage, sizeof) {
 
 TEST(small_storage, construct) {
   pmr::small_storage<64> ss;
+  SUCCEED();
+}
+
+TEST(small_storage, acquire) {
+  pmr::small_storage<128> ss;
+  pmr::allocator alc;
+  ASSERT_FALSE(ss.valid());
+  int *p = ss.acquire<int>(alc, 3);
+  ASSERT_TRUE(ss.valid());
+  ASSERT_NE(p, nullptr);
+  ASSERT_EQ(*p, 3);
+  ASSERT_EQ(p, ss.as<int>());
+  ASSERT_EQ(ss.count(), 1);
+  ASSERT_EQ(ss.sizeof_heap(), 0);
+  ASSERT_EQ(ss.sizeof_type(), sizeof(int));
+
+  p = ss.acquire<int[]>(alc, 3);
+  ASSERT_TRUE(ss.valid());
+  ASSERT_NE(p, nullptr);
+  ASSERT_EQ(p, ss.as<int>());
+  ASSERT_EQ(ss.count(), 3);
+  ASSERT_EQ(ss.sizeof_heap(), 0);
+  ASSERT_EQ(ss.sizeof_type(), sizeof(int));
+
+  p = ss.acquire<int[]>(alc, 30);
+  ASSERT_TRUE(ss.valid());
+  ASSERT_NE(p, nullptr);
+  ASSERT_EQ(p, ss.as<int>());
+  ASSERT_EQ(ss.count(), 30);
+  ASSERT_EQ(ss.sizeof_heap(), sizeof(int) * 30 + sizeof(pmr::detail::holder_info));
+  ASSERT_EQ(ss.sizeof_type(), sizeof(int));
+
+  ss.release(alc);
   SUCCEED();
 }
