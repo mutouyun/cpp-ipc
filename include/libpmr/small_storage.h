@@ -283,7 +283,7 @@ class holder<void, true> : public holder_base {
 public:
   template <typename Value>
   static std::size_t full_sizeof(std::size_t count) noexcept {
-    return offsetof(holder, info_) + detail::full_sizeof<Value>(count);
+    return sizeof(holder) - sizeof(info_) + detail::full_sizeof<Value>(count);
   }
 
   holder() noexcept
