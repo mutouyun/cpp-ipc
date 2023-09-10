@@ -22,10 +22,10 @@ LIBPMR_NAMESPACE_BEG_
  * \brief An allocator which exhibits different allocation behavior 
  * depending upon the memory resource from which it is constructed.
  * 
- * \remarks Unlike std::pmr::polymorphic_allocator, it does not 
+ * \note Unlike `std::pmr::polymorphic_allocator`, it does not 
  * rely on a specific inheritance relationship and only restricts 
  * the interface behavior of the incoming memory resource object to 
- * conform to std::pmr::memory_resource.
+ * conform to `std::pmr::memory_resource`.
  * 
  * \see https://en.cppreference.com/w/cpp/memory/memory_resource
  *      https://en.cppreference.com/w/cpp/memory/polymorphic_allocator
@@ -55,7 +55,7 @@ class LIBIMP_EXPORT allocator {
     holder_mr(MR *p_mr) noexcept
       : res_(p_mr) {}
 
-    // [MSVC 19] error C2259: 'pmr::allocator::holder_mr<void *,bool>': cannot instantiate abstract class.
+    // [MSVC] error C2259: 'pmr::allocator::holder_mr<void *,bool>': cannot instantiate abstract class.
     void *alloc(std::size_t s, std::size_t a) const override { return nullptr; }
     void dealloc(void *p, std::size_t s, std::size_t a) const override {}
   };
