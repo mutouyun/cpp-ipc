@@ -219,7 +219,7 @@ struct holder_type : holder_type_base {
   std::type_info const &type() const noexcept override { return typeid(Value); }
 
   void move(void *s, void *d, std::size_t n) const noexcept override {
-    std::uninitialized_move_n(static_cast<Value *>(s), n, static_cast<Value *>(d));
+    ::LIBIMP::uninitialized_move_n(static_cast<Value *>(s), n, static_cast<Value *>(d));
   }
   void copy(void const *s, void *d, std::size_t n) const noexcept(false) override {
     std::uninitialized_copy_n(static_cast<Value const *>(s), n, static_cast<Value *>(d));

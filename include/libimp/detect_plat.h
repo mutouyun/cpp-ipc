@@ -208,11 +208,11 @@
 ///      https://stackoverflow.com/questions/6487013/programmatically-determine-whether-exceptions-are-enabled
 #if defined(__cpp_exceptions) && __cpp_exceptions || \
     defined(__EXCEPTIONS) || defined(_CPPUNWIND)
-# define LIBIMP_TRY                     try
-# define LIBIMP_CATCH(...)              catch (__VA_ARGS__)
-# define LIBIMP_THROW($exception, $ret) throw $exception
+# define LIBIMP_TRY                    try
+# define LIBIMP_CATCH(...)             catch (__VA_ARGS__)
+# define LIBIMP_THROW($exception, ...) throw $exception
 #else
-# define LIBIMP_TRY                     if (true)
-# define LIBIMP_CATCH(...)              else if (false)
-# define LIBIMP_THROW($exception, $ret) return $ret
+# define LIBIMP_TRY                    if (true)
+# define LIBIMP_CATCH(...)             else if (false)
+# define LIBIMP_THROW($exception, ...) return __VA_ARGS__
 #endif

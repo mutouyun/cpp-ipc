@@ -100,7 +100,7 @@ ForwardIt destroy_n(ForwardIt first, Size n) noexcept {
 
 /**
  * \brief Constructs objects by default-initialization 
- * in an uninitialized area of memory, defined by a start and a count.
+ *        in an uninitialized area of memory, defined by a start and a count.
  * \see https://en.cppreference.com/w/cpp/memory/uninitialized_default_construct_n
 */
 template <typename ForwardIt, typename Size>
@@ -118,6 +118,30 @@ ForwardIt uninitialized_default_construct_n(ForwardIt first, Size n) {
     destroy(first, current);
     LIBIMP_THROW(, first);
   }
+#endif
+}
+
+/**
+* \brief Moves a number of objects to an uninitialized area of memory.
+* \see https://en.cppreference.com/w/cpp/memory/uninitialized_move_n
+*/
+template <typename InputIt, typename Size, typename NoThrowForwardIt>
+auto uninitialized_move_n(InputIt first, Size count, NoThrowForwardIt d_first)
+  -> std::pair<InputIt, NoThrowForwardIt> {
+#if defined(LIBIMP_CPP_17)
+  return std::uninitialized_move_n(first, count, d_first);
+#else
+  using Value = typename std::iterator_traits<NoThrowForwardIt>::value_type;
+  NoThrowForwardIt current = d_first;
+  LIBIMP_TRY {
+    for (; count > 0; ++first, (void) ++current, --count) {
+      ::new (static_cast<void *>(std::addressof(*current))) Value(std::move(*first));
+    }
+  } LIBIMP_CATCH(...) {
+    destroy(d_first, current);
+    LIBIMP_THROW(, {first, d_first});
+  }
+  return {first, current};
 #endif
 }
 
