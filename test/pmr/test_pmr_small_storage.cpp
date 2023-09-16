@@ -114,10 +114,10 @@ TEST(small_storage, sizeof) {
   EXPECT_EQ(sizeof(pmr::holder<void, false>), sizeof(void *) + sizeof(void *));
 
   // pmr::small_storage<4> s1;
-  EXPECT_EQ(sizeof(pmr::small_storage<16>)  , 16);
-  EXPECT_EQ(sizeof(pmr::small_storage<64>)  , 64);
-  EXPECT_EQ(sizeof(pmr::small_storage<512>) , 512);
-  EXPECT_EQ(sizeof(pmr::small_storage<4096>), 4096);
+  EXPECT_TRUE(sizeof(pmr::small_storage<16>)   > 16);
+  EXPECT_TRUE(sizeof(pmr::small_storage<64>)   > 64);
+  EXPECT_TRUE(sizeof(pmr::small_storage<512>)  > 512);
+  EXPECT_TRUE(sizeof(pmr::small_storage<4096>) > 4096);
 }
 
 TEST(small_storage, construct) {

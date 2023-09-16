@@ -18,6 +18,7 @@
 #include "libimp/byte.h"
 #include "libimp/generic.h"
 #include "libimp/aligned.h"
+#include "libimp/log.h"
 
 #include "libpmr/def.h"
 #include "libpmr/allocator.h"
@@ -203,13 +204,40 @@ public:
 
 namespace detail {
 
+struct holder_type_base {
+  virtual ~holder_type_base() noexcept = default;
+  virtual std::size_t size() const noexcept = 0;
+  virtual std::type_info const &type() const noexcept = 0;
+  virtual void move(void *s, void *d, std::size_t n) const noexcept = 0;
+  virtual void copy(void const *s, void *d, std::size_t n) const noexcept(false) = 0;
+  virtual void dest(void *p, std::size_t n) const noexcept = 0;
+};
+
+template <typename Value>
+struct holder_type : holder_type_base {
+  std::size_t           size() const noexcept override { return sizeof(Value); }
+  std::type_info const &type() const noexcept override { return typeid(Value); }
+
+  void move(void *s, void *d, std::size_t n) const noexcept override {
+    std::uninitialized_move_n(static_cast<Value *>(s), n, static_cast<Value *>(d));
+  }
+  void copy(void const *s, void *d, std::size_t n) const noexcept(false) override {
+    std::uninitialized_copy_n(static_cast<Value const *>(s), n, static_cast<Value *>(d));
+  }
+  void dest(void *p, std::size_t n) const noexcept override {
+    ::LIBIMP::destroy_n(static_cast<Value *>(p), n);
+  }
+};
+
+template <typename Value>
+holder_type_base const *make_holder_type() noexcept {
+  static holder_type<Value> holder_type;
+  return &holder_type;
+}
+
 struct holder_info {
-  std::type_info const *type;
-  std::size_t sizeof_type;
+  holder_type_base const *type;
   std::size_t count;
-  void (*copy)(allocator const &, void const *s, void *d);
-  void (*move)(void *s, void *d);
-  void (*dest)(void *p, std::size_t n);
 };
 
 template <typename Value>
@@ -220,7 +248,7 @@ std::size_t full_sizeof(std::size_t count) noexcept {
 
 std::size_t full_sizeof(holder_info const *info) noexcept {
   return ::LIBIMP::round_up(sizeof(detail::holder_info), alignof(std::max_align_t))
-        + (info->sizeof_type * info->count);
+        + (info->type->size() * info->count);
 }
 
 void *value_ptr(holder_info *info) noexcept {
@@ -260,8 +288,10 @@ public:
     return *pptr_;
   }
 
-  holder_info &operator*() noexcept {
-    return **pptr_;
+  holder_info_ptr &operator=(holder_info const &rhs) noexcept {
+    if (!*this) return *this;
+    **pptr_ = rhs;
+    return *this;
   }
 
   void release() noexcept {
@@ -286,8 +316,7 @@ public:
     return sizeof(holder) - sizeof(info_) + detail::full_sizeof<Value>(count);
   }
 
-  holder() noexcept
-    : info_{&typeid(nullptr)} {}
+  holder() noexcept : info_{} {}
 
   /// \brief Constructs a holder with type of `Value`.
   /// alignof(Value) must be less than or equal to alignof(std::max_align_t).
@@ -295,39 +324,22 @@ public:
             std::enable_if_t<alignof(Value) <= alignof(std::max_align_t), bool> = true>
   holder(allocator const &, ::LIBIMP::types<Value>, std::size_t n) : holder() {
     ::LIBIMP::uninitialized_default_construct_n(static_cast<Value *>(get()), n);
-    info_.type = &typeid(Value);
-    info_.sizeof_type = sizeof(Value);
+    info_.type  = detail::make_holder_type<Value>();
     info_.count = n;
-    info_.copy = [](allocator const &, void const *s, void *d) {
-      auto const &src = *static_cast<holder const *>(s);
-      auto &      dst = *static_cast<holder *      >(d);
-      std::uninitialized_copy_n(static_cast<Value const *>(src.get()), src.count(), 
-                                static_cast<Value *      >(dst.get()));
-      dst.info_ = src.info_;
-    };
-    info_.move = [](void *s, void *d) noexcept {
-      auto &src = *static_cast<holder *>(s);
-      auto &dst = *static_cast<holder *>(d);
-      std::uninitialized_move_n(static_cast<Value *>(src.get()), src.count(), 
-                                static_cast<Value *>(dst.get()));
-      std::swap(dst.info_, src.info_);
-    };
-    info_.dest = [](void *p, std::size_t n) noexcept {
-      ::LIBIMP::destroy_n(static_cast<Value *>(p), n);
-    };
   }
 
   bool valid() const noexcept override {
-    return (info_.type != nullptr) && (info_.type != &typeid(nullptr));
+    return info_.type != nullptr;
   }
 
   std::type_info const &type() const noexcept override {
     if (!valid()) return typeid(nullptr);
-    return *info_.type;
+    return info_.type->type();
   }
 
   std::size_t sizeof_type() const noexcept override {
-    return info_.sizeof_type;
+    if (!valid()) return 0;
+    return info_.type->size();
   }
 
   std::size_t sizeof_heap() const noexcept override {
@@ -349,18 +361,20 @@ public:
   void move_to(allocator const &, void *p) noexcept override {
     auto *des = ::LIBIMP::construct<holder>(p);
     if (!valid()) return;
-    info_.move(this, des);
+    info_.type->move(this->get(), des->get(), this->count());
+    std::swap(des->info_, this->info_);
   }
 
   void copy_to(allocator const &alloc, void *p) const noexcept(false) override {
     auto *des = ::LIBIMP::construct<holder>(p);
     if (!valid()) return;
-    info_.copy(alloc, this, des);
+    info_.type->copy(this->get(), des->get(), this->count());
+    des->info_ = this->info_;
   }
 
   void destroy(allocator const &) noexcept override {
     if (!valid()) return;
-    info_.dest(get(), count());
+    info_.type->dest(get(), count());
   }
 };
 
@@ -382,39 +396,32 @@ public:
   template <typename Value, 
             std::enable_if_t<alignof(Value) <= alignof(std::max_align_t), bool> = true>
   holder(allocator const &alloc, ::LIBIMP::types<Value>, std::size_t n) : holder() {
+    LIBIMP_LOG_("holder<void, false>");
     detail::holder_info_ptr info_p{alloc, info_ptr_, sizeof(Value) * n};
-    if (!info_p) return;
+    if (!info_p) {
+      log.error("The destination information-pointer failed to be constructed."
+                " type size = ", sizeof(Value),
+                ", count = "   , n);
+      return;
+    }
     ::LIBIMP::uninitialized_default_construct_n(static_cast<Value *>(get()), n);
-    info_p->type = &typeid(Value);
-    info_p->sizeof_type = sizeof(Value);
+    info_p->type  = detail::make_holder_type<Value>();
     info_p->count = n;
-    info_p->copy = [](allocator const &alloc, void const *s, void *d) {
-      auto const &src = *static_cast<holder const *>(s);
-      auto &      dst = *static_cast<holder *      >(d);
-      detail::holder_info_ptr info_p{alloc, dst.info_ptr_, sizeof(Value) * src.count()};
-      if (!info_p) return;
-      ::LIBIMP::uninitialized_default_construct_n(static_cast<Value *>(dst.get()), src.count());
-      *info_p = *src.info_ptr_;
-      info_p.release();
-    };
-    info_p->dest = [](void *p, std::size_t n) noexcept {
-      ::LIBIMP::destroy_n(static_cast<Value *>(p), n);
-    };
     info_p.release();
   }
 
   bool valid() const noexcept override {
-    return info_ptr_ != nullptr;
+    return (info_ptr_ != nullptr) && (info_ptr_->type != nullptr);
   }
 
   std::type_info const &type() const noexcept override {
     if (!valid()) return typeid(nullptr);
-    return *info_ptr_->type;
+    return info_ptr_->type->type();
   }
 
   std::size_t sizeof_type() const noexcept override {
     if (!valid()) return 0;
-    return info_ptr_->sizeof_type;
+    return info_ptr_->type->size();
   }
 
   std::size_t sizeof_heap() const noexcept override {
@@ -442,14 +449,24 @@ public:
   }
 
   void copy_to(allocator const &alloc, void *p) const noexcept(false) override {
+    LIBIMP_LOG_();
     auto *des = ::LIBIMP::construct<holder>(p);
     if (!valid()) return;
-    info_ptr_->copy(alloc, this, des);
+    detail::holder_info_ptr info_p{alloc, des->info_ptr_, this->sizeof_type() * this->count()};
+    if (!info_p) {
+      log.error("The destination information-pointer failed to be constructed."
+                " type size = ", this->sizeof_type(),
+                ", count = "   , this->count());
+      return;
+    }
+    info_ptr_->type->copy(this->get(), des->get(), this->count());
+    info_p = *info_ptr_;
+    info_p.release();
   }
 
   void destroy(allocator const &alloc) noexcept override {
     if (!valid()) return;
-    info_ptr_->dest(get(), count());
+    info_ptr_->type->dest(get(), count());
     alloc.deallocate(info_ptr_, sizeof_heap());
   }
 };
@@ -467,9 +484,10 @@ public:
 template <std::size_t N>
 class small_storage {
 
-  static_assert(N >= sizeof(holder<void *, false>), "N must be greater than sizeof(holder<void *, false>)");
+  constexpr static std::size_t storage_size = sizeof(holder<void *, false>) - sizeof(void *) + N;
+  static_assert(storage_size >= sizeof(holder<void *, false>), "N is not large enough to hold a pointer.");
 
-  alignas(std::max_align_t) std::array<::LIBIMP::byte, N> storage_;
+  alignas(std::max_align_t) std::array<::LIBIMP::byte, storage_size> storage_;
 
   /// \brief Try to construct an object on the stack, and if there is not enough space, 
   /// the memory allocator allocates heap memory to complete the construction.
@@ -478,7 +496,7 @@ class small_storage {
     template <typename... A>
     T *operator()(small_storage *self, allocator const &alloc, A &&...args) const noexcept(false) {
       self->get_holder()->destroy(alloc);
-      constexpr bool on_stack = (sizeof(holder<T, true>) <= N);
+      constexpr bool on_stack = (sizeof(holder<T, true>) <= storage_size);
       ::LIBIMP::construct<holder<T, on_stack>>(self->get_holder(), alloc, std::forward<A>(args)...);
       return self->as<T>();
     }
@@ -490,8 +508,8 @@ class small_storage {
   struct applicant<T[]> {
     T *operator()(small_storage *self, allocator const &alloc, std::size_t n) const noexcept(false) {
       self->get_holder()->destroy(alloc);
-      if (holder<void, true>::full_sizeof<T>(n) <= N) {
-        ::LIBIMP::construct<holder<void, true>>(self->get_holder(), alloc, ::LIBIMP::types<T>{}, n);
+      if (holder<void, true>::full_sizeof<T>(n) <= storage_size) {
+        ::LIBIMP::construct<holder<void, true> >(self->get_holder(), alloc, ::LIBIMP::types<T>{}, n);
       } else {
         ::LIBIMP::construct<holder<void, false>>(self->get_holder(), alloc, ::LIBIMP::types<T>{}, n);
       }
