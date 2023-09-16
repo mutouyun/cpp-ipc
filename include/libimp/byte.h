@@ -56,12 +56,12 @@ public:
 #endif // LIBIMP_CPP_LIB_BYTE_
 
   template <typename T, typename = detail::is_integral<T>>
-  explicit constexpr operator T() const noexcept {
+  constexpr operator T() const noexcept {
     return static_cast<T>(bits_);
   }
 
 #ifdef LIBIMP_CPP_LIB_BYTE_
-  explicit constexpr operator std::byte() const noexcept {
+  constexpr operator std::byte() const noexcept {
     /// \brief C++17 relaxed enum class initialization rules.
     /// \see https://en.cppreference.com/w/cpp/language/enum#enum_relaxed_init_cpp17
     return std::byte{bits_};

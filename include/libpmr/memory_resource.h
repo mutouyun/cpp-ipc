@@ -40,9 +40,9 @@ using verify_memory_resource =
                    has_deallocate<T>::value, bool>;
 
 /**
+ * \class LIBIMP_EXPORT new_delete_resource
  * \brief A memory resource that uses the 
- * standard memory allocation and deallocation interface to allocate memory.
- * 
+ *        standard memory allocation and deallocation interface to allocate memory.
  * \see https://en.cppreference.com/w/cpp/memory/new_delete_resource
  */
 class LIBIMP_EXPORT new_delete_resource {

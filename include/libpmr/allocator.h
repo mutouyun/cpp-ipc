@@ -20,12 +20,12 @@ LIBPMR_NAMESPACE_BEG_
 
 /**
  * \brief An allocator which exhibits different allocation behavior 
- * depending upon the memory resource from which it is constructed.
+ *        depending upon the memory resource from which it is constructed.
  * 
  * \note Unlike `std::pmr::polymorphic_allocator`, it does not 
- * rely on a specific inheritance relationship and only restricts 
- * the interface behavior of the incoming memory resource object to 
- * conform to `std::pmr::memory_resource`.
+ *       rely on a specific inheritance relationship and only restricts 
+ *       the interface behavior of the incoming memory resource object to 
+ *       conform to `std::pmr::memory_resource`.
  * 
  * \see https://en.cppreference.com/w/cpp/memory/memory_resource
  *      https://en.cppreference.com/w/cpp/memory/polymorphic_allocator
@@ -88,6 +88,8 @@ class LIBIMP_EXPORT allocator {
   holder_mr_base const &get_holder() const noexcept;
 
 public:
+  /// \brief Constructs an `allocator` using the return value of 
+  ///       `new_delete_resource::get()` as the underlying memory resource.
   allocator() noexcept;
   ~allocator() noexcept;
 
@@ -97,8 +99,8 @@ public:
   allocator(allocator &&other) noexcept = default;
   allocator &operator=(allocator &&other) & noexcept = default;
 
-  /// \brief Constructs a allocator from a memory resource pointer
-  /// The lifetime of the pointer must be longer than that of allocator.
+  /// \brief Constructs a allocator from a memory resource pointer.
+  /// \note The lifetime of the pointer must be longer than that of allocator.
   template <typename T, verify_memory_resource<T> = true>
   allocator(T *p_mr) noexcept {
     if (p_mr == nullptr) {
