@@ -25,9 +25,22 @@ LIBPMR_NAMESPACE_BEG_
  */
 class LIBIMP_EXPORT monotonic_buffer_resource {
 
+  allocator upstream_;
+
+  struct node {
+    node *next;
+    std::size_t size;
+  } *free_list_;
+
+  ::LIBIMP::byte *head_;
+  ::LIBIMP::byte *tail_;
+
+  ::LIBIMP::span<::LIBIMP::byte> const initial_buffer_;
+  std::size_t initial_size_;
+
 public:
   monotonic_buffer_resource() noexcept;
-  explicit monotonic_buffer_resource(allocator upstream);
+  explicit monotonic_buffer_resource(allocator upstream) noexcept;
   explicit monotonic_buffer_resource(std::size_t initial_size);
   monotonic_buffer_resource(std::size_t initial_size, allocator upstream);
   monotonic_buffer_resource(::LIBIMP::span<::LIBIMP::byte> buffer) noexcept;
