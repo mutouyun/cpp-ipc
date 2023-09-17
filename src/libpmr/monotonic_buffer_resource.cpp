@@ -17,7 +17,8 @@ Node *make_node(allocator const &upstream, std::size_t initial_size, std::size_t
   auto sz = ::LIBIMP::round_up(sizeof(Node), alignment) + initial_size;
   auto *node = static_cast<Node *>(upstream.allocate(sz));
   if (node == nullptr) {
-    log.error("failed: allocate memory for `monotonic_buffer_resource`.");
+    log.error("failed: allocate memory for `monotonic_buffer_resource`'s node.", 
+              " bytes = ", initial_size, ", alignment = ", alignment);
     return nullptr;
   }
   node->next = nullptr;
@@ -104,7 +105,15 @@ void *monotonic_buffer_resource::allocate(std::size_t bytes, std::size_t alignme
     node->next = free_list_;
     free_list_ = node;
     next_size_ = next_buffer_size(next_size_);
-    p = reinterpret_cast<::LIBIMP::byte *>(free_list_) + ::LIBIMP::round_up(sizeof(node), alignment);
+    // try again
+    s = node->size - sizeof(monotonic_buffer_resource::node);
+    p = std::align(alignment, bytes, (p = node + 1), s);
+    if (p == nullptr) {
+      log.error("failed: allocate memory for `monotonic_buffer_resource`.", 
+                " bytes = ", bytes, ", alignment = ", alignment);
+      return nullptr;
+    }
+    tail_ = static_cast<::LIBIMP::byte *>(p) + s;
   }
   head_ = static_cast<::LIBIMP::byte *>(p) + bytes;
   return p;

@@ -22,7 +22,8 @@ struct has_allocate : std::false_type {};
 template <typename T>
 struct has_allocate<T, 
   typename std::enable_if<std::is_convertible<
-  decltype(std::declval<T &>().allocate(std::declval<std::size_t>())), void *
+  decltype(std::declval<T &>().allocate(std::declval<std::size_t>(), 
+                                        std::declval<std::size_t>())), void *
   >::value>::type> : std::true_type {};
 
 template <typename T, typename = void>
@@ -31,6 +32,7 @@ struct has_deallocate : std::false_type {};
 template <typename T>
 struct has_deallocate<T, 
   decltype(std::declval<T &>().deallocate(std::declval<void *>(), 
+                                          std::declval<std::size_t>(), 
                                           std::declval<std::size_t>()))
   > : std::true_type {};
 
