@@ -94,7 +94,7 @@ TEST(monotonic_buffer_resource, allocate_by_buffer) {
   }
   ASSERT_EQ(dummy.allocated, 0);
 }
-#include <memory_resource>
+
 TEST(monotonic_buffer_resource, release) {
   dummy_allocator dummy;
   {
@@ -126,15 +126,4 @@ TEST(monotonic_buffer_resource, release) {
     ASSERT_EQ(dummy.allocated, 0);
   }
   ASSERT_EQ(dummy.allocated, 0);
-  // {
-  //   std::pmr::monotonic_buffer_resource res{buffer.data(), buffer.size()};
-  //   std::pmr::polymorphic_allocator<imp::byte> tmp{&res};
-  //   auto *p = tmp.allocate(1024);
-  //   ASSERT_EQ(p, buffer.data());
-  //   p = tmp.allocate(10240);
-  //   ASSERT_NE(p, buffer.data());
-  //   res.release();
-  //   p = tmp.allocate(1024);
-  //   ASSERT_EQ(p, buffer.data());
-  // }
 }
