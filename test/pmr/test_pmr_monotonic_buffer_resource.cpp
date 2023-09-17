@@ -116,6 +116,7 @@ TEST(monotonic_buffer_resource, release) {
     pmr::monotonic_buffer_resource tmp{buffer, &dummy};
     auto *p = tmp.allocate(1024);
     ASSERT_EQ(p, buffer.data());
+    ASSERT_EQ(dummy.allocated, 0);
     p = tmp.allocate(10240);
     ASSERT_NE(p, buffer.data());
     ASSERT_LE(dummy.allocated, 10240 + 1024);
@@ -124,6 +125,9 @@ TEST(monotonic_buffer_resource, release) {
     p = tmp.allocate(1024);
     ASSERT_EQ(p, buffer.data());
     ASSERT_EQ(dummy.allocated, 0);
+    p = tmp.allocate(10240);
+    ASSERT_NE(p, buffer.data());
+    ASSERT_LE(dummy.allocated, 10240 + 1024);
   }
   ASSERT_EQ(dummy.allocated, 0);
 }
