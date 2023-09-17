@@ -34,9 +34,10 @@ class LIBIMP_EXPORT monotonic_buffer_resource {
 
   ::LIBIMP::byte *head_;
   ::LIBIMP::byte *tail_;
+  std::size_t next_size_;
 
-  ::LIBIMP::span<::LIBIMP::byte> const initial_buffer_;
-  std::size_t initial_size_;
+  ::LIBIMP::byte * const initial_buffer_;
+  std::size_t const initial_size_;
 
 public:
   monotonic_buffer_resource() noexcept;
