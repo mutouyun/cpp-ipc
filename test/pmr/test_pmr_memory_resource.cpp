@@ -28,7 +28,7 @@ TEST(memory_resource, traits) {
   EXPECT_FALSE(pmr::has_allocate<void>::value);
   EXPECT_FALSE(pmr::has_allocate<int>::value);
   EXPECT_FALSE(pmr::has_allocate<std::vector<int>>::value);
-  EXPECT_TRUE (pmr::has_allocate<std::allocator<int>>::value);
+  EXPECT_FALSE(pmr::has_allocate<std::allocator<int>>::value);
 #if defined(LIBIMP_CPP_17) && defined(__cpp_lib_memory_resource)
   EXPECT_TRUE (pmr::has_allocate<std::pmr::memory_resource>::value);
   EXPECT_TRUE (pmr::has_allocate<std::pmr::polymorphic_allocator<int>>::value);

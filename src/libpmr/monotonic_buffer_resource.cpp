@@ -92,10 +92,6 @@ void *monotonic_buffer_resource::allocate(std::size_t bytes, std::size_t alignme
     log.error("failed: allocate bytes = 0.");
     return nullptr;
   }
-  if ((alignment & (alignment - 1)) != 0) {
-    log.error("failed: allocate alignment is not a power of 2.");
-    return nullptr;
-  }
   void *p = head_;
   auto  s = static_cast<std::size_t>(tail_ - head_);
   if (std::align(alignment, bytes, p, s) == nullptr) {

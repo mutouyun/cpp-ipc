@@ -1,6 +1,7 @@
 
 #include <algorithm>  // std::swap
 
+#include "libimp/log.h"
 #include "libpmr/allocator.h"
 
 LIBPMR_NAMESPACE_BEG_
@@ -25,10 +26,20 @@ void allocator::swap(allocator &other) noexcept {
 }
 
 void *allocator::allocate(std::size_t s, std::size_t a) const {
+  LIBIMP_LOG_();
+  if ((a & (a - 1)) != 0) {
+    log.error("failed: allocate alignment is not a power of 2.");
+    return nullptr;
+  }
   return get_holder().alloc(s, a);
 }
 
 void allocator::deallocate(void *p, std::size_t s, std::size_t a) const {
+  LIBIMP_LOG_();
+  if ((a & (a - 1)) != 0) {
+    log.error("failed: allocate alignment is not a power of 2.");
+    return;
+  }
   get_holder().dealloc(p, s, a);
 }
 

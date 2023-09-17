@@ -102,13 +102,13 @@ TEST(monotonic_buffer_resource, release) {
     tmp.release();
     ASSERT_EQ(dummy.allocated, 0);
     ASSERT_NE(tmp.allocate(1024), nullptr);
-    ASSERT_GE(dummy.allocated, 1024);
-    ASSERT_LE(dummy.allocated, 1024 * 1.5);
+    ASSERT_GE(dummy.allocated, 1024u);
+    ASSERT_LE(dummy.allocated, 1024u * 1.5);
     tmp.release();
     ASSERT_EQ(dummy.allocated, 0);
     ASSERT_NE(tmp.allocate(1024), nullptr);
-    ASSERT_GE(dummy.allocated, 1024);
-    ASSERT_LE(dummy.allocated, 1024 * 1.5);
+    ASSERT_GE(dummy.allocated, 1024u);
+    ASSERT_LE(dummy.allocated, 1024u * 1.5);
   }
   ASSERT_EQ(dummy.allocated, 0);
   std::array<imp::byte, 4096> buffer;
@@ -119,7 +119,7 @@ TEST(monotonic_buffer_resource, release) {
     ASSERT_EQ(dummy.allocated, 0);
     p = tmp.allocate(10240);
     ASSERT_NE(p, buffer.data());
-    ASSERT_LE(dummy.allocated, 10240 + 1024);
+    ASSERT_LE(dummy.allocated, 10240u + 1024u);
     tmp.release();
     ASSERT_EQ(dummy.allocated, 0);
     p = tmp.allocate(1024);
@@ -127,7 +127,7 @@ TEST(monotonic_buffer_resource, release) {
     ASSERT_EQ(dummy.allocated, 0);
     p = tmp.allocate(10240);
     ASSERT_NE(p, buffer.data());
-    ASSERT_LE(dummy.allocated, 10240 + 1024);
+    ASSERT_LE(dummy.allocated, 10240u + 1024u);
   }
   ASSERT_EQ(dummy.allocated, 0);
 }
