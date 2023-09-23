@@ -33,7 +33,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         return nullptr;
     }
     HANDLE h;
-    auto fmt_name = ipc::detail::to_tchar(ipc::string{"__IPC_SHM__"} + name);
+    auto fmt_name = ipc::detail::to_tchar(ipc::string{"Global\\__IPC_SHM__"} + name);
     // Opens a named file mapping object.
     if (mode == open) {
         h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, fmt_name.c_str());

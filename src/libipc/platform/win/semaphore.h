@@ -32,7 +32,7 @@ public:
         close();
         h_ = ::CreateSemaphore(detail::get_sa(), 
                                static_cast<LONG>(count), LONG_MAX, 
-                               ipc::detail::to_tchar(name).c_str());
+                               ipc::detail::to_tchar(ipc::string{"Global\\"} + name).c_str());
         if (h_ == NULL) {
             ipc::error("fail CreateSemaphore[%lu]: %s\n", ::GetLastError(), name);
             return false;
