@@ -2,6 +2,7 @@
 #include "libipc/condition.h"
 
 #include "libipc/utility/pimpl.h"
+#include "libipc/utility/log.h"
 #include "libipc/memory/resource.h"
 #include "libipc/platform/detail.h"
 #if defined(IPC_OS_WINDOWS_)
@@ -49,6 +50,10 @@ bool condition::valid() const noexcept {
 }
 
 bool condition::open(char const *name) noexcept {
+    if (name == nullptr || name[0] == '\0') {
+        ipc::error("fail condition open: name is empty\n");
+        return false;
+    }
     return impl(p_)->cond_.open(name);
 }
 

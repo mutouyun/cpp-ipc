@@ -9,6 +9,7 @@
 
 #include "to_tchar.h"
 #include "get_sa.h"
+#include "comfortable_prefix.h"
 
 namespace ipc {
 namespace detail {
@@ -33,7 +34,8 @@ public:
 
     bool open(char const *name) noexcept {
         close();
-        h_ = ::CreateMutex(detail::get_sa(), FALSE, ipc::detail::to_tchar(ipc::string{"Global\\"} + name).c_str());
+        h_ = ::CreateMutex(detail::get_sa(), FALSE, 
+                           detail::to_tchar(detail::make_comfortable_prefix(name)).c_str());
         if (h_ == NULL) {
             ipc::error("fail CreateMutex[%lu]: %s\n", ::GetLastError(), name);
             return false;
