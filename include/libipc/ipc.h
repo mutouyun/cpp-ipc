@@ -169,26 +169,22 @@ template <relat Rp, relat Rc, trans Ts>
 using chan = chan_wrapper<ipc::wr<Rp, Rc, Ts>>;
 
 /**
- * class route
+ * \class route
  *
- * You could use one producer/server/sender for sending messages to a route,
- * then all the consumers/clients/receivers which are receiving with this route,
- * would receive your sent messages.
- *
- * A route could only be used in 1 to N
- * (one producer/writer to multi consumers/readers)
+ * \note You could use one producer/server/sender for sending messages to a route,
+ *       then all the consumers/clients/receivers which are receiving with this route,
+ *       would receive your sent messages.
+ *       A route could only be used in 1 to N (one producer/writer to multi consumers/readers).
 */
-
 using route = chan<relat::single, relat::multi, trans::broadcast>;
 
 /**
- * class channel
+ * \class channel
  *
- * You could use multi producers/writers for sending messages to a channel,
- * then all the consumers/readers which are receiving with this channel,
- * would receive your sent messages.
+ * \note You could use multi producers/writers for sending messages to a channel,
+ *       then all the consumers/readers which are receiving with this channel,
+ *       would receive your sent messages.
 */
-
 using channel = chan<relat::multi, relat::multi, trans::broadcast>;
 
 } // namespace ipc
