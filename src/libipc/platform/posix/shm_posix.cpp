@@ -49,7 +49,9 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         ipc::error("fail acquire: name is empty\n");
         return nullptr;
     }
-    ipc::string op_name = ipc::string{"__IPC_SHM__"} + name;
+    // For portable use, a shared memory object should be identified by name of the form /somename.
+    // see: https://man7.org/linux/man-pages/man3/shm_open.3.html
+    ipc::string op_name = ipc::string{"/__IPC_SHM__"} + name;
     // Open the object for read-write access.
     int flag = O_RDWR;
     switch (mode) {
