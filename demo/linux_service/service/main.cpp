@@ -1,5 +1,4 @@
-/// \brief To create a basic Windows Service in C++.
-/// \see https://www.codeproject.com/Articles/499465/Simple-Windows-Service-in-Cplusplus
+/// \brief To create a basic command line program.
 
 #include <stdio.h>
 #include <string>
