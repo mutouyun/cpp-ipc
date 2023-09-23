@@ -75,8 +75,8 @@ VOID WINAPI ServiceMain (DWORD argc, LPTSTR *argv) {
         g_ServiceStatus.dwCheckPoint = 1;
 
         if (SetServiceStatus (g_StatusHandle, &g_ServiceStatus) == FALSE) {
-		    OutputDebugString(_T("My Sample Service: ServiceMain: SetServiceStatus returned error"));
-	    }
+            OutputDebugString(_T("My Sample Service: ServiceMain: SetServiceStatus returned error"));
+        }
         goto EXIT; 
     }    
 
@@ -87,7 +87,7 @@ VOID WINAPI ServiceMain (DWORD argc, LPTSTR *argv) {
     g_ServiceStatus.dwCheckPoint = 0;
 
     if (SetServiceStatus (g_StatusHandle, &g_ServiceStatus) == FALSE) {
-	    OutputDebugString(_T("My Sample Service: ServiceMain: SetServiceStatus returned error"));
+        OutputDebugString(_T("My Sample Service: ServiceMain: SetServiceStatus returned error"));
     }
 
     // Start the thread that will perform the main task of the service
@@ -114,7 +114,7 @@ VOID WINAPI ServiceMain (DWORD argc, LPTSTR *argv) {
     g_ServiceStatus.dwCheckPoint = 3;
 
     if (SetServiceStatus (g_StatusHandle, &g_ServiceStatus) == FALSE) {
-	    OutputDebugString(_T("My Sample Service: ServiceMain: SetServiceStatus returned error"));
+        OutputDebugString(_T("My Sample Service: ServiceMain: SetServiceStatus returned error"));
     }
     
 EXIT:
@@ -143,8 +143,8 @@ VOID WINAPI ServiceCtrlHandler (DWORD CtrlCode) {
         g_ServiceStatus.dwCheckPoint = 4;
 
         if (SetServiceStatus (g_StatusHandle, &g_ServiceStatus) == FALSE) {
-			OutputDebugString(_T("My Sample Service: ServiceCtrlHandler: SetServiceStatus returned error"));
-		}
+            OutputDebugString(_T("My Sample Service: ServiceCtrlHandler: SetServiceStatus returned error"));
+        }
 
         // This will signal the worker thread to start shutting down
         SetEvent (g_ServiceStopEvent);
