@@ -18,6 +18,7 @@
 #include "libipc/utility/log.h"
 #include "libipc/platform/detail.h"
 #include "libipc/circ/elem_def.h"
+#include "libipc/memory/resource.h"
 
 namespace ipc {
 namespace detail {
@@ -29,7 +30,7 @@ protected:
 
     template <typename Elems>
     Elems* open(char const * name) {
-        if (name == nullptr || name[0] == '\0') {
+        if (!is_valid_string(name)) {
             ipc::error("fail open waiter: name is empty!\n");
             return nullptr;
         }

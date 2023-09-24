@@ -69,7 +69,7 @@ void handle::sub_ref() noexcept {
 }
 
 bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
-    if (name == nullptr || name[0] == '\0') {
+    if (!is_valid_string(name)) {
         ipc::error("fail acquire: name is empty\n");
         return false;
     }

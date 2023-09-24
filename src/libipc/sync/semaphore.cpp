@@ -48,7 +48,7 @@ bool semaphore::valid() const noexcept {
 }
 
 bool semaphore::open(char const *name, std::uint32_t count) noexcept {
-    if (name == nullptr || name[0] == '\0') {
+    if (!is_valid_string(name)) {
         ipc::error("fail semaphore open: name is empty\n");
         return false;
     }
