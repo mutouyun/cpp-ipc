@@ -49,6 +49,9 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         ipc::error("fail acquire: name is empty\n");
         return nullptr;
     }
+    // For portable use, a shared memory object should be identified by name of the form /somename.
+    // see: https://man7.org/linux/man-pages/man3/shm_open.3.html
+    ipc::string op_name = ipc::string{"/"} + name;
     // Open the object for read-write access.
     int flag = O_RDWR;
     switch (mode) {
@@ -65,17 +68,17 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         flag |= O_CREAT;
         break;
     }
-    int fd = ::shm_open(name, flag, S_IRUSR | S_IWUSR |
-                                    S_IRGRP | S_IWGRP |
-                                    S_IROTH | S_IWOTH);
+    int fd = ::shm_open(op_name.c_str(), flag, S_IRUSR | S_IWUSR |
+                                               S_IRGRP | S_IWGRP |
+                                               S_IROTH | S_IWOTH);
     if (fd == -1) {
-        ipc::error("fail shm_open[%d]: %s\n", errno, name);
+        ipc::error("fail shm_open[%d]: %s\n", errno, op_name.c_str());
         return nullptr;
     }
     auto ii = mem::alloc<id_info_t>();
     ii->fd_   = fd;
     ii->size_ = size;
-    ii->name_ = name;
+    ii->name_ = std::move(op_name);
     return ii;
 }
 
@@ -158,7 +161,8 @@ std::int32_t release(id_t id) {
     std::int32_t ret = -1;
     auto ii = static_cast<id_info_t*>(id);
     if (ii->mem_ == nullptr || ii->size_ == 0) {
-        ipc::error("fail release: invalid id (mem = %p, size = %zd)\n", ii->mem_, ii->size_);
+        ipc::error("fail release: invalid id (mem = %p, size = %zd), name = %s\n", 
+                    ii->mem_, ii->size_, ii->name_.c_str());
     }
     else if ((ret = acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel)) <= 1) {
         ::munmap(ii->mem_, ii->size_);
