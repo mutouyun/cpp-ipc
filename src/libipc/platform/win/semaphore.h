@@ -8,7 +8,6 @@
 
 #include "to_tchar.h"
 #include "get_sa.h"
-#include "comfortable_prefix.h"
 
 namespace ipc {
 namespace detail {
@@ -33,7 +32,7 @@ public:
         close();
         h_ = ::CreateSemaphore(detail::get_sa(), 
                                static_cast<LONG>(count), LONG_MAX, 
-                               detail::to_tchar(detail::make_comfortable_prefix(name)).c_str());
+                               detail::to_tchar(name).c_str());
         if (h_ == NULL) {
             ipc::error("fail CreateSemaphore[%lu]: %s\n", ::GetLastError(), name);
             return false;

@@ -37,8 +37,8 @@ private:
     elem_t   block_[elem_max] {};
 
     /**
-     * @remarks 'warning C4348: redefinition of default parameter' with MSVC.
-     * @see
+     * \remarks 'warning C4348: redefinition of default parameter' with MSVC.
+     * \see
      *  - https://stackoverflow.com/questions/12656239/redefinition-of-default-template-parameter
      *  - https://developercommunity.visualstudio.com/content/problem/425978/incorrect-c4348-warning-in-nested-template-declara.html
     */

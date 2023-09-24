@@ -65,4 +65,9 @@ struct relat_trait<wr<Rp, Rc, Ts>> {
 template <template <typename> class Policy, typename Flag>
 struct relat_trait<Policy<Flag>> : relat_trait<Flag> {};
 
+// the prefix tag of a channel
+struct prefix {
+    char const *str;
+};
+
 } // namespace ipc

@@ -69,6 +69,11 @@ ipc::buff_t make_cache(T& data, std::size_t size) {
     return { ptr, size, ipc::mem::free };
 }
 
+acc_t *cc_acc() {
+    static ipc::shm::handle acc_h("__CA_CONN__", sizeof(acc_t));
+    return static_cast<acc_t *>(acc_h.get());
+}
+
 struct cache_t {
     std::size_t fill_;
     ipc::buff_t buff_;
@@ -85,10 +90,39 @@ struct cache_t {
     }
 };
 
-auto cc_acc() {
-    static ipc::shm::handle acc_h("__CA_CONN__", sizeof(acc_t));
-    return static_cast<acc_t*>(acc_h.get());
-}
+struct conn_info_head {
+
+    ipc::string prefix_;
+    ipc::string name_;
+    msg_id_t    cc_id_; // connection-info id
+    ipc::detail::waiter cc_waiter_, wt_waiter_, rd_waiter_;
+    ipc::shm::handle acc_h_;
+
+    conn_info_head(char const * prefix, char const * name)
+        : prefix_   {ipc::make_string(prefix)}
+        , name_     {ipc::make_string(name)}
+        , cc_id_    {(cc_acc() == nullptr) ? 0 : cc_acc()->fetch_add(1, std::memory_order_relaxed)}
+        , cc_waiter_{ipc::make_prefix(prefix_, {"CC_CONN__", name_}).c_str()}
+        , wt_waiter_{ipc::make_prefix(prefix_, {"WT_CONN__", name_}).c_str()}
+        , rd_waiter_{ipc::make_prefix(prefix_, {"RD_CONN__", name_}).c_str()}
+        , acc_h_    {ipc::make_prefix(prefix_, {"AC_CONN__", name_}).c_str(), sizeof(acc_t)} {
+    }
+
+    void quit_waiting() {
+        cc_waiter_.quit_waiting();
+        wt_waiter_.quit_waiting();
+        rd_waiter_.quit_waiting();
+    }
+
+    auto acc() {
+        return static_cast<acc_t*>(acc_h_.get());
+    }
+
+    auto& recv_cache() {
+        thread_local ipc::unordered_map<msg_id_t, cache_t> tls;
+        return tls;
+    }
+};
 
 IPC_CONSTEXPR_ std::size_t align_chunk_size(std::size_t size) noexcept {
     return (((size - 1) / ipc::large_msg_align) + 1) * ipc::large_msg_align;
@@ -130,17 +164,27 @@ struct chunk_info_t {
 
 auto& chunk_storages() {
     class chunk_handle_t {
-        ipc::shm::handle handle_;
+        ipc::unordered_map<ipc::string, ipc::shm::handle> handles_;
+
+        static bool make_handle(ipc::shm::handle &h, ipc::string const &shm_name, std::size_t chunk_size) {
+            if (!h.valid() &&
+                !h.acquire( shm_name.c_str(), 
+                            sizeof(chunk_info_t) + chunk_info_t::chunks_mem_size(chunk_size) )) {
+                ipc::error("[chunk_storages] chunk_shm.id_info_.acquire failed: chunk_size = %zd\n", chunk_size);
+                return false;
+            }
+            return true;
+        }
 
     public:
-        chunk_info_t *get_info(std::size_t chunk_size) {
-            if (!handle_.valid() &&
-                !handle_.acquire( ("__CHUNK_INFO__" + ipc::to_string(chunk_size)).c_str(), 
-                                  sizeof(chunk_info_t) + chunk_info_t::chunks_mem_size(chunk_size) )) {
-                ipc::error("[chunk_storages] chunk_shm.id_info_.acquire failed: chunk_size = %zd\n", chunk_size);
+        chunk_info_t *get_info(conn_info_head *inf, std::size_t chunk_size) {
+            ipc::string pref {(inf == nullptr) ? ipc::string{} : inf->prefix_};
+            ipc::string shm_name {ipc::make_prefix(pref, {"CHUNK_INFO__", ipc::to_string(chunk_size)})};
+            ipc::shm::handle &h = handles_[pref];
+            if (!make_handle(h, shm_name, chunk_size)) {
                 return nullptr;
             }
-            auto info = static_cast<chunk_info_t*>(handle_.get());
+            auto *info = static_cast<chunk_info_t*>(h.get());
             if (info == nullptr) {
                 ipc::error("[chunk_storages] chunk_shm.id_info_.get failed: chunk_size = %zd\n", chunk_size);
                 return nullptr;
@@ -152,7 +196,7 @@ auto& chunk_storages() {
     return chunk_hs;
 }
 
-chunk_info_t *chunk_storage_info(std::size_t chunk_size) {
+chunk_info_t *chunk_storage_info(conn_info_head *inf, std::size_t chunk_size) {
     auto &storages = chunk_storages();
     std::decay_t<decltype(storages)>::iterator it;
     {
@@ -165,12 +209,12 @@ chunk_info_t *chunk_storage_info(std::size_t chunk_size) {
             it = storages.emplace(chunk_size, chunk_handle_t{}).first;
         }
     }
-    return it->second.get_info(chunk_size);
+    return it->second.get_info(inf, chunk_size);
 }
 
-std::pair<ipc::storage_id_t, void*> acquire_storage(std::size_t size, ipc::circ::cc_t conns) {
+std::pair<ipc::storage_id_t, void*> acquire_storage(conn_info_head *inf, std::size_t size, ipc::circ::cc_t conns) {
     std::size_t chunk_size = calc_chunk_size(size);
-    auto info = chunk_storage_info(chunk_size);
+    auto info = chunk_storage_info(inf, chunk_size);
     if (info == nullptr) return {};
 
     info->lock_.lock();
@@ -185,24 +229,24 @@ std::pair<ipc::storage_id_t, void*> acquire_storage(std::size_t size, ipc::circ:
     return { id, chunk->data() };
 }
 
-void *find_storage(ipc::storage_id_t id, std::size_t size) {
+void *find_storage(ipc::storage_id_t id, conn_info_head *inf, std::size_t size) {
     if (id < 0) {
         ipc::error("[find_storage] id is invalid: id = %ld, size = %zd\n", (long)id, size);
         return nullptr;
     }
     std::size_t chunk_size = calc_chunk_size(size);
-    auto info = chunk_storage_info(chunk_size);
+    auto info = chunk_storage_info(inf, chunk_size);
     if (info == nullptr) return nullptr;
     return info->at(chunk_size, id)->data();
 }
 
-void release_storage(ipc::storage_id_t id, std::size_t size) {
+void release_storage(ipc::storage_id_t id, conn_info_head *inf, std::size_t size) {
     if (id < 0) {
         ipc::error("[release_storage] id is invalid: id = %ld, size = %zd\n", (long)id, size);
         return;
     }
     std::size_t chunk_size = calc_chunk_size(size);
-    auto info = chunk_storage_info(chunk_size);
+    auto info = chunk_storage_info(inf, chunk_size);
     if (info == nullptr) return;
     info->lock_.lock();
     info->pool_.release(id);
@@ -229,13 +273,13 @@ bool sub_rc(ipc::wr<Rp, Rc, ipc::trans::broadcast>,
 }
 
 template <typename Flag>
-void recycle_storage(ipc::storage_id_t id, std::size_t size, ipc::circ::cc_t curr_conns, ipc::circ::cc_t conn_id) {
+void recycle_storage(ipc::storage_id_t id, conn_info_head *inf, std::size_t size, ipc::circ::cc_t curr_conns, ipc::circ::cc_t conn_id) {
     if (id < 0) {
         ipc::error("[recycle_storage] id is invalid: id = %ld, size = %zd\n", (long)id, size);
         return;
     }
     std::size_t chunk_size = calc_chunk_size(size);
-    auto info = chunk_storage_info(chunk_size);
+    auto info = chunk_storage_info(inf, chunk_size);
     if (info == nullptr) return;
 
     auto chunk = info->at(chunk_size, id);
@@ -250,7 +294,7 @@ void recycle_storage(ipc::storage_id_t id, std::size_t size, ipc::circ::cc_t cur
 }
 
 template <typename MsgT>
-bool clear_message(void* p) {
+bool clear_message(conn_info_head *inf, void* p) {
     auto msg = static_cast<MsgT*>(p);
     if (msg->storage_) {
         std::int32_t r_size = static_cast<std::int32_t>(ipc::data_length) + msg->remain_;
@@ -258,44 +302,11 @@ bool clear_message(void* p) {
             ipc::error("[clear_message] invalid msg size: %d\n", (int)r_size);
             return true;
         }
-        release_storage(
-            *reinterpret_cast<ipc::storage_id_t*>(&msg->data_),
-            static_cast<std::size_t>(r_size));
+        release_storage(*reinterpret_cast<ipc::storage_id_t*>(&msg->data_),
+                        inf, static_cast<std::size_t>(r_size));
     }
     return true;
 }
-
-struct conn_info_head {
-
-    ipc::string name_;
-    msg_id_t    cc_id_; // connection-info id
-    ipc::detail::waiter cc_waiter_, wt_waiter_, rd_waiter_;
-    ipc::shm::handle acc_h_;
-
-    conn_info_head(char const * name)
-        : name_     {name}
-        , cc_id_    {(cc_acc() == nullptr) ? 0 : cc_acc()->fetch_add(1, std::memory_order_relaxed)}
-        , cc_waiter_{("__CC_CONN__" + name_).c_str()}
-        , wt_waiter_{("__WT_CONN__" + name_).c_str()}
-        , rd_waiter_{("__RD_CONN__" + name_).c_str()}
-        , acc_h_    {("__AC_CONN__" + name_).c_str(), sizeof(acc_t)} {
-    }
-
-    void quit_waiting() {
-        cc_waiter_.quit_waiting();
-        wt_waiter_.quit_waiting();
-        rd_waiter_.quit_waiting();
-    }
-
-    auto acc() {
-        return static_cast<acc_t*>(acc_h_.get());
-    }
-
-    auto& recv_cache() {
-        thread_local ipc::unordered_map<msg_id_t, cache_t> tls;
-        return tls;
-    }
-};
 
 template <typename W, typename F>
 bool wait_for(W& waiter, F&& pred, std::uint64_t tm) {
@@ -322,11 +333,13 @@ struct queue_generator {
     struct conn_info_t : conn_info_head {
         queue_t que_;
 
-        conn_info_t(char const * name)
-            : conn_info_head{name}
-            , que_{("__QU_CONN__" +
-                    ipc::to_string(DataSize) + "__" +
-                    ipc::to_string(AlignSize) + "__" + name).c_str()} {
+        conn_info_t(char const * pref, char const * name)
+            : conn_info_head{pref, name}
+            , que_{ipc::make_prefix(prefix_, {
+                    "QU_CONN__",
+                    ipc::to_string(DataSize), "__",
+                    ipc::to_string(AlignSize), "__", 
+                    name}).c_str()} {
         }
 
         void disconnect_receiver() {
@@ -389,12 +402,16 @@ static bool reconnect(ipc::handle_t * ph, bool start_to_recv) {
     return que->ready_sending();
 }
 
-static bool connect(ipc::handle_t * ph, char const * name, bool start_to_recv) {
+static bool connect(ipc::handle_t * ph, ipc::prefix pref, char const * name, bool start_to_recv) {
     assert(ph != nullptr);
     if (*ph == nullptr) {
-        *ph = ipc::mem::alloc<conn_info_t>(name);
+        *ph = ipc::mem::alloc<conn_info_t>(pref.str, name);
     }
     return reconnect(ph, start_to_recv);
+}
+
+static bool connect(ipc::handle_t * ph, char const * name, bool start_to_recv) {
+    return connect(ph, {nullptr}, name, start_to_recv);
 }
 
 static void destroy(ipc::handle_t h) {
@@ -445,15 +462,16 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
         return false;
     }
     // calc a new message id
-    auto acc = info_of(h)->acc();
+    conn_info_t *inf = info_of(h);
+    auto acc = inf->acc();
     if (acc == nullptr) {
         ipc::error("fail: send, info_of(h)->acc() == nullptr\n");
         return false;
     }
     auto msg_id   = acc->fetch_add(1, std::memory_order_relaxed);
-    auto try_push = std::forward<F>(gen_push)(info_of(h), que, msg_id);
+    auto try_push = std::forward<F>(gen_push)(inf, que, msg_id);
     if (size > ipc::large_msg_limit) {
-        auto   dat = acquire_storage(size, conns);
+        auto   dat = acquire_storage(inf, size, conns);
         void * buf = dat.second;
         if (buf != nullptr) {
             std::memcpy(buf, data, size);
@@ -484,7 +502,7 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
 }
 
 static bool send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm) {
-    return send([tm](auto info, auto que, auto msg_id) {
+    return send([tm](auto *info, auto *que, auto msg_id) {
         return [tm, info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(
@@ -493,7 +511,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size, std::uint
                 }, tm)) {
                 ipc::log("force_push: msg_id = %zd, remain = %d, size = %zd\n", msg_id, remain, size);
                 if (!que->force_push(
-                        clear_message<typename queue_t::value_t>,
+                        [info](void* p) { return clear_message<typename queue_t::value_t>(info, p); },
                         info->cc_id_, msg_id, remain, data, size)) {
                     return false;
                 }
@@ -505,7 +523,7 @@ static bool send(ipc::handle_t h, void const * data, std::size_t size, std::uint
 }
 
 static bool try_send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm) {
-    return send([tm](auto info, auto que, auto msg_id) {
+    return send([tm](auto *info, auto *que, auto msg_id) {
         return [tm, info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(
@@ -530,18 +548,19 @@ static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
         // hasn't connected yet, just return.
         return {};
     }
-    auto& rc = info_of(h)->recv_cache();
+    conn_info_t *inf = info_of(h);
+    auto& rc = inf->recv_cache();
     for (;;) {
         // pop a new message
         typename queue_t::value_t msg {};
-        if (!wait_for(info_of(h)->rd_waiter_, [que, &msg] {
+        if (!wait_for(inf->rd_waiter_, [que, &msg] {
                 return !que->pop(msg);
             }, tm)) {
             // pop failed, just return.
             return {};
         }
-        info_of(h)->wt_waiter_.broadcast();
-        if ((info_of(h)->acc() != nullptr) && (msg.cc_id_ == info_of(h)->cc_id_)) {
+        inf->wt_waiter_.broadcast();
+        if ((inf->acc() != nullptr) && (msg.cc_id_ == inf->cc_id_)) {
             continue; // ignore message to self
         }
         // msg.remain_ may minus & abs(msg.remain_) < data_length
@@ -554,14 +573,18 @@ static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
         // large message
         if (msg.storage_) {
             ipc::storage_id_t buf_id = *reinterpret_cast<ipc::storage_id_t*>(&msg.data_);
-            void* buf = find_storage(buf_id, msg_size);
+            void* buf = find_storage(buf_id, inf, msg_size);
             if (buf != nullptr) {
                 struct recycle_t {
                     ipc::storage_id_t storage_id;
+                    conn_info_t *     inf;
                     ipc::circ::cc_t   curr_conns;
                     ipc::circ::cc_t   conn_id;
                 } *r_info = ipc::mem::alloc<recycle_t>(recycle_t{
-                    buf_id, que->elems()->connections(std::memory_order_relaxed), que->connected_id()
+                    buf_id, 
+                    inf, 
+                    que->elems()->connections(std::memory_order_relaxed), 
+                    que->connected_id()
                 });
                 if (r_info == nullptr) {
                     ipc::log("fail: ipc::mem::alloc<recycle_t>.\n");
@@ -572,7 +595,11 @@ static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
                         IPC_UNUSED_ auto finally = ipc::guard([r_info] {
                             ipc::mem::free(r_info);
                         });
-                        recycle_storage<flag_t>(r_info->storage_id, size, r_info->curr_conns, r_info->conn_id);
+                        recycle_storage<flag_t>(r_info->storage_id, 
+                                                r_info->inf, 
+                                                size, 
+                                                r_info->curr_conns, 
+                                                r_info->conn_id);
                     }, r_info};
                 }
             } else {
@@ -642,6 +669,11 @@ bool chan_impl<Flag>::connect(ipc::handle_t * ph, char const * name, unsigned mo
 }
 
 template <typename Flag>
+bool chan_impl<Flag>::connect(ipc::handle_t * ph, prefix pref, char const * name, unsigned mode) {
+    return detail_impl<policy_t<Flag>>::connect(ph, pref, name, mode & receiver);
+}
+
+template <typename Flag>
 bool chan_impl<Flag>::reconnect(ipc::handle_t * ph, unsigned mode) {
     return detail_impl<policy_t<Flag>>::reconnect(ph, mode & receiver);
 }
@@ -658,7 +690,7 @@ void chan_impl<Flag>::destroy(ipc::handle_t h) {
 
 template <typename Flag>
 char const * chan_impl<Flag>::name(ipc::handle_t h) {
-    auto info = detail_impl<policy_t<Flag>>::info_of(h);
+    auto *info = detail_impl<policy_t<Flag>>::info_of(h);
     return (info == nullptr) ? nullptr : info->name_.c_str();
 }
 

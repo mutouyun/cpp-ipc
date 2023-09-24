@@ -49,9 +49,6 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         ipc::error("fail acquire: name is empty\n");
         return nullptr;
     }
-    // For portable use, a shared memory object should be identified by name of the form /somename.
-    // see: https://man7.org/linux/man-pages/man3/shm_open.3.html
-    ipc::string op_name = ipc::string{"/__IPC_SHM__"} + name;
     // Open the object for read-write access.
     int flag = O_RDWR;
     switch (mode) {
@@ -68,9 +65,9 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         flag |= O_CREAT;
         break;
     }
-    int fd = ::shm_open(op_name.c_str(), flag, S_IRUSR | S_IWUSR |
-                                               S_IRGRP | S_IWGRP |
-                                               S_IROTH | S_IWOTH);
+    int fd = ::shm_open(name, flag, S_IRUSR | S_IWUSR |
+                                    S_IRGRP | S_IWGRP |
+                                    S_IROTH | S_IWOTH);
     if (fd == -1) {
         ipc::error("fail shm_open[%d]: %s\n", errno, name);
         return nullptr;
@@ -78,7 +75,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     auto ii = mem::alloc<id_info_t>();
     ii->fd_   = fd;
     ii->size_ = size;
-    ii->name_ = std::move(op_name);
+    ii->name_ = name;
     return ii;
 }
 
@@ -192,7 +189,7 @@ void remove(char const * name) {
         ipc::error("fail remove: name is empty\n");
         return;
     }
-    ::shm_unlink((ipc::string{"__IPC_SHM__"} + name).c_str());
+    ::shm_unlink(name);
 }
 
 } // namespace shm

@@ -87,4 +87,24 @@ ipc::string to_string(T val) {
     return {};
 }
 
+/// \brief Check string validity.
+constexpr bool is_valid_string(char const *str) noexcept {
+    return (str != nullptr) && (str[0] != '\0');
+}
+
+/// \brief Make a valid string.
+inline ipc::string make_string(char const *str) {
+    return is_valid_string(str) ? ipc::string{str} : ipc::string{};
+}
+
+/// \brief Combine prefix from a list of strings.
+inline ipc::string make_prefix(ipc::string prefix, std::initializer_list<ipc::string> args) {
+    prefix += "__IPC_SHM__";
+    for (auto const &txt: args) {
+        if (txt.empty()) continue;
+        prefix += txt;
+    }
+    return prefix;
+}
+
 } // namespace ipc
