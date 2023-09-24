@@ -50,7 +50,7 @@ bool mutex::valid() const noexcept {
 }
 
 bool mutex::open(char const *name) noexcept {
-    if (name == nullptr || name[0] == '\0') {
+    if (!is_valid_string(name)) {
         ipc::error("fail mutex open: name is empty\n");
         return false;
     }

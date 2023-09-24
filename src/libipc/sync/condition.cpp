@@ -50,7 +50,7 @@ bool condition::valid() const noexcept {
 }
 
 bool condition::open(char const *name) noexcept {
-    if (name == nullptr || name[0] == '\0') {
+    if (!is_valid_string(name)) {
         ipc::error("fail condition open: name is empty\n");
         return false;
     }

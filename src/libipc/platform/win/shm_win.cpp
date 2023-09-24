@@ -28,7 +28,7 @@ namespace ipc {
 namespace shm {
 
 id_t acquire(char const * name, std::size_t size, unsigned mode) {
-    if (name == nullptr || name[0] == '\0') {
+    if (!is_valid_string(name)) {
         ipc::error("fail acquire: name is empty\n");
         return nullptr;
     }
@@ -124,7 +124,7 @@ void remove(id_t id) {
 }
 
 void remove(char const * name) {
-    if (name == nullptr || name[0] == '\0') {
+    if (!is_valid_string(name)) {
         ipc::error("fail remove: name is empty\n");
         return;
     }
