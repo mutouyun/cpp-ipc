@@ -151,11 +151,15 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
 
 } // internal-linkage
 
-TEST(IPC, basic) {
+TEST(IPC, basic_ssu) {
     test_basic<relat::single, relat::single, trans::unicast  >("ssu");
-    //test_basic<relat::single, relat::multi , trans::unicast  >("smu");
-    //test_basic<relat::multi , relat::multi , trans::unicast  >("mmu");
+}
+
+TEST(IPC, basic_smb) {
     test_basic<relat::single, relat::multi , trans::broadcast>("smb");
+}
+
+TEST(IPC, basic_mmb) {
     test_basic<relat::multi , relat::multi , trans::broadcast>("mmb");
 }
 

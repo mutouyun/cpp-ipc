@@ -182,6 +182,7 @@ struct chunk_info_t {
 auto& chunk_storages() {
     class chunk_handle_t {
         ipc::unordered_map<ipc::string, ipc::shm::handle> handles_;
+        std::mutex lock_;
 
         static bool make_handle(ipc::shm::handle &h, ipc::string const &shm_name, std::size_t chunk_size) {
             if (!h.valid() &&
@@ -197,11 +198,15 @@ auto& chunk_storages() {
         chunk_info_t *get_info(conn_info_head *inf, std::size_t chunk_size) {
             ipc::string pref {(inf == nullptr) ? ipc::string{} : inf->prefix_};
             ipc::string shm_name {ipc::make_prefix(pref, {"CHUNK_INFO__", ipc::to_string(chunk_size)})};
-            ipc::shm::handle &h = handles_[pref];
-            if (!make_handle(h, shm_name, chunk_size)) {
-                return nullptr;
+            ipc::shm::handle *h;
+            {
+                std::lock_guard<std::mutex> guard {lock_};
+                h = &(handles_[pref]);
+                if (!make_handle(*h, shm_name, chunk_size)) {
+                    return nullptr;
+                }
             }
-            auto *info = static_cast<chunk_info_t*>(h.get());
+            auto *info = static_cast<chunk_info_t*>(h->get());
             if (info == nullptr) {
                 ipc::error("[chunk_storages] chunk_shm.id_info_.get failed: chunk_size = %zd\n", chunk_size);
                 return nullptr;
@@ -209,7 +214,9 @@ auto& chunk_storages() {
             return info;
         }
     };
-    static ipc::map<std::size_t, chunk_handle_t> chunk_hs;
+    using deleter_t = void (*)(chunk_handle_t*);
+    using chunk_handle_ptr_t = std::unique_ptr<chunk_handle_t, deleter_t>;
+    static ipc::map<std::size_t, chunk_handle_ptr_t> chunk_hs;
     return chunk_hs;
 }
 
@@ -220,13 +227,17 @@ chunk_info_t *chunk_storage_info(conn_info_head *inf, std::size_t chunk_size) {
         static ipc::rw_lock lock;
         IPC_UNUSED_ std::shared_lock<ipc::rw_lock> guard {lock};
         if ((it = storages.find(chunk_size)) == storages.end()) {
-            using chunk_handle_t = std::decay_t<decltype(storages)>::value_type::second_type;
+            using chunk_handle_ptr_t = std::decay_t<decltype(storages)>::value_type::second_type;
+            using chunk_handle_t     = chunk_handle_ptr_t::element_type;
             guard.unlock();
             IPC_UNUSED_ std::lock_guard<ipc::rw_lock> guard {lock};
-            it = storages.emplace(chunk_size, chunk_handle_t{}).first;
+            it = storages.emplace(chunk_size, chunk_handle_ptr_t{
+                ipc::mem::alloc<chunk_handle_t>(), [](chunk_handle_t *p) {
+                    ipc::mem::destruct(p);
+                }}).first;
         }
     }
-    return it->second.get_info(inf, chunk_size);
+    return it->second->get_info(inf, chunk_size);
 }
 
 std::pair<ipc::storage_id_t, void*> acquire_storage(conn_info_head *inf, std::size_t size, ipc::circ::cc_t conns) {
@@ -356,8 +367,7 @@ struct queue_generator {
                     "QU_CONN__",
                     ipc::to_string(DataSize), "__",
                     ipc::to_string(AlignSize), "__", 
-                    name}).c_str()} {
-        }
+                    name}).c_str()} {}
 
         void disconnect_receiver() {
             bool dis = que_.disconnect();

@@ -131,7 +131,7 @@ TEST(Sync, Condition) {
             {
                 std::lock_guard<ipc::sync::mutex> guard {lock};
                 while (que.empty()) {
-                    EXPECT_TRUE(cond.wait(lock, 1000));
+                    ASSERT_TRUE(cond.wait(lock, 1000));
                 }
                 val = que.front();
                 que.pop_front();
