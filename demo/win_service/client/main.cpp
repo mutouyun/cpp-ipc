@@ -8,8 +8,8 @@
 
 int _tmain (int argc, TCHAR *argv[]) {
     _tprintf(_T("My Sample Client: Entry\n"));
-    ipc::channel ipc_r{"service ipc r", ipc::receiver};
-    ipc::channel ipc_w{"service ipc w", ipc::sender};
+    ipc::channel ipc_r{ipc::prefix{"Global\\"}, "service ipc r", ipc::receiver};
+    ipc::channel ipc_w{ipc::prefix{"Global\\"}, "service ipc w", ipc::sender};
     while (1) {
         auto msg = ipc_r.recv();
         if (msg.empty()) {
