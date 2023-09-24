@@ -5,6 +5,7 @@
 #include "libipc/shm.h"
 
 #include "libipc/utility/pimpl.h"
+#include "libipc/utility/log.h"
 #include "libipc/memory/resource.h"
 
 namespace ipc {
@@ -68,8 +69,17 @@ void handle::sub_ref() noexcept {
 }
 
 bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
+    if (name == nullptr || name[0] == '\0') {
+        ipc::error("fail acquire: name is empty\n");
+        return false;
+    }
+    if (size == 0) {
+        ipc::error("fail acquire: size is 0\n");
+        return false;
+    }
     release();
-    impl(p_)->id_ = shm::acquire((impl(p_)->n_ = name).c_str(), size, mode);
+    impl(p_)->n_  = name;
+    impl(p_)->id_ = shm::acquire(name, size, mode);
     impl(p_)->m_  = shm::get_mem(impl(p_)->id_, &(impl(p_)->s_));
     return valid();
 }
