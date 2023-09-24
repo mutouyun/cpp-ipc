@@ -36,10 +36,10 @@ public:
 
     bool open(char const *name) noexcept {
         quit_.store(false, std::memory_order_relaxed);
-        if (!cond_.open((std::string{"_waiter_cond_"} + name).c_str())) {
+        if (!cond_.open((std::string{name} + "_WAITER_COND_").c_str())) {
             return false;
         }
-        if (!lock_.open((std::string{"_waiter_lock_"} + name).c_str())) {
+        if (!lock_.open((std::string{name} + "_WAITER_LOCK_").c_str())) {
             cond_.close();
             return false;
         }

@@ -160,8 +160,8 @@ VOID WINAPI ServiceCtrlHandler (DWORD CtrlCode) {
 
 DWORD WINAPI ServiceWorkerThread (LPVOID lpParam) {
     OutputDebugString(_T("My Sample Service: ServiceWorkerThread: Entry"));
-    ipc::channel ipc_r{"service ipc r", ipc::sender};
-    ipc::channel ipc_w{"service ipc w", ipc::receiver};
+    ipc::channel ipc_r{ipc::prefix{"Global\\"}, "service ipc r", ipc::sender};
+    ipc::channel ipc_w{ipc::prefix{"Global\\"}, "service ipc w", ipc::receiver};
 
     //  Periodically check if the service has been requested to stop
     while (WaitForSingleObject(g_ServiceStopEvent, 0) != WAIT_OBJECT_0) {        

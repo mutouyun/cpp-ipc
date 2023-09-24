@@ -9,6 +9,7 @@
 #include <vector>
 #include <array>
 #include <cassert>
+#include <mutex>
 
 #include "libipc/ipc.h"
 #include "libipc/def.h"
@@ -69,9 +70,21 @@ ipc::buff_t make_cache(T& data, std::size_t size) {
     return { ptr, size, ipc::mem::free };
 }
 
-acc_t *cc_acc() {
-    static ipc::shm::handle acc_h("__CA_CONN__", sizeof(acc_t));
-    return static_cast<acc_t *>(acc_h.get());
+acc_t *cc_acc(ipc::string const &pref) {
+    static ipc::unordered_map<ipc::string, ipc::shm::handle> handles;
+    static std::mutex lock;
+    std::lock_guard<std::mutex> guard {lock};
+    auto it = handles.find(pref);
+    if (it == handles.end()) {
+        ipc::string shm_name {ipc::make_prefix(pref, {"CA_CONN__"})};
+        ipc::shm::handle h;
+        if (!h.acquire(shm_name.c_str(), sizeof(acc_t))) {
+            ipc::error("[cc_acc] acquire failed: %s\n", shm_name.c_str());
+            return nullptr;
+        }
+        it = handles.emplace(pref, std::move(h)).first;
+    }
+    return static_cast<acc_t *>(it->second.get());
 }
 
 struct cache_t {
@@ -101,11 +114,15 @@ struct conn_info_head {
     conn_info_head(char const * prefix, char const * name)
         : prefix_   {ipc::make_string(prefix)}
         , name_     {ipc::make_string(name)}
-        , cc_id_    {(cc_acc() == nullptr) ? 0 : cc_acc()->fetch_add(1, std::memory_order_relaxed)}
+        , cc_id_    {}
         , cc_waiter_{ipc::make_prefix(prefix_, {"CC_CONN__", name_}).c_str()}
         , wt_waiter_{ipc::make_prefix(prefix_, {"WT_CONN__", name_}).c_str()}
         , rd_waiter_{ipc::make_prefix(prefix_, {"RD_CONN__", name_}).c_str()}
         , acc_h_    {ipc::make_prefix(prefix_, {"AC_CONN__", name_}).c_str(), sizeof(acc_t)} {
+        acc_t *pacc = cc_acc(prefix_);
+        if (pacc != nullptr) {
+            cc_id_ = pacc->fetch_add(1, std::memory_order_relaxed);
+        }
     }
 
     void quit_waiting() {
