@@ -76,7 +76,7 @@ public:
         }
         DWORD ms = (tm == invalid_value) ? INFINITE : static_cast<DWORD>(tm);
         /**
-         * @see
+         * \see
          *  - https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf
          *  - https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-signalobjectandwait
         */

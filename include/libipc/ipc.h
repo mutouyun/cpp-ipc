@@ -22,6 +22,7 @@ struct IPC_EXPORT chan_impl {
     static ipc::handle_t inited();
 
     static bool connect   (ipc::handle_t * ph, char const * name, unsigned mode);
+    static bool connect   (ipc::handle_t * ph, prefix, char const * name, unsigned mode);
     static bool reconnect (ipc::handle_t * ph, unsigned mode);
     static void disconnect(ipc::handle_t h);
     static void destroy   (ipc::handle_t h);
@@ -52,6 +53,10 @@ public:
 
     explicit chan_wrapper(char const * name, unsigned mode = ipc::sender)
         : connected_{this->connect(name, mode)} {
+    }
+
+    chan_wrapper(prefix pref, char const * name, unsigned mode = ipc::sender)
+        : connected_{this->connect(pref, name, mode)} {
     }
 
     chan_wrapper(chan_wrapper&& rhs) noexcept
@@ -101,6 +106,11 @@ public:
         if (name == nullptr || name[0] == '\0') return false;
         detail_t::disconnect(h_); // clear old connection
         return connected_ = detail_t::connect(&h_, name, mode_ = mode);
+    }
+    bool connect(prefix pref, char const * name, unsigned mode = ipc::sender | ipc::receiver) {
+        if (name == nullptr || name[0] == '\0') return false;
+        detail_t::disconnect(h_); // clear old connection
+        return connected_ = detail_t::connect(&h_, pref, name, mode_ = mode);
     }
 
     /**

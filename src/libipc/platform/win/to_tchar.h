@@ -41,8 +41,8 @@ constexpr auto to_tchar(ipc::string &&str) -> IsSameChar<T, ipc::string, ipc::st
 }
 
 /**
- * @remarks codecvt_utf8_utf16/std::wstring_convert is deprecated
- * @see https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
+ * \remarks codecvt_utf8_utf16/std::wstring_convert is deprecated
+ * \see https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
  *      https://stackoverflow.com/questions/42946335/deprecated-header-codecvt-replacement
  *      https://en.cppreference.com/w/cpp/locale/codecvt/in
  *      https://docs.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
