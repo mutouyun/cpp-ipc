@@ -37,21 +37,26 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     // Opens a named file mapping object.
     if (mode == open) {
         h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, fmt_name.c_str());
+        if (h == NULL) {
+          ipc::error("fail OpenFileMapping[%d]: %s\n", static_cast<int>(::GetLastError()), name);
+          return nullptr;
+        }
     }
     // Creates or opens a named file mapping object for a specified file.
     else {
         h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
                                 0, static_cast<DWORD>(size), fmt_name.c_str());
+        DWORD err = ::GetLastError();
         // If the object exists before the function call, the function returns a handle to the existing object 
         // (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.
-        if ((mode == create) && (::GetLastError() == ERROR_ALREADY_EXISTS)) {
-            ::CloseHandle(h);
+        if ((mode == create) && (err == ERROR_ALREADY_EXISTS)) {
+            if (h != NULL) ::CloseHandle(h);
             h = NULL;
         }
-    }
-    if (h == NULL) {
-        ipc::error("fail CreateFileMapping/OpenFileMapping[%d]: %s\n", static_cast<int>(::GetLastError()), name);
-        return nullptr;
+        if (h == NULL) {
+          ipc::error("fail CreateFileMapping[%d]: %s\n", static_cast<int>(err), name);
+          return nullptr;
+        }
     }
     auto ii = mem::alloc<id_info_t>();
     ii->h_    = h;

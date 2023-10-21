@@ -112,16 +112,27 @@ struct conn_info_head {
     ipc::shm::handle acc_h_;
 
     conn_info_head(char const * prefix, char const * name)
-        : prefix_   {ipc::make_string(prefix)}
-        , name_     {ipc::make_string(name)}
-        , cc_id_    {}
-        , cc_waiter_{ipc::make_prefix(prefix_, {"CC_CONN__", name_}).c_str()}
-        , wt_waiter_{ipc::make_prefix(prefix_, {"WT_CONN__", name_}).c_str()}
-        , rd_waiter_{ipc::make_prefix(prefix_, {"RD_CONN__", name_}).c_str()}
-        , acc_h_    {ipc::make_prefix(prefix_, {"AC_CONN__", name_}).c_str(), sizeof(acc_t)} {
+        : prefix_{ipc::make_string(prefix)}
+        , name_  {ipc::make_string(name)}
+        , cc_id_ {} {}
+
+    void init() {
+        if (!cc_waiter_.valid()) cc_waiter_.open(ipc::make_prefix(prefix_, {"CC_CONN__", name_}).c_str());
+        if (!wt_waiter_.valid()) wt_waiter_.open(ipc::make_prefix(prefix_, {"WT_CONN__", name_}).c_str());
+        if (!rd_waiter_.valid()) rd_waiter_.open(ipc::make_prefix(prefix_, {"RD_CONN__", name_}).c_str());
+        if (!acc_h_.valid()) acc_h_.acquire(ipc::make_prefix(prefix_, {"AC_CONN__", name_}).c_str(), sizeof(acc_t));
+        if (cc_id_ != 0) {
+            return;
+        }
         acc_t *pacc = cc_acc(prefix_);
-        if (pacc != nullptr) {
-            cc_id_ = pacc->fetch_add(1, std::memory_order_relaxed);
+        if (pacc == nullptr) {
+            // Failed to obtain the global accumulator.
+            return;
+        }
+        cc_id_ = pacc->fetch_add(1, std::memory_order_relaxed) + 1;
+        if (cc_id_ == 0) {
+            // The identity cannot be 0.
+            cc_id_ = pacc->fetch_add(1, std::memory_order_relaxed) + 1;
         }
     }
 
@@ -362,12 +373,18 @@ struct queue_generator {
         queue_t que_;
 
         conn_info_t(char const * pref, char const * name)
-            : conn_info_head{pref, name}
-            , que_{ipc::make_prefix(prefix_, {
-                    "QU_CONN__",
-                    ipc::to_string(DataSize), "__",
-                    ipc::to_string(AlignSize), "__", 
-                    name}).c_str()} {}
+            : conn_info_head{pref, name} { init(); }
+
+        void init() {
+            conn_info_head::init();
+            if (!que_.valid()) {
+                que_.open(ipc::make_prefix(prefix_, {
+                          "QU_CONN__",
+                          ipc::to_string(DataSize), "__",
+                          ipc::to_string(AlignSize), "__", 
+                          this->name_}).c_str());
+            }
+        }
 
         void disconnect_receiver() {
             bool dis = que_.disconnect();
@@ -397,6 +414,18 @@ constexpr static queue_t* queue_of(ipc::handle_t h) noexcept {
 
 /* API implementations */
 
+static bool connect(ipc::handle_t * ph, ipc::prefix pref, char const * name, bool start_to_recv) {
+    assert(ph != nullptr);
+    if (*ph == nullptr) {
+        *ph = ipc::mem::alloc<conn_info_t>(pref.str, name);
+    }
+    return reconnect(ph, start_to_recv);
+}
+
+static bool connect(ipc::handle_t * ph, char const * name, bool start_to_recv) {
+    return connect(ph, {nullptr}, name, start_to_recv);
+}
+
 static void disconnect(ipc::handle_t h) {
     auto que = queue_of(h);
     if (que == nullptr) {
@@ -414,6 +443,7 @@ static bool reconnect(ipc::handle_t * ph, bool start_to_recv) {
     if (que == nullptr) {
         return false;
     }
+    info_of(*ph)->init();
     if (start_to_recv) {
         que->shut_sending();
         if (que->connect()) { // wouldn't connect twice
@@ -427,18 +457,6 @@ static bool reconnect(ipc::handle_t * ph, bool start_to_recv) {
         info_of(*ph)->disconnect_receiver();
     }
     return que->ready_sending();
-}
-
-static bool connect(ipc::handle_t * ph, ipc::prefix pref, char const * name, bool start_to_recv) {
-    assert(ph != nullptr);
-    if (*ph == nullptr) {
-        *ph = ipc::mem::alloc<conn_info_t>(pref.str, name);
-    }
-    return reconnect(ph, start_to_recv);
-}
-
-static bool connect(ipc::handle_t * ph, char const * name, bool start_to_recv) {
-    return connect(ph, {nullptr}, name, start_to_recv);
 }
 
 static void destroy(ipc::handle_t h) {
