@@ -104,7 +104,7 @@ public:
 
     explicit queue_base(char const * name)
         : queue_base{} {
-        elems_ = open<elems_t>(name);
+        elems_ = queue_conn::template open<elems_t>(name);
     }
 
     explicit queue_base(elems_t * elems) noexcept
@@ -115,6 +115,12 @@ public:
 
     /* not virtual */ ~queue_base() {
         base_t::close();
+    }
+
+    bool open(char const * name) noexcept {
+        base_t::close();
+        elems_ = queue_conn::template open<elems_t>(name);
+        return elems_ != nullptr;
     }
 
     elems_t       * elems()       noexcept { return elems_; }
