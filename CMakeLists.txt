@@ -9,13 +9,9 @@ option(LIBIPC_USE_STATIC_CRT    "Set to ON to build with static CRT on Windows (
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
-if(NOT MSVC)
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -rdynamic -fsanitize=address")
-endif()
 
 if (MSVC)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /fsanitize=address /Zi")
   set(CompilerFlags
       CMAKE_CXX_FLAGS
       CMAKE_CXX_FLAGS_DEBUG
@@ -34,6 +30,9 @@ if (MSVC)
         string(REPLACE "/MTd" "/MDd" ${CompilerFlag} "${${CompilerFlag}}")
       endforeach()
   endif()
+else()
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG -O2")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -rdynamic -fsanitize=address")
 endif()
 
 set(LIBRARY_OUTPUT_PATH    ${CMAKE_BINARY_DIR}/bin)
