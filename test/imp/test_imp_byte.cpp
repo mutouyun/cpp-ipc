@@ -8,19 +8,23 @@
 TEST(byte, construct) {
   {
     imp::byte b;
+    SUCCEED();
+  }
+  {
+    imp::byte b{};
     EXPECT_EQ(int(b), 0);
   }
   {
-    imp::byte b {123};
+    imp::byte b{123};
     EXPECT_EQ(int(b), 123);
   }
   {
-    imp::byte b {65535};
+    imp::byte b{65535};
     EXPECT_EQ(int(b), 255);
     EXPECT_EQ(std::int8_t(b), -1);
   }
   {
-    imp::byte b {65536};
+    imp::byte b{65536};
     EXPECT_EQ(int(b), 0);
   }
 }

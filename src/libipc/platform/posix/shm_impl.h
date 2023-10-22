@@ -53,8 +53,10 @@ result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
     log.error("name is empty.");
     return std::make_error_code(std::errc::invalid_argument);
   }
-
-  /// \brief Open the object for read-write access.
+  // For portable use, a shared memory object should be identified by name of the form /somename.
+  // see: https://man7.org/linux/man-pages/man3/shm_open.3.html
+  std::string op_name = '/' + name;
+  // Open the object for read-write access.
   int flag = O_RDWR;
   switch (type) {
   case mode::open:
@@ -73,13 +75,13 @@ result<int> shm_open_fd(std::string const &name, mode::type type) noexcept {
     return std::make_error_code(std::errc::invalid_argument);
   }
 
-  /// \brief Create/Open POSIX shared memory bject
-  int fd = ::shm_open(name.c_str(), flag, S_IRUSR | S_IWUSR |
-                                          S_IRGRP | S_IWGRP |
-                                          S_IROTH | S_IWOTH);
+  // Create/Open POSIX shared memory bject.
+  int fd = ::shm_open(op_name.c_str(), flag, S_IRUSR | S_IWUSR |
+                                             S_IRGRP | S_IWGRP |
+                                             S_IROTH | S_IWOTH);
   if (fd == posix::failed) {
     auto err = sys::error();
-    log.error("failed: shm_open(name = ", name, 
+    log.error("failed: shm_open(name = ", op_name, 
                              ", type = ", type, 
                            "). error = ", err);
     return err;

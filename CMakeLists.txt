@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 if(NOT MSVC)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_DEBUG} -g -rdynamic")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -rdynamic -fsanitize=address")
 endif()
 
 if (MSVC)
@@ -22,8 +22,7 @@ if (MSVC)
       CMAKE_CXX_FLAGS_RELEASE
       CMAKE_C_FLAGS
       CMAKE_C_FLAGS_DEBUG
-      CMAKE_C_FLAGS_RELEASE
-      )
+      CMAKE_C_FLAGS_RELEASE)
   if (LIBIPC_USE_STATIC_CRT)
       foreach(CompilerFlag ${CompilerFlags})
         string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")

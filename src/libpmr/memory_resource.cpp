@@ -4,6 +4,7 @@
 #include "libimp/detect_plat.h"
 #include "libimp/system.h"
 #include "libimp/log.h"
+#include "libimp/aligned.h"
 
 #include "libpmr/memory_resource.h"
 
@@ -52,7 +53,8 @@ void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) no
   }
 #if defined(LIBIMP_CPP_17)
   /// \see https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
-  return std::aligned_alloc(alignment, bytes);
+  /// \remark The size parameter must be an integral multiple of alignment.
+  return std::aligned_alloc(alignment, ::LIBIMP::round_up(bytes, alignment));
 #else
   if (alignment <= alignof(std::max_align_t)) {
     /// \see https://en.cppreference.com/w/cpp/memory/c/malloc

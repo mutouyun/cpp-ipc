@@ -57,7 +57,7 @@ shared_memory::shared_memory(shared_memory &&other) noexcept
   : shm_(std::exchange(other.shm_, nullptr)) {}
 
 shared_memory &shared_memory::operator=(shared_memory &&rhs) & noexcept {
-  this->shm_ = std::exchange(rhs.shm_, nullptr);
+  shared_memory(std::move(rhs)).swap(*this);
   return *this;
 }
 

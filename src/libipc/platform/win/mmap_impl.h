@@ -72,7 +72,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     return std::make_error_code(std::errc::invalid_argument);
   }
 
-  /// \brief Opens a named file mapping object.
+  // Opens a named file mapping object.
   auto try_open = [&]() -> result<HANDLE> {
     HANDLE h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, t_name.c_str());
     if (h == NULL) {
@@ -83,7 +83,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     return h;
   };
 
-  /// \brief Creates or opens a named or unnamed file mapping object for a specified file.
+  // Creates or opens a named or unnamed file mapping object for a specified file.
   auto try_create = [&]() -> result<HANDLE> {
     HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
                                    /// \remark dwMaximumSizeHigh always 0 here.

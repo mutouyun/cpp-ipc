@@ -204,6 +204,8 @@ public:
 
 namespace detail {
 
+/// \struct holder_type_base
+/// \brief Defines the holder type operation interface.
 struct holder_type_base {
   virtual ~holder_type_base() noexcept = default;
   virtual std::size_t size() const noexcept = 0;
@@ -213,6 +215,8 @@ struct holder_type_base {
   virtual void dest(void *p, std::size_t n) const noexcept = 0;
 };
 
+/// \struct template <typename Value> holder_type
+/// \brief Defines generalization operations for different data types.
 template <typename Value>
 struct holder_type : holder_type_base {
   std::size_t           size() const noexcept override { return sizeof(Value); }
@@ -240,6 +244,10 @@ struct holder_info {
   std::size_t count;
 };
 
+struct holder_data : holder_info {
+  alignas(std::max_align_t) char ___data;
+};
+
 template <typename Value>
 std::size_t full_sizeof(std::size_t count) noexcept {
   return ::LIBIMP::round_up(sizeof(detail::holder_info), alignof(std::max_align_t))
@@ -252,29 +260,31 @@ std::size_t full_sizeof(holder_info const *info) noexcept {
 }
 
 void *value_ptr(holder_info *info) noexcept {
-  return reinterpret_cast<void *>(
-      ::LIBIMP::round_up(reinterpret_cast<std::size_t>(info + 1), alignof(std::max_align_t)));
+  if (info == nullptr) return nullptr;
+  return &static_cast<holder_data *>(info)->___data;
 }
 
 void const *value_ptr(holder_info const *info) noexcept {
-  return reinterpret_cast<void const *>(
-      ::LIBIMP::round_up(reinterpret_cast<std::size_t>(info + 1), alignof(std::max_align_t)));
+  if (info == nullptr) return nullptr;
+  return &static_cast<holder_data const *>(info)->___data;
 }
 
-class holder_info_ptr {
+/// \class holder_data_builder
+/// \brief The data pointer builder.
+class holder_data_builder {
   allocator const &alloc_;
-  holder_info **pptr_;
+  holder_data **pptr_;
   std::size_t size_;
 
 public:
-  holder_info_ptr(allocator const &alloc, holder_info *(&ptr), std::size_t sz) noexcept
+  holder_data_builder(allocator const &alloc, holder_data *(&ptr), std::size_t sz) noexcept
     : alloc_(alloc)
     , pptr_ (&ptr)
-    , size_ (::LIBIMP::round_up(sizeof(holder_info), alignof(std::max_align_t)) + sz) {
-    *pptr_ = static_cast<holder_info *>(alloc_.allocate(size_));
+    , size_ (detail::full_sizeof<::LIBIMP::byte>(sz)) {
+    *pptr_ = static_cast<holder_data *>(alloc_.allocate(size_));
   }
 
-  ~holder_info_ptr() noexcept {
+  ~holder_data_builder() noexcept {
     if (pptr_ == nullptr) return;
     alloc_.deallocate(*pptr_, size_);
     *pptr_ = nullptr;
@@ -284,11 +294,11 @@ public:
     return (pptr_ != nullptr) && (*pptr_ != nullptr);
   }
 
-  holder_info *operator->() const noexcept {
+  holder_data *operator->() const noexcept {
     return *pptr_;
   }
 
-  holder_info_ptr &operator=(holder_info const &rhs) noexcept {
+  holder_data_builder &operator=(holder_data const &rhs) noexcept {
     if (!*this) return *this;
     **pptr_ = rhs;
     return *this;
@@ -308,7 +318,7 @@ public:
 template <>
 class holder<void, true> : public holder_base {
 
-  detail::holder_info info_;
+  detail::holder_data info_;
 
 public:
   template <typename Value>
@@ -385,7 +395,7 @@ public:
 template <>
 class holder<void, false> : public holder_base {
 
-  detail::holder_info *info_ptr_;
+  detail::holder_data *info_ptr_;
 
 public:
   holder() noexcept
@@ -397,7 +407,7 @@ public:
             std::enable_if_t<alignof(Value) <= alignof(std::max_align_t), bool> = true>
   holder(allocator const &alloc, ::LIBIMP::types<Value>, std::size_t n) : holder() {
     LIBIMP_LOG_("holder<void, false>");
-    detail::holder_info_ptr info_p{alloc, info_ptr_, sizeof(Value) * n};
+    detail::holder_data_builder info_p{alloc, info_ptr_, sizeof(Value) * n};
     if (!info_p) {
       log.error("The destination information-pointer failed to be constructed."
                 " type size = ", sizeof(Value),
@@ -452,7 +462,7 @@ public:
     LIBIMP_LOG_();
     auto *des = ::LIBIMP::construct<holder>(p);
     if (!valid()) return;
-    detail::holder_info_ptr info_p{alloc, des->info_ptr_, this->sizeof_type() * this->count()};
+    detail::holder_data_builder info_p{alloc, des->info_ptr_, this->sizeof_type() * this->count()};
     if (!info_p) {
       log.error("The destination information-pointer failed to be constructed."
                 " type size = ", this->sizeof_type(),

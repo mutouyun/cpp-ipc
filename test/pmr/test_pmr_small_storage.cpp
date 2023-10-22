@@ -41,14 +41,18 @@ TEST(small_storage, holder_copy_move_construct) {
   EXPECT_FALSE((std::is_move_assignable<pmr::holder<void, false>>::value));
 }
 
-TEST(small_storage, holder_copy_move) {
-  struct foo {
-    int i;
-    foo(int i) : i(i) {}
-    foo(foo const &rhs) : i(rhs.i) {}
-    foo(foo &&rhs) : i(std::exchange(rhs.i, 0)) {}
-  };
+namespace {
 
+struct foo {
+  int i;
+  foo(int i) : i(i) {}
+  foo(foo const &rhs) : i(rhs.i) {}
+  foo(foo &&rhs) : i(std::exchange(rhs.i, 0)) {}
+};
+
+} // namespace
+
+TEST(small_storage, holder_copy_move_object_stack) {
   pmr::allocator alc;
   pmr::holder<foo, true> h1(alc, 1);
   pmr::holder<foo, true> h2, h3;
@@ -61,7 +65,10 @@ TEST(small_storage, holder_copy_move) {
   h1.destroy(alc);
   h2.destroy(alc);
   h3.destroy(alc);
+}
 
+TEST(small_storage, holder_copy_move_object_heap) {
+  pmr::allocator alc;
   pmr::holder<foo, false> h4(alc, 1);
   pmr::holder<foo, false> h5, h6;
   h4.copy_to(alc, &h5);
@@ -73,17 +80,20 @@ TEST(small_storage, holder_copy_move) {
   h4.destroy(alc);
   h5.destroy(alc);
   h6.destroy(alc);
+}
 
+TEST(small_storage, holder_copy_move_array_stack) {
+  pmr::allocator alc;
   void *ph1 = std::malloc(pmr::holder<void, true>::full_sizeof<int>(10));
   void *ph2 = std::malloc(pmr::holder<void, true>::full_sizeof<int>(10));
   void *ph3 = std::malloc(pmr::holder<void, true>::full_sizeof<int>(10));
   auto *h7 = ::new (ph1) pmr::holder<void, true>(alc, ::LIBIMP::types<int>{}, 10);
-  auto *h8 = ::new (ph2) pmr::holder<void, true>;
-  auto *h9 = ::new (ph2) pmr::holder<void, true>;
-  h7->copy_to(alc, h8);
+  auto *h8 = static_cast<pmr::holder<void, true> *>(ph2);
+  auto *h9 = static_cast<pmr::holder<void, true> *>(ph3);
+  h7->copy_to(alc, ph2);
   EXPECT_EQ(h7->count(), 10);
   EXPECT_EQ(h8->count(), 10);
-  h7->move_to(alc, h9);
+  h7->move_to(alc, ph3);
   EXPECT_EQ(h7->count(), 0);
   EXPECT_EQ(h9->count(), 10);
   h7->destroy(alc);
@@ -92,7 +102,10 @@ TEST(small_storage, holder_copy_move) {
   std::free(ph1);
   std::free(ph2);
   std::free(ph3);
+}
 
+TEST(small_storage, holder_copy_move_array_heap) {
+  pmr::allocator alc;
   pmr::holder<void, false> h10(alc, ::LIBIMP::types<int>{}, 10);
   pmr::holder<void, false> h11, h12;
   h10.copy_to(alc, &h11);
@@ -110,14 +123,14 @@ TEST(small_storage, sizeof) {
   EXPECT_EQ(sizeof(pmr::holder_null), sizeof(void *));
   EXPECT_EQ(sizeof(pmr::holder<int, true>), sizeof(void *) + imp::round_up(sizeof(int), alignof(void *)));
   EXPECT_EQ(sizeof(pmr::holder<int, false>), sizeof(void *) + sizeof(void *));
-  EXPECT_EQ(sizeof(pmr::holder<void, true>), sizeof(void *) + sizeof(pmr::detail::holder_info));
+  EXPECT_EQ(sizeof(pmr::holder<void, true>), imp::round_up(sizeof(void *) + sizeof(pmr::detail::holder_data), alignof(std::max_align_t)));
   EXPECT_EQ(sizeof(pmr::holder<void, false>), sizeof(void *) + sizeof(void *));
 
   // pmr::small_storage<4> s1;
-  EXPECT_TRUE(sizeof(pmr::small_storage<16>)   > 16);
-  EXPECT_TRUE(sizeof(pmr::small_storage<64>)   > 64);
-  EXPECT_TRUE(sizeof(pmr::small_storage<512>)  > 512);
-  EXPECT_TRUE(sizeof(pmr::small_storage<4096>) > 4096);
+  EXPECT_GT(sizeof(pmr::small_storage<16>)  , 16);
+  EXPECT_GT(sizeof(pmr::small_storage<64>)  , 64);
+  EXPECT_GT(sizeof(pmr::small_storage<512>) , 512);
+  EXPECT_GT(sizeof(pmr::small_storage<4096>), 4096);
 }
 
 TEST(small_storage, construct) {
