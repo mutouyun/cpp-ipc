@@ -4,10 +4,11 @@
 #include "libimp/byte.h"
 #include "libimp/span.h"
 #include "libimp/fmt.h"
+#include "libimp/detect_plat.h"
 
 TEST(byte, construct) {
   {
-    imp::byte b;
+    LIBIMP_UNUSED imp::byte b;
     SUCCEED();
   }
   {
