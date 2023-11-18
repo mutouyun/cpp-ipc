@@ -7,14 +7,14 @@
 
 #include "gtest/gtest.h"
 
-#include "libconcur/queue.h"
+#include "libconcur/circular_queue.h"
 #include "libimp/log.h"
 #include "libimp/nameof.h"
 
 using namespace concur;
 
-TEST(queue, construct) {
-  using queue_t = queue<int>;
+TEST(circular_queue, construct) {
+  using queue_t = circular_queue<int>;
   queue_t q1;
   EXPECT_TRUE(q1.valid());
   EXPECT_TRUE(q1.empty());
@@ -25,7 +25,7 @@ namespace {
 
 template <typename PR, typename CR>
 void test_queue_basic() {
-  using queue_t = queue<int, PR, CR>;
+  using queue_t = circular_queue<int, PR, CR>;
   queue_t q1;
   EXPECT_TRUE(q1.valid());
   EXPECT_TRUE(q1.empty());
@@ -74,7 +74,7 @@ void test_queue_basic() {
 
 } // namespace
 
-TEST(queue, push_pop) {
+TEST(circular_queue, push_pop) {
   test_queue_basic<relation::single, relation::single>();
   test_queue_basic<relation::single, relation::multi >();
   test_queue_basic<relation::multi , relation::multi >();
@@ -91,7 +91,7 @@ void test_queue(std::size_t np, std::size_t nc) {
     std::uint64_t n;
     std::uint64_t i;
   };
-  queue<Data, PR, CR> que;
+  circular_queue<Data, PR, CR> que;
 
   constexpr static std::uint32_t loop_size = 10'0000;
 
@@ -139,7 +139,7 @@ void test_queue(std::size_t np, std::size_t nc) {
 
 } // namespace
 
-TEST(queue, multi_thread) {
+TEST(circular_queue, multi_thread) {
   using namespace concur;
 
   /// \brief 1-1

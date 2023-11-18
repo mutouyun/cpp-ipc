@@ -13,7 +13,7 @@ LIBCONCUR_NAMESPACE_BEG_
 
 template <typename T, typename PRelationT = relation::multi
                     , typename CRelationT = relation::multi>
-class queue
+class circular_queue
   : public data_model<T, trans::unicast, PRelationT, CRelationT> {
 
   using base_t = data_model<T, trans::unicast, PRelationT, CRelationT>;

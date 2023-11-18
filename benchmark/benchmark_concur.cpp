@@ -6,13 +6,13 @@
 
 #include "benchmark/benchmark.h"
 
-#include "libconcur/queue.h"
+#include "libconcur/circular_queue.h"
 
 namespace {
 
 void concur_queue_rtt(benchmark::State &state) {
   using namespace concur;
-  queue<std::int64_t, relation::single, relation::single> que [2];
+  circular_queue<std::int64_t, relation::single, relation::single> que [2];
   std::atomic_bool stop = false;
   auto producer = std::async(std::launch::async, [&stop, &que] {
     for (std::int64_t i = 0; !stop.load(std::memory_order_relaxed); ++i) {
@@ -35,7 +35,7 @@ void concur_queue_rtt(benchmark::State &state) {
 
 void concur_queue_1v1(benchmark::State &state) {
   using namespace concur;
-  queue<std::int64_t, relation::single, relation::single> que;
+  circular_queue<std::int64_t, relation::single, relation::single> que;
   std::atomic_bool stop = false;
   auto producer = std::async(std::launch::async, [&stop, &que] {
     for (std::int64_t i = 0; !stop.load(std::memory_order_relaxed); ++i) {
@@ -56,7 +56,7 @@ void concur_queue_1v1(benchmark::State &state) {
 void concur_queue_NvN(benchmark::State &state) {
   using namespace concur;
 
-  static queue<std::int64_t, relation::multi, relation::multi> que;
+  static circular_queue<std::int64_t, relation::multi, relation::multi> que;
   static std::atomic_int run = 0;
   static std::vector<std::thread> prods;
 
