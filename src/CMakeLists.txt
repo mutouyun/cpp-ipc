@@ -40,7 +40,9 @@ set_target_properties(${PROJECT_NAME}
     SOVERSION 3)
 
 target_include_directories(${PROJECT_NAME}
-  PUBLIC  ${LIBIPC_PROJECT_DIR}/include
+  PUBLIC  
+    "$<BUILD_INTERFACE:${LIBIPC_PROJECT_DIR}/include>"
+    "$<INSTALL_INTERFACE:include>"
   PRIVATE ${LIBIPC_PROJECT_DIR}/src
           $<$<BOOL:UNIX>:${LIBIPC_PROJECT_DIR}/src/libipc/platform/linux>)
 
