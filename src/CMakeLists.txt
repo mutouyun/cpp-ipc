@@ -50,6 +50,28 @@ endif()
 
 install(
   TARGETS ${PROJECT_NAME}
+  EXPORT cpp-ipc-targets
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+
+install(EXPORT cpp-ipc-targets
+	FILE cpp-ipc-targets.cmake
+	NAMESPACE cpp-ipc::
+	DESTINATION share/cpp-ipc
+)
+
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cpp-ipc-config.cmake.in"
+[[include(CMakeFindDependencyMacro)
+include("${CMAKE_CURRENT_LIST_DIR}/cpp-ipc-targets.cmake")
+]])
+configure_file("${CMAKE_CURRENT_BINARY_DIR}/cpp-ipc-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cpp-ipc-config.cmake" @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cpp-ipc-config.cmake DESTINATION share/cpp-ipc)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+	cppIpcConfigVersion.cmake
+	VERSION ${PACKAGE_VERSION}
+	COMPATIBILITY AnyNewerVersion
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cppIpcConfigVersion.cmake DESTINATION share/cpp-ipc)
