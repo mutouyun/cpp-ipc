@@ -1,5 +1,7 @@
 project(ipc)
 
+set (PACKAGE_VERSION 1.3.0)
+
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc SRC_FILES)
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/sync SRC_FILES)
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/platform SRC_FILES)
@@ -34,7 +36,7 @@ set_target_properties(${PROJECT_NAME}
 # set version
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-    VERSION 1.2.0
+    VERSION ${PACKAGE_VERSION}
     SOVERSION 3)
 
 target_include_directories(${PROJECT_NAME}
