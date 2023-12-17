@@ -14,4 +14,8 @@ LIBPMR_NAMESPACE_BEG_
 
 /// \brief Constants.
 
+enum : std::size_t {
+  block_pool_expansion = 64,
+};
+
 LIBPMR_NAMESPACE_END_
