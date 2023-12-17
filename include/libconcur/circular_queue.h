@@ -1,7 +1,7 @@
 /**
  * \file libconcur/queue.h
  * \author mutouyun (orz@orzz.org)
- * \brief Define concurrent queue.
+ * \brief Define concurrent circular queue.
  * \date 2022-11-19
  */
 #pragma once
