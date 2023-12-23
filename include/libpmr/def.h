@@ -15,7 +15,8 @@ LIBPMR_NAMESPACE_BEG_
 /// \brief Constants.
 
 enum : std::size_t {
-  block_pool_expansion = 64,
+  block_pool_expansion       = 64,
+  central_cache_default_size = 1024 * 1024, ///< 1MB
 };
 
 LIBPMR_NAMESPACE_END_

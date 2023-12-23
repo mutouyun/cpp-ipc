@@ -115,6 +115,18 @@ public:
   /// \brief Allocate/deallocate memory.
   void *allocate(std::size_t s, std::size_t = alignof(std::max_align_t)) const;
   void  deallocate(void *p, std::size_t s, std::size_t = alignof(std::max_align_t)) const;
+
+  /// \brief Allocates uninitialized memory and constructs an object of type T in the memory.
+  template <typename T, typename... A>
+  T *construct(A &&...args) const {
+    return ::LIBIMP::construct<T>(allocate(sizeof(T), alignof(T)), std::forward<A>(args)...);
+  }
+
+  /// \brief Calls the destructor of the object pointed to by p and deallocates the memory.
+  template <typename T>
+  void destroy(T *p) const noexcept {
+    deallocate(::LIBIMP::destroy(p), sizeof(T), alignof(T));
+  }
 };
 
 LIBPMR_NAMESPACE_END_

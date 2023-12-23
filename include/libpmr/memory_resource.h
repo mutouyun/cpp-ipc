@@ -49,7 +49,7 @@ using verify_memory_resource =
  */
 class LIBIMP_EXPORT new_delete_resource {
 public:
-  /// \brief Returns a pointer to a new_delete_resource.
+  /// \brief Returns a pointer to a `new_delete_resource`.
   static new_delete_resource *get() noexcept;
 
   /// \brief Allocates storage with a size of at least bytes bytes, aligned to the specified alignment.
