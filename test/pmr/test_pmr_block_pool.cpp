@@ -1,5 +1,6 @@
 
 #include <type_traits>
+#include <algorithm>
 
 #include "gtest/gtest.h"
 
@@ -16,11 +17,11 @@ TEST(block_pool, central_cache_allocator) {
 
 TEST(block_pool, block) {
   pmr::block<1> b1;
-  EXPECT_EQ(sizeof(b1), sizeof(void*));
-  pmr::block<sizeof(void*)> b2;
-  EXPECT_EQ(sizeof(b2), sizeof(void*));
-  pmr::block<sizeof(void*) + 1> b3;
-  EXPECT_EQ(sizeof(b3), sizeof(void*) * 2);
+  EXPECT_EQ(sizeof(b1), (std::max)(alignof(std::max_align_t), sizeof(void *)));
+  pmr::block<sizeof(void *)> b2;
+  EXPECT_EQ(sizeof(b2), (std::max)(alignof(std::max_align_t), sizeof(void *)));
+  pmr::block<sizeof(void *) + 1> b3;
+  EXPECT_EQ(sizeof(b3), (std::max)(alignof(std::max_align_t), sizeof(void *) * 2));
 }
 
 TEST(block_pool, central_cache_pool_ctor) {
