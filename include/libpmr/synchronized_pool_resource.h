@@ -18,7 +18,7 @@ LIBPMR_NAMESPACE_BEG_
  * \brief `synchronized_pool_resource` may be accessed from multiple threads without external synchronization, 
  *        and have thread-specific pools to reduce synchronization costs.
  * \note Unlike the standard library implementation, `synchronized_pool_resource` automatically manages 
- *       the block size and reclaims all allocated memory to the central heap when the thread is destroyed, 
+ *       the block size and reclaims all deallocated memory to the central heap when the thread is destroyed, 
  *       rather than being destructed on its own.
  * \see https://en.cppreference.com/w/cpp/memory/synchronized_pool_resource
  */

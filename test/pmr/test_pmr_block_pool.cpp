@@ -61,3 +61,29 @@ TEST(block_pool, central_cache_pool_ctor) {
     EXPECT_NE(b1, b4);
   }
 }
+
+TEST(block_pool, ctor) {
+  ASSERT_TRUE ((std::is_default_constructible<pmr::block_pool<1, 1>>::value));
+  ASSERT_FALSE((std::is_copy_constructible<pmr::block_pool<1, 1>>::value));
+  ASSERT_FALSE((std::is_move_constructible<pmr::block_pool<1, 1>>::value));
+  ASSERT_FALSE((std::is_copy_assignable<pmr::block_pool<1, 1>>::value));
+  ASSERT_FALSE((std::is_move_assignable<pmr::block_pool<1, 1>>::value));
+}
+
+TEST(block_pool, allocate) {
+  std::vector<void *> v;
+  pmr::block_pool<1, 1> pool;
+  for (int i = 0; i < 100; ++i) {
+    v.push_back(pool.allocate());
+  }
+  for (void *p: v) {
+    ASSERT_FALSE(nullptr == p);
+    pool.deallocate(p);
+  }
+  for (int i = 0; i < 100; ++i) {
+    ASSERT_EQ(v[v.size() - i - 1], pool.allocate());
+  }
+  for (void *p: v) {
+    pool.deallocate(p);
+  }
+}
