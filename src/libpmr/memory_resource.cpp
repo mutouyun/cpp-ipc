@@ -8,23 +8,9 @@
 
 #include "libpmr/memory_resource.h"
 
+#include "verify_args.h"
+
 LIBPMR_NAMESPACE_BEG_
-namespace {
-
-/**
- * \brief Check that bytes is not 0 and that the alignment is a power of two.
- */
-bool verify_args(std::size_t bytes, std::size_t alignment) noexcept {
-  if (bytes == 0) {
-    return false;
-  }
-  if ((alignment == 0) || (alignment & (alignment - 1)) != 0) {
-    return false;
-  }
-  return true;
-}
-
-} // namespace
 
 /**
  * \brief Returns a pointer to a new_delete_resource.
