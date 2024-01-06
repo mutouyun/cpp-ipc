@@ -30,7 +30,7 @@ constexpr inline std::size_t regular_level(std::size_t s) noexcept {
 
 constexpr inline std::size_t regular_sizeof_impl(std::size_t l, std::size_t s) noexcept {
   return (l == 0) ? std::max<std::size_t>(::LIBIMP::round_up<std::size_t>(s, 8), regular_head_size) :
-         (l == 1) ? ::LIBIMP::round_up<std::size_t>(s, 128) :
+         (l == 1) ? ::LIBIMP::round_up<std::size_t>(s, 128 ) :
          (l == 2) ? ::LIBIMP::round_up<std::size_t>(s, 1024) :
          (l == 3) ? ::LIBIMP::round_up<std::size_t>(s, 8192) : (std::numeric_limits<std::size_t>::max)();
 }
@@ -107,15 +107,19 @@ public:
     }
     auto &map = get_block_pool_map();
     auto it = map.find(r_size);
-    if ((it == map.end()) || (it->second == nullptr)) LIBIMP_TRY {
-      // If the corresponding memory resource cannot be found, 
-      // create a temporary general-purpose block pool to deallocate memory.
-      it = map.emplace(r_size, new block_pool_resource<0, 0>).first;
-    } LIBIMP_CATCH(...) {
-      // If the memory resource cannot be created, 
-      // store the pointer directly to avoid leakage.
-      base_t::deallocate(p);
-      return;
+    if ((it == map.end()) || (it->second == nullptr)) {
+      block_pool_resource<0, 0> *bp = nullptr;
+      LIBIMP_TRY {
+        // If the corresponding memory resource cannot be found, 
+        // create a temporary general-purpose block pool to deallocate memory.
+        it = map.emplace(r_size, bp = new block_pool_resource<0, 0>).first;
+      } LIBIMP_CATCH(...) {
+        // If the memory resource cannot be created, 
+        // store the pointer directly to avoid leakage.
+        delete bp;
+        base_t::deallocate(p);
+        return;
+      }
     }
     it->second->deallocate(p);
   }
