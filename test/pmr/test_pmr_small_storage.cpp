@@ -6,7 +6,7 @@
 
 #include "libpmr/small_storage.h"
 
-TEST(small_storage, holder_construct) {
+TEST(pmr_small_storage, holder_construct) {
   pmr::holder_null();
   pmr::holder<int, true>();
   pmr::holder<int, false>();
@@ -15,7 +15,7 @@ TEST(small_storage, holder_construct) {
   SUCCEED();
 }
 
-TEST(small_storage, holder_copy_move_construct) {
+TEST(pmr_small_storage, holder_copy_move_construct) {
   EXPECT_FALSE(std::is_copy_constructible<pmr::holder_null>::value);
   EXPECT_FALSE((std::is_copy_constructible<pmr::holder<int, true>>::value));
   EXPECT_FALSE((std::is_copy_constructible<pmr::holder<int, false>>::value));
@@ -52,7 +52,7 @@ struct foo {
 
 } // namespace
 
-TEST(small_storage, holder_copy_move_object_stack) {
+TEST(pmr_small_storage, holder_copy_move_object_stack) {
   pmr::allocator alc;
   pmr::holder<foo, true> h1(alc, 1);
   pmr::holder<foo, true> h2, h3;
@@ -67,7 +67,7 @@ TEST(small_storage, holder_copy_move_object_stack) {
   h3.destroy(alc);
 }
 
-TEST(small_storage, holder_copy_move_object_heap) {
+TEST(pmr_small_storage, holder_copy_move_object_heap) {
   pmr::allocator alc;
   pmr::holder<foo, false> h4(alc, 1);
   pmr::holder<foo, false> h5, h6;
@@ -82,7 +82,7 @@ TEST(small_storage, holder_copy_move_object_heap) {
   h6.destroy(alc);
 }
 
-TEST(small_storage, holder_copy_move_array_stack) {
+TEST(pmr_small_storage, holder_copy_move_array_stack) {
   pmr::allocator alc;
   void *ph1 = std::malloc(pmr::holder<void, true>::full_sizeof<int>(10));
   void *ph2 = std::malloc(pmr::holder<void, true>::full_sizeof<int>(10));
@@ -104,7 +104,7 @@ TEST(small_storage, holder_copy_move_array_stack) {
   std::free(ph3);
 }
 
-TEST(small_storage, holder_copy_move_array_heap) {
+TEST(pmr_small_storage, holder_copy_move_array_heap) {
   pmr::allocator alc;
   pmr::holder<void, false> h10(alc, ::LIBIMP::types<int>{}, 10);
   pmr::holder<void, false> h11, h12;
@@ -119,7 +119,7 @@ TEST(small_storage, holder_copy_move_array_heap) {
   h12.destroy(alc);
 }
 
-TEST(small_storage, sizeof) {
+TEST(pmr_small_storage, sizeof) {
   EXPECT_EQ(sizeof(pmr::holder_null), sizeof(void *));
   EXPECT_EQ(sizeof(pmr::holder<int, true>), sizeof(void *) + imp::round_up(sizeof(int), alignof(void *)));
   EXPECT_EQ(sizeof(pmr::holder<int, false>), sizeof(void *) + sizeof(void *));
@@ -133,12 +133,12 @@ TEST(small_storage, sizeof) {
   EXPECT_GT(sizeof(pmr::small_storage<4096>), 4096);
 }
 
-TEST(small_storage, construct) {
+TEST(pmr_small_storage, construct) {
   pmr::small_storage<64> ss;
   SUCCEED();
 }
 
-TEST(small_storage, acquire) {
+TEST(pmr_small_storage, acquire) {
   pmr::small_storage<128> ss;
   pmr::allocator alc;
   ASSERT_FALSE(ss.valid());

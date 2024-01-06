@@ -24,7 +24,7 @@ void *test_mr(T &&mr, std::size_t bytes, std::size_t alignment) {
 
 } // namespace
 
-TEST(memory_resource, traits) {
+TEST(pmr_memory_resource, traits) {
   EXPECT_FALSE(pmr::has_allocate<void>::value);
   EXPECT_FALSE(pmr::has_allocate<int>::value);
   EXPECT_FALSE(pmr::has_allocate<std::vector<int>>::value);
@@ -44,7 +44,7 @@ TEST(memory_resource, traits) {
 #endif
 }
 
-TEST(memory_resource, new_delete_resource) {
+TEST(pmr_memory_resource, new_delete_resource) {
   pmr::new_delete_resource mem_res;
 
   EXPECT_EQ(test_mr(mem_res, 0, 0), nullptr);

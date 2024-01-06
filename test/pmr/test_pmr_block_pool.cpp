@@ -6,7 +6,7 @@
 
 #include "libpmr/block_pool.h"
 
-TEST(block_pool, central_cache_allocator) {
+TEST(pmr_block_pool, central_cache_allocator) {
   auto &a = pmr::central_cache_allocator();
   ASSERT_FALSE(nullptr == a.allocate(1));
   ASSERT_FALSE(nullptr == a.allocate(10));
@@ -15,7 +15,7 @@ TEST(block_pool, central_cache_allocator) {
   ASSERT_FALSE(nullptr == a.allocate(10000));
 }
 
-TEST(block_pool, block) {
+TEST(pmr_block_pool, block) {
   pmr::block<1> b1;
   EXPECT_EQ(sizeof(b1), (std::max)(alignof(std::max_align_t), sizeof(void *)));
   pmr::block<sizeof(void *)> b2;
@@ -24,7 +24,7 @@ TEST(block_pool, block) {
   EXPECT_EQ(sizeof(b3), (std::max)(alignof(std::max_align_t), sizeof(void *) * 2));
 }
 
-TEST(block_pool, central_cache_pool_ctor) {
+TEST(pmr_block_pool, central_cache_pool_ctor) {
   ASSERT_FALSE((std::is_default_constructible<pmr::central_cache_pool<pmr::block<1>, 1>>::value));
   ASSERT_FALSE((std::is_copy_constructible<pmr::central_cache_pool<pmr::block<1>, 1>>::value));
   ASSERT_FALSE((std::is_move_constructible<pmr::central_cache_pool<pmr::block<1>, 1>>::value));
@@ -62,15 +62,15 @@ TEST(block_pool, central_cache_pool_ctor) {
   }
 }
 
-TEST(block_pool, ctor) {
+TEST(pmr_block_pool, ctor) {
   ASSERT_TRUE ((std::is_default_constructible<pmr::block_pool<1, 1>>::value));
   ASSERT_FALSE((std::is_copy_constructible<pmr::block_pool<1, 1>>::value));
-  ASSERT_FALSE((std::is_move_constructible<pmr::block_pool<1, 1>>::value));
+  ASSERT_TRUE ((std::is_move_constructible<pmr::block_pool<1, 1>>::value));
   ASSERT_FALSE((std::is_copy_assignable<pmr::block_pool<1, 1>>::value));
   ASSERT_FALSE((std::is_move_assignable<pmr::block_pool<1, 1>>::value));
 }
 
-TEST(block_pool, allocate) {
+TEST(pmr_block_pool, allocate) {
   std::vector<void *> v;
   pmr::block_pool<1, 1> pool;
   for (int i = 0; i < 100; ++i) {

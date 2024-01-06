@@ -7,7 +7,7 @@
 
 #include "libpmr/monotonic_buffer_resource.h"
 
-TEST(monotonic_buffer_resource, construct) {
+TEST(pmr_monotonic_buffer_resource, construct) {
   { pmr::monotonic_buffer_resource tmp; }
   pmr::monotonic_buffer_resource{};
   pmr::monotonic_buffer_resource{pmr::allocator{}};
@@ -18,14 +18,14 @@ TEST(monotonic_buffer_resource, construct) {
   SUCCEED();
 }
 
-TEST(monotonic_buffer_resource, no_copy) {
+TEST(pmr_monotonic_buffer_resource, no_copy) {
   EXPECT_FALSE(std::is_copy_constructible<pmr::monotonic_buffer_resource>::value);
   EXPECT_FALSE(std::is_copy_assignable<pmr::monotonic_buffer_resource>::value);
   EXPECT_FALSE(std::is_move_constructible<pmr::monotonic_buffer_resource>::value);
   EXPECT_FALSE(std::is_move_assignable<pmr::monotonic_buffer_resource>::value);
 }
 
-TEST(monotonic_buffer_resource, upstream_resource) {
+TEST(pmr_monotonic_buffer_resource, upstream_resource) {
   struct dummy_allocator {
     bool allocated = false;
     void *allocate(std::size_t, std::size_t) noexcept { allocated = true; return nullptr; }
@@ -52,7 +52,7 @@ struct dummy_allocator {
 
 } // namespace
 
-TEST(monotonic_buffer_resource, allocate) {
+TEST(pmr_monotonic_buffer_resource, allocate) {
   dummy_allocator dummy;
   {
     pmr::monotonic_buffer_resource tmp{&dummy};
@@ -76,7 +76,7 @@ TEST(monotonic_buffer_resource, allocate) {
   ASSERT_EQ(dummy.allocated, 0);
 }
 
-TEST(monotonic_buffer_resource, allocate_by_buffer) {
+TEST(pmr_monotonic_buffer_resource, allocate_by_buffer) {
   dummy_allocator dummy;
   std::array<imp::byte, 4096> buffer;
   {
@@ -95,7 +95,7 @@ TEST(monotonic_buffer_resource, allocate_by_buffer) {
   ASSERT_EQ(dummy.allocated, 0);
 }
 
-TEST(monotonic_buffer_resource, release) {
+TEST(pmr_monotonic_buffer_resource, release) {
   dummy_allocator dummy;
   {
     pmr::monotonic_buffer_resource tmp{&dummy};

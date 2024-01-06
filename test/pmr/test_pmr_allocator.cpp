@@ -6,12 +6,12 @@
 
 #include "libpmr/allocator.h"
 
-TEST(allocator, construct) {
+TEST(pmr_allocator, construct) {
   pmr::allocator alc;
   SUCCEED();
 }
 
-TEST(allocator, construct_value_initialization) {
+TEST(pmr_allocator, construct_value_initialization) {
   pmr::allocator alc{};
   auto p = alc.allocate(128);
   EXPECT_NE(p, nullptr);
@@ -32,7 +32,7 @@ public:
 
 } // namespace
 
-TEST(allocator, construct_copy_move) {
+TEST(pmr_allocator, construct_copy_move) {
   pmr::new_delete_resource mem_res;
   dummy_resource dummy_res;
   pmr::allocator alc1{&mem_res}, alc2{&dummy_res};
@@ -54,7 +54,7 @@ TEST(allocator, construct_copy_move) {
   ASSERT_NO_THROW(alc5.deallocate(p, 128));
 }
 
-TEST(allocator, swap) {
+TEST(pmr_allocator, swap) {
   pmr::new_delete_resource mem_res;
   dummy_resource dummy_res;
   pmr::allocator alc1{&mem_res}, alc2{&dummy_res};
@@ -65,7 +65,7 @@ TEST(allocator, swap) {
   ASSERT_EQ(alc1.allocate(128), nullptr);
 }
 
-TEST(allocator, invalid_alloc_free) {
+TEST(pmr_allocator, invalid_alloc_free) {
   pmr::allocator alc1;
   EXPECT_EQ(alc1.allocate(0), nullptr);
   EXPECT_NO_THROW(alc1.deallocate(nullptr, 128));
@@ -73,6 +73,6 @@ TEST(allocator, invalid_alloc_free) {
   EXPECT_NO_THROW(alc1.deallocate(&alc1, 0));
 }
 
-TEST(allocator, sizeof) {
+TEST(pmr_allocator, sizeof) {
   EXPECT_EQ(sizeof(pmr::allocator), sizeof(void *) * 2);
 }

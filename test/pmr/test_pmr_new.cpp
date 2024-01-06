@@ -68,6 +68,8 @@ TEST(pmr_new, new$array) {
 
 namespace {
 
+int construct_count__ = 0;
+
 class Base {
 public:
   virtual ~Base() = default;
@@ -76,7 +78,14 @@ public:
 
 class Derived : public Base {
 public:
-  Derived(int value) : value_(value) {}
+  Derived(int value) : value_(value) {
+    construct_count__ = value_;
+  }
+
+  ~Derived() override {
+    construct_count__ = 0;
+  }
+
   int get() const override { return value_; }
 
 private:
@@ -89,9 +98,19 @@ TEST(pmr_new, delete$poly) {
   Base *p = pmr::new$<Derived>(-1);
   ASSERT_NE(p, nullptr);
   ASSERT_EQ(p->get(), -1);
+  ASSERT_EQ(construct_count__, -1);
   pmr::delete$(p);
+  ASSERT_EQ(construct_count__, 0);
 
   ASSERT_EQ(p, pmr::new$<Derived>((std::numeric_limits<int>::max)()));
   ASSERT_EQ(p->get(), (std::numeric_limits<int>::max)());
+  ASSERT_EQ(construct_count__, (std::numeric_limits<int>::max)());
   pmr::delete$(p);
+  ASSERT_EQ(construct_count__, 0);
+}
+
+TEST(pmr_new, delete$null) {
+  Base *p = nullptr;
+  pmr::delete$(p);
+  SUCCEED();
 }
