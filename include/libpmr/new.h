@@ -22,21 +22,21 @@
 LIBPMR_NAMESPACE_BEG_
 
 constexpr inline std::size_t regular_level(std::size_t s) noexcept {
-  if (s <= 128  ) return 0;
-  if (s <= 1024 ) return 1;
-  if (s <= 8192 ) return 2;
-  if (s <= 65536) return 3;
-  return 4;
+  return (s <= 128  ) ? 0 :
+         (s <= 1024 ) ? 1 :
+         (s <= 8192 ) ? 2 :
+         (s <= 65536) ? 3 : 4;
+}
+
+constexpr inline std::size_t regular_sizeof_impl(std::size_t l, std::size_t s) noexcept {
+  return (l == 0) ? std::max<std::size_t>(::LIBIMP::round_up<std::size_t>(s, 8), regular_head_size) :
+         (l == 1) ? ::LIBIMP::round_up<std::size_t>(s, 128) :
+         (l == 2) ? ::LIBIMP::round_up<std::size_t>(s, 1024) :
+         (l == 3) ? ::LIBIMP::round_up<std::size_t>(s, 8192) : (std::numeric_limits<std::size_t>::max)();
 }
 
 constexpr inline std::size_t regular_sizeof(std::size_t s) noexcept {
-  switch (regular_level(s)) {
-    case 0 : return std::max<std::size_t>(::LIBIMP::round_up<std::size_t>(s, 8), regular_head_size);
-    case 1 : return ::LIBIMP::round_up<std::size_t>(s, 128);
-    case 2 : return ::LIBIMP::round_up<std::size_t>(s, 1024);
-    case 3 : return ::LIBIMP::round_up<std::size_t>(s, 8192);
-    default: return (std::numeric_limits<std::size_t>::max)();
-  }
+  return regular_sizeof_impl(regular_level(s), s);
 }
 
 template <typename T>
@@ -179,7 +179,11 @@ void delete$(T *p) noexcept {
   ::LIBIMP::destroy(p);
   auto *mem_res = regular_resource<regular_sizeof<T>()>::get();
   if (mem_res == nullptr) return;
+#if defined(LIBIMP_CC_MSVC_2015)
+  mem_res->deallocate(p, sizeof(T));
+#else
   mem_res->deallocate(p, sizeof(T), alignof(T));
+#endif
 }
 
 LIBPMR_NAMESPACE_END_

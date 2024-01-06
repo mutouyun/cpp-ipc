@@ -42,12 +42,12 @@ template <std::size_t Pts, std::size_t N>
 void test_new$array() {
   std::array<void *, Pts> pts;
   using T = std::array<char, N>;
-  for (int i = 0; i < pts.size(); ++i) {
+  for (int i = 0; i < (int)pts.size(); ++i) {
     auto p = pmr::new$<T>();
     pts[i] = p;
     std::memset(p, i, sizeof(T));
   }
-  for (int i = 0; i < pts.size(); ++i) {
+  for (int i = 0; i < (int)pts.size(); ++i) {
     T tmp;
     std::memset(&tmp, i, sizeof(T));
     ASSERT_EQ(std::memcmp(pts[i], &tmp, sizeof(T)), 0);
