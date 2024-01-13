@@ -95,7 +95,7 @@ void test_unicast(std::size_t np, std::size_t nc) {
   LIBIMP_LOG_();
   log.info("\n\tStart with: ", imp::nameof<PC>(), ", ", np, " producers, ", nc, " consumers...");
 
-  constexpr static std::uint32_t loop_size = 100'0000;
+  static constexpr std::uint32_t loop_size = 100'0000;
 
   concur::element<std::uint64_t> circ[32] {};
   PC pc;
@@ -232,7 +232,7 @@ void test_broadcast(std::size_t np, std::size_t nc) {
     typename concur::traits<PC>::header hdr {imp::make_span(circ)};
     ASSERT_TRUE(hdr.valid());
 
-    constexpr static std::uint32_t loop_size = 10'0000;
+    static constexpr std::uint32_t loop_size = 10'0000;
 
     std::atomic<std::uint64_t> sum {0};
     std::atomic<std::size_t> running {np};

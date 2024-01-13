@@ -29,7 +29,7 @@ private:
   static std::false_type check(...);
 public:
   using type = decltype(check<T>(nullptr));
-  constexpr static auto value = type::value;
+  static constexpr auto value = type::value;
 };
 
 template <typename T>
@@ -41,7 +41,7 @@ private:
   static std::false_type check(...);
 public:
   using type = decltype(check<T>(nullptr));
-  constexpr static auto value = type::value;
+  static constexpr auto value = type::value;
 };
 
 template <typename C, bool = trait_has_data<C>::value
@@ -50,10 +50,10 @@ struct trait;
 
 template <typename T, std::size_t N>
 struct trait<T[N], false, false> {
-  constexpr static T const *dataof(T const (&arr)[N]) noexcept {
+  static constexpr T const *dataof(T const (&arr)[N]) noexcept {
     return arr;
   }
-  constexpr static T *dataof(T (&arr)[N]) noexcept {
+  static constexpr T *dataof(T (&arr)[N]) noexcept {
     return arr;
   }
 };
@@ -61,7 +61,7 @@ struct trait<T[N], false, false> {
 template <typename C, bool B>
 struct trait<C, true, B> {
   template <typename T>
-  constexpr static auto dataof(T &&c) noexcept(noexcept(c.data())) {
+  static constexpr auto dataof(T &&c) noexcept(noexcept(c.data())) {
     return std::forward<T>(c).data();
   }
 };
@@ -69,7 +69,7 @@ struct trait<C, true, B> {
 template <typename C>
 struct trait<C, false, true> {
   template <typename T>
-  constexpr static auto dataof(T &&c) noexcept(noexcept(c.Data())) {
+  static constexpr auto dataof(T &&c) noexcept(noexcept(c.Data())) {
     return std::forward<T>(c).Data();
   }
 };
@@ -77,11 +77,11 @@ struct trait<C, false, true> {
 template <typename C>
 struct trait<C, false, false> {
   template <typename T>
-  constexpr static T const *dataof(std::initializer_list<T> il) noexcept {
+  static constexpr T const *dataof(std::initializer_list<T> il) noexcept {
     return il.begin();
   }
   template <typename T>
-  constexpr static T const *dataof(T const *p) noexcept {
+  static constexpr T const *dataof(T const *p) noexcept {
     return p;
   }
 };

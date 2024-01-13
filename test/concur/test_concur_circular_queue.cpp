@@ -93,7 +93,7 @@ void test_queue(std::size_t np, std::size_t nc) {
   };
   circular_queue<Data, PR, CR> que;
 
-  constexpr static std::uint32_t loop_size = 10'0000;
+  static constexpr std::uint32_t loop_size = 10'0000;
 
   std::atomic<std::uint64_t> sum {0};
   std::atomic<std::size_t> running {np};

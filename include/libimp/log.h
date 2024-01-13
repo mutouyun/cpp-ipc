@@ -54,7 +54,7 @@ bool unfold_tuple_fmt_to(fmt_context &ctx, Tp const &tp, std::index_sequence<I..
 
 template <typename... T>
 bool context_to_string(fmt_context &f_ctx, context<T...> const &l_ctx) noexcept {
-  constexpr static char types[] = {
+  static constexpr char types[] = {
     'T', 'D', 'I', 'W', 'E', 'F',
   };
   LIBIMP_TRY {

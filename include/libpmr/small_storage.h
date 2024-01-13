@@ -494,7 +494,7 @@ public:
 template <std::size_t N>
 class small_storage {
 
-  constexpr static std::size_t storage_size = sizeof(holder<void *, false>) - sizeof(void *) + N;
+  static constexpr std::size_t storage_size = sizeof(holder<void *, false>) - sizeof(void *) + N;
   static_assert(storage_size >= sizeof(holder<void *, false>), "N is not large enough to hold a pointer.");
 
   alignas(std::max_align_t) std::array<::LIBIMP::byte, storage_size> storage_;

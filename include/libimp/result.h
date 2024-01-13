@@ -41,27 +41,27 @@ struct generic_traits {
   using storage_t = std::tuple<T, std::error_code>;
 
   /// \brief Custom initialization.
-  constexpr static void init_code(storage_t &code) noexcept {
+  static constexpr void init_code(storage_t &code) noexcept {
     code = {{}, std::error_code(-1, std::generic_category())};
   }
-  constexpr static void init_code(storage_t &code, T value, std::error_code const &ec) noexcept {
+  static constexpr void init_code(storage_t &code, T value, std::error_code const &ec) noexcept {
     code = {value, ec};
   }
-  constexpr static void init_code(storage_t &code, T value) noexcept {
+  static constexpr void init_code(storage_t &code, T value) noexcept {
     code = {value, {}};
   }
-  constexpr static void init_code(storage_t &code, std::error_code const &ec) noexcept {
+  static constexpr void init_code(storage_t &code, std::error_code const &ec) noexcept {
     code = {{}, ec};
   }
 
   /// \brief Custom type data acquisition.
-  constexpr static T get_value(storage_t const &code) noexcept {
+  static constexpr T get_value(storage_t const &code) noexcept {
     return std::get<0>(code);
   }
-  constexpr static bool get_ok(storage_t const &code) noexcept {
+  static constexpr bool get_ok(storage_t const &code) noexcept {
     return !std::get<1>(code);
   }
-  constexpr static std::error_code get_error(storage_t const &code) noexcept {
+  static constexpr std::error_code get_error(storage_t const &code) noexcept {
     return std::get<1>(code);
   }
 };
@@ -72,18 +72,18 @@ struct default_traits<void, ___> {
   using storage_t = std::error_code;
 
   /// \brief Custom initialization.
-  constexpr static void init_code(storage_t &code) noexcept {
+  static constexpr void init_code(storage_t &code) noexcept {
     code = std::error_code(-1, std::generic_category());
   }
-  constexpr static void init_code(storage_t &code, std::error_code const &ec) noexcept {
+  static constexpr void init_code(storage_t &code, std::error_code const &ec) noexcept {
     code = ec;
   }
 
   /// \brief Custom type data acquisition.
-  constexpr static bool get_ok(storage_t const &code) noexcept {
+  static constexpr bool get_ok(storage_t const &code) noexcept {
     return !code;
   }
-  constexpr static std::error_code get_error(storage_t const &code) noexcept {
+  static constexpr std::error_code get_error(storage_t const &code) noexcept {
     return code;
   }
 
@@ -94,7 +94,7 @@ struct default_traits<void, ___> {
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> : generic_traits<T> {
   /// \brief Custom initialization.
-  constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
+  static constexpr void init_code(typename generic_traits<T>::storage_t &code, 
                                   T value, bool ok) noexcept {
     code = {value, ok ? std::error_code() : std::error_code(-1, std::generic_category())};
   }
@@ -107,11 +107,11 @@ struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> : generic
 template <typename T>
 struct default_traits<T, std::enable_if_t<std::is_pointer<T>::value>> : generic_traits<T> {
   /// \brief Custom initialization.
-  constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
+  static constexpr void init_code(typename generic_traits<T>::storage_t &code, 
                                   std::nullptr_t, std::error_code const &ec) noexcept {
     code = {nullptr, ec};
   }
-  constexpr static void init_code(typename generic_traits<T>::storage_t &code, 
+  static constexpr void init_code(typename generic_traits<T>::storage_t &code, 
                                   std::nullptr_t) noexcept {
     code = {nullptr, std::error_code(-1, std::generic_category())};
   }

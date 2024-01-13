@@ -21,7 +21,7 @@ LIBIMP_NAMESPACE_BEG_
 namespace {
 
 struct sfmt_policy {
-  constexpr static std::size_t aligned_size = 32U;
+  static constexpr std::size_t aligned_size = 32U;
 };
 
 template <typename Policy = sfmt_policy>

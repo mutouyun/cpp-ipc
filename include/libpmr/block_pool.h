@@ -163,7 +163,7 @@ class block_pool<0, 0> {
   using central_cache_pool_t = central_cache_pool<block_t, 0>;
 
 public:
-  constexpr static std::size_t block_size = 0;
+  static constexpr std::size_t block_size = 0;
 
   block_pool() noexcept : cursor_(central_cache_pool_t::instance().aqueire()) {}
   ~block_pool() noexcept {
@@ -202,7 +202,7 @@ class block_pool {
   }
 
 public:
-  constexpr static std::size_t block_size = BlockSize;
+  static constexpr std::size_t block_size = BlockSize;
 
   block_pool() noexcept : cursor_(expand()) {}
   ~block_pool() noexcept {

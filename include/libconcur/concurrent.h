@@ -379,15 +379,15 @@ struct producer<trans::broadcast, relation::multi> {
 private:
   friend struct producer::header_impl;
 
-  constexpr static index_t get_index(state::flag_t flags) noexcept {
+  static constexpr index_t get_index(state::flag_t flags) noexcept {
     return index_t(flags);
   }
 
-  constexpr static index_t get_begin(state::flag_t flags) noexcept {
+  static constexpr index_t get_begin(state::flag_t flags) noexcept {
     return index_t(flags >> (sizeof(index_t) * CHAR_BIT));
   }
 
-  constexpr static state::flag_t make_flags(index_t idx, index_t beg) noexcept {
+  static constexpr state::flag_t make_flags(index_t idx, index_t beg) noexcept {
     return state::flag_t(idx) | (state::flag_t(beg) << (sizeof(index_t) * CHAR_BIT));
   }
 };

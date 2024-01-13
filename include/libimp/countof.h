@@ -29,7 +29,7 @@ private:
   static std::false_type check(...);
 public:
   using type = decltype(check<T>(nullptr));
-  constexpr static auto value = type::value;
+  static constexpr auto value = type::value;
 };
 
 template <typename T>
@@ -41,7 +41,7 @@ private:
   static std::false_type check(...);
 public:
   using type = decltype(check<T>(nullptr));
-  constexpr static auto value = type::value;
+  static constexpr auto value = type::value;
 };
 
 template <typename C, bool = trait_has_size<C>::value
@@ -50,21 +50,21 @@ struct trait;
 
 template <typename T, std::size_t N>
 struct trait<T[N], false, false> {
-  constexpr static auto countof(T const (&)[N]) noexcept {
+  static constexpr auto countof(T const (&)[N]) noexcept {
     return N;
   }
 };
 
 template <typename C, bool B>
 struct trait<C, true, B> {
-  constexpr static auto countof(C const &c) noexcept(noexcept(c.size())) {
+  static constexpr auto countof(C const &c) noexcept(noexcept(c.size())) {
     return c.size();
   }
 };
 
 template <typename C>
 struct trait<C, false, true> {
-  constexpr static auto countof(C const &c) noexcept(noexcept(c.Size())) {
+  static constexpr auto countof(C const &c) noexcept(noexcept(c.Size())) {
     return c.Size();
   }
 };
