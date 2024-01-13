@@ -106,20 +106,30 @@ inline auto &make_std_out() noexcept {
 }
 
 /**
- * \brief Log information grips.
+ * \brief Log information base class.
  */
-template <typename Outputer>
-class logger {
-  Outputer out_;
+class logger_base {
+protected:
   char const *func_;
   level level_limit_;
 
+  logger_base(char const *func, level level_limit) noexcept
+    : func_       (func)
+    , level_limit_(level_limit) {}
+};
+
+/**
+ * \brief Log information grips.
+ */
+template <typename Outputer>
+class logger : public logger_base {
+  Outputer out_;
+
 public:
   template <typename O>
-  logger(char const *func, O &&out, level level_limit) noexcept 
-    : out_        (std::forward<O>(out))
-    , func_       (func)
-    , level_limit_(level_limit) {}
+  logger(char const *func, O &&out, level level_limit) noexcept
+    : logger_base(func, level_limit)
+    , out_       (std::forward<O>(out)) {}
 
   template <typename... A>
   logger const &operator()(log::level l, A &&...args) const noexcept {

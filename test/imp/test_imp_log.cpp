@@ -17,7 +17,7 @@ TEST(log, logger) {
   }
   {
     LIBIMP_LOG_();
-    log.info(), "hello ", 3;
+    log.info("hello ", 3);
   }
   SUCCEED();
 }
@@ -36,11 +36,11 @@ TEST(log, custom) {
 
   LIBIMP_LOG_(ll);
 
-  log.info ("hello");
-  log.error("failed:");
-  log.info ("log-pt");
+  log.info ("hello", " world");
+  log.error("failed", ":");
+  log.info ("log", '-', "pt");
   log.error("whatever");
 
-  EXPECT_EQ(ll_data.i, "hello log-pt ");
+  EXPECT_EQ(ll_data.i, "hello world log-pt ");
   EXPECT_EQ(ll_data.e, "failed: whatever ");
 }
