@@ -109,20 +109,20 @@ inline auto &make_std_out() noexcept {
  * \brief Log information grips.
  */
 template <typename Outputer>
-class grip {
+class logger {
   Outputer out_;
   char const *func_;
   level level_limit_;
 
 public:
   template <typename O>
-  grip(char const *func, O &&out, level level_limit) noexcept 
+  logger(char const *func, O &&out, level level_limit) noexcept 
     : out_        (std::forward<O>(out))
     , func_       (func)
     , level_limit_(level_limit) {}
 
   template <typename... A>
-  grip const &operator()(log::level l, A &&...args) const noexcept {
+  logger const &operator()(log::level l, A &&...args) const noexcept {
     if (underlyof(l) < underlyof(level_limit_)) {
       return *this;
     }
@@ -135,28 +135,28 @@ public:
     return *this;
   }
 
-  template <typename... A> grip const &trace  (A &&...args) const noexcept { return (*this)(log::level::trace  , std::forward<A>(args)...); }
-  template <typename... A> grip const &debug  (A &&...args) const noexcept { return (*this)(log::level::debug  , std::forward<A>(args)...); }
-  template <typename... A> grip const &info   (A &&...args) const noexcept { return (*this)(log::level::info   , std::forward<A>(args)...); }
-  template <typename... A> grip const &warning(A &&...args) const noexcept { return (*this)(log::level::warning, std::forward<A>(args)...); }
-  template <typename... A> grip const &error  (A &&...args) const noexcept { return (*this)(log::level::error  , std::forward<A>(args)...); }
-  template <typename... A> grip const &failed (A &&...args) const noexcept { return (*this)(log::level::failed , std::forward<A>(args)...); }
+  template <typename... A> logger const &trace  (A &&...args) const noexcept { return (*this)(log::level::trace  , std::forward<A>(args)...); }
+  template <typename... A> logger const &debug  (A &&...args) const noexcept { return (*this)(log::level::debug  , std::forward<A>(args)...); }
+  template <typename... A> logger const &info   (A &&...args) const noexcept { return (*this)(log::level::info   , std::forward<A>(args)...); }
+  template <typename... A> logger const &warning(A &&...args) const noexcept { return (*this)(log::level::warning, std::forward<A>(args)...); }
+  template <typename... A> logger const &error  (A &&...args) const noexcept { return (*this)(log::level::error  , std::forward<A>(args)...); }
+  template <typename... A> logger const &failed (A &&...args) const noexcept { return (*this)(log::level::failed , std::forward<A>(args)...); }
 };
 
 template <typename O>
-inline auto make_grip(char const *func, O &&out, level level_limit = level::info) noexcept {
-  return grip<std::decay_t<O>>(func, std::forward<O>(out), level_limit);
+inline auto make_logger(char const *func, O &&out, level level_limit = level::info) noexcept {
+  return logger<std::decay_t<O>>(func, std::forward<O>(out), level_limit);
 }
 
-inline auto make_grip(char const *func, level level_limit = level::info) noexcept {
-  return make_grip(func, make_std_out(), level_limit);
+inline auto make_logger(char const *func, level level_limit = level::info) noexcept {
+  return make_logger(func, make_std_out(), level_limit);
 }
 
-inline auto make_grip(char const * /*ignore*/, char const *name, level level_limit = level::info) noexcept {
-  return make_grip(name, make_std_out(), level_limit);
+inline auto make_logger(char const * /*ignore*/, char const *name, level level_limit = level::info) noexcept {
+  return make_logger(name, make_std_out(), level_limit);
 }
 
 } // namespace log
 LIBIMP_NAMESPACE_END_
 
-#define LIBIMP_LOG_(...) auto log = ::LIBIMP::log::make_grip(__func__,##__VA_ARGS__)
+#define LIBIMP_LOG_(...) auto log = ::LIBIMP::log::make_logger(__func__,##__VA_ARGS__)

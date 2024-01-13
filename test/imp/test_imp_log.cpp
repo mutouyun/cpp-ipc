@@ -6,7 +6,7 @@
 
 #include "libimp/log.h"
 
-TEST(log, gripper) {
+TEST(log, logger) {
   {
     LIBIMP_LOG_();
     log.info("hello");
@@ -14,6 +14,10 @@ TEST(log, gripper) {
   {
     LIBIMP_LOG_();
     log.info("hello 2");
+  }
+  {
+    LIBIMP_LOG_();
+    log.info(), "hello ", 3;
   }
   SUCCEED();
 }
