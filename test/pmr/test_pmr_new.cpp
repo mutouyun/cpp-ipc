@@ -3,6 +3,7 @@
 #include <array>
 #include <cstring>
 #include <cstddef>
+#include <thread>
 
 #include "gtest/gtest.h"
 
@@ -112,5 +113,34 @@ TEST(pmr_new, delete$poly) {
 TEST(pmr_new, delete$null) {
   Base *p = nullptr;
   pmr::delete$(p);
+  SUCCEED();
+}
+
+TEST(pmr_new, multi_thread) {
+  std::array<std::thread, 16> threads;
+  for (auto &t : threads) {
+    t = std::thread([] {
+      for (int i = 0; i < 10000; ++i) {
+        auto p = pmr::new$<int>();
+        *p = i;
+        pmr::delete$(p);
+      }
+      std::array<void *, 10000> pts;
+      for (int i = 0; i < 10000; ++i) {
+        auto p = pmr::new$<std::array<char, 10>>();
+        pts[i] = p;
+        std::memset(p, i, sizeof(std::array<char, 10>));
+      }
+      for (int i = 0; i < 10000; ++i) {
+        std::array<char, 10> tmp;
+        std::memset(&tmp, i, sizeof(std::array<char, 10>));
+        ASSERT_EQ(std::memcmp(pts[i], &tmp, sizeof(std::array<char, 10>)), 0);
+        pmr::delete$(static_cast<std::array<char, 10> *>(pts[i]));
+      }
+    });
+  }
+  for (auto &t : threads) {
+    t.join();
+  }
   SUCCEED();
 }

@@ -322,7 +322,7 @@ R or_else(E &&exp, F &&f) {
  */
 template <typename T, typename E>
 class expected : public detail_expected::storage<typename std::remove_cv<T>::type, E> {
- public:
+public:
   using value_type = typename std::remove_cv<T>::type;
   using error_type = E;
 
