@@ -5,6 +5,7 @@
 
 #include "libimp/log.h"
 #include "libimp/aligned.h"
+#include "libimp/detect_plat.h"
 
 #include "libpmr/monotonic_buffer_resource.h"
 
@@ -12,18 +13,24 @@ LIBPMR_NAMESPACE_BEG_
 namespace {
 
 template <typename Node>
-Node *make_node(allocator const &upstream, std::size_t initial_size, std::size_t alignment) {
+Node *make_node(allocator const &upstream, std::size_t initial_size, std::size_t alignment) noexcept {
   LIBIMP_LOG_();
   auto sz = ::LIBIMP::round_up(sizeof(Node), alignment) + initial_size;
-  auto *node = static_cast<Node *>(upstream.allocate(sz));
-  if (node == nullptr) {
+  LIBIMP_TRY {
+    auto *node = static_cast<Node *>(upstream.allocate(sz));
+    if (node == nullptr) {
+      log.error("failed: allocate memory for `monotonic_buffer_resource`'s node.", 
+                " bytes = ", initial_size, ", alignment = ", alignment);
+      return nullptr;
+    }
+    node->next = nullptr;
+    node->size = sz;
+    return node;
+  } LIBIMP_CATCH(...) {
     log.error("failed: allocate memory for `monotonic_buffer_resource`'s node.", 
               " bytes = ", initial_size, ", alignment = ", alignment);
     return nullptr;
   }
-  node->next = nullptr;
-  node->size = sz;
-  return node;
 }
 
 std::size_t next_buffer_size(std::size_t size) noexcept {
@@ -38,10 +45,10 @@ monotonic_buffer_resource::monotonic_buffer_resource() noexcept
 monotonic_buffer_resource::monotonic_buffer_resource(allocator upstream) noexcept
   : monotonic_buffer_resource(0, std::move(upstream)) {}
 
-monotonic_buffer_resource::monotonic_buffer_resource(std::size_t initial_size)
+monotonic_buffer_resource::monotonic_buffer_resource(std::size_t initial_size) noexcept
   : monotonic_buffer_resource(initial_size, allocator{}) {}
 
-monotonic_buffer_resource::monotonic_buffer_resource(std::size_t initial_size, allocator upstream)
+monotonic_buffer_resource::monotonic_buffer_resource(std::size_t initial_size, allocator upstream) noexcept
   : upstream_      (std::move(upstream))
   , free_list_     (nullptr)
   , head_          (nullptr)
@@ -62,7 +69,7 @@ monotonic_buffer_resource::monotonic_buffer_resource(::LIBIMP::span<::LIBIMP::by
   , initial_buffer_(buffer.begin())
   , initial_size_  (buffer.size()) {}
 
-monotonic_buffer_resource::~monotonic_buffer_resource() {
+monotonic_buffer_resource::~monotonic_buffer_resource() noexcept {
   release();
 }
 
@@ -70,11 +77,16 @@ allocator monotonic_buffer_resource::upstream_resource() const noexcept {
   return upstream_;
 }
 
-void monotonic_buffer_resource::release() {
-  while (free_list_ != nullptr) {
-    auto *next = free_list_->next;
-    upstream_.deallocate(free_list_, free_list_->size);
-    free_list_ = next;
+void monotonic_buffer_resource::release() noexcept {
+  LIBIMP_LOG_();
+  LIBIMP_TRY {
+    while (free_list_ != nullptr) {
+      auto *next = free_list_->next;
+      upstream_.deallocate(free_list_, free_list_->size);
+      free_list_ = next;
+    }
+  } LIBIMP_CATCH(...) {
+    log.error("failed: deallocate memory for `monotonic_buffer_resource`.");
   }
   // reset to initial state at contruction
   if ((head_ = initial_buffer_) != nullptr) {

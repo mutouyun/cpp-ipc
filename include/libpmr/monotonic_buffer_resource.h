@@ -42,18 +42,18 @@ class LIBIMP_EXPORT monotonic_buffer_resource {
 public:
   monotonic_buffer_resource() noexcept;
   explicit monotonic_buffer_resource(allocator upstream) noexcept;
-  explicit monotonic_buffer_resource(std::size_t initial_size);
-  monotonic_buffer_resource(std::size_t initial_size, allocator upstream);
+  explicit monotonic_buffer_resource(std::size_t initial_size) noexcept;
+  monotonic_buffer_resource(std::size_t initial_size, allocator upstream) noexcept;
   monotonic_buffer_resource(::LIBIMP::span<::LIBIMP::byte> buffer) noexcept;
   monotonic_buffer_resource(::LIBIMP::span<::LIBIMP::byte> buffer, allocator upstream) noexcept;
 
-  ~monotonic_buffer_resource();
+  ~monotonic_buffer_resource() noexcept;
 
   monotonic_buffer_resource(monotonic_buffer_resource const &) = delete;
   monotonic_buffer_resource &operator=(monotonic_buffer_resource const &) = delete;
 
   allocator upstream_resource() const noexcept;
-  void release();
+  void release() noexcept;
 
   void *allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept;
   void deallocate(void *p, std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept;
