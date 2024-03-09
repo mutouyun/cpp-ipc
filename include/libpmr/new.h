@@ -144,17 +144,17 @@ auto *get_regular_resource() noexcept {
 /// \brief Creates an object based on the specified type and parameters with block pool resource.
 /// \note This function is thread-safe.
 template <typename T, typename... A>
-T *new$(A &&... args) noexcept {
+T *$new(A &&... args) noexcept {
   auto *res = get_regular_resource<T>();
   if (res == nullptr) return nullptr;
   return ::LIBIMP::construct<T>(res->allocate(sizeof(T), alignof(T)), std::forward<A>(args)...);
 }
 
-/// \brief Destroys object previously allocated by the `new$` and releases obtained memory area.
-/// \note This function is thread-safe. If the pointer type passed in is different from `new$`, 
+/// \brief Destroys object previously allocated by the `$new` and releases obtained memory area.
+/// \note This function is thread-safe. If the pointer type passed in is different from `$new`, 
 ///       additional performance penalties may be incurred.
 template <typename T>
-void delete$(T *p) noexcept {
+void $delete(T *p) noexcept {
   if (p == nullptr) return;
   ::LIBIMP::destroy(p);
   auto *res = get_regular_resource<T>();

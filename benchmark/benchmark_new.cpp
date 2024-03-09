@@ -106,11 +106,11 @@ struct policy_cpp_new {
 template <std::size_t AllocSize>
 struct policy_pmr_new {
   static void *allocate() noexcept {
-    return pmr::new$<std::array<char, AllocSize>>();
+    return pmr::$new<std::array<char, AllocSize>>();
   }
 
   static void deallocate(void *p) noexcept {
-    pmr::delete$(static_cast<std::array<char, AllocSize> *>(p));
+    pmr::$delete(static_cast<std::array<char, AllocSize> *>(p));
   }
 };
 

@@ -73,7 +73,7 @@ struct scope_exit_helper {
 
 } // namespace detail
 
-#define LIBIMP_SCOPE_EXIT($val) \
-  LIBIMP_UNUSED auto $val = ::LIBIMP::detail::scope_exit_helper{}
+#define LIBIMP_SCOPE_EXIT($VAL) \
+  LIBIMP_UNUSED auto $VAL = ::LIBIMP::detail::scope_exit_helper{}
 
 LIBIMP_NAMESPACE_END_

@@ -22,19 +22,19 @@ TEST(pmr_new, regular_sizeof) {
   ASSERT_EQ((pmr::regular_sizeof<std::array<char, 100000>>()), (std::numeric_limits<std::size_t>::max)());
 }
 
-TEST(pmr_new, new$) {
-  auto p = pmr::new$<int>();
+TEST(pmr_new, $new) {
+  auto p = pmr::$new<int>();
   ASSERT_NE(p, nullptr);
   *p = -1;
   ASSERT_EQ(*p, -1);
-  pmr::delete$(p);
+  pmr::$delete(p);
 }
 
-TEST(pmr_new, new$value) {
-  auto p = pmr::new$<int>((std::numeric_limits<int>::max)());
+TEST(pmr_new, $new_value) {
+  auto p = pmr::$new<int>((std::numeric_limits<int>::max)());
   ASSERT_NE(p, nullptr);
   ASSERT_EQ(*p, (std::numeric_limits<int>::max)());
-  pmr::delete$(p);
+  pmr::$delete(p);
 }
 
 namespace {
@@ -44,7 +44,7 @@ void test_new$array() {
   std::array<void *, Pts> pts;
   using T = std::array<char, N>;
   for (int i = 0; i < (int)pts.size(); ++i) {
-    auto p = pmr::new$<T>();
+    auto p = pmr::$new<T>();
     pts[i] = p;
     std::memset(p, i, sizeof(T));
   }
@@ -52,13 +52,13 @@ void test_new$array() {
     T tmp;
     std::memset(&tmp, i, sizeof(T));
     ASSERT_EQ(std::memcmp(pts[i], &tmp, sizeof(T)), 0);
-    pmr::delete$(static_cast<T *>(pts[i]));
+    pmr::$delete(static_cast<T *>(pts[i]));
   }
 }
 
 } // namespace
 
-TEST(pmr_new, new$array) {
+TEST(pmr_new, $new_array) {
   test_new$array<1000, 10>();
   test_new$array<1000, 100>();
   test_new$array<1000, 1000>();
@@ -103,39 +103,39 @@ private:
 
 } // namespace
 
-TEST(pmr_new, delete$poly) {
-  Base *p = pmr::new$<Derived>(-1);
+TEST(pmr_new, $delete_poly) {
+  Base *p = pmr::$new<Derived>(-1);
   ASSERT_NE(p, nullptr);
   ASSERT_EQ(p->get(), -1);
   ASSERT_EQ(construct_count__, -1);
-  pmr::delete$(p);
+  pmr::$delete(p);
   ASSERT_EQ(construct_count__, 0);
 
-  ASSERT_EQ(p, pmr::new$<Derived>((std::numeric_limits<int>::max)()));
+  ASSERT_EQ(p, pmr::$new<Derived>((std::numeric_limits<int>::max)()));
   ASSERT_EQ(p->get(), (std::numeric_limits<int>::max)());
   ASSERT_EQ(construct_count__, (std::numeric_limits<int>::max)());
-  pmr::delete$(p);
+  pmr::$delete(p);
   ASSERT_EQ(construct_count__, 0);
 }
 
-TEST(pmr_new, delete$poly64k) {
-  Base *p = pmr::new$<Derived64K>(-1);
+TEST(pmr_new, $delete_poly64k) {
+  Base *p = pmr::$new<Derived64K>(-1);
   ASSERT_NE(p, nullptr);
   ASSERT_EQ(p->get(), -1);
   ASSERT_EQ(construct_count__, -1);
-  pmr::delete$(p);
+  pmr::$delete(p);
   ASSERT_EQ(construct_count__, 0);
 
-  Base *q = pmr::new$<Derived64K>((std::numeric_limits<int>::max)());
+  Base *q = pmr::$new<Derived64K>((std::numeric_limits<int>::max)());
   ASSERT_EQ(q->get(), (std::numeric_limits<int>::max)());
   ASSERT_EQ(construct_count__, (std::numeric_limits<int>::max)());
-  pmr::delete$(q);
+  pmr::$delete(q);
   ASSERT_EQ(construct_count__, 0);
 }
 
-TEST(pmr_new, delete$null) {
+TEST(pmr_new, $delete_null) {
   Base *p = nullptr;
-  pmr::delete$(p);
+  pmr::$delete(p);
   SUCCEED();
 }
 
@@ -144,13 +144,13 @@ TEST(pmr_new, multi_thread) {
   for (auto &t : threads) {
     t = std::thread([] {
       for (int i = 0; i < 10000; ++i) {
-        auto p = pmr::new$<int>();
+        auto p = pmr::$new<int>();
         *p = i;
-        pmr::delete$(p);
+        pmr::$delete(p);
       }
       std::array<void *, 10000> pts;
       for (int i = 0; i < 10000; ++i) {
-        auto p = pmr::new$<std::array<char, 10>>();
+        auto p = pmr::$new<std::array<char, 10>>();
         pts[i] = p;
         std::memset(p, i, sizeof(std::array<char, 10>));
       }
@@ -158,7 +158,7 @@ TEST(pmr_new, multi_thread) {
         std::array<char, 10> tmp;
         std::memset(&tmp, i, sizeof(std::array<char, 10>));
         ASSERT_EQ(std::memcmp(pts[i], &tmp, sizeof(std::array<char, 10>)), 0);
-        pmr::delete$(static_cast<std::array<char, 10> *>(pts[i]));
+        pmr::$delete(static_cast<std::array<char, 10> *>(pts[i]));
       }
     });
   }

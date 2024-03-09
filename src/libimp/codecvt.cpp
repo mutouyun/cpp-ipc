@@ -324,12 +324,12 @@ auto cvt_cstr_utf(T const *src, std::size_t slen, U *des, std::size_t dlen) noex
 
 } // namespace
 
-#define LIBIMP_DEF_CVT_CSTR_($char_t, $char_u) \
+#define LIBIMP_DEF_CVT_CSTR_($CHAR_T, $CHAR_U) \
   template <> \
-  std::size_t cvt_cstr($char_t const *src, std::size_t slen, $char_u *des, std::size_t dlen) noexcept { \
+  std::size_t cvt_cstr($CHAR_T const *src, std::size_t slen, $CHAR_U *des, std::size_t dlen) noexcept { \
     return cvt_cstr_utf(src, slen, des, dlen); \
   }
-// #define LIBIMP_DEF_CVT_CSTR_($char_t, $char_u)
+// #define LIBIMP_DEF_CVT_CSTR_($CHAR_T, $CHAR_U)
 
 LIBIMP_DEF_CVT_CSTR_(char    , char)
 LIBIMP_DEF_CVT_CSTR_(char    , char16_t)
