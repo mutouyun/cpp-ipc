@@ -28,7 +28,11 @@ public:
   virtual void recycle(void *p, std::size_t bytes, std::size_t alignment) noexcept = 0;
 };
 
+#if defined(LIBIMP_CPP_17)
 using get_block_collector_t = block_collector *(*)() noexcept;
+#else
+using get_block_collector_t = block_collector *(*)();
+#endif
 
 static constexpr std::size_t regular_head_size
     = ::LIBIMP::round_up(sizeof(get_block_collector_t), alignof(std::max_align_t));
@@ -123,12 +127,12 @@ public:
 /// \brief Different increment levels match different chunk sizes.
 ///        512 means that 512 consecutive memory blocks are allocated at a time, and the block size is N.
 template <std::size_t L>
-constexpr static std::size_t block_pool_expansion = 0;
+constexpr std::size_t block_pool_expansion = 0;
 
-template <> constexpr static std::size_t block_pool_expansion<0> = 512;
-template <> constexpr static std::size_t block_pool_expansion<1> = 256;
-template <> constexpr static std::size_t block_pool_expansion<2> = 128;
-template <> constexpr static std::size_t block_pool_expansion<3> = 64;
+template <> constexpr std::size_t block_pool_expansion<0> = 512;
+template <> constexpr std::size_t block_pool_expansion<1> = 256;
+template <> constexpr std::size_t block_pool_expansion<2> = 128;
+template <> constexpr std::size_t block_pool_expansion<3> = 64;
 
 /// \brief Match the appropriate memory block resources according to the size of the specification.
 template <std::size_t N, std::size_t L = regular_level(N)>
