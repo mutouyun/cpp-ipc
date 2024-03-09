@@ -53,33 +53,30 @@ bool unfold_tuple_fmt_to(fmt_context &ctx, Tp const &tp, std::index_sequence<I..
 } // namespace detail
 
 template <typename... T>
-bool context_to_string(fmt_context &f_ctx, context<T...> const &l_ctx) noexcept {
+bool context_to_string(fmt_context &f_ctx, context<T...> const &l_ctx) {
   static constexpr char types[] = {
     'T', 'D', 'I', 'W', 'E', 'F',
   };
-  LIBIMP_TRY {
-    auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(l_ctx.tp).time_since_epoch().count() % 1000;
-    return detail::unfold_tuple_fmt_to(f_ctx, l_ctx.params, std::index_sequence_for<T...>{},
-                                      "[", types[underlyof(l_ctx.level)], "]"
-                                      "[", l_ctx.tp, ".", spec("03")(ms), "]"
-                                      "[", l_ctx.func, "] ");
-  } LIBIMP_CATCH(...) {
-    return false;
-  }
+  auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(l_ctx.tp).time_since_epoch().count() % 1000;
+  return detail::unfold_tuple_fmt_to(f_ctx, l_ctx.params, std::index_sequence_for<T...>{},
+                                    "[", types[underlyof(l_ctx.level)], "]"
+                                    "[", l_ctx.tp, ".", spec("03")(ms), "]"
+                                    "[", l_ctx.func, "] ");
 }
 
 template <typename... T>
-std::string context_to_string(context<T...> const &l_ctx) noexcept {
+std::string context_to_string(context<T...> const &l_ctx) {
+  std::string log_txt;
+  fmt_context f_ctx(log_txt);
   LIBIMP_TRY {
-    std::string log_txt;
-    fmt_context f_ctx(log_txt);
     if (!context_to_string(f_ctx, l_ctx)) {
       return {};
     }
     f_ctx.finish();
     return log_txt;
   } LIBIMP_CATCH(...) {
-    return {};
+    f_ctx.finish();
+    throw;
   }
 }
 
@@ -103,6 +100,22 @@ inline auto &make_std_out() noexcept {
     }
   };
   return std_out;
+}
+
+/// \brief Record the last information when an exception occurs.
+inline void log_exception(char const *func, std::exception_ptr eptr) noexcept {
+  LIBIMP_TRY {
+    if (func == nullptr) {
+      func = "-";
+    }
+    if (eptr) {
+      std::rethrow_exception(eptr);
+    }
+  } LIBIMP_CATCH(std::exception const &e) {
+    std::fprintf(stderr, "[F][%s] exception: %s\n", func, e.what());
+  } LIBIMP_CATCH(...) {
+    std::fprintf(stderr, "[F][%s] exception: unknown\n", func);
+  }
 }
 
 /**
@@ -141,7 +154,9 @@ public:
         l, std::chrono::system_clock::now(), func_,
         std::forward_as_tuple(std::forward<A>(args)...),
       });
-    } LIBIMP_CATCH(...) {}
+    } LIBIMP_CATCH(...) {
+      log_exception(func_, std::current_exception());
+    }
     return *this;
   }
 
