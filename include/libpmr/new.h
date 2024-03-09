@@ -125,7 +125,7 @@ public:
 };
 
 /// \brief Different increment levels match different chunk sizes.
-///        512 means that 512 consecutive memory blocks are allocated at a time, and the block size is N.
+///        512 means that 512 consecutive memory blocks are allocated at a time.
 template <std::size_t L>
 constexpr std::size_t block_pool_expansion = 0;
 
@@ -134,20 +134,18 @@ template <> constexpr std::size_t block_pool_expansion<1> = 256;
 template <> constexpr std::size_t block_pool_expansion<2> = 128;
 template <> constexpr std::size_t block_pool_expansion<3> = 64;
 
-/// \brief Match the appropriate memory block resources according to the size of the specification.
-template <std::size_t N, std::size_t L = regular_level(N)>
-struct regular_resource {
-  static auto *get() noexcept {
-    using block_poll_resource_t = block_pool_resource<N, block_pool_expansion<L>>;
-    return dynamic_cast<block_poll_resource_t *>(block_poll_resource_t::get());
-  }
-};
+/// \brief Matches the appropriate memory block resource based on the specified type.
+template <typename T, std::size_t N = regular_sizeof<T>(), std::size_t L = regular_level(N)>
+auto *get_regular_resource() noexcept {
+  using block_poll_resource_t = block_pool_resource<N, block_pool_expansion<L>>;
+  return dynamic_cast<block_poll_resource_t *>(block_poll_resource_t::get());
+}
 
 /// \brief Creates an object based on the specified type and parameters with block pool resource.
 /// \note This function is thread-safe.
 template <typename T, typename... A>
 T *new$(A &&... args) noexcept {
-  auto *res = regular_resource<regular_sizeof<T>()>::get();
+  auto *res = get_regular_resource<T>();
   if (res == nullptr) return nullptr;
   return ::LIBIMP::construct<T>(res->allocate(sizeof(T), alignof(T)), std::forward<A>(args)...);
 }
@@ -159,7 +157,7 @@ template <typename T>
 void delete$(T *p) noexcept {
   if (p == nullptr) return;
   ::LIBIMP::destroy(p);
-  auto *res = regular_resource<regular_sizeof<T>()>::get();
+  auto *res = get_regular_resource<T>();
   if (res == nullptr) return;
 #if (LIBIMP_CC_MSVC > LIBIMP_CC_MSVC_2015)
   res->deallocate(p, sizeof(T), alignof(T));
