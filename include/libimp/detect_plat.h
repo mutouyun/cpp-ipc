@@ -42,6 +42,7 @@
 # define LIBIMP_CC_MSVC_2015 1900
 # define LIBIMP_CC_MSVC_2017 1910
 # define LIBIMP_CC_MSVC_2019 1920
+# define LIBIMP_CC_MSVC_2022 1930
 #elif defined(__GNUC__)
 # define LIBIMP_CC_GNUC __GNUC__
 # if defined(__clang__)

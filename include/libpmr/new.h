@@ -25,7 +25,7 @@ LIBPMR_NAMESPACE_BEG_
 class LIBIMP_EXPORT block_collector {
 public:
   virtual ~block_collector() noexcept = default;
-  virtual void deallocate(void *p) noexcept = 0;
+  virtual void recycle(void *p, std::size_t bytes, std::size_t alignment) noexcept = 0;
 };
 
 using get_block_collector_t = block_collector *(*)() noexcept;
@@ -60,15 +60,41 @@ constexpr inline std::size_t regular_sizeof() noexcept {
   return regular_sizeof_impl(regular_head_size + sizeof(T));
 }
 
+/// \brief Use block pools to handle memory less than 64K.
+template <std::size_t BlockSize, std::size_t BlockPoolExpansion>
+class block_resource_base : public block_pool<BlockSize, BlockPoolExpansion> {
+public:
+  void *allocate(std::size_t /*bytes*/, std::size_t /*alignment*/) noexcept {
+    return block_pool<BlockSize, BlockPoolExpansion>::allocate();
+  }
+
+  void deallocate(void *p, std::size_t /*bytes*/, std::size_t /*alignment*/) noexcept {
+    block_pool<BlockSize, BlockPoolExpansion>::deallocate(p);
+  }
+};
+
+/// \brief Use `new`/`delete` to handle memory larger than 64K.
+template <std::size_t BlockSize>
+class block_resource_base<BlockSize, 0> : public new_delete_resource {
+public:
+  void *allocate(std::size_t bytes, std::size_t alignment) noexcept {
+    return new_delete_resource::allocate(regular_head_size + bytes, alignment);
+  }
+
+  void deallocate(void *p, std::size_t bytes, std::size_t alignment) noexcept {
+    new_delete_resource::deallocate(p, regular_head_size + bytes, alignment);
+  }
+};
+
 /// \brief Defines block pool memory resource based on block pool.
 template <std::size_t BlockSize, std::size_t BlockPoolExpansion>
-class block_pool_resource : public block_pool<BlockSize, BlockPoolExpansion>
+class block_pool_resource : public block_resource_base<BlockSize, BlockPoolExpansion>
                           , public block_collector {
 
-  using base_t = block_pool<BlockSize, BlockPoolExpansion>;
+  using base_t = block_resource_base<BlockSize, BlockPoolExpansion>;
 
-  void deallocate(void *p) noexcept override {
-    base_t::deallocate(p);
+  void recycle(void *p, std::size_t bytes, std::size_t alignment) noexcept override {
+    base_t::deallocate(p, bytes, alignment);
   }
 
 public:
@@ -77,22 +103,20 @@ public:
     return &instance;
   }
 
-  using base_t::base_t;
-
-  void *allocate(std::size_t /*bytes*/, std::size_t /*alignment*/ = alignof(std::max_align_t)) noexcept {
-    void *p = base_t::allocate();
+  void *allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept {
+    void *p = base_t::allocate(bytes, alignment);
     *static_cast<get_block_collector_t *>(p) = get;
     return static_cast<::LIBIMP::byte *>(p) + regular_head_size;
   }
 
-  void deallocate(void *p, std::size_t /*bytes*/, std::size_t /*alignment*/ = alignof(std::max_align_t)) noexcept {
+  void deallocate(void *p, std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept {
     p = static_cast<::LIBIMP::byte *>(p) - regular_head_size;
     auto g = *static_cast<get_block_collector_t *>(p);
     if (g == get) {
-      base_t::deallocate(p);
+      base_t::deallocate(p, bytes, alignment);
       return;
     }
-    g()->deallocate(p);
+    g()->recycle(p, bytes, alignment);
   }
 };
 
@@ -115,9 +139,6 @@ struct regular_resource {
   }
 };
 
-template <std::size_t N>
-struct regular_resource<N, 4> : new_delete_resource {};
-
 /// \brief Creates an object based on the specified type and parameters with block pool resource.
 /// \note This function is thread-safe.
 template <typename T, typename... A>
@@ -136,11 +157,11 @@ void delete$(T *p) noexcept {
   ::LIBIMP::destroy(p);
   auto *res = regular_resource<regular_sizeof<T>()>::get();
   if (res == nullptr) return;
-#if defined(LIBIMP_CC_MSVC_2015)
+#if (LIBIMP_CC_MSVC > LIBIMP_CC_MSVC_2015)
+  res->deallocate(p, sizeof(T), alignof(T));
+#else
   // `alignof` of vs2015 requires that type must be able to be instantiated.
   res->deallocate(p, sizeof(T));
-#else
-  res->deallocate(p, sizeof(T), alignof(T));
 #endif
 }
 

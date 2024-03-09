@@ -93,6 +93,14 @@ private:
   int value_;
 };
 
+class Derived64K : public Derived {
+public:
+  using Derived::Derived;
+
+private:
+  std::array<char, 65536> padding_;
+};
+
 } // namespace
 
 TEST(pmr_new, delete$poly) {
@@ -107,6 +115,21 @@ TEST(pmr_new, delete$poly) {
   ASSERT_EQ(p->get(), (std::numeric_limits<int>::max)());
   ASSERT_EQ(construct_count__, (std::numeric_limits<int>::max)());
   pmr::delete$(p);
+  ASSERT_EQ(construct_count__, 0);
+}
+
+TEST(pmr_new, delete$poly64k) {
+  Base *p = pmr::new$<Derived64K>(-1);
+  ASSERT_NE(p, nullptr);
+  ASSERT_EQ(p->get(), -1);
+  ASSERT_EQ(construct_count__, -1);
+  pmr::delete$(p);
+  ASSERT_EQ(construct_count__, 0);
+
+  Base *q = pmr::new$<Derived64K>((std::numeric_limits<int>::max)());
+  ASSERT_EQ(q->get(), (std::numeric_limits<int>::max)());
+  ASSERT_EQ(construct_count__, (std::numeric_limits<int>::max)());
+  pmr::delete$(q);
   ASSERT_EQ(construct_count__, 0);
 }
 
