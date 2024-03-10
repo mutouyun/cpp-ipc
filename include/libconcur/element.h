@@ -74,10 +74,9 @@ public:
     LIBIMP_LOG_();
     LIBIMP_TRY {
       data_ = std::forward<U>(src);
-    } LIBIMP_CATCH(std::exception const &e) {
-      log.error("failed: `data = std::forward<U>(src)`. error = ", e.what());
     } LIBIMP_CATCH(...) {
-      log.error("failed: `data = std::forward<U>(src)`. error = unknown");
+      log.error("failed: `data = std::forward<U>(src)`.",
+                "\n\texception: ", ::LIBIMP::log::exception_string(std::current_exception()));
     }
   }
 

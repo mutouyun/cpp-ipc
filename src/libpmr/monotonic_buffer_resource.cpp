@@ -28,7 +28,8 @@ Node *make_node(allocator const &upstream, std::size_t initial_size, std::size_t
     return node;
   } LIBIMP_CATCH(...) {
     log.error("failed: allocate memory for `monotonic_buffer_resource`'s node.", 
-              " bytes = ", initial_size, ", alignment = ", alignment);
+              " bytes = ", initial_size, ", alignment = ", alignment,
+              "\n\texception: ", ::LIBIMP::log::exception_string(std::current_exception()));
     return nullptr;
   }
 }
@@ -86,7 +87,8 @@ void monotonic_buffer_resource::release() noexcept {
       free_list_ = next;
     }
   } LIBIMP_CATCH(...) {
-    log.error("failed: deallocate memory for `monotonic_buffer_resource`.");
+    log.error("failed: deallocate memory for `monotonic_buffer_resource`.",
+              "\n\texception: ", ::LIBIMP::log::exception_string(std::current_exception()));
   }
   // reset to initial state at contruction
   if ((head_ = initial_buffer_) != nullptr) {

@@ -49,8 +49,9 @@ std::string error_string(DWORD code) noexcept {
     std::string ret(len, '\0');
     cvt_cstr(lpErrText, msg_len, &ret[0], ret.size());
     return ret;
-  } LIBIMP_CATCH(std::exception const &e) {
-    log.failed(e.what());
+  } LIBIMP_CATCH(...) {
+    log.error("failed: FormatMessage(dwMessageId = ", code, ").",
+              "\n\texception: ", ::LIBIMP::log::exception_string(std::current_exception()));
   }
   return {};
 }

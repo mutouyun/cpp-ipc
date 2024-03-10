@@ -102,20 +102,26 @@ inline auto &make_std_out() noexcept {
   return std_out;
 }
 
-/// \brief Record the last information when an exception occurs.
-inline void log_exception(char const *func, std::exception_ptr eptr) noexcept {
+/// \brief Get the exception information.
+inline char const *exception_string(std::exception_ptr eptr) noexcept {
   LIBIMP_TRY {
-    if (func == nullptr) {
-      func = "-";
-    }
     if (eptr) {
       std::rethrow_exception(eptr);
     }
   } LIBIMP_CATCH(std::exception const &e) {
-    std::fprintf(stderr, "[F][%s] exception: %s\n", func, e.what());
+    return e.what();
   } LIBIMP_CATCH(...) {
-    std::fprintf(stderr, "[F][%s] exception: unknown\n", func);
+    return "unknown";
   }
+  return "none";
+}
+
+/// \brief Record the last information when an exception occurs.
+inline void exception_print(char const *func, std::exception_ptr eptr) noexcept {
+  if (func == nullptr) {
+    func = "-";
+  }
+  std::fprintf(stderr, "[F][%s] exception: %s\n", func, exception_string(eptr));
 }
 
 /**
@@ -155,7 +161,7 @@ public:
         std::forward_as_tuple(std::forward<A>(args)...),
       });
     } LIBIMP_CATCH(...) {
-      log_exception(func_, std::current_exception());
+      exception_print(func_, std::current_exception());
     }
     return *this;
   }
