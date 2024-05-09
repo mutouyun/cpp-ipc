@@ -55,8 +55,12 @@ class mutex {
         IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
-            it = info.mutex_handles.emplace(name, 
-                  curr_prog::shm_data::init{name, sizeof(pthread_mutex_t)}).first;
+          it = info.mutex_handles
+                   .emplace(std::piecewise_construct,
+                            std::forward_as_tuple(name),
+                            std::forward_as_tuple(curr_prog::shm_data::init{
+                                name, sizeof(pthread_mutex_t)}))
+                   .first;
         }
         shm_ = &it->second.shm;
         ref_ = &it->second.ref;
