@@ -3,6 +3,7 @@
 #include <future>
 #include <atomic>
 #include <vector>
+#include <tuple>
 
 #include "benchmark/benchmark.h"
 
@@ -18,18 +19,18 @@ void concur_queue_rtt(benchmark::State &state) {
     for (std::int64_t i = 0; !stop.load(std::memory_order_relaxed); ++i) {
       std::int64_t n {};
       while (!que[0].pop(n)) ;
-      (void)que[1].push(i);
+      std::ignore = que[1].push(i);
     }
   });
 
   for (auto _ : state) {
-    (void)que[0].push(0);
+    std::ignore = que[0].push(0);
     std::int64_t n {};
     while (!que[1].pop(n)) ;
   }
 
   stop = true;
-  (void)que[0].push(0);
+  std::ignore = que[0].push(0);
   producer.wait();
 }
 
@@ -39,7 +40,7 @@ void concur_queue_1v1(benchmark::State &state) {
   std::atomic_bool stop = false;
   auto producer = std::async(std::launch::async, [&stop, &que] {
     for (std::int64_t i = 0; !stop.load(std::memory_order_relaxed); ++i) {
-      (void)que.push(i);
+      std::ignore = que.push(i);
       std::this_thread::yield();
     }
   });
@@ -65,7 +66,7 @@ void concur_queue_NvN(benchmark::State &state) {
     prods.resize(state.threads());
     auto producer = [] {
       for (std::int64_t i = 0; run.load(std::memory_order_relaxed) > 0; ++i) {
-        (void)que.push(i);
+        std::ignore = que.push(i);
         std::this_thread::yield();
       }
     };

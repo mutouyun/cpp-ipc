@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <array>
+#include <tuple>
 #include <cstddef>
 #include <cstdint>
 
@@ -46,11 +47,11 @@ private:
       typename decltype(elements)::size_type i = 0;
       LIBIMP_TRY {
         for (; i < elements.size(); ++i) {
-          (void)::LIBIMP::construct<element<value_type>>(&elements[i]);
+          std::ignore = ::LIBIMP::construct<element<value_type>>(&elements[i]);
         }
       } LIBIMP_CATCH(...) {
         for (decltype(i) k = 0; k < i; ++k) {
-          (void)::LIBIMP::destroy<element<value_type>>(&elements[k]);
+          std::ignore = ::LIBIMP::destroy<element<value_type>>(&elements[k]);
         }
         throw;
       }
@@ -58,7 +59,7 @@ private:
 
     ~data() noexcept {
       for (auto &elem : this->elements()) {
-        (void)::LIBIMP::destroy<element<value_type>>(&elem);
+        std::ignore = ::LIBIMP::destroy<element<value_type>>(&elem);
       }
     }
 
@@ -124,7 +125,7 @@ public:
   ~data_model() noexcept {
     if (valid()) {
       auto sz = data_->byte_size();
-      (void)::LIBIMP::destroy<data>(data_);
+      std::ignore = ::LIBIMP::destroy<data>(data_);
       data_allocator_.deallocate(data_, sz);
     }
   }
