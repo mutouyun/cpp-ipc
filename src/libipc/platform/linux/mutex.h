@@ -126,9 +126,9 @@ class mutex {
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
             it = info.mutex_handles
-                   .emplace(
-                       std::piecewise_construct, std::forward_as_tuple(name),
-                       std::forward_as_tuple(curr_prog::shm_data::init{name}))
+                   .emplace(std::piecewise_construct, 
+                            std::forward_as_tuple(name),
+                            std::forward_as_tuple(curr_prog::shm_data::init{name}))
                    .first;
         }
         mutex_ = &it->second.mtx;
