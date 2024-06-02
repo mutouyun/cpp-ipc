@@ -12,10 +12,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: cmake
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Configure
       run: cmake -DCMAKE_BUILD_TYPE=Release -DLIBIPC_BUILD_TESTS=ON .
-    - name: make
+
+    - name: Build
       run: make -j
-    - name: test
-      run: export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH && ./bin/test-ipc
+
+    - name: Test
+      env:
+        LD_LIBRARY_PATH: ./lib
+      run: ./bin/test-ipc
