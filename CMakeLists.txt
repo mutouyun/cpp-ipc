@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.13)
 project(cpp-ipc)
 
 option(LIBIPC_BUILD_TESTS       "Build all of libipc's own tests."                      OFF)
@@ -6,6 +6,7 @@ option(LIBIPC_BUILD_DEMOS       "Build all of libipc's own demos."              
 option(LIBIPC_BUILD_BENCHMARK   "Build all of libipc's own benchmark tests."            OFF)
 option(LIBIPC_BUILD_SHARED_LIBS "Build shared libraries (DLLs)."                        OFF)
 option(LIBIPC_USE_STATIC_CRT    "Set to ON to build with static CRT on Windows (/MT)."  OFF)
+option(LIBIPC_CODECOV           "Build with unit test coverage."                        OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -31,8 +32,15 @@ if (MSVC)
       endforeach()
   endif()
 else()
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG -O2")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -rdynamic -fsanitize=address")
+  add_compile_options(
+    "$<$<BOOL:${LIBIPC_CODECOV}>:SHELL:--coverage>"
+    "$<$<CONFIG:Release>:SHELL:-DNDEBUG -O2>"
+    "$<$<CONFIG:Debug>:SHELL:-g -rdynamic -fsanitize=address>"
+    )
+  add_link_options(
+    "$<$<BOOL:${LIBIPC_CODECOV}>:SHELL:-lgcov --coverage>"
+    "$<$<CONFIG:Debug>:SHELL:-fsanitize=address>"
+    )
 endif()
 
 set(LIBRARY_OUTPUT_PATH    ${CMAKE_BINARY_DIR}/bin)
@@ -73,4 +81,4 @@ endif()
 install(
   DIRECTORY "include/"
   DESTINATION "include"
-)
+  )
