@@ -9,6 +9,7 @@
 #include <atomic>
 #include <array>
 #include <tuple>
+#include <type_traits>
 #include <cstddef>
 #include <cstdint>
 
@@ -26,6 +27,9 @@ LIBCONCUR_NAMESPACE_BEG_
 
 template <typename T, typename TransModT, typename PRelationT, typename CRelationT>
 class data_model {
+
+  static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable.");
+
 public:
   using producer_relation_t = PRelationT;
   using consumer_relation_t = CRelationT;
