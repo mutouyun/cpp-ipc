@@ -325,8 +325,8 @@ struct producer<trans::broadcast, relation::single> {
     hdr.w_idx.fetch_add(1, std::memory_order_release);
     // Set data & flag.
     elem.set_flag(w_idx | state::enqueue_mask);
-    elem.set_data(std::forward<U>(src));  // Here should not be interrupted.
-    elem.set_flag(w_idx | state::commit_mask);
+    elem.set_data(std::forward<U>(src));
+    elem.set_flag(w_idx);
     return true;
   }
 };
@@ -336,14 +336,14 @@ template <>
 struct producer<trans::broadcast, relation::multi> {
 
   struct header_impl {
-    std::atomic<state::flag_t> w_flags {0}; ///< write flags, combined current and starting index.
-    private: padding<decltype(w_flags)> ___;
+    std::atomic<std::uint64_t> w_contexts {0}; ///< write contexts, combined current and starting index.
+    private: padding<decltype(w_contexts)> ___;
 
   public:
     void get(index_t &idx, index_t &beg) const noexcept {
-      auto w_flags = this->w_flags.load(std::memory_order_relaxed);
-      idx = get_index(w_flags);
-      beg = get_begin(w_flags);
+      auto w_contexts = this->w_contexts.load(std::memory_order_relaxed);
+      idx = get_index(w_contexts);
+      beg = get_begin(w_contexts);
     }
   };
 
@@ -351,28 +351,29 @@ struct producer<trans::broadcast, relation::multi> {
             verify_elems_header<H> = true,
             convertible<H, header_impl> = true>
   static bool enqueue(::LIBIMP::span<element<T>> elems, H &hdr, C &/*ctx*/, U &&src) noexcept {
-    auto w_flags = hdr.w_flags.load(std::memory_order_acquire);
+    auto w_contexts = hdr.w_contexts.load(std::memory_order_acquire);
     index_t w_idx;
     for (;;) {
-      w_idx = get_index(w_flags);
-      auto w_beg = get_begin(w_flags);
+      w_idx = get_index(w_contexts);
+      auto w_beg = get_begin(w_contexts);
       // Move the queue head index.
       if (w_beg + hdr.circ_size <= w_idx) {
         w_beg += 1;
       }
-      // Update flags.
-      auto n_flags = make_flags(w_idx + 1/*iterate backwards*/, w_beg);
-      if (hdr.w_flags.compare_exchange_weak(w_flags, n_flags, std::memory_order_acq_rel)) {
+      // Update write contexts.
+      auto n_contexts = make_w_contexts(w_idx + 1/*iterate backwards*/, w_beg);
+      if (hdr.w_contexts.compare_exchange_weak(w_contexts, n_contexts, std::memory_order_acq_rel)) {
         break;
       }
     }
     // Get element.
     auto w_cur = trunc_index(hdr, w_idx);
     auto &elem = elems[w_cur];
-    // Set data & flag.
+    // Set data & flag. Dirty write is not considered here. 
+    // By default, when dirty write occurs, the previous writer must no longer exist.
     elem.set_flag(w_idx | state::enqueue_mask);
-    elem.set_data(std::forward<U>(src));  // Here should not be interrupted.
-    elem.set_flag(w_idx | state::commit_mask);
+    elem.set_data(std::forward<U>(src));
+    elem.set_flag(w_idx);
     return true;
   }
 
@@ -387,8 +388,8 @@ private:
     return index_t(flags >> (sizeof(index_t) * CHAR_BIT));
   }
 
-  static constexpr state::flag_t make_flags(index_t idx, index_t beg) noexcept {
-    return state::flag_t(idx) | (state::flag_t(beg) << (sizeof(index_t) * CHAR_BIT));
+  static constexpr std::uint64_t make_w_contexts(index_t idx, index_t beg) noexcept {
+    return std::uint64_t(idx) | (std::uint64_t(beg) << (sizeof(index_t) * CHAR_BIT));
   }
 };
 
@@ -426,7 +427,7 @@ struct consumer<trans::broadcast, relation::multi> {
     }
     // Try getting data.
     for (;;) {
-      if ((f_ct & state::enqueue_mask) == state::enqueue_mask) {
+      if (f_ct & state::enqueue_mask) {
         return false; // unreadable
       }
       des = LIBCONCUR::get(elem);
@@ -434,8 +435,8 @@ struct consumer<trans::broadcast, relation::multi> {
       // the elem data is not modified during the getting process.
       if (elem.cas_flag(f_ct, f_ct)) break;
     }
-    ctx.w_lst = (f_ct & ~state::enqueue_mask) + 1;
     // Get a valid index and iterate backwards.
+    ctx.w_lst = index_t(f_ct) + 1;
     ctx.r_idx += 1;
     return true;
   }

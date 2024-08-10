@@ -13,6 +13,8 @@
 #include "libimp/log.h"
 #include "libimp/nameof.h"
 
+#include "test_util.h"
+
 TEST(concurrent, cache_line_size) {
   std::cout << concur::cache_line_size << "\n";
   EXPECT_TRUE(concur::cache_line_size >= alignof(std::max_align_t));
@@ -311,4 +313,61 @@ TEST(concurrent, broadcast) {
 
   /// \brief 8-8
   test_broadcast<prod_cons<trans::broadcast, relation::multi , relation::multi>>(8, 8);
+}
+
+TEST(concurrent, broadcast_multi_dirtywrite) {
+  using namespace concur;
+
+  struct data {
+    std::uint64_t n{};
+
+    data &operator=(test::latch &l) noexcept {
+      l.arrive_and_wait();
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      n = 1;
+      return *this;
+    }
+
+    data &operator=(data const &rhs) noexcept {
+      n = rhs.n;
+      return *this;
+    }
+  };
+
+  element<data> circ[2] {};
+  prod_cons<trans::broadcast, relation::multi, relation::multi> pc;
+  typename traits<decltype(pc)>::header hdr {imp::make_span(circ)};
+
+  auto push_one = [&, ctx = typename concur::traits<decltype(pc)>::context{}](auto &i) mutable {
+    return pc.enqueue(imp::make_span(circ), hdr, ctx, i);
+  };
+  auto pop_one = [&, ctx = typename concur::traits<decltype(pc)>::context{}]() mutable {
+    data i;
+    if (pc.dequeue(imp::make_span(circ), hdr, ctx, i)) {
+      return i;
+    }
+    return data{};
+  };
+
+  test::latch l(2);
+  std::thread t[2];
+  t[0] = std::thread([&] {
+    push_one(l); // 1
+  });
+  t[1] = std::thread([&] {
+    l.arrive_and_wait();
+    push_one(data{3});
+    push_one(data{2}); // dirty write
+  });
+
+  for (int i = 0; i < 2; ++i) {
+    t[i].join();
+  }
+  std::set<std::uint64_t> s{1, 2, 3};
+  for (int i = 0; i < 2; ++i) {
+    auto d = pop_one();
+    EXPECT_TRUE(s.find(d.n) != s.end());
+    s.erase(d.n);
+  }
+  EXPECT_TRUE(s.find(3) == s.end());
 }
