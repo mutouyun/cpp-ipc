@@ -370,7 +370,6 @@ struct producer<trans::broadcast, relation::multi> {
     auto w_cur = trunc_index(hdr, w_idx);
     auto &elem = elems[w_cur];
     // Set data & flag. Dirty write is not considered here. 
-    // By default, when dirty write occurs, the previous writer must no longer exist.
     elem.set_flag(w_idx | state::enqueue_mask);
     elem.set_data(std::forward<U>(src));
     elem.set_flag(w_idx);
