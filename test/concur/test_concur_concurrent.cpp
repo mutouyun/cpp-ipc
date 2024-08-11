@@ -319,7 +319,7 @@ TEST(concurrent, broadcast_multi_dirtywrite) {
   using namespace concur;
 
   struct data {
-    std::uint64_t n{};
+    std::uint64_t n;
 
     data &operator=(test::latch &l) noexcept {
       l.arrive_and_wait();
@@ -338,7 +338,7 @@ TEST(concurrent, broadcast_multi_dirtywrite) {
   prod_cons<trans::broadcast, relation::multi, relation::multi> pc;
   typename traits<decltype(pc)>::header hdr {imp::make_span(circ)};
 
-  auto push_one = [&, ctx = typename concur::traits<decltype(pc)>::context{}](auto &i) mutable {
+  auto push_one = [&, ctx = typename concur::traits<decltype(pc)>::context{}](auto &&i) mutable {
     return pc.enqueue(imp::make_span(circ), hdr, ctx, i);
   };
   auto pop_one = [&, ctx = typename concur::traits<decltype(pc)>::context{}]() mutable {
@@ -346,7 +346,7 @@ TEST(concurrent, broadcast_multi_dirtywrite) {
     if (pc.dequeue(imp::make_span(circ), hdr, ctx, i)) {
       return i;
     }
-    return data{};
+    return data{0};
   };
 
   test::latch l(2);
