@@ -5,6 +5,14 @@ if(NOT MSVC)
     -Wno-attributes)
 endif()
 
+# if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+#   FetchContent_Declare(phnt
+#     GIT_REPOSITORY https://github.com/winsiderss/phnt.git
+#     GIT_TAG        master
+#   )
+#   FetchContent_MakeAvailable(phnt)
+# endif()
+
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc SRC_FILES)
 
 file(GLOB HEAD_FILES
@@ -46,6 +54,10 @@ if(NOT MSVC)
 else()
   target_link_libraries(${PROJECT_NAME} PUBLIC imp pmr)
 endif()
+
+# if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+#   target_link_libraries(${PROJECT_NAME} PUBLIC phnt)
+# endif()
 
 install(
   TARGETS ${PROJECT_NAME}

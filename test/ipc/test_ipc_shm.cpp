@@ -3,6 +3,8 @@
 
 #include "libipc/shm.h"
 
+#include "test_util.h"
+
 TEST(shm, open_close) {
   EXPECT_FALSE(ipc::shm_open("hello-ipc-shm", 1024, ipc::mode::none));
 
@@ -76,6 +78,22 @@ TEST(shm, shared_memory) {
   EXPECT_TRUE(ipc::shm_close(*shm_r));
 }
 
+TEST(shm, process) {
+  ipc::shared_memory shm{"ipc-shared-memory-process1", 333};
+  ASSERT_TRUE(shm.valid());
+  *shm.as<int>() = 4321;
+
+  auto r1 = test::subproc([] {
+    ipc::shared_memory shm{"ipc-shared-memory-process1"};
+    ASSERT_TRUE(shm.valid());
+    EXPECT_EQ(*shm.as<int>(), 4321);
+    *shm.as<int>() = 1234;
+  });
+
+  test::join_subproc(r1);
+  EXPECT_EQ(*shm.as<int>(), 1234);
+}
+
 #include <libimp/detect_plat.h>
 #if /*defined(LIBIMP_OS_LINUX)*/ 0
 #include <sys/socket.h>
@@ -86,8 +104,6 @@ TEST(shm, shared_memory) {
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-
-#include "test_util.h"
 
 TEST(shm, pipe) {
   auto writer = test::subproc([] {

@@ -21,7 +21,6 @@ A high-performance inter-process communication using shared memory on Linux/Wind
 - [ ] IPC：实现基本组件
     - [x] 共享内存（需要作为后续组件的基础）
     - [x] 原子锁
-    - [ ] 进程对象
     - [ ] 互斥量
     - [ ] 条件变量
     - [ ] 信号量

@@ -6,7 +6,9 @@
 # include <sys/wait.h>
 # include <unistd.h>
 #else
-# define pid_t int
+# include <Windows.h>
+# include <process.h>
+# define pid_t uintptr_t
 #endif
 
 #include <condition_variable>
@@ -15,7 +17,7 @@
 namespace test {
 
 template <typename Fn>
-pid_t subproc(Fn&& fn) {
+pid_t subproc(Fn &&fn) {
 #ifndef LIBIMP_OS_WIN
   pid_t pid = fork();
   if (pid == -1) {
@@ -31,14 +33,23 @@ pid_t subproc(Fn&& fn) {
   }
   return pid;
 #else
-  return -1;
+  auto runner = [](void* pparam) {
+    auto fn = reinterpret_cast<std::decay_t<Fn> *>(pparam);
+    (*fn)();
+  };
+  return _beginthread(runner, 0, (void *)&fn);
 #endif
 }
 
 inline void join_subproc(pid_t pid) {
+  if (pid == -1) return;
 #ifndef LIBIMP_OS_WIN
   int ret_code;
   waitpid(pid, &ret_code, 0);
+#else
+  HANDLE hThread = reinterpret_cast<HANDLE>(pid);
+  WaitForSingleObject(hThread, INFINITE);
+  CloseHandle(hThread);
 #endif
 }
 
