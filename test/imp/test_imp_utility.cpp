@@ -143,7 +143,11 @@ TEST(utility, horrible_cast) {
   EXPECT_EQ(b.a_[0], 0);
 #endif
 
-  // imp::horrible_cast<std::uint32_t>(0ll);
+#if LIBIMP_ENDIAN_LIT
+  EXPECT_EQ(imp::horrible_cast<std::uint32_t>(0xff00'0000'0001ll), 1);
+#else
+  EXPECT_EQ(imp::horrible_cast<std::uint32_t>(0xff00'0000'0001ll), 0xff00);
+#endif
 }
 
 #if defined(LIBIMP_CPP_17)

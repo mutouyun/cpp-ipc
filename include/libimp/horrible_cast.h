@@ -23,9 +23,8 @@ union temp {
 } // namespace detail_horrible_cast
 
 template <typename T, typename U>
-constexpr auto horrible_cast(U &&in) noexcept
-  -> std::enable_if_t<(sizeof(T) == sizeof(std::decay_t<U>)), T> {
-  return detail_horrible_cast::temp<T, std::decay_t<U>>{std::forward<U>(in)}.out;
+constexpr T horrible_cast(U &&in) noexcept {
+  return detail_horrible_cast::temp<T, U>{std::forward<U>(in)}.out;
 }
 
 LIBIMP_NAMESPACE_END_
