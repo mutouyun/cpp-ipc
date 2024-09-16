@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <algorithm>
+#include <type_traits>
 
 #include "libimp/aligned.h"
 #include "libimp/uninitialized.h"
@@ -166,5 +167,14 @@ void $delete(T *p) noexcept {
   res->deallocate(p, sizeof(T));
 #endif
 }
+
+/// \brief The destruction policy used by std::unique_ptr.
+/// \see https://en.cppreference.com/w/cpp/memory/default_delete
+struct deleter {
+  template <typename T>
+  void operator()(T *p) const noexcept {
+    $delete(p);
+  }
+};
 
 LIBPMR_NAMESPACE_END_
