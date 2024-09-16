@@ -16,8 +16,10 @@
 
 #include "get_sa.h"
 #include "to_tchar.h"
+#include "close_handle.h"
 
 LIBIPC_NAMESPACE_BEG_
+
 using namespace ::LIBIMP;
 
 struct shm_handle {
@@ -28,24 +30,6 @@ struct shm_handle {
 };
 
 namespace {
-
-/**
- * \brief Closes an open object handle.
- * \see https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
- */
-result<void> mmap_close(HANDLE h) {
-  LIBIMP_LOG_();
-  if (h == NULL) {
-    log.error("handle is null.");
-    return std::make_error_code(std::errc::invalid_argument);
-  }
-  if (!::CloseHandle(h)) {
-    auto err = sys::error();
-    log.error("failed: CloseHandle(", h, "). error = ", err);
-    return err;
-  }
-  return std::error_code{};
-}
 
 /**
  * \brief Creates or opens a file mapping object for a specified file.
@@ -113,7 +97,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
   ///         (with its current size, not the specified size), and GetLastError returns ERROR_ALREADY_EXISTS.
   if ((type == mode::create) && (::GetLastError() == ERROR_ALREADY_EXISTS)) {
     log.info("the file being created already exists. file = ", file, ", type = ", type);
-    mmap_close(*h);
+    winapi::close_handle(*h);
     return sys::error();
   }
   return h;
@@ -174,7 +158,7 @@ result<void> mmap_release(HANDLE h, LPCVOID mem) {
   if (!::UnmapViewOfFile(mem)) {
     log.warning("failed: UnmapViewOfFile. error = ", sys::error());
   }
-  return mmap_close(h);
+  return winapi::close_handle(h);
 }
 
 } // namespace

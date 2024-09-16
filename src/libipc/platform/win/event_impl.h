@@ -12,13 +12,17 @@
 #include <Windows.h>
 
 #include "libimp/log.h"
+#include "libpmr/new.h"
 #include "libipc/event.h"
 
 #include "get_sa.h"
 #include "to_tchar.h"
+#include "close_handle.h"
 
 LIBIPC_NAMESPACE_BEG_
+
 using namespace ::LIBIMP;
+using namespace ::LIBPMR;
 
 struct evt_handle {
   std::string name;
@@ -51,26 +55,20 @@ result<evt_t> evt_open(std::string name) noexcept {
     log.error("failed: CreateEvent(FALSE, FALSE, ", name, "). error = ", err);
     return err;
   }
-  return new evt_handle{std::move(name), h};
+  return $new<evt_handle>(std::move(name), h);
 }
 
 /**
- * \brief Closes an open object handle.
- * \see https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
+ * \brief Closes an open event object handle.
  */
 result<void> evt_close(evt_t evt) noexcept {
   LIBIMP_LOG_();
-  LIBIMP_UNUSED auto guard = std::unique_ptr<evt_handle>(evt);
+  LIBIMP_UNUSED auto guard = std::unique_ptr<evt_handle, deleter>(evt);
   if (!is_valid(evt)) {
     log.error("handle is null.");
     return {};
   }
-  if (!::CloseHandle(evt->h_event)) {
-    auto err = sys::error();
-    log.error("failed: CloseHandle(", evt->h_event, "). error = ", err);
-    return err;
-  }
-  return std::error_code{};
+  return winapi::close_handle(evt->h_event);
 }
 
 /**
