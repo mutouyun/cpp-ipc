@@ -9,15 +9,11 @@
 #include <vector>
 #include <cstddef>
 
-#include <Windows.h>
-
 #include "libimp/log.h"
 #include "libpmr/new.h"
 #include "libipc/event.h"
 
-#include "get_sa.h"
-#include "to_tchar.h"
-#include "close_handle.h"
+#include "api.h"
 
 LIBIPC_NAMESPACE_BEG_
 
@@ -45,8 +41,8 @@ bool is_valid(evt_t evt) noexcept {
  */
 result<evt_t> evt_open(std::string name) noexcept {
   LIBIMP_LOG_();
-  auto t_name = detail::to_tstring(name);
-  auto h = ::CreateEvent(detail::get_sa(), 
+  auto t_name = winapi::to_tstring(name);
+  auto h = ::CreateEvent(winapi::get_sa(), 
                         /*bManualReset*/ FALSE, 
                         /*bInitialState*/FALSE, 
                         /*lpName*/       t_name.c_str());

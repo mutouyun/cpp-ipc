@@ -1,35 +1,85 @@
 /**
- * \file libipc/platform/win/mmap_impl.h
+ * \file libipc/platform/win/api.h
  * \author mutouyun (orz@orzz.org)
  */
 #pragma once
 
+#include <Windows.h>
+#include <securitybaseapi.h>
+#include <tchar.h>
+
 #include <string>
 #include <cstddef>
 
-#include <Windows.h>
-
 #include "libimp/log.h"
 #include "libimp/system.h"
+#include "libimp/codecvt.h"
 
-#include "libipc/shm.h"
-
-#include "get_sa.h"
-#include "to_tchar.h"
-#include "close_handle.h"
+#include "libipc/def.h"
 
 LIBIPC_NAMESPACE_BEG_
-
 using namespace ::LIBIMP;
 
-struct shm_handle {
-  std::string file;
-  std::size_t f_sz;
-  void *memp;
-  HANDLE h_fmap;
-};
+namespace winapi {
 
-namespace {
+using tstring = std::basic_string<TCHAR>;
+
+inline tstring to_tstring(std::string const &str) {
+  tstring des;
+  ::LIBIMP::cvt_sstr(str, des);
+  return des;
+}
+
+/**
+ * \brief Create a SECURITY_ATTRIBUTES structure singleton
+ * \see https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/aa379560(v=vs.85)
+ */
+inline LPSECURITY_ATTRIBUTES get_sa() {
+  static struct initiator {
+
+    SECURITY_DESCRIPTOR sd_;
+    SECURITY_ATTRIBUTES sa_;
+
+    bool succ_ = false;
+
+    initiator() {
+      using namespace ::LIBIMP;
+      LIBIMP_LOG_("get_sa");
+      if (!::InitializeSecurityDescriptor(&sd_, SECURITY_DESCRIPTOR_REVISION)) {
+        log.error("failed: InitializeSecurityDescriptor(SECURITY_DESCRIPTOR_REVISION). "
+                  "error = ", sys::error());
+        return;
+      }
+      if (!::SetSecurityDescriptorDacl(&sd_, TRUE, NULL, FALSE)) {
+        log.error("failed: SetSecurityDescriptorDacl. error = ", sys::error());
+        return;
+      }
+      sa_.nLength = sizeof(SECURITY_ATTRIBUTES);
+      sa_.bInheritHandle = FALSE;
+      sa_.lpSecurityDescriptor = &sd_;
+      succ_ = true;
+    }
+  } handle;
+  return handle.succ_ ? &handle.sa_ : nullptr;
+}
+
+/**
+ * \brief Closes an open object handle.
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle
+ */
+inline result<void> close_handle(HANDLE h) noexcept {
+  LIBIMP_LOG_();
+  if (h == NULL) {
+    log.error("handle is null.");
+    return std::make_error_code(std::errc::invalid_argument);
+  }
+  if (!::CloseHandle(h)) {
+    auto err = sys::error();
+    log.error("failed: CloseHandle(", h, "). error = ", err);
+    return err;
+  }
+  return std::error_code{};
+}
 
 /**
  * \brief Creates or opens a file mapping object for a specified file.
@@ -50,7 +100,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
     log.error("file name is empty.");
     return std::make_error_code(std::errc::invalid_argument);
   }
-  auto t_name = detail::to_tstring(file);
+  auto t_name = winapi::to_tstring(file);
   if (t_name.empty()) {
     log.error("file name is empty. (TCHAR conversion failed)");
     return std::make_error_code(std::errc::invalid_argument);
@@ -69,7 +119,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
 
   // Creates or opens a named or unnamed file mapping object for a specified file.
   auto try_create = [&]() -> result<HANDLE> {
-    HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, detail::get_sa(), PAGE_READWRITE | SEC_COMMIT,
+    HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, winapi::get_sa(), PAGE_READWRITE | SEC_COMMIT,
                                    /// \remark dwMaximumSizeHigh always 0 here.
                                    0, static_cast<DWORD>(size), t_name.c_str());
     if (h == NULL) {
@@ -161,5 +211,5 @@ result<void> mmap_release(HANDLE h, LPCVOID mem) {
   return winapi::close_handle(h);
 }
 
-} // namespace
+} // namespace winapi
 LIBIPC_NAMESPACE_END_
