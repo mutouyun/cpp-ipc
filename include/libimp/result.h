@@ -92,7 +92,8 @@ struct default_traits<void, ___> {
 };
 
 template <typename T>
-struct default_traits<T, std::enable_if_t<std::is_integral<T>::value>> : generic_traits<T> {
+struct default_traits<T, std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value>>
+     : generic_traits<T> {
   /// \brief Custom initialization.
   static constexpr void init_code(typename generic_traits<T>::storage_t &code, 
                                   T value, bool ok) noexcept {
@@ -192,7 +193,7 @@ std::string default_traits<void, ___>::format(result<void> const &r) {
 }
 
 template <typename T>
-std::string default_traits<T, std::enable_if_t<std::is_integral<T>::value>>
+std::string default_traits<T, std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value>>
           ::format(result<T> const &r) noexcept {
   return fmt(*r);
 }

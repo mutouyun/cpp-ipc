@@ -14,10 +14,12 @@
 #include "libimp/log.h"
 #include "libimp/system.h"
 #include "libimp/codecvt.h"
+#include "libimp/span.h"
 
 #include "libipc/def.h"
 
 LIBIPC_NAMESPACE_BEG_
+
 using namespace ::LIBIMP;
 
 namespace winapi {
@@ -94,7 +96,7 @@ inline result<void> close_handle(HANDLE h) noexcept {
  * 
  * \return File mapping object HANDLE, NULL on error.
  */
-result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
+inline result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();
   if (file.empty()) {
     log.error("file name is empty.");
@@ -157,7 +159,7 @@ result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type t
  * \brief Maps a view of a file mapping into the address space of a calling process.
  * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
  */
-result<LPVOID> mmap_memof(HANDLE h) {
+inline result<LPVOID> mmap_memof(HANDLE h) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
@@ -176,7 +178,7 @@ result<LPVOID> mmap_memof(HANDLE h) {
  * \brief Retrieves the size about a range of pages in the virtual address space of the calling process.
  * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualquery
  */
-result<SIZE_T> mmap_sizeof(LPCVOID mem) {
+inline result<SIZE_T> mmap_sizeof(LPCVOID mem) {
   LIBIMP_LOG_();
   if (mem == NULL) {
     log.error("memory pointer is null.");
@@ -195,7 +197,7 @@ result<SIZE_T> mmap_sizeof(LPCVOID mem) {
  * \brief Unmaps a mapped view of a file from the calling process's address space.
  * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-unmapviewoffile
  */
-result<void> mmap_release(HANDLE h, LPCVOID mem) {
+inline result<void> mmap_release(HANDLE h, LPCVOID mem) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
@@ -209,6 +211,56 @@ result<void> mmap_release(HANDLE h, LPCVOID mem) {
     log.warning("failed: UnmapViewOfFile. error = ", sys::error());
   }
   return winapi::close_handle(h);
+}
+
+enum class wait_result {
+  object_0,
+  abandoned,
+  timeout
+};
+
+/**
+ * \brief Waits until the specified object is in the signaled state or the time-out interval elapses.
+ * \see https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject
+ */
+inline result<wait_result> wait_for_single_object(HANDLE h, std::int64_t ms) noexcept {
+  LIBIMP_LOG_();
+  DWORD dwMilliseconds = (ms < 0) ? INFINITE : static_cast<DWORD>(ms);
+  DWORD r = ::WaitForSingleObject(h, dwMilliseconds);
+  if (r == WAIT_FAILED) {
+    auto err = sys::error();
+    log.error("failed: WaitForSingleObject(", h, ", ", dwMilliseconds, "). error = ", err);
+    return err;
+  }
+  if (r == WAIT_OBJECT_0) {
+    return wait_result::object_0;
+  }
+  if (r == WAIT_ABANDONED) {
+    return wait_result::abandoned;
+  }
+  return wait_result::timeout;
+}
+
+/**
+ * \brief Waits until one or all of the specified objects are in the signaled state or the time-out interval elapses.
+ * \see https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitformultipleobjects
+ */
+inline result<wait_result> wait_for_multiple_objects(span<HANDLE const> handles, std::int64_t ms) noexcept {
+  LIBIMP_LOG_();
+  DWORD dwMilliseconds = (ms < 0) ? INFINITE : static_cast<DWORD>(ms);
+  DWORD r = ::WaitForMultipleObjects(static_cast<DWORD>(handles.size()), handles.data(), FALSE, dwMilliseconds);
+  if (r == WAIT_FAILED) {
+    auto err = sys::error();
+    log.error("failed: WaitForMultipleObjects(", handles.size(), ", ", dwMilliseconds, "). error = ", err);
+    return err;
+  }
+  if ((r >= WAIT_OBJECT_0) && (r < WAIT_OBJECT_0 + handles.size())) {
+    return wait_result::object_0;
+  }
+  if ((r >= WAIT_ABANDONED_0) && (r < WAIT_ABANDONED_0 + handles.size())) {
+    return wait_result::abandoned;
+  }
+  return wait_result::timeout;
 }
 
 } // namespace winapi

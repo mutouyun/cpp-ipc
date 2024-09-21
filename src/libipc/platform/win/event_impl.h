@@ -95,21 +95,18 @@ result<bool> evt_wait(evt_t evt, std::int64_t ms) noexcept {
     log.error("handle is null.");
     return std::make_error_code(std::errc::invalid_argument);
   }
-  DWORD dwMilliseconds = (ms < 0) ? INFINITE : static_cast<DWORD>(ms);
-  auto r = ::WaitForSingleObject(evt->h_event, dwMilliseconds);
-  if (r == WAIT_TIMEOUT) {
-    return false;
+  auto r = winapi::wait_for_single_object(evt->h_event, ms);
+  if (!r) {
+    return r.error();
   }
-  if (r == WAIT_ABANDONED_0) {
-    log.error("failed: WaitForSingleObject(", evt->h_event, ", ", dwMilliseconds, "). error = WAIT_ABANDONED_0");
-    return {};
-  }
-  if (r == WAIT_OBJECT_0) {
+  if (*r == winapi::wait_result::object_0) {
     return true;
   }
-  auto err = sys::error();
-  log.error("failed: WaitForSingleObject(", evt->h_event, ", ", dwMilliseconds, "). error = ", err);
-  return err;
+  if (*r == winapi::wait_result::abandoned) {
+    log.error("failed: WaitForSingleObject(", evt->h_event, ", ", ms, "). error = WAIT_ABANDONED");
+    return false;
+  }
+  return false;
 }
 
 /**
@@ -132,21 +129,18 @@ result<bool> evt_wait(::LIBIMP::span<evt_t const> evts, std::int64_t ms) noexcep
     handles[i] = evts[i]->h_event;
   }
   // Wait for the events.
-  DWORD dwMilliseconds = (ms < 0) ? INFINITE : static_cast<DWORD>(ms);
-  auto r = ::WaitForMultipleObjects(static_cast<DWORD>(handles.size()), handles.data(), FALSE, dwMilliseconds);
-  if (r == WAIT_TIMEOUT) {
-    return false;
+  auto r = winapi::wait_for_multiple_objects(handles, ms);
+  if (!r) {
+    return r.error();
   }
-  if ((r >= WAIT_ABANDONED_0) && (r < WAIT_ABANDONED_0 + handles.size())) {
-    log.error("failed: WaitForMultipleObjects(", handles.size(), ", ", dwMilliseconds, "). error = WAIT_ABANDONED_0 + ", r - WAIT_ABANDONED_0);
-    return {};
-  }
-  if ((r >= WAIT_OBJECT_0) && (r < WAIT_OBJECT_0 + handles.size())) {
+  if (*r == winapi::wait_result::object_0) {
     return true;
   }
-  auto err = sys::error();
-  log.error("failed: WaitForMultipleObjects(", handles.size(), ", ", dwMilliseconds, "). error = ", err);
-  return err;
+  if (*r == winapi::wait_result::abandoned) {
+    log.error("failed: WaitForMultipleObjects(", handles.size(), ", ", ms, "). error = WAIT_ABANDONED");
+    return false;
+  }
+  return false;
 }
 
 LIBIPC_NAMESPACE_END_
