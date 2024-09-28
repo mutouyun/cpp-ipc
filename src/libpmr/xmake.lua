@@ -1,0 +1,7 @@
+target("pmr")
+  set_kind("static")
+  add_deps("imp")
+  on_config(config_target_compilation)
+  add_includedirs("$(projectdir)/include", {public = true})
+  add_includedirs("$(projectdir)/src")
+  add_files("$(projectdir)/src/libpmr/**.cpp")

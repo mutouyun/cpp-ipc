@@ -187,7 +187,11 @@ inline auto make_logger(char const * /*ignore*/, char const *name, level level_l
   return make_logger(name, make_std_out(), level_limit);
 }
 
+#define LIBIMP_LOG_(...) \
+  auto log \
+    = [](auto &&...args) noexcept { \
+        return ::LIBIMP::log::make_logger(__func__, std::forward<decltype(args)>(args)...); \
+      }(__VA_ARGS__)
+
 } // namespace log
 LIBIMP_NAMESPACE_END_
-
-#define LIBIMP_LOG_(...) auto log = ::LIBIMP::log::make_logger(__func__,##__VA_ARGS__)
