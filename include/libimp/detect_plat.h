@@ -106,6 +106,14 @@
 # error "This C++ version is unsupported."
 #endif
 
+/// \brief Feature cross-platform adaptation.
+
+#if defined(LIBIMP_CPP_17)
+# define LIBIMP_INLINE_CONSTEXPR inline constexpr
+#else
+# define LIBIMP_INLINE_CONSTEXPR constexpr
+#endif
+
 /// \brief C++ attributes.
 /// \see https://en.cppreference.com/w/cpp/language/attributes
 
