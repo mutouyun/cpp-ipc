@@ -42,7 +42,7 @@ bool is_valid(evt_t evt) noexcept {
 result<evt_t> evt_open(std::string name) noexcept {
   LIBIMP_LOG_();
   auto t_name = winapi::to_tstring(name);
-  auto h = ::CreateEvent(winapi::get_sa(), 
+  auto h = ::CreateEvent(winapi::get_security_descriptor(), 
                         /*bManualReset*/ FALSE, 
                         /*bInitialState*/FALSE, 
                         /*lpName*/       t_name.c_str());

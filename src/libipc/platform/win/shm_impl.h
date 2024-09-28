@@ -28,20 +28,20 @@ struct shm_handle {
 
 result<shm_t> shm_open(std::string name, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();
-  auto h = winapi::mmap_open(name, size, type);
+  auto h = winapi::open_file_mapping(name, size, type);
   if (*h == NULL) {
-    log.error("failed: mmap_open(name = ", name, ", size = ", size, ", type = ", type, ").");
+    log.error("failed: OpenFileMapping(name = ", name, ", size = ", size, ", type = ", type, ").");
     return h.error();
   }
-  auto mem = winapi::mmap_memof(*h);
+  auto mem = winapi::address_of_file_mapping(*h);
   if (*mem == NULL) {
-    log.error("failed: mmap_memof(", *h, ").");
+    log.error("failed: MapViewOfFile(", *h, ").");
     winapi::close_handle(*h);
     return mem.error();
   }
-  auto sz = winapi::mmap_sizeof(*mem);
+  auto sz = winapi::region_size_of_address(*mem);
   if (!sz) {
-    log.error("failed: mmap_sizeof(", *mem, ").");
+    log.error("failed: RegionSizeOfMemory(", *mem, ").");
     winapi::close_handle(*h);
     return sz.error();
   }
@@ -55,7 +55,7 @@ result<void> shm_close(shm_t h) noexcept {
     return std::make_error_code(std::errc::invalid_argument);
   }
   auto shm = static_cast<shm_handle *>(h);
-  auto ret = winapi::mmap_release(shm->h_fmap, shm->memp);
+  auto ret = winapi::close_file_mapping(shm->h_fmap, shm->memp);
   $delete(shm);
   return ret;
 }

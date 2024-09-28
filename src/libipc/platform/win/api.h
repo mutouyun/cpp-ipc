@@ -15,6 +15,7 @@
 #include "libimp/system.h"
 #include "libimp/codecvt.h"
 #include "libimp/span.h"
+#include "libimp/detect_plat.h"
 
 #include "libipc/def.h"
 
@@ -33,10 +34,10 @@ inline tstring to_tstring(std::string const &str) {
 }
 
 /**
- * \brief Create a SECURITY_ATTRIBUTES structure singleton
+ * \brief Creates or opens a SECURITY_ATTRIBUTES structure singleton
  * \see https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/aa379560(v=vs.85)
  */
-inline LPSECURITY_ATTRIBUTES get_sa() {
+inline LPSECURITY_ATTRIBUTES get_security_descriptor() {
   static struct initiator {
 
     SECURITY_DESCRIPTOR sd_;
@@ -46,7 +47,7 @@ inline LPSECURITY_ATTRIBUTES get_sa() {
 
     initiator() {
       using namespace ::LIBIMP;
-      LIBIMP_LOG_("get_sa");
+      LIBIMP_LOG_("get_security_descriptor");
       if (!::InitializeSecurityDescriptor(&sd_, SECURITY_DESCRIPTOR_REVISION)) {
         log.error("failed: InitializeSecurityDescriptor(SECURITY_DESCRIPTOR_REVISION). "
                   "error = ", sys::error());
@@ -96,7 +97,7 @@ inline result<void> close_handle(HANDLE h) noexcept {
  * 
  * \return File mapping object HANDLE, NULL on error.
  */
-inline result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode::type type) noexcept {
+inline result<HANDLE> open_file_mapping(std::string const &file, std::size_t size, mode::type type) noexcept {
   LIBIMP_LOG_();
   if (file.empty()) {
     log.error("file name is empty.");
@@ -121,7 +122,7 @@ inline result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode:
 
   // Creates or opens a named or unnamed file mapping object for a specified file.
   auto try_create = [&]() -> result<HANDLE> {
-    HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, winapi::get_sa(), PAGE_READWRITE | SEC_COMMIT,
+    HANDLE h = ::CreateFileMapping(INVALID_HANDLE_VALUE, winapi::get_security_descriptor(), PAGE_READWRITE | SEC_COMMIT,
                                    /// \remark dwMaximumSizeHigh always 0 here.
                                    0, static_cast<DWORD>(size), t_name.c_str());
     if (h == NULL) {
@@ -159,7 +160,7 @@ inline result<HANDLE> mmap_open(std::string const &file, std::size_t size, mode:
  * \brief Maps a view of a file mapping into the address space of a calling process.
  * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile
  */
-inline result<LPVOID> mmap_memof(HANDLE h) {
+inline result<LPVOID> address_of_file_mapping(HANDLE h) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
@@ -178,7 +179,7 @@ inline result<LPVOID> mmap_memof(HANDLE h) {
  * \brief Retrieves the size about a range of pages in the virtual address space of the calling process.
  * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualquery
  */
-inline result<SIZE_T> mmap_sizeof(LPCVOID mem) {
+inline result<SIZE_T> region_size_of_address(LPCVOID mem) {
   LIBIMP_LOG_();
   if (mem == NULL) {
     log.error("memory pointer is null.");
@@ -197,7 +198,7 @@ inline result<SIZE_T> mmap_sizeof(LPCVOID mem) {
  * \brief Unmaps a mapped view of a file from the calling process's address space.
  * \see https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-unmapviewoffile
  */
-inline result<void> mmap_release(HANDLE h, LPCVOID mem) {
+inline result<void> close_file_mapping(HANDLE h, LPCVOID mem) {
   LIBIMP_LOG_();
   if (h == NULL) {
     log.error("handle is null.");
@@ -218,6 +219,8 @@ enum class wait_result {
   abandoned,
   timeout
 };
+
+LIBIMP_INLINE_CONSTEXPR std::int64_t const infinite_time = -1;
 
 /**
  * \brief Waits until the specified object is in the signaled state or the time-out interval elapses.
@@ -261,6 +264,80 @@ inline result<wait_result> wait_for_multiple_objects(span<HANDLE const> handles,
     return wait_result::abandoned;
   }
   return wait_result::timeout;
+}
+
+/**
+ * \brief Retrieves the current value of the performance counter, 
+ *        which is a high resolution (<1us) time stamp that can be used for time-interval measurements.
+ * \see https://learn.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter
+ */
+inline result<std::int64_t> query_performance_counter() noexcept {
+  LIBIMP_LOG_();
+  std::int64_t pc;
+  BOOL r = ::QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER *>(&pc));
+  if (!r) {
+    auto err = sys::error();
+    log.error("failed: QueryPerformanceCounter(). error = ", err);
+    return err;
+  }
+  return pc;
+}
+
+/**
+ * \brief Creates or opens a named or unnamed mutex object.
+ * \see https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-createmutexa
+ * \return Mutex object HANDLE, NULL on error.
+ */
+inline result<HANDLE> open_mutex(char const *name, bool initial_owner) noexcept {
+  LIBIMP_LOG_();
+  HANDLE h = ::CreateMutexA(winapi::get_security_descriptor(), initial_owner, name);
+  if (h == NULL) {
+    auto err = sys::error();
+    log.error("failed: CreateMutexA(", initial_owner, ", ", name, "). error = ", err);
+    return err;
+  }
+  return h;
+}
+
+/**
+ * \brief Releases ownership of the specified mutex object.
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-releasemutex
+*/
+inline result<bool> release_mutex(HANDLE h) noexcept {
+  LIBIMP_LOG_();
+  if (::ReleaseMutex(h)) {
+    return true;
+  }
+  auto err = sys::error();
+  log.error("failed: ReleaseMutex. error = ", err);
+  return err;
+}
+
+/**
+ * \brief Locks the mutex, blocks if the mutex is not available.
+ * \see https://docs.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject
+*/
+inline result<bool> wait_mutex(HANDLE h, std::int64_t ms) noexcept {
+  LIBIMP_LOG_();
+  // If the mutex is abandoned, we need to release it and try again.
+  for (;;) {
+    auto r = winapi::wait_for_single_object(h, ms);
+    if (!r) {
+      return r.error();
+    }
+    if (*r == winapi::wait_result::object_0) {
+      return true;
+    }
+    if (*r == winapi::wait_result::abandoned) {
+      log.info("failed: WaitForSingleObject(", ms, "). The mutex is abandoned, try again.");
+      auto rr = release_mutex(h);
+      if (rr) {
+        continue;
+      }
+      return rr.error();
+    }
+    return false;
+  }
 }
 
 } // namespace winapi
