@@ -26,6 +26,9 @@ public:
     bool open(char const *name) noexcept;
     void close() noexcept;
 
+    void clear() noexcept;
+    static void clear_storage(char const * name) noexcept;
+
     bool lock(std::uint64_t tm = ipc::invalid_value) noexcept;
     bool try_lock() noexcept(false); // std::system_error
     bool unlock() noexcept;

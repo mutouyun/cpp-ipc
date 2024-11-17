@@ -62,6 +62,15 @@ public:
         shm_.release();
         h_ = nullptr;
     }
+
+    void clear() noexcept {
+        shm_.clear(); // Make sure the storage is cleaned up.
+        h_ = nullptr;
+    }
+
+    static void clear_storage(char const *name) noexcept {
+        ipc::shm::handle::clear_storage(name);
+    }
 };
 
 } // namespace sync

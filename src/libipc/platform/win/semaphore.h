@@ -46,6 +46,13 @@ public:
         h_ = NULL;
     }
 
+    void clear() noexcept {
+        close();
+    }
+
+    static void clear_storage(char const */*name*/) noexcept {
+    }
+
     bool wait(std::uint64_t tm) noexcept {
         DWORD ret, ms = (tm == invalid_value) ? INFINITE : static_cast<DWORD>(tm);
         switch ((ret = ::WaitForSingleObject(h_, ms))) {

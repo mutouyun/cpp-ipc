@@ -188,7 +188,7 @@ void remove(id_t id) noexcept {
     }
 }
 
-void remove(char const * name) {
+void remove(char const * name) noexcept {
     if (!is_valid_string(name)) {
         ipc::error("fail remove: name is empty\n");
         return;

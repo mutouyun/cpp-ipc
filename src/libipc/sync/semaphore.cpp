@@ -59,6 +59,14 @@ void semaphore::close() noexcept {
     impl(p_)->sem_.close();
 }
 
+void semaphore::clear() noexcept {
+    impl(p_)->sem_.clear();
+}
+
+void semaphore::clear_storage(char const * name) noexcept {
+    ipc::detail::sync::semaphore::clear_storage(name);
+}
+
 bool semaphore::wait(std::uint64_t tm) noexcept {
     return impl(p_)->sem_.wait(tm);
 }

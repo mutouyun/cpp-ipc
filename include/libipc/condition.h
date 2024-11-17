@@ -26,6 +26,9 @@ public:
     bool open(char const *name) noexcept;
     void close() noexcept;
 
+    void clear() noexcept;
+    static void clear_storage(char const * name) noexcept;
+
     bool wait(ipc::sync::mutex &mtx, std::uint64_t tm = ipc::invalid_value) noexcept;
     bool notify(ipc::sync::mutex &mtx) noexcept;
     bool broadcast(ipc::sync::mutex &mtx) noexcept;

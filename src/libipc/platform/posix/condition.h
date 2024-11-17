@@ -88,6 +88,21 @@ public:
         cond_ = nullptr;
     }
 
+    void clear() noexcept {
+        if ((shm_.ref() <= 1) && cond_ != nullptr) {
+            int eno;
+            if ((eno = ::pthread_cond_destroy(cond_)) != 0) {
+                ipc::error("fail pthread_cond_destroy[%d]\n", eno);
+            }
+        }
+        shm_.clear(); // Make sure the storage is cleaned up.
+        cond_ = nullptr;
+    }
+
+    static void clear_storage(char const *name) noexcept {
+        ipc::shm::handle::clear_storage(name);
+    }
+
     bool wait(ipc::sync::mutex &mtx, std::uint64_t tm) noexcept {
         if (!valid()) return false;
         switch (tm) {

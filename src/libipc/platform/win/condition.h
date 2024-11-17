@@ -67,6 +67,16 @@ public:
         shm_.release();
     }
 
+    void clear() noexcept {
+        close();
+    }
+
+    static void clear_storage(char const *name) noexcept {
+        ipc::shm::handle::clear_storage(name);
+        ipc::sync::mutex::clear_storage(name);
+        ipc::sync::semaphore::clear_storage(name);
+    }
+
     bool wait(ipc::sync::mutex &mtx, std::uint64_t tm) noexcept {
         if (!valid()) return false;
         auto &cnt = counter();

@@ -25,6 +25,9 @@ public:
     bool open(char const *name, std::uint32_t count = 0) noexcept;
     void close() noexcept;
 
+    void clear() noexcept;
+    static void clear_storage(char const * name) noexcept;
+
     bool wait(std::uint64_t tm = ipc::invalid_value) noexcept;
     bool post(std::uint32_t count = 1) noexcept;
 

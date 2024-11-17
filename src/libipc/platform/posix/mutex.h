@@ -71,7 +71,7 @@ class mutex {
     }
 
     template <typename F>
-    void release_mutex(ipc::string const &name, F &&clear) {
+    static void release_mutex(ipc::string const &name, F &&clear) {
         if (name.empty()) return;
         auto &info = curr_prog::get();
         IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
@@ -167,6 +167,30 @@ public:
         shm_   = nullptr;
         ref_   = nullptr;
         mutex_ = nullptr;
+    }
+
+    void clear() noexcept {
+        if ((shm_ != nullptr) && (mutex_ != nullptr)) {
+            if (shm_->name() != nullptr) {
+                release_mutex(shm_->name(), [this] {
+                    int eno;
+                    if ((eno = ::pthread_mutex_destroy(mutex_)) != 0) {
+                        ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
+                    }
+                    return true;
+                });
+            }
+            shm_->clear();
+        }
+        shm_   = nullptr;
+        ref_   = nullptr;
+        mutex_ = nullptr;
+    }
+
+    static void clear_storage(char const *name) noexcept {
+        if (name == nullptr) return;
+        release_mutex(name, [] { return true; });
+        ipc::shm::handle::clear_storage(name);
     }
 
     bool lock(std::uint64_t tm) noexcept {

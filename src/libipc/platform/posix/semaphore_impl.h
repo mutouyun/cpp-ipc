@@ -62,6 +62,24 @@ public:
         }
     }
 
+    void clear() noexcept {
+        if (valid()) {
+            if (::sem_close(h_) != 0) {
+                ipc::error("fail sem_close[%d]: %s\n", errno);
+            }
+            h_ = SEM_FAILED;
+        }
+        char const *name = shm_.name();
+        if (name == nullptr) return;
+        ::sem_unlink(name);
+        shm_.clear(); // Make sure the storage is cleaned up.
+    }
+
+    static void clear_storage(char const *name) noexcept {
+        ::sem_unlink(name);
+        ipc::shm::handle::clear_storage(name);
+    }
+
     bool wait(std::uint64_t tm) noexcept {
         if (!valid()) return false;
         if (tm == invalid_value) {

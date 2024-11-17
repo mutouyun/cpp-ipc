@@ -136,7 +136,7 @@ class mutex {
     }
 
     template <typename F>
-    void release_mutex(ipc::string const &name, F &&clear) {
+    static void release_mutex(ipc::string const &name, F &&clear) {
         if (name.empty()) return;
         auto &info = curr_prog::get();
         IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
@@ -190,6 +190,23 @@ public:
         }
         mutex_ = nullptr;
         ref_   = nullptr;
+    }
+
+    void clear() noexcept {
+        if (mutex_ != nullptr) {
+            if (mutex_->name() != nullptr) {
+                release_mutex(mutex_->name(), [] { return true; });
+            }
+            mutex_->clear();
+        }
+        mutex_ = nullptr;
+        ref_   = nullptr;
+    }
+
+    static void clear_storage(char const *name) noexcept {
+        if (name == nullptr) return;
+        release_mutex(name, [] { return true; });
+        robust_mutex::clear_storage(name);
     }
 
     bool lock(std::uint64_t tm) noexcept {

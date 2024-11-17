@@ -61,6 +61,14 @@ void condition::close() noexcept {
     impl(p_)->cond_.close();
 }
 
+void condition::clear() noexcept {
+    impl(p_)->cond_.clear();
+}
+
+void condition::clear_storage(char const * name) noexcept {
+    ipc::detail::sync::condition::clear_storage(name);
+}
+
 bool condition::wait(ipc::sync::mutex &mtx, std::uint64_t tm) noexcept {
     return impl(p_)->cond_.wait(mtx, tm);
 }

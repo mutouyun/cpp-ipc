@@ -61,6 +61,14 @@ void mutex::close() noexcept {
     impl(p_)->lock_.close();
 }
 
+void mutex::clear() noexcept {
+    impl(p_)->lock_.clear();
+}
+
+void mutex::clear_storage(char const * name) noexcept {
+    ipc::detail::sync::mutex::clear_storage(name);
+}
+
 bool mutex::lock(std::uint64_t tm) noexcept {
     return impl(p_)->lock_.lock(tm);
 }

@@ -102,7 +102,7 @@ void * get_mem(id_t id, std::size_t * size) {
     return static_cast<void *>(mem);
 }
 
-std::int32_t release(id_t id) {
+std::int32_t release(id_t id) noexcept {
     if (id == nullptr) {
         ipc::error("fail release: invalid id (null)\n");
         return -1;
@@ -120,7 +120,7 @@ std::int32_t release(id_t id) {
     return 0;
 }
 
-void remove(id_t id) {
+void remove(id_t id) noexcept {
     if (id == nullptr) {
         ipc::error("fail release: invalid id (null)\n");
         return;
@@ -128,7 +128,7 @@ void remove(id_t id) {
     release(id);
 }
 
-void remove(char const * name) {
+void remove(char const * name) noexcept {
     if (!is_valid_string(name)) {
         ipc::error("fail remove: name is empty\n");
         return;
