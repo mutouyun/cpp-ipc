@@ -302,3 +302,10 @@ TEST(Queue, prod_cons_NvN_broadcast) {
         test_sr(elems_t<ipc::relat::multi , ipc::relat::multi , ipc::trans::broadcast>{}, i, i, "mmb");
     }
 }
+
+TEST(Queue, clear) {
+    queue_t<ipc::relat::single, ipc::relat::single, ipc::trans::unicast> que{"test-queue-clear"};
+    EXPECT_TRUE(ipc_ut::expect_exist("test-queue-clear", true));
+    que.clear();
+    EXPECT_TRUE(ipc_ut::expect_exist("test-queue-clear", false));
+}

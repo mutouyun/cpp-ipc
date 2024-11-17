@@ -55,6 +55,10 @@ public:
     queue_conn(const queue_conn&) = delete;
     queue_conn& operator=(const queue_conn&) = delete;
 
+    void clear() noexcept {
+        elems_h_.clear();
+    }
+
     bool connected() const noexcept {
         return connected_ != 0;
     }
