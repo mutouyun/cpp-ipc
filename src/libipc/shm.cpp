@@ -89,6 +89,18 @@ std::int32_t handle::release() {
     return shm::release(detach());
 }
 
+void handle::clear() noexcept {
+    if (impl(p_)->id_ == nullptr) return;
+    shm::remove(detach());
+}
+
+void handle::clear_storage(char const * name) noexcept {
+    if (name == nullptr) {
+        return;
+    }
+    shm::remove(name);
+}
+
 void* handle::get() const {
     return impl(p_)->m_;
 }

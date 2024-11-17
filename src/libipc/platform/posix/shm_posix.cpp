@@ -153,7 +153,7 @@ void * get_mem(id_t id, std::size_t * size) {
     return mem;
 }
 
-std::int32_t release(id_t id) {
+std::int32_t release(id_t id) noexcept {
     if (id == nullptr) {
         ipc::error("fail release: invalid id (null)\n");
         return -1;
@@ -175,7 +175,7 @@ std::int32_t release(id_t id) {
     return ret;
 }
 
-void remove(id_t id) {
+void remove(id_t id) noexcept {
     if (id == nullptr) {
         ipc::error("fail remove: invalid id (null)\n");
         return;

@@ -14,6 +14,11 @@
 
 #include "thread_pool.h"
 
+#include "libipc/platform/detail.h"
+#ifdef IPC_OS_LINUX_
+#include <fcntl.h> // ::open
+#endif
+
 namespace ipc_ut {
 
 template <typename Dur>
@@ -81,6 +86,25 @@ inline static thread_pool & sender() {
 inline static thread_pool & reader() {
     static thread_pool pool;
     return pool;
+}
+
+#ifdef IPC_OS_LINUX_
+inline bool check_exist(char const *name) noexcept {
+    int fd = ::open((std::string{"/dev/shm/__IPC_SHM__"} + name).c_str(), O_RDONLY);
+    if (fd == -1) {
+        return false;
+    }
+    ::close(fd);
+    return true;
+}
+#endif
+
+inline bool expect_exist(char const *name, bool expected) noexcept {
+#ifdef IPC_OS_LINUX_
+    return ipc_ut::check_exist(name) == expected;
+#else
+    return true;
+#endif
 }
 
 } // namespace ipc_ut

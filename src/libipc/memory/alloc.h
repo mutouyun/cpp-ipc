@@ -19,17 +19,17 @@ namespace mem {
 
 class static_alloc {
 public:
-    static void swap(static_alloc&) {}
+    static void swap(static_alloc&) noexcept {}
 
-    static void* alloc(std::size_t size) {
+    static void* alloc(std::size_t size) noexcept {
         return size ? std::malloc(size) : nullptr;
     }
 
-    static void free(void* p) {
+    static void free(void* p) noexcept {
         std::free(p);
     }
 
-    static void free(void* p, std::size_t /*size*/) {
+    static void free(void* p, std::size_t /*size*/) noexcept {
         free(p);
     }
 };

@@ -17,9 +17,9 @@ enum : unsigned {
 
 IPC_EXPORT id_t         acquire(char const * name, std::size_t size, unsigned mode = create | open);
 IPC_EXPORT void *       get_mem(id_t id, std::size_t * size);
-IPC_EXPORT std::int32_t release(id_t id);
-IPC_EXPORT void         remove (id_t id);
-IPC_EXPORT void         remove (char const * name);
+IPC_EXPORT std::int32_t release(id_t id) noexcept;
+IPC_EXPORT void         remove (id_t id) noexcept;
+IPC_EXPORT void         remove (char const * name) noexcept;
 
 IPC_EXPORT std::int32_t get_ref(id_t id);
 IPC_EXPORT void sub_ref(id_t id);
@@ -44,6 +44,10 @@ public:
 
     bool acquire(char const * name, std::size_t size, unsigned mode = create | open);
     std::int32_t release();
+
+    // Clean the handle file.
+    void clear() noexcept;
+    static void clear_storage(char const * name) noexcept;
 
     void* get() const;
 

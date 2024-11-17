@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "libipc/shm.h"
+
 #include "test.h"
 
 using namespace ipc::shm;
@@ -97,6 +98,37 @@ TEST(SHM, mt) {
     EXPECT_TRUE(shm_hd.acquire("mt-test", 1024));
     std::uint8_t buf[1024] = {};
     EXPECT_TRUE(memcmp(shm_hd.get(), buf, sizeof(buf)) == 0);
+}
+
+TEST(SHM, remove) {
+    {
+        auto id = ipc::shm::acquire("hello-remove", 111);
+        EXPECT_TRUE(ipc_ut::expect_exist("hello-remove", true));
+        ipc::shm::remove(id);
+        EXPECT_TRUE(ipc_ut::expect_exist("hello-remove", false));
+    }
+    {
+        auto id = ipc::shm::acquire("hello-remove", 111);
+        EXPECT_TRUE(ipc_ut::expect_exist("hello-remove", true));
+        ipc::shm::release(id);
+        EXPECT_TRUE(ipc_ut::expect_exist("hello-remove", true));
+        ipc::shm::remove("hello-remove");
+        EXPECT_TRUE(ipc_ut::expect_exist("hello-remove", false));
+    }
+    {
+        handle shm_hd;
+        EXPECT_TRUE(shm_hd.acquire("mt-test", 256));
+        EXPECT_TRUE(ipc_ut::expect_exist("mt-test", true));
+        shm_hd.clear();
+        EXPECT_TRUE(ipc_ut::expect_exist("mt-test", false));
+    }
+    {
+        handle shm_hd;
+        EXPECT_TRUE(shm_hd.acquire("mt-test", 256));
+        EXPECT_TRUE(ipc_ut::expect_exist("mt-test", true));
+        shm_hd.clear_storage("mt-test");
+        EXPECT_TRUE(ipc_ut::expect_exist("mt-test", false));
+    }
 }
 
 } // internal-linkage

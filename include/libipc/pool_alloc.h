@@ -11,8 +11,8 @@ namespace mem {
 
 class IPC_EXPORT pool_alloc {
 public:
-    static void* alloc(std::size_t size);
-    static void  free (void* p, std::size_t size);
+    static void* alloc(std::size_t size) noexcept;
+    static void  free (void* p, std::size_t size) noexcept;
 };
 
 ////////////////////////////////////////////////////////////////
