@@ -90,7 +90,7 @@ inline static thread_pool & reader() {
 
 #ifdef IPC_OS_LINUX_
 inline bool check_exist(char const *name) noexcept {
-    int fd = ::open((std::string{"/dev/shm/__IPC_SHM__"} + name).c_str(), O_RDONLY);
+    int fd = ::open((std::string{"/dev/shm/"} + name).c_str(), O_RDONLY);
     if (fd == -1) {
         return false;
     }
