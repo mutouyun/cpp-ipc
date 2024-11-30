@@ -51,6 +51,16 @@ public:
         lock_.close();
     }
 
+    void clear() noexcept {
+        cond_.clear();
+        lock_.clear();
+    }
+
+    static void clear_storage(char const *name) noexcept {
+        ipc::sync::condition::clear_storage(name);
+        ipc::sync::mutex::clear_storage(name);
+    }
+
     template <typename F>
     bool wait_if(F &&pred, std::uint64_t tm = ipc::invalid_value) noexcept {
         IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> guard {lock_};
