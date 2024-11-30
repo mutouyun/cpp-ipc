@@ -59,6 +59,10 @@ public:
         elems_h_.clear();
     }
 
+    static void clear_storage(char const *name) noexcept {
+        shm::handle::clear_storage(name);
+    }
+
     bool connected() const noexcept {
         return connected_ != 0;
     }

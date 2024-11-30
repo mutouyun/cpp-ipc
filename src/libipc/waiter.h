@@ -57,8 +57,8 @@ public:
     }
 
     static void clear_storage(char const *name) noexcept {
-        ipc::sync::condition::clear_storage(name);
-        ipc::sync::mutex::clear_storage(name);
+        ipc::sync::condition::clear_storage((std::string{name} + "_WAITER_COND_").c_str());
+        ipc::sync::mutex::clear_storage((std::string{name} + "_WAITER_LOCK_").c_str());
     }
 
     template <typename F>
