@@ -131,6 +131,11 @@ public:
         return elems_ != nullptr;
     }
 
+    void clear() noexcept {
+        base_t::clear();
+        elems_ = nullptr;
+    }
+
     elems_t       * elems()       noexcept { return elems_; }
     elems_t const * elems() const noexcept { return elems_; }
 

@@ -136,6 +136,22 @@ struct conn_info_head {
         }
     }
 
+    void clear() noexcept {
+        cc_waiter_.clear();
+        wt_waiter_.clear();
+        rd_waiter_.clear();
+        acc_h_.clear();
+    }
+
+    static void clear_storage(char const * prefix, char const * name) noexcept {
+        auto p = ipc::make_string(prefix);
+        auto n = ipc::make_string(name);
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"CC_CONN__", n}).c_str());
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"WT_CONN__", n}).c_str());
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"RD_CONN__", n}).c_str());
+        ipc::shm::handle::clear_storage(ipc::make_prefix(p, {"AC_CONN__", n}).c_str());
+    }
+
     void quit_waiting() {
         cc_waiter_.quit_waiting();
         wt_waiter_.quit_waiting();
@@ -384,6 +400,20 @@ struct queue_generator {
                           ipc::to_string(AlignSize), "__", 
                           this->name_}).c_str());
             }
+        }
+
+        void clear() noexcept {
+            que_.clear();
+            conn_info_head::clear();
+        }
+
+        static void clear_storage(char const * prefix, char const * name) noexcept {
+            queue_t::clear_storage(ipc::make_prefix(prefix, {
+                                   "QU_CONN__",
+                                   ipc::to_string(DataSize), "__",
+                                   ipc::to_string(AlignSize), "__", 
+                                   name}).c_str());
+            conn_info_head::clear_storage(prefix, name);
         }
 
         void disconnect_receiver() {
@@ -737,6 +767,27 @@ template <typename Flag>
 char const * chan_impl<Flag>::name(ipc::handle_t h) {
     auto *info = detail_impl<policy_t<Flag>>::info_of(h);
     return (info == nullptr) ? nullptr : info->name_.c_str();
+}
+
+template <typename Flag>
+void chan_impl<Flag>::clear(ipc::handle_t h) noexcept {
+    disconnect(h);
+    using conn_info_t = typename detail_impl<policy_t<Flag>>::conn_info_t;
+    auto conn_info_p = static_cast<conn_info_t *>(h);
+    if (conn_info_p == nullptr) return;
+    conn_info_p->clear();
+    destroy(h);
+}
+
+template <typename Flag>
+void chan_impl<Flag>::clear_storage(char const * name) noexcept {
+    chan_impl<Flag>::clear_storage({nullptr}, name);
+}
+
+template <typename Flag>
+void chan_impl<Flag>::clear_storage(prefix pref, char const * name) noexcept {
+    using conn_info_t = typename detail_impl<policy_t<Flag>>::conn_info_t;
+    conn_info_t::clear_storage(pref.str, name);
 }
 
 template <typename Flag>
