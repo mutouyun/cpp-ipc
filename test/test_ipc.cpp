@@ -151,6 +151,50 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
 
 } // internal-linkage
 
+TEST(IPC, clear) {
+    {
+        chan<relat::single, relat::single, trans::unicast> c{"ssu"};
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__AC_CONN__ssu", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__CC_CONN__ssu_WAITER_COND_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__CC_CONN__ssu_WAITER_LOCK_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__RD_CONN__ssu_WAITER_COND_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__RD_CONN__ssu_WAITER_LOCK_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__WT_CONN__ssu_WAITER_COND_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__WT_CONN__ssu_WAITER_LOCK_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__QU_CONN__ssu__64__16", true));
+        c.clear();
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__AC_CONN__ssu", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__CC_CONN__ssu_WAITER_COND_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__CC_CONN__ssu_WAITER_LOCK_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__RD_CONN__ssu_WAITER_COND_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__RD_CONN__ssu_WAITER_LOCK_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__WT_CONN__ssu_WAITER_COND_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__WT_CONN__ssu_WAITER_LOCK_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__QU_CONN__ssu__64__16", false));
+    }
+    {
+        chan<relat::single, relat::single, trans::unicast> c{"ssu"};
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__AC_CONN__ssu", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__CC_CONN__ssu_WAITER_COND_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__CC_CONN__ssu_WAITER_LOCK_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__RD_CONN__ssu_WAITER_COND_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__RD_CONN__ssu_WAITER_LOCK_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__WT_CONN__ssu_WAITER_COND_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__WT_CONN__ssu_WAITER_LOCK_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__QU_CONN__ssu__64__16", true));
+        chan<relat::single, relat::single, trans::unicast>::clear_storage("ssu");
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__AC_CONN__ssu", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__CC_CONN__ssu_WAITER_COND_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__CC_CONN__ssu_WAITER_LOCK_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__RD_CONN__ssu_WAITER_COND_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__RD_CONN__ssu_WAITER_LOCK_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__WT_CONN__ssu_WAITER_COND_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__WT_CONN__ssu_WAITER_LOCK_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("__IPC_SHM__QU_CONN__ssu__64__16", false));
+        c.release(); // Call this interface to prevent destruction-time exceptions.
+    }
+}
+
 TEST(IPC, basic_ssu) {
     test_basic<relat::single, relat::single, trans::unicast  >("ssu");
 }

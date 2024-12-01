@@ -395,10 +395,10 @@ struct queue_generator {
             conn_info_head::init();
             if (!que_.valid()) {
                 que_.open(ipc::make_prefix(prefix_, {
-                          "QU_CONN__",
-                          ipc::to_string(DataSize), "__",
-                          ipc::to_string(AlignSize), "__", 
-                          this->name_}).c_str());
+                          "QU_CONN__", 
+                          this->name_, 
+                          "__", ipc::to_string(DataSize), 
+                          "__", ipc::to_string(AlignSize)}).c_str());
             }
         }
 
@@ -408,11 +408,11 @@ struct queue_generator {
         }
 
         static void clear_storage(char const * prefix, char const * name) noexcept {
-            queue_t::clear_storage(ipc::make_prefix(prefix, {
-                                   "QU_CONN__",
-                                   ipc::to_string(DataSize), "__",
-                                   ipc::to_string(AlignSize), "__", 
-                                   name}).c_str());
+            queue_t::clear_storage(ipc::make_prefix(ipc::make_string(prefix), {
+                                   "QU_CONN__", 
+                                   ipc::make_string(name), 
+                                   "__", ipc::to_string(DataSize), 
+                                   "__", ipc::to_string(AlignSize)}).c_str());
             conn_info_head::clear_storage(prefix, name);
         }
 
@@ -489,8 +489,7 @@ static bool reconnect(ipc::handle_t * ph, bool start_to_recv) {
     return que->ready_sending();
 }
 
-static void destroy(ipc::handle_t h) {
-    disconnect(h);
+static void destroy(ipc::handle_t h) noexcept {
     ipc::mem::free(info_of(h));
 }
 
@@ -733,7 +732,7 @@ using policy_t = ipc::policy::choose<ipc::circ::elem_array, Flag>;
 namespace ipc {
 
 template <typename Flag>
-ipc::handle_t chan_impl<Flag>::inited() {
+ipc::handle_t chan_impl<Flag>::init_first() {
     ipc::detail::waiter::init();
     return nullptr;
 }
@@ -760,6 +759,12 @@ void chan_impl<Flag>::disconnect(ipc::handle_t h) {
 
 template <typename Flag>
 void chan_impl<Flag>::destroy(ipc::handle_t h) {
+    disconnect(h);
+    detail_impl<policy_t<Flag>>::destroy(h);
+}
+
+template <typename Flag>
+void chan_impl<Flag>::release(ipc::handle_t h) noexcept {
     detail_impl<policy_t<Flag>>::destroy(h);
 }
 

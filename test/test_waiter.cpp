@@ -4,8 +4,6 @@
 #include "libipc/waiter.h"
 #include "test.h"
 
-namespace {
-
 TEST(Waiter, broadcast) {
     for (int i = 0; i < 10; ++i) {
         ipc::detail::waiter waiter;
@@ -65,4 +63,23 @@ TEST(Waiter, quit_waiting) {
     std::cout << "quit... \n";
 }
 
-} // internal-linkage
+TEST(Waiter, clear) {
+    {
+        ipc::detail::waiter w{"my-waiter"};
+        ASSERT_TRUE(w.valid());
+        EXPECT_TRUE(ipc_ut::expect_exist("my-waiter_WAITER_COND_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("my-waiter_WAITER_LOCK_", true));
+        w.clear();
+        ASSERT_TRUE(!w.valid());
+        EXPECT_TRUE(ipc_ut::expect_exist("my-waiter_WAITER_COND_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("my-waiter_WAITER_LOCK_", false));
+    }
+    {
+        ipc::detail::waiter w{"my-waiter"};
+        EXPECT_TRUE(ipc_ut::expect_exist("my-waiter_WAITER_COND_", true));
+        EXPECT_TRUE(ipc_ut::expect_exist("my-waiter_WAITER_LOCK_", true));
+        ipc::detail::waiter::clear_storage("my-waiter");
+        EXPECT_TRUE(ipc_ut::expect_exist("my-waiter_WAITER_COND_", false));
+        EXPECT_TRUE(ipc_ut::expect_exist("my-waiter_WAITER_LOCK_", false));
+    }
+}

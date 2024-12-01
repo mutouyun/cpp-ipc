@@ -177,10 +177,10 @@ public:
                     if ((eno = ::pthread_mutex_destroy(mutex_)) != 0) {
                         ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
                     }
+                    shm_->clear();
                     return true;
                 });
-            }
-            shm_->clear();
+            } else shm_->clear();
         }
         shm_   = nullptr;
         ref_   = nullptr;

@@ -195,9 +195,11 @@ public:
     void clear() noexcept {
         if (mutex_ != nullptr) {
             if (mutex_->name() != nullptr) {
-                release_mutex(mutex_->name(), [] { return true; });
-            }
-            mutex_->clear();
+                release_mutex(mutex_->name(), [this] {
+                    mutex_->clear();
+                    return true;
+                });
+            } else mutex_->clear();
         }
         mutex_ = nullptr;
         ref_   = nullptr;
