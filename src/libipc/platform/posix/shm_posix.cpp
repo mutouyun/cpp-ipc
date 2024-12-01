@@ -68,13 +68,14 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
         flag |= O_CREAT;
         break;
     }
-    int fd = ::shm_open(op_name.c_str(), flag, S_IRUSR | S_IWUSR |
-                                               S_IRGRP | S_IWGRP |
-                                               S_IROTH | S_IWOTH);
+    int fd = ::shm_open(op_name.c_str(), flag, 0);
     if (fd == -1) {
         ipc::error("fail shm_open[%d]: %s\n", errno, op_name.c_str());
         return nullptr;
     }
+    ::fchmod(fd, S_IRUSR | S_IWUSR | 
+                 S_IRGRP | S_IWGRP | 
+                 S_IROTH | S_IWOTH);
     auto ii = mem::alloc<id_info_t>();
     ii->fd_   = fd;
     ii->size_ = size;
