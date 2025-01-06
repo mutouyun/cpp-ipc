@@ -3,7 +3,7 @@
 #include <new>
 #include <utility>
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 #include "libipc/def.h"
 
 namespace ipc {
