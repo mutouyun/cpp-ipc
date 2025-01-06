@@ -3,7 +3,7 @@
 #include <cstdint>  // std::uint64_t
 #include <system_error>
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 #include "libipc/def.h"
 
 namespace ipc {
