@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 
 namespace ipc {
 namespace shm {
