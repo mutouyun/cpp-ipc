@@ -5,7 +5,7 @@
 #include <vector>
 #include <type_traits>
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 #include "libipc/def.h"
 
 namespace ipc {
