@@ -6,6 +6,8 @@
 #include "test.h"
 
 #include "libipc/imp/fmt.h"
+#include "libipc/imp/byte.h"
+#include "libipc/imp/span.h"
 
 TEST(fmt, spec) {
   EXPECT_STREQ(ipc::spec("hello")(123).fstr.data(), "hello");
@@ -122,4 +124,22 @@ bool tag_invoke(decltype(ipc::fmt_to), ipc::fmt_context &, foo arg) noexcept(fal
 
 TEST(fmt, throw) {
   EXPECT_THROW(std::ignore = ipc::fmt(foo{}), foo);
+}
+
+TEST(fmt, byte) {
+  {
+    ipc::byte b1{}, b2(31);
+    EXPECT_EQ(ipc::fmt(b1), "00");
+    EXPECT_EQ(ipc::fmt(b2), "1f");
+    EXPECT_EQ(ipc::fmt(ipc::spec("03X")(b2)), "01F");
+  }
+  {
+    ipc::byte bs[] {31, 32, 33, 34, 35, 36, 37, 38};
+    EXPECT_EQ(ipc::fmt(ipc::make_span(bs)), "1f 20 21 22 23 24 25 26");
+  }
+}
+
+TEST(fmt, span) {
+  EXPECT_EQ(ipc::fmt(ipc::span<int>{}), "");
+  EXPECT_EQ(ipc::fmt(ipc::make_span({1, 3, 2, 4, 5, 6, 7})), "1 3 2 4 5 6 7");
 }
