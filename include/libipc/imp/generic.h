@@ -44,7 +44,7 @@ constexpr in_place_t in_place {};
  * \brief A general pattern for supporting customisable functions
  * \see https://www.open-std.org/jtc1/sc22/WG21/docs/papers/2019/p1895r0.pdf
  */
-namespace detail {
+namespace detail_tag_invoke {
 
 void tag_invoke();
 
@@ -57,15 +57,15 @@ struct tag_invoke_t {
   }
 };
 
-} // namespace detail
+} // namespace detail_tag_invoke
 
-constexpr detail::tag_invoke_t tag_invoke {};
+constexpr detail_tag_invoke::tag_invoke_t tag_invoke{};
 
 /**
  * \brief Circumventing forwarding reference may override copy and move constructs.
  * \see https://mpark.github.io/programming/2014/06/07/beware-of-perfect-forwarding-constructors/
  */
-namespace detail {
+namespace detail_not_match {
 
 template <typename T, typename... A>
 struct is_same_first : std::false_type {};
@@ -73,11 +73,11 @@ struct is_same_first : std::false_type {};
 template <typename T>
 struct is_same_first<T, T> : std::true_type {};
 
-} // namespace detail
+} // namespace detail_not_match
 
 template <typename T, typename... A>
 using not_match = 
-  typename std::enable_if<!detail::is_same_first<T, 
+  typename std::enable_if<!detail_not_match::is_same_first<T, 
   typename std::decay<A>::type...>::value, bool>::type;
 
 /**
