@@ -5,6 +5,8 @@ set (PACKAGE_VERSION 1.3.0)
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc SRC_FILES)
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/sync SRC_FILES)
 aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/platform SRC_FILES)
+aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/imp SRC_FILES)
+aux_source_directory(${LIBIPC_PROJECT_DIR}/src/libipc/mem SRC_FILES)
 
 file(GLOB HEAD_FILES
   ${LIBIPC_PROJECT_DIR}/include/libipc/*.h
