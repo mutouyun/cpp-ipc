@@ -1,5 +1,5 @@
 /**
- * \file libimp/scope_exit.h
+ * \file libipc/scope_exit.h
  * \author mutouyun (orz@orzz.org)
  * \brief Execute guard function when the enclosing scope exits.
  */

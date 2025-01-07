@@ -1,5 +1,5 @@
 /**
- * \file libimp/nameof.h
+ * \file libipc/nameof.h
  * \author mutouyun (orz@orzz.org)
  * \brief Gets the name string of a type.
  */
