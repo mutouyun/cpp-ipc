@@ -22,7 +22,7 @@ namespace ipc {
  * \param name the mangled name
  * \return std::string a human-readable demangled type name
  */
-IPC_EXPORT std::string demangle(std::string name) noexcept;
+LIBIPC_EXPORT std::string demangle(std::string name) noexcept;
 
 /**
  * \brief Returns an implementation defined string containing the name of the type.

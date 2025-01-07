@@ -8,7 +8,7 @@
 namespace ipc {
 namespace sync {
 
-class IPC_EXPORT semaphore {
+class LIBIPC_EXPORT semaphore {
     semaphore(semaphore const &) = delete;
     semaphore &operator=(semaphore const &) = delete;
 

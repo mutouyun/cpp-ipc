@@ -65,45 +65,45 @@ LIBIPC_NODISCARD std::string fmt(A &&...args) {
 }
 
 /// \brief String types.
-IPC_EXPORT bool to_string(fmt_context &ctx, char const *       a) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, std::string const &a) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, char const *       a, span<char const> fstr) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, char const *       a) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, std::string const &a) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, char const *       a, span<char const> fstr) noexcept;
        inline bool to_string(fmt_context &ctx, std::string const &a, span<char const> fstr) noexcept { return to_string(ctx, a.c_str(), fstr); }
 
 /// \brief Character to string conversion.
-IPC_EXPORT bool to_string(fmt_context &ctx, char     a) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, char     a) noexcept;
 #if defined(LIBIPC_CPP_20)
        inline bool to_string(fmt_context &ctx, char8_t  a) noexcept { return to_string(ctx, (char)a); }
 #endif // defined(LIBIPC_CPP_20)
-IPC_EXPORT bool to_string(fmt_context &ctx, wchar_t  a) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, char16_t a) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, char32_t a) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, wchar_t  a) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, char16_t a) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, char32_t a) noexcept;
 
 /// \brief Conversion of numeric types to strings.
-IPC_EXPORT bool to_string(fmt_context &ctx,   signed short     a, span<char const> fstr = {}) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, unsigned short     a, span<char const> fstr = {}) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx,   signed int       a, span<char const> fstr = {}) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, unsigned int       a, span<char const> fstr = {}) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx,   signed long      a, span<char const> fstr = {}) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, unsigned long      a, span<char const> fstr = {}) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx,   signed long long a, span<char const> fstr = {}) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, unsigned long long a, span<char const> fstr = {}) noexcept;
-    inline bool to_string(fmt_context &ctx,   signed char      a, span<char const> fstr = {}) noexcept { return to_string(ctx,      (int)a, fstr); }
-    inline bool to_string(fmt_context &ctx, unsigned char      a, span<char const> fstr = {}) noexcept { return to_string(ctx, (unsigned)a, fstr); }
+LIBIPC_EXPORT bool to_string(fmt_context &ctx,   signed short     a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, unsigned short     a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx,   signed int       a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, unsigned int       a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx,   signed long      a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, unsigned long      a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx,   signed long long a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, unsigned long long a, span<char const> fstr = {}) noexcept;
+       inline bool to_string(fmt_context &ctx,   signed char      a, span<char const> fstr = {}) noexcept { return to_string(ctx,      (int)a, fstr); }
+       inline bool to_string(fmt_context &ctx, unsigned char      a, span<char const> fstr = {}) noexcept { return to_string(ctx, (unsigned)a, fstr); }
 
 /// \brief Conversion of floating point type to strings.
-IPC_EXPORT bool to_string(fmt_context &ctx,      double a, span<char const> fstr = {}) noexcept;
-IPC_EXPORT bool to_string(fmt_context &ctx, long double a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx,      double a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, long double a, span<char const> fstr = {}) noexcept;
        inline bool to_string(fmt_context &ctx, float       a, span<char const> fstr = {}) noexcept { return to_string(ctx, (double)a, fstr); }
 
 /// \brief Pointer.
-IPC_EXPORT bool to_string(fmt_context &ctx, std::nullptr_t) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, std::nullptr_t) noexcept;
 template <typename T,
           typename = std::enable_if_t<std::is_same<T, void>::value>>
-IPC_EXPORT bool to_string(fmt_context &ctx, T const volatile *a) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, T const volatile *a) noexcept;
 
 /// \brief Date and time.
-IPC_EXPORT bool to_string(fmt_context &ctx, std::tm const &a, span<char const> fstr = {}) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, std::tm const &a, span<char const> fstr = {}) noexcept;
 
 namespace detail_fmt {
 

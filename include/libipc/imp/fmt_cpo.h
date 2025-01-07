@@ -17,10 +17,10 @@
 namespace ipc {
 
 /**
- * \class class IPC_EXPORT fmt_context
+ * \class class LIBIPC_EXPORT fmt_context
  * \brief The context of fmt.
  */
-class IPC_EXPORT fmt_context {
+class LIBIPC_EXPORT fmt_context {
   std::array<char, 2048U> sbuf_; ///< stack buffer
 
   std::string &joined_;

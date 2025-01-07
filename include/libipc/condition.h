@@ -9,7 +9,7 @@
 namespace ipc {
 namespace sync {
 
-class IPC_EXPORT condition {
+class LIBIPC_EXPORT condition {
     condition(condition const &) = delete;
     condition &operator=(condition const &) = delete;
 
