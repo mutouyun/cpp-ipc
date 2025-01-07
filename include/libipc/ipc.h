@@ -18,7 +18,7 @@ enum : unsigned {
 };
 
 template <typename Flag>
-struct IPC_EXPORT chan_impl {
+struct LIBIPC_EXPORT chan_impl {
     static ipc::handle_t init_first();
 
     static bool connect   (ipc::handle_t * ph, char const * name, unsigned mode);

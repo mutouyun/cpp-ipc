@@ -15,16 +15,16 @@ enum : unsigned {
     open   = 0x02
 };
 
-IPC_EXPORT id_t         acquire(char const * name, std::size_t size, unsigned mode = create | open);
-IPC_EXPORT void *       get_mem(id_t id, std::size_t * size);
-IPC_EXPORT std::int32_t release(id_t id) noexcept;
-IPC_EXPORT void         remove (id_t id) noexcept;
-IPC_EXPORT void         remove (char const * name) noexcept;
+LIBIPC_EXPORT id_t         acquire(char const * name, std::size_t size, unsigned mode = create | open);
+LIBIPC_EXPORT void *       get_mem(id_t id, std::size_t * size);
+LIBIPC_EXPORT std::int32_t release(id_t id) noexcept;
+LIBIPC_EXPORT void         remove (id_t id) noexcept;
+LIBIPC_EXPORT void         remove (char const * name) noexcept;
 
-IPC_EXPORT std::int32_t get_ref(id_t id);
-IPC_EXPORT void sub_ref(id_t id);
+LIBIPC_EXPORT std::int32_t get_ref(id_t id);
+LIBIPC_EXPORT void sub_ref(id_t id);
 
-class IPC_EXPORT handle {
+class LIBIPC_EXPORT handle {
 public:
     handle();
     handle(char const * name, std::size_t size, unsigned mode = create | open);
