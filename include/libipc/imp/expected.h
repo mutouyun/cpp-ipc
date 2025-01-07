@@ -1,5 +1,5 @@
 /**
- * \file libimp/expected.h
+ * \file libipc/expected.h
  * \author mutouyun (orz@orzz.org)
  * \brief Provides a way to store either of two values.
  */

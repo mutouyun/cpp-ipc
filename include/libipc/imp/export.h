@@ -1,5 +1,5 @@
 /**
- * \file libimp/export.h
+ * \file libipc/export.h
  * \author mutouyun (orz@orzz.org)
  * \brief Define the symbol export interfaces.
  */
