@@ -14,7 +14,7 @@
 #include "libipc/imp/byte.h"
 #include "libipc/imp/detect_plat.h"
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 
 namespace ipc {
 namespace mem {

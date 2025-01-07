@@ -19,7 +19,7 @@ namespace ipc {
  * \param dlen The target string length can be 0
  */
 template <typename CharT, typename CharU>
-IPC_EXPORT std::size_t cvt_cstr(CharT const *src, std::size_t slen, CharU *des, std::size_t dlen) noexcept;
+LIBIPC_EXPORT std::size_t cvt_cstr(CharT const *src, std::size_t slen, CharU *des, std::size_t dlen) noexcept;
 
 template <typename CharT, typename TraitsT, typename AllocT, 
           typename CharU, typename TraitsU, typename AllocU>
