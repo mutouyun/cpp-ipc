@@ -98,9 +98,10 @@ LIBIPC_EXPORT bool to_string(fmt_context &ctx, long double a, span<char const> f
 
 /// \brief Pointer.
 LIBIPC_EXPORT bool to_string(fmt_context &ctx, std::nullptr_t) noexcept;
+LIBIPC_EXPORT bool to_string(fmt_context &ctx, void const volatile *a) noexcept;
 template <typename T,
-          typename = std::enable_if_t<std::is_same<T, void>::value>>
-LIBIPC_EXPORT bool to_string(fmt_context &ctx, T const volatile *a) noexcept;
+          typename = std::enable_if_t<!std::is_same<T, char>::value>>
+inline bool to_string(fmt_context &ctx, T const volatile *a) noexcept { return to_string(ctx, (void *)a); }
 
 /// \brief Date and time.
 LIBIPC_EXPORT bool to_string(fmt_context &ctx, std::tm const &a, span<char const> fstr = {}) noexcept;
@@ -114,7 +115,7 @@ namespace detail_fmt {
 inline bool time_to_string(fmt_context &ctx, std::time_t tt, span<char const> fstr) noexcept {
 #if defined(LIBIPC_CC_MSVC)
   /// \see https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/localtime-s-localtime32-s-localtime64-s
-  std::tm tm {};
+  std::tm tm{};
   if (::localtime_s(&tm, &tt) != 0) {
     return {};
   }

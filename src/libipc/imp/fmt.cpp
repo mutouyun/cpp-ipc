@@ -302,8 +302,7 @@ bool to_string(fmt_context &ctx, std::nullptr_t) noexcept {
   return ctx.append("null");
 }
 
-template <>
-bool to_string<void, void>(fmt_context &ctx, void const volatile *a) noexcept {
+bool to_string(fmt_context &ctx, void const volatile *a) noexcept {
   if (a == nullptr) {
     return to_string(ctx, nullptr);
   }
