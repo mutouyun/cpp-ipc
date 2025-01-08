@@ -37,7 +37,7 @@ using std::in_place;
 struct in_place_t {
   explicit in_place_t() = default;
 };
-constexpr in_place_t in_place {};
+constexpr in_place_t in_place{};
 #endif/*!LIBIPC_CPP_17*/
 
 /**
