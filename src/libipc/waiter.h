@@ -63,7 +63,7 @@ public:
 
     template <typename F>
     bool wait_if(F &&pred, std::uint64_t tm = ipc::invalid_value) noexcept {
-        IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> guard {lock_};
+        LIBIPC_UNUSED std::lock_guard<ipc::sync::mutex> guard {lock_};
         while ([this, &pred] {
                     return !quit_.load(std::memory_order_relaxed)
                         && std::forward<F>(pred)();
@@ -75,14 +75,14 @@ public:
 
     bool notify() noexcept {
         {
-            IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> barrier{lock_}; // barrier
+            LIBIPC_UNUSED std::lock_guard<ipc::sync::mutex> barrier{lock_}; // barrier
         }
         return cond_.notify(lock_);
     }
 
     bool broadcast() noexcept {
         {
-            IPC_UNUSED_ std::lock_guard<ipc::sync::mutex> barrier{lock_}; // barrier
+            LIBIPC_UNUSED std::lock_guard<ipc::sync::mutex> barrier{lock_}; // barrier
         }
         return cond_.broadcast(lock_);
     }

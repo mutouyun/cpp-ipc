@@ -52,7 +52,7 @@ class mutex {
             return nullptr;
         }
         auto &info = curr_prog::get();
-        IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
+        LIBIPC_UNUSED std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
           it = info.mutex_handles
@@ -74,7 +74,7 @@ class mutex {
     static void release_mutex(ipc::string const &name, F &&clear) {
         if (name.empty()) return;
         auto &info = curr_prog::get();
-        IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
+        LIBIPC_UNUSED std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
             return;
@@ -130,7 +130,7 @@ public:
             ipc::error("fail pthread_mutexattr_init[%d]\n", eno);
             return false;
         }
-        IPC_UNUSED_ auto guard_mutex_attr = guard([&mutex_attr] { ::pthread_mutexattr_destroy(&mutex_attr); });
+        LIBIPC_UNUSED auto guard_mutex_attr = guard([&mutex_attr] { ::pthread_mutexattr_destroy(&mutex_attr); });
         if ((eno = ::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)) != 0) {
             ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
             return false;
