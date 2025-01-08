@@ -27,7 +27,7 @@ constexpr decltype(auto) static_switch(std::size_t i, F&& f, D&& def) {
 
 template <typename F, std::size_t...I>
 IPC_CONSTEXPR_ void static_for(std::index_sequence<I...>, F&& f) {
-    IPC_UNUSED_ auto expand = { (std::forward<F>(f)(std::integral_constant<std::size_t, I>{}), 0)... };
+    LIBIPC_UNUSED auto expand = { (std::forward<F>(f)(std::integral_constant<std::size_t, I>{}), 0)... };
 }
 
 template <std::size_t N, typename F>

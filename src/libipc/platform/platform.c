@@ -1,13 +1,13 @@
 
 #include "libipc/platform/detail.h"
-#if defined(IPC_OS_WINDOWS_)
-#elif defined(IPC_OS_LINUX_)
+#if defined(LIBIPC_OS_WIN)
+#elif defined(LIBIPC_OS_LINUX)
 #include "libipc/platform/linux/a0/err.c"
 #include "libipc/platform/linux/a0/mtx.c"
 #include "libipc/platform/linux/a0/strconv.c"
 #include "libipc/platform/linux/a0/tid.c"
 #include "libipc/platform/linux/a0/time.c"
-#elif defined(IPC_OS_QNX_) || defined(IPC_OS_FREEBSD_)
+#elif defined(LIBIPC_OS_QNX) || defined(LIBIPC_OS_FREEBSD)
 #else/*IPC_OS*/
 #   error "Unsupported platform."
 #endif
