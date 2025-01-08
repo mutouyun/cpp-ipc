@@ -51,13 +51,13 @@ protected:
 
 public:
     void try_recover(alloc_policy & alc) {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
+        LIBIPC_UNUSED auto guard = ipc::detail::unique_lock(master_lock_);
         if (master_allocs_.empty()) return;
         take_first_do([&alc](alloc_policy & first) { alc.swap(first); });
     }
 
     void collect(alloc_policy && alc) {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(master_lock_);
+        LIBIPC_UNUSED auto guard = ipc::detail::unique_lock(master_lock_);
         if (master_allocs_.size() >= 32) {
             take_first_do([](alloc_policy &) {}); // erase first
         }
@@ -75,7 +75,7 @@ class default_recycler : public limited_recycler<AllocP> {
 
     template <typename A>
     void try_fill(A & alc) {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(this->master_lock_);
+        LIBIPC_UNUSED auto guard = ipc::detail::unique_lock(this->master_lock_);
         if (this->master_allocs_.empty()) return;
         this->take_first_do([&alc](alloc_policy & first) { alc.take(std::move(first)); });
     }
@@ -197,17 +197,17 @@ public:
     {}
 
     void swap(sync_wrapper& rhs) {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+        LIBIPC_UNUSED auto guard = ipc::detail::unique_lock(lock_);
         alloc_.swap(rhs.alloc_);
     }
 
     void* alloc(std::size_t size) {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+        LIBIPC_UNUSED auto guard = ipc::detail::unique_lock(lock_);
         return alloc_.alloc(size);
     }
 
     void free(void* p, std::size_t size) {
-        IPC_UNUSED_ auto guard = ipc::detail::unique_lock(lock_);
+        LIBIPC_UNUSED auto guard = ipc::detail::unique_lock(lock_);
         alloc_.free(p, size);
     }
 };

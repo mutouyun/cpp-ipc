@@ -1,11 +1,11 @@
 #include "libipc/waiter.h"
 
 #include "libipc/platform/detail.h"
-#if defined(IPC_OS_WINDOWS_)
+#if defined(LIBIPC_OS_WIN)
 #include "libipc/platform/win/mutex.h"
-#elif defined(IPC_OS_LINUX_)
+#elif defined(LIBIPC_OS_LINUX)
 #include "libipc/platform/linux/mutex.h"
-#elif defined(IPC_OS_QNX_)
+#elif defined(LIBIPC_OS_QNX)
 #include "libipc/platform/posix/mutex.h"
 #else/*IPC_OS*/
 #   error "Unsupported platform."
