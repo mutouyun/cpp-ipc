@@ -24,7 +24,7 @@ namespace ipc {
 struct unexpected_t {
   explicit unexpected_t() = default;
 };
-constexpr unexpected_t unexpected {};
+constexpr unexpected_t unexpected{};
 
 /**
  * \class template <typename T, typename E> expected
