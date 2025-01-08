@@ -252,12 +252,12 @@ chunk_info_t *chunk_storage_info(conn_info_head *inf, std::size_t chunk_size) {
     std::decay_t<decltype(storages)>::iterator it;
     {
         static ipc::rw_lock lock;
-        IPC_UNUSED_ std::shared_lock<ipc::rw_lock> guard {lock};
+        LIBIPC_UNUSED std::shared_lock<ipc::rw_lock> guard {lock};
         if ((it = storages.find(chunk_size)) == storages.end()) {
             using chunk_handle_ptr_t = std::decay_t<decltype(storages)>::value_type::second_type;
             using chunk_handle_t     = chunk_handle_ptr_t::element_type;
             guard.unlock();
-            IPC_UNUSED_ std::lock_guard<ipc::rw_lock> guard {lock};
+            LIBIPC_UNUSED std::lock_guard<ipc::rw_lock> guard {lock};
             it = storages.emplace(chunk_size, chunk_handle_ptr_t{
                 ipc::mem::alloc<chunk_handle_t>(), [](chunk_handle_t *p) {
                     ipc::mem::destruct(p);
@@ -666,7 +666,7 @@ static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
                 } else {
                     return ipc::buff_t{buf, msg_size, [](void* p_info, std::size_t size) {
                         auto r_info = static_cast<recycle_t *>(p_info);
-                        IPC_UNUSED_ auto finally = ipc::guard([r_info] {
+                        LIBIPC_UNUSED auto finally = ipc::guard([r_info] {
                             ipc::mem::free(r_info);
                         });
                         recycle_storage<flag_t>(r_info->storage_id, 

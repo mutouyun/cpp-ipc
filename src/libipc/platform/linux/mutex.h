@@ -122,7 +122,7 @@ class mutex {
             return;
         }
         auto &info = curr_prog::get();
-        IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
+        LIBIPC_UNUSED std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
             it = info.mutex_handles
@@ -139,7 +139,7 @@ class mutex {
     static void release_mutex(ipc::string const &name, F &&clear) {
         if (name.empty()) return;
         auto &info = curr_prog::get();
-        IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
+        LIBIPC_UNUSED std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
             return;

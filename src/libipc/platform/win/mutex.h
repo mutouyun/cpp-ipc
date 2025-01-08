@@ -84,7 +84,7 @@ public:
             return false;
         case WAIT_ABANDONED:
             unlock();
-            IPC_FALLTHROUGH_;
+            LIBIPC_FALLTHROUGH;
         default:
             ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
             throw std::system_error{static_cast<int>(ret), std::system_category()};

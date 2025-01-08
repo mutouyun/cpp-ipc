@@ -5,9 +5,9 @@
 #include "libipc/utility/log.h"
 #include "libipc/memory/resource.h"
 #include "libipc/platform/detail.h"
-#if defined(IPC_OS_WINDOWS_)
+#if defined(LIBIPC_OS_WIN)
 #include "libipc/platform/win/semaphore.h"
-#elif defined(IPC_OS_LINUX_) || defined(IPC_OS_QNX_)
+#elif defined(LIBIPC_OS_LINUX) || defined(LIBIPC_OS_QNX)
 #include "libipc/platform/posix/semaphore_impl.h"
 #else/*IPC_OS*/
 #   error "Unsupported platform."

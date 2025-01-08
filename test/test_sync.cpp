@@ -10,7 +10,7 @@
 #include "test.h"
 
 #include "libipc/platform/detail.h"
-#if defined(IPC_OS_LINUX_)
+#if defined(LIBIPC_OS_LINUX)
 #include <pthread.h>
 #include <time.h>
 
@@ -36,7 +36,7 @@ TEST(PThread, Robust) {
     pthread_mutex_unlock(&mutex);
     pthread_mutex_destroy(&mutex);
 }
-#elif defined(IPC_OS_WINDOWS_)
+#elif defined(LIBIPC_OS_WIN)
 #include <Windows.h>
 #include <tchar.h>
 

@@ -74,7 +74,7 @@ result<std::int64_t> conf(info r) noexcept {
   LIBIPC_LOG();
   switch (r) {
   case info::page_size: {
-    ::SYSTEM_INFO info {};
+    ::SYSTEM_INFO info{};
     ::GetNativeSystemInfo(&info);
     return (std::int64_t)info.dwPageSize;
   }

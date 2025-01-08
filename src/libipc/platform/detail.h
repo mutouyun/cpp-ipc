@@ -1,20 +1,7 @@
 #ifndef LIBIPC_SRC_PLATFORM_DETAIL_H_
 #define LIBIPC_SRC_PLATFORM_DETAIL_H_
 
-// detect platform
-
-#if defined(WIN64) || defined(_WIN64) || defined(__WIN64__) || \
-    defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || \
-    defined(WINCE) || defined(_WIN32_WCE)
-#   define IPC_OS_WINDOWS_
-#elif defined(__linux__) || defined(__linux)
-#   define IPC_OS_LINUX_
-#elif defined(__QNX__)
-#   define IPC_OS_QNX_
-#elif defined(__APPLE__)
-#elif defined(__ANDROID__)
-// TBD
-#endif
+#include "libipc/imp/detect_plat.h"
 
 #if defined(__cplusplus)
 
@@ -27,12 +14,6 @@
 
 // pre-defined
 
-#ifdef IPC_UNUSED_
-#   error "IPC_UNUSED_ has been defined."
-#endif
-#ifdef IPC_FALLTHROUGH_
-#   error "IPC_FALLTHROUGH_ has been defined."
-#endif
 #ifdef IPC_STBIND_
 #   error "IPC_STBIND_ has been defined."
 #endif
@@ -42,22 +23,10 @@
 
 #if __cplusplus >= 201703L
 
-#define IPC_UNUSED_      [[maybe_unused]]
-#define IPC_FALLTHROUGH_ [[fallthrough]]
 #define IPC_STBIND_(A, B, ...) auto [A, B] = __VA_ARGS__
 #define IPC_CONSTEXPR_   constexpr
 
 #else /*__cplusplus < 201703L*/
-
-#if defined(_MSC_VER)
-#   define IPC_UNUSED_ __pragma(warning(suppress: 4100 4101 4189))
-#elif defined(__GNUC__)
-#   define IPC_UNUSED_ __attribute__((__unused__))
-#else
-#   define IPC_UNUSED_
-#endif
-
-#define IPC_FALLTHROUGH_
 
 #define IPC_STBIND_(A, B, ...)       \
     auto tp___ = __VA_ARGS__         \
