@@ -8,6 +8,7 @@
 #include "libipc/imp/fmt.h"
 #include "libipc/imp/byte.h"
 #include "libipc/imp/span.h"
+#include "libipc/imp/result.h"
 
 TEST(fmt, spec) {
   EXPECT_STREQ(ipc::spec("hello")(123).fstr.data(), "hello");
@@ -142,4 +143,45 @@ TEST(fmt, byte) {
 TEST(fmt, span) {
   EXPECT_EQ(ipc::fmt(ipc::span<int>{}), "");
   EXPECT_EQ(ipc::fmt(ipc::make_span({1, 3, 2, 4, 5, 6, 7})), "1 3 2 4 5 6 7");
+}
+
+TEST(fmt, result) {
+  {
+    ipc::result<std::uint64_t> r1;
+    EXPECT_EQ(ipc::fmt(r1), ipc::fmt("fail, error = ", std::error_code(-1, std::generic_category())));
+    ipc::result<std::uint64_t> r2(65537);
+    EXPECT_EQ(ipc::fmt(r2), "succ, value = 65537");
+    ipc::result<std::uint64_t> r3(0);
+    EXPECT_EQ(ipc::fmt(r3), "succ, value = 0");
+  }
+  {
+    ipc::result<int> r0;
+    EXPECT_EQ(ipc::fmt(r0), ipc::fmt(ipc::result<std::uint64_t>()));
+    ipc::result<int> r1 {std::error_code(-1, std::generic_category())};
+    EXPECT_EQ(ipc::fmt(r1), ipc::fmt("fail, error = ", std::error_code(-1, std::generic_category())));
+
+    ipc::result<void *> r2 {&r1};
+    EXPECT_EQ(ipc::fmt(r2), ipc::fmt("succ, value = ", (void *)&r1));
+
+    int aaa {};
+    ipc::result<int *> r3 {&aaa};
+    EXPECT_EQ(ipc::fmt(r3), ipc::fmt("succ, value = ", (void *)&aaa));
+    ipc::result<int *> r4 {nullptr};
+    EXPECT_EQ(ipc::fmt(r4), ipc::fmt("fail, error = ", std::error_code(-1, std::generic_category())));
+    r4 = std::error_code(1234, std::generic_category());
+    EXPECT_EQ(ipc::fmt(r4), ipc::fmt("fail, error = ", std::error_code(1234, std::generic_category())));
+    ipc::result<int *> r5;
+    EXPECT_EQ(ipc::fmt(r5), ipc::fmt("fail, error = ", std::error_code(-1, std::generic_category())));
+  }
+  {
+    ipc::result<std::int64_t> r1 {-123};
+    EXPECT_EQ(ipc::fmt(r1), ipc::fmt("succ, value = ", -123));
+  }
+  {
+    ipc::result<void> r1;
+    EXPECT_EQ(ipc::fmt(r1), ipc::fmt("fail, error = ", std::error_code(-1, std::generic_category())));
+    r1 = std::error_code{};
+    EXPECT_TRUE(r1);
+    EXPECT_EQ(ipc::fmt(r1), ipc::fmt("succ, error = ", std::error_code()));
+  }
 }

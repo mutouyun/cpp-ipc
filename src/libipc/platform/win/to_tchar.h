@@ -36,7 +36,7 @@ using IsSameChar = ipc::require<is_same_char<T, S>::value, R>;
 ////////////////////////////////////////////////////////////////
 
 template <typename T = TCHAR>
-constexpr auto to_tchar(ipc::string &&str) -> IsSameChar<T, ipc::string, ipc::string &&> {
+constexpr auto to_tchar(std::string &&str) -> IsSameChar<T, std::string, std::string &&> {
     return std::move(str); // noconv
 }
 
@@ -48,7 +48,7 @@ constexpr auto to_tchar(ipc::string &&str) -> IsSameChar<T, ipc::string, ipc::st
  *      https://docs.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-multibytetowidechar
 */
 template <typename T = TCHAR>
-auto to_tchar(ipc::string &&external) -> IsSameChar<T, ipc::wstring> {
+auto to_tchar(std::string &&external) -> IsSameChar<T, std::wstring> {
     if (external.empty()) {
         return {}; // noconv
     }
@@ -65,7 +65,7 @@ auto to_tchar(ipc::string &&external) -> IsSameChar<T, ipc::wstring> {
     if (size_needed <= 0) {
         return {};
     }
-    ipc::wstring internal(size_needed, L'\0');
+    std::wstring internal(size_needed, L'\0');
     ::MultiByteToWideChar(CP_UTF8, 0, &external[0], (int)external.size(), &internal[0], size_needed);
     return internal;
 }

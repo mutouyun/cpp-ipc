@@ -70,13 +70,13 @@ ipc::buff_t make_cache(T& data, std::size_t size) {
     return { ptr, size, ipc::mem::free };
 }
 
-acc_t *cc_acc(ipc::string const &pref) {
-    static ipc::unordered_map<ipc::string, ipc::shm::handle> handles;
+acc_t *cc_acc(std::string const &pref) {
+    static ipc::unordered_map<std::string, ipc::shm::handle> handles;
     static std::mutex lock;
     std::lock_guard<std::mutex> guard {lock};
     auto it = handles.find(pref);
     if (it == handles.end()) {
-        ipc::string shm_name {ipc::make_prefix(pref, {"CA_CONN__"})};
+        std::string shm_name {ipc::make_prefix(pref, "CA_CONN__")};
         ipc::shm::handle h;
         if (!h.acquire(shm_name.c_str(), sizeof(acc_t))) {
             ipc::error("[cc_acc] acquire failed: %s\n", shm_name.c_str());
@@ -105,8 +105,8 @@ struct cache_t {
 
 struct conn_info_head {
 
-    ipc::string prefix_;
-    ipc::string name_;
+    std::string prefix_;
+    std::string name_;
     msg_id_t    cc_id_; // connection-info id
     ipc::detail::waiter cc_waiter_, wt_waiter_, rd_waiter_;
     ipc::shm::handle acc_h_;
@@ -117,10 +117,10 @@ struct conn_info_head {
         , cc_id_ {} {}
 
     void init() {
-        if (!cc_waiter_.valid()) cc_waiter_.open(ipc::make_prefix(prefix_, {"CC_CONN__", name_}).c_str());
-        if (!wt_waiter_.valid()) wt_waiter_.open(ipc::make_prefix(prefix_, {"WT_CONN__", name_}).c_str());
-        if (!rd_waiter_.valid()) rd_waiter_.open(ipc::make_prefix(prefix_, {"RD_CONN__", name_}).c_str());
-        if (!acc_h_.valid()) acc_h_.acquire(ipc::make_prefix(prefix_, {"AC_CONN__", name_}).c_str(), sizeof(acc_t));
+        if (!cc_waiter_.valid()) cc_waiter_.open(ipc::make_prefix(prefix_, "CC_CONN__", name_).c_str());
+        if (!wt_waiter_.valid()) wt_waiter_.open(ipc::make_prefix(prefix_, "WT_CONN__", name_).c_str());
+        if (!rd_waiter_.valid()) rd_waiter_.open(ipc::make_prefix(prefix_, "RD_CONN__", name_).c_str());
+        if (!acc_h_.valid()) acc_h_.acquire(ipc::make_prefix(prefix_, "AC_CONN__", name_).c_str(), sizeof(acc_t));
         if (cc_id_ != 0) {
             return;
         }
@@ -146,10 +146,10 @@ struct conn_info_head {
     static void clear_storage(char const * prefix, char const * name) noexcept {
         auto p = ipc::make_string(prefix);
         auto n = ipc::make_string(name);
-        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"CC_CONN__", n}).c_str());
-        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"WT_CONN__", n}).c_str());
-        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"RD_CONN__", n}).c_str());
-        ipc::shm::handle::clear_storage(ipc::make_prefix(p, {"AC_CONN__", n}).c_str());
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, "CC_CONN__", n).c_str());
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, "WT_CONN__", n).c_str());
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, "RD_CONN__", n).c_str());
+        ipc::shm::handle::clear_storage(ipc::make_prefix(p, "AC_CONN__", n).c_str());
     }
 
     void quit_waiting() {
@@ -208,10 +208,10 @@ struct chunk_info_t {
 
 auto& chunk_storages() {
     class chunk_handle_t {
-        ipc::unordered_map<ipc::string, ipc::shm::handle> handles_;
+        ipc::unordered_map<std::string, ipc::shm::handle> handles_;
         std::mutex lock_;
 
-        static bool make_handle(ipc::shm::handle &h, ipc::string const &shm_name, std::size_t chunk_size) {
+        static bool make_handle(ipc::shm::handle &h, std::string const &shm_name, std::size_t chunk_size) {
             if (!h.valid() &&
                 !h.acquire( shm_name.c_str(), 
                             sizeof(chunk_info_t) + chunk_info_t::chunks_mem_size(chunk_size) )) {
@@ -223,8 +223,8 @@ auto& chunk_storages() {
 
     public:
         chunk_info_t *get_info(conn_info_head *inf, std::size_t chunk_size) {
-            ipc::string pref {(inf == nullptr) ? ipc::string{} : inf->prefix_};
-            ipc::string shm_name {ipc::make_prefix(pref, {"CHUNK_INFO__", ipc::to_string(chunk_size)})};
+            std::string pref {(inf == nullptr) ? std::string{} : inf->prefix_};
+            std::string shm_name {ipc::make_prefix(pref, "CHUNK_INFO__", chunk_size)};
             ipc::shm::handle *h;
             {
                 std::lock_guard<std::mutex> guard {lock_};
@@ -394,11 +394,11 @@ struct queue_generator {
         void init() {
             conn_info_head::init();
             if (!que_.valid()) {
-                que_.open(ipc::make_prefix(prefix_, {
+                que_.open(ipc::make_prefix(prefix_, 
                           "QU_CONN__", 
                           this->name_, 
-                          "__", ipc::to_string(DataSize), 
-                          "__", ipc::to_string(AlignSize)}).c_str());
+                          "__", DataSize, 
+                          "__", AlignSize).c_str());
             }
         }
 
@@ -408,11 +408,11 @@ struct queue_generator {
         }
 
         static void clear_storage(char const * prefix, char const * name) noexcept {
-            queue_t::clear_storage(ipc::make_prefix(ipc::make_string(prefix), {
+            queue_t::clear_storage(ipc::make_prefix(prefix, 
                                    "QU_CONN__", 
-                                   ipc::make_string(name), 
-                                   "__", ipc::to_string(DataSize), 
-                                   "__", ipc::to_string(AlignSize)}).c_str());
+                                   name, 
+                                   "__", DataSize, 
+                                   "__", AlignSize).c_str());
             conn_info_head::clear_storage(prefix, name);
         }
 

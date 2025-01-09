@@ -16,7 +16,7 @@ public:
     shm::id_t id_ = nullptr;
     void*     m_  = nullptr;
 
-    ipc::string n_;
+    std::string n_;
     std::size_t s_ = 0;
 };
 

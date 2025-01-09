@@ -38,7 +38,7 @@ class mutex {
             shm_data(init arg)
                 : shm{arg.name, arg.size}, ref{0} {}
         };
-        ipc::map<ipc::string, shm_data> mutex_handles;
+        ipc::map<std::string, shm_data> mutex_handles;
         std::mutex lock;
 
         static curr_prog &get() {
@@ -71,7 +71,7 @@ class mutex {
     }
 
     template <typename F>
-    static void release_mutex(ipc::string const &name, F &&clear) {
+    static void release_mutex(std::string const &name, F &&clear) {
         if (name.empty()) return;
         auto &info = curr_prog::get();
         LIBIPC_UNUSED std::lock_guard<std::mutex> guard {info.lock};
