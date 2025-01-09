@@ -14,6 +14,7 @@
 #include "libipc/memory/alloc.h"
 #include "libipc/memory/wrapper.h"
 #include "libipc/platform/detail.h"
+#include "libipc/imp/fmt.h"
 
 namespace ipc {
 namespace mem {
@@ -30,20 +31,6 @@ template <typename T>
 using allocator = allocator_wrapper<T, async_pool_alloc>;
 
 } // namespace mem
-
-namespace {
-
-constexpr char const * pf(int)                { return "%d"  ; }
-constexpr char const * pf(long)               { return "%ld" ; }
-constexpr char const * pf(long long)          { return "%lld"; }
-constexpr char const * pf(unsigned int)       { return "%u"  ; }
-constexpr char const * pf(unsigned long)      { return "%lu" ; }
-constexpr char const * pf(unsigned long long) { return "%llu"; }
-constexpr char const * pf(float)              { return "%f"  ; }
-constexpr char const * pf(double)             { return "%f"  ; }
-constexpr char const * pf(long double)        { return "%Lf" ; }
-
-} // internal-linkage
 
 template <typename T>
 struct hash : public std::hash<T> {};
@@ -78,33 +65,20 @@ template <> struct hash<wstring> {
     }
 };
 
-template <typename T>
-ipc::string to_string(T val) {
-    char buf[std::numeric_limits<T>::digits10 + 1] {};
-    if (std::snprintf(buf, sizeof(buf), pf(val), val) > 0) {
-        return buf;
-    }
-    return {};
-}
-
 /// \brief Check string validity.
 constexpr bool is_valid_string(char const *str) noexcept {
     return (str != nullptr) && (str[0] != '\0');
 }
 
 /// \brief Make a valid string.
-inline ipc::string make_string(char const *str) {
-    return is_valid_string(str) ? ipc::string{str} : ipc::string{};
+inline std::string make_string(char const *str) {
+    return is_valid_string(str) ? std::string{str} : std::string{};
 }
 
 /// \brief Combine prefix from a list of strings.
-inline ipc::string make_prefix(ipc::string prefix, std::initializer_list<ipc::string> args) {
-    prefix += "__IPC_SHM__";
-    for (auto const &txt: args) {
-        if (txt.empty()) continue;
-        prefix += txt;
-    }
-    return prefix;
+template <typename... A>
+inline std::string make_prefix(std::string prefix, A &&...args) {
+    return ipc::fmt(prefix, "__IPC_SHM__", std::forward<A>(args)...);
 }
 
 } // namespace ipc
