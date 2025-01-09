@@ -11,7 +11,6 @@
 #include "libipc/rw_lock.h"
 
 #include "libipc/utility/concept.h"
-#include "libipc/memory/allocator_wrapper.h"
 #include "libipc/platform/detail.h"
 
 namespace ipc {
