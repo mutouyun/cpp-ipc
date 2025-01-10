@@ -3,6 +3,7 @@
 
 #include "libipc/imp/log.h"
 #include "libipc/mem/allocator.h"
+#include "libipc/mem/memory_resource.h"
 
 namespace ipc {
 namespace mem {
@@ -13,6 +14,10 @@ allocator::holder_mr_base &allocator::get_holder() noexcept {
 
 allocator::holder_mr_base const &allocator::get_holder() const noexcept {
   return *reinterpret_cast<holder_mr_base const *>(holder_.data());
+}
+
+void allocator::init_default_resource() noexcept {
+  std::ignore = ipc::construct<holder_mr<new_delete_resource>>(holder_.data(), new_delete_resource::get());
 }
 
 allocator::allocator() noexcept
