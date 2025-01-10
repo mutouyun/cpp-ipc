@@ -4,7 +4,12 @@
 
 #include "test.h"
 
+#if defined(LIBIPC_CPP_17) && defined(__cpp_lib_memory_resource)
+# include <memory_resource>
+#endif
+
 #include "libipc/mem/allocator.h"
+#include "libipc/mem/memory_resource.h"
 
 TEST(allocator, construct) {
   ipc::mem::allocator alc;
@@ -31,6 +36,26 @@ public:
 };
 
 } // namespace
+
+TEST(allocator, memory_resource_traits) {
+  EXPECT_FALSE(ipc::mem::has_allocate<void>::value);
+  EXPECT_FALSE(ipc::mem::has_allocate<int>::value);
+  EXPECT_FALSE(ipc::mem::has_allocate<std::vector<int>>::value);
+  EXPECT_FALSE(ipc::mem::has_allocate<std::allocator<int>>::value);
+#if defined(LIBIMP_CPP_17) && defined(__cpp_lib_memory_resource)
+  EXPECT_TRUE (ipc::mem::has_allocate<std::ipc::mem::memory_resource>::value);
+  EXPECT_TRUE (ipc::mem::has_allocate<std::ipc::mem::polymorphic_allocator<int>>::value);
+#endif
+
+  EXPECT_FALSE(ipc::mem::has_deallocate<void>::value);
+  EXPECT_FALSE(ipc::mem::has_deallocate<int>::value);
+  EXPECT_FALSE(ipc::mem::has_deallocate<std::vector<int>>::value);
+  EXPECT_FALSE(ipc::mem::has_deallocate<std::allocator<int>>::value);
+#if defined(LIBIMP_CPP_17) && defined(__cpp_lib_memory_resource)
+  EXPECT_TRUE (ipc::mem::has_deallocate<std::ipc::mem::memory_resource>::value);
+  EXPECT_FALSE(ipc::mem::has_deallocate<std::ipc::mem::polymorphic_allocator<int>>::value);
+#endif
+}
 
 TEST(allocator, construct_copy_move) {
   ipc::mem::new_delete_resource mem_res;

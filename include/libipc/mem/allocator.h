@@ -15,10 +15,36 @@
 #include "libipc/imp/export.h"
 #include "libipc/imp/uninitialized.h"
 #include "libipc/imp/byte.h"
-#include "libipc/mem/memory_resource.h"
 
 namespace ipc {
 namespace mem {
+
+/// \brief Helper trait for memory resource.
+
+template <typename T, typename = void>
+struct has_allocate : std::false_type {};
+
+template <typename T>
+struct has_allocate<T, 
+  typename std::enable_if<std::is_convertible<
+  decltype(std::declval<T &>().allocate(std::declval<std::size_t>(), 
+                                        std::declval<std::size_t>())), void *
+  >::value>::type> : std::true_type {};
+
+template <typename T, typename = void>
+struct has_deallocate : std::false_type {};
+
+template <typename T>
+struct has_deallocate<T, 
+  decltype(std::declval<T &>().deallocate(std::declval<void *>(), 
+                                          std::declval<std::size_t>(), 
+                                          std::declval<std::size_t>()))
+  > : std::true_type {};
+
+template <typename T>
+using is_memory_resource = 
+  std::enable_if_t<has_allocate  <T>::value && 
+                   has_deallocate<T>::value, bool>;
 
 /**
  * \brief An allocator which exhibits different allocation behavior 
@@ -57,7 +83,7 @@ class LIBIPC_EXPORT allocator {
     holder_mr(MR *p_mr) noexcept
       : res_(p_mr) {}
 
-    // [MSVC] error C2259: 'pmr::allocator::holder_mr<void *,bool>': cannot instantiate abstract class.
+    // [MSVC] error C2259: 'allocator::holder_mr<void *,bool>': cannot instantiate abstract class.
     void *alloc(std::size_t s, std::size_t a) const override { return nullptr; }
     void dealloc(void *p, std::size_t s, std::size_t a) const override {}
   };
@@ -67,7 +93,7 @@ class LIBIPC_EXPORT allocator {
    * \tparam MR memory resource type
    */
   template <typename MR>
-  class holder_mr<MR, verify_memory_resource<MR>> : public holder_mr<MR, void> {
+  class holder_mr<MR, is_memory_resource<MR>> : public holder_mr<MR, void> {
     using base_t = holder_mr<MR, void>;
 
   public:
@@ -89,6 +115,8 @@ class LIBIPC_EXPORT allocator {
   holder_mr_base &      get_holder() noexcept;
   holder_mr_base const &get_holder() const noexcept;
 
+  void init_default_resource() noexcept;
+
 public:
   /// \brief Constructs an `allocator` using the return value of 
   ///       `new_delete_resource::get()` as the underlying memory resource.
@@ -103,13 +131,13 @@ public:
 
   /// \brief Constructs a allocator from a memory resource pointer.
   /// \note The lifetime of the pointer must be longer than that of allocator.
-  template <typename T, verify_memory_resource<T> = true>
+  template <typename T, is_memory_resource<T> = true>
   allocator(T *p_mr) noexcept {
     if (p_mr == nullptr) {
-      ipc::construct<holder_mr<new_delete_resource>>(holder_.data(), new_delete_resource::get());
+      init_default_resource();
       return;
     }
-    ipc::construct<holder_mr<T>>(holder_.data(), p_mr);
+    std::ignore = ipc::construct<holder_mr<T>>(holder_.data(), p_mr);
   }
 
   void swap(allocator &other) noexcept;
