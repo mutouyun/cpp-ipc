@@ -1,7 +1,7 @@
 /**
  * \file libipc/memory_resource.h
  * \author mutouyun (orz@orzz.org)
- * \brief Implement memory allocation strategies that can be used by pmr::allocator.
+ * \brief Implement memory allocation strategies that can be used by ipc::mem::allocator.
  */
 #pragma once
 
@@ -9,37 +9,12 @@
 #include <cstddef>  // std::size_t, std::max_align_t
 
 #include "libipc/imp/export.h"
-#include "libipc/def.h"
+#include "libipc/imp/span.h"
+#include "libipc/imp/byte.h"
+#include "libipc/mem/allocator.h"
 
 namespace ipc {
 namespace mem {
-
-/// \brief Helper trait for memory resource.
-
-template <typename T, typename = void>
-struct has_allocate : std::false_type {};
-
-template <typename T>
-struct has_allocate<T, 
-  typename std::enable_if<std::is_convertible<
-  decltype(std::declval<T &>().allocate(std::declval<std::size_t>(), 
-                                        std::declval<std::size_t>())), void *
-  >::value>::type> : std::true_type {};
-
-template <typename T, typename = void>
-struct has_deallocate : std::false_type {};
-
-template <typename T>
-struct has_deallocate<T, 
-  decltype(std::declval<T &>().deallocate(std::declval<void *>(), 
-                                          std::declval<std::size_t>(), 
-                                          std::declval<std::size_t>()))
-  > : std::true_type {};
-
-template <typename T>
-using verify_memory_resource = 
-  std::enable_if_t<has_allocate  <T>::value && 
-                   has_deallocate<T>::value, bool>;
 
 /**
  * \class LIBIPC_EXPORT new_delete_resource
@@ -59,6 +34,48 @@ public:
 
   /// \brief Deallocates the storage pointed to by p.
   /// \see https://en.cppreference.com/w/cpp/memory/memory_resource/deallocate
+  void deallocate(void *p, std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept;
+};
+
+/**
+ * \class LIBIPC_EXPORT monotonic_buffer_resource
+ * \brief A special-purpose memory resource class 
+ *        that releases the allocated memory only when the resource is destroyed.
+ * \see https://en.cppreference.com/w/cpp/memory/monotonic_buffer_resource
+ */
+class LIBIPC_EXPORT monotonic_buffer_resource {
+
+  allocator upstream_;
+
+  struct node {
+    node *next;
+    std::size_t size;
+  } *free_list_;
+
+  ipc::byte * head_;
+  ipc::byte * tail_;
+  std::size_t next_size_;
+
+  ipc::byte * const initial_buffer_;
+  std::size_t const initial_size_;
+
+public:
+  monotonic_buffer_resource() noexcept;
+  explicit monotonic_buffer_resource(allocator upstream) noexcept;
+  explicit monotonic_buffer_resource(std::size_t initial_size) noexcept;
+  monotonic_buffer_resource(std::size_t initial_size, allocator upstream) noexcept;
+  monotonic_buffer_resource(ipc::span<ipc::byte> buffer) noexcept;
+  monotonic_buffer_resource(ipc::span<ipc::byte> buffer, allocator upstream) noexcept;
+
+  ~monotonic_buffer_resource() noexcept;
+
+  monotonic_buffer_resource(monotonic_buffer_resource const &) = delete;
+  monotonic_buffer_resource &operator=(monotonic_buffer_resource const &) = delete;
+
+  allocator upstream_resource() const noexcept;
+  void release() noexcept;
+
+  void *allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept;
   void deallocate(void *p, std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept;
 };
 
