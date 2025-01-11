@@ -199,6 +199,7 @@ void fmt_context::expend(std::size_t sz) noexcept {
 
 bool fmt_context::append(span<char const> const &str) noexcept {
   auto sz = str.size();
+  if (sz == 0) return true;
   if (str.back() == '\0') --sz;
   auto sbuf = buffer(sz);
   if (sbuf.size() < sz) {
