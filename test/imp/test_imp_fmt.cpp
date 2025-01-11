@@ -110,6 +110,13 @@ TEST(fmt, fmt) {
   std::string test(4096, ' ');
   std::memcpy(&test[test.size() - sizeof(txt) + 1], txt, sizeof(txt) - 1);
   EXPECT_EQ(s, test);
+
+  EXPECT_EQ(ipc::fmt("", 1, "", '2', "", 3.0), "123.000000");
+  std::string empty;
+  EXPECT_EQ(ipc::fmt(empty, 1, "", '2', "", 3.0), "123.000000");
+  EXPECT_EQ(ipc::fmt(empty, 1, empty, '2', "", 3.0), "123.000000");
+  EXPECT_EQ(ipc::fmt("", 1, empty, '2', empty, 3.0), "123.000000");
+  EXPECT_EQ(ipc::fmt("", 1, "", '2', empty), "12");
 }
 
 namespace {

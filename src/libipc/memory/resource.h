@@ -46,9 +46,9 @@ inline std::string make_string(char const *str) {
 }
 
 /// \brief Combine prefix from a list of strings.
-template <typename... A>
-inline std::string make_prefix(std::string prefix, A &&...args) {
-  return ipc::fmt(prefix, "__IPC_SHM__", std::forward<A>(args)...);
+template <typename A1, typename... A>
+inline std::string make_prefix(A1 &&prefix, A &&...args) {
+  return ipc::fmt(std::forward<A1>(prefix), "__IPC_SHM__", std::forward<A>(args)...);
 }
 
 } // namespace ipc
