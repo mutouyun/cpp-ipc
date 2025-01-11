@@ -221,8 +221,11 @@ bool to_string(fmt_context &ctx, std::string const &a) noexcept {
 }
 
 bool to_string(fmt_context &ctx, char const *a, span<char const> fstr) noexcept {
-  if (a == nullptr) return false;
-  return ipc::sprintf(ctx, fmt_of, fstr, "s", a);
+  if (a == nullptr) {
+    return ipc::sprintf(ctx, fmt_of, fstr, "s", "");
+  } else {
+    return ipc::sprintf(ctx, fmt_of, fstr, "s", a);
+  }
 }
 
 bool to_string(fmt_context &ctx, char a) noexcept {
