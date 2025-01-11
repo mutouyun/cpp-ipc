@@ -2,7 +2,7 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ master, develop, issue-* ]
+    branches: [ master, develop, issue-*, feature/* ]
   pull_request:
     branches: [ master, develop ]
 
