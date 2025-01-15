@@ -7,7 +7,7 @@
 #include "libipc/def.h"
 #include "libipc/memory/alloc.h"
 #include "libipc/imp/fmt.h"
-#include "libipc/mem/allocator.h"
+#include "libipc/mem/polymorphic_allocator.h"
 
 namespace ipc {
 namespace mem {
