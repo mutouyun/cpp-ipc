@@ -42,11 +42,11 @@ TEST(memory_resource, new_delete_resource) {
 TEST(memory_resource, monotonic_buffer_resource_construct) {
   { ipc::mem::monotonic_buffer_resource tmp; }
   ipc::mem::monotonic_buffer_resource{};
-  ipc::mem::monotonic_buffer_resource{ipc::mem::allocator{}};
+  ipc::mem::monotonic_buffer_resource{ipc::mem::bytes_allocator{}};
   ipc::mem::monotonic_buffer_resource{0};
-  ipc::mem::monotonic_buffer_resource{0, ipc::mem::allocator{}};
+  ipc::mem::monotonic_buffer_resource{0, ipc::mem::bytes_allocator{}};
   ipc::mem::monotonic_buffer_resource{ipc::span<ipc::byte>{}};
-  ipc::mem::monotonic_buffer_resource{ipc::span<ipc::byte>{}, ipc::mem::allocator{}};
+  ipc::mem::monotonic_buffer_resource{ipc::span<ipc::byte>{}, ipc::mem::bytes_allocator{}};
   SUCCEED();
 }
 
