@@ -13,7 +13,7 @@ namespace mem {
 namespace {
 
 template <typename Node>
-Node *make_node(allocator const &upstream, std::size_t initial_size, std::size_t alignment) noexcept {
+Node *make_node(bytes_allocator const &upstream, std::size_t initial_size, std::size_t alignment) noexcept {
   LIBIPC_LOG();
   auto sz = ipc::round_up(sizeof(Node), alignment) + initial_size;
   LIBIPC_TRY {
@@ -41,15 +41,15 @@ std::size_t next_buffer_size(std::size_t size) noexcept {
 } // namespace
 
 monotonic_buffer_resource::monotonic_buffer_resource() noexcept
-  : monotonic_buffer_resource(allocator{}) {}
+  : monotonic_buffer_resource(bytes_allocator{}) {}
 
-monotonic_buffer_resource::monotonic_buffer_resource(allocator upstream) noexcept
+monotonic_buffer_resource::monotonic_buffer_resource(bytes_allocator upstream) noexcept
   : monotonic_buffer_resource(0, std::move(upstream)) {}
 
 monotonic_buffer_resource::monotonic_buffer_resource(std::size_t initial_size) noexcept
-  : monotonic_buffer_resource(initial_size, allocator{}) {}
+  : monotonic_buffer_resource(initial_size, bytes_allocator{}) {}
 
-monotonic_buffer_resource::monotonic_buffer_resource(std::size_t initial_size, allocator upstream) noexcept
+monotonic_buffer_resource::monotonic_buffer_resource(std::size_t initial_size, bytes_allocator upstream) noexcept
   : upstream_      (std::move(upstream))
   , free_list_     (nullptr)
   , head_          (nullptr)
@@ -59,9 +59,9 @@ monotonic_buffer_resource::monotonic_buffer_resource(std::size_t initial_size, a
   , initial_size_  (initial_size) {}
 
 monotonic_buffer_resource::monotonic_buffer_resource(ipc::span<ipc::byte> buffer) noexcept
-  : monotonic_buffer_resource(buffer, allocator{}) {}
+  : monotonic_buffer_resource(buffer, bytes_allocator{}) {}
 
-monotonic_buffer_resource::monotonic_buffer_resource(ipc::span<ipc::byte> buffer, allocator upstream) noexcept
+monotonic_buffer_resource::monotonic_buffer_resource(ipc::span<ipc::byte> buffer, bytes_allocator upstream) noexcept
   : upstream_      (std::move(upstream))
   , free_list_     (nullptr)
   , head_          (buffer.begin())
@@ -74,7 +74,7 @@ monotonic_buffer_resource::~monotonic_buffer_resource() noexcept {
   release();
 }
 
-allocator monotonic_buffer_resource::upstream_resource() const noexcept {
+bytes_allocator monotonic_buffer_resource::upstream_resource() const noexcept {
   return upstream_;
 }
 
