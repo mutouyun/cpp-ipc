@@ -1,5 +1,5 @@
 /**
- * \file libipc/allocator.h
+ * \file libipc/polymorphic_allocator
  * \author mutouyun (orz@orzz.org)
  * \brief A generic polymorphic memory allocator.
  */
@@ -58,7 +58,7 @@ using is_memory_resource =
  * \see https://en.cppreference.com/w/cpp/memory/memory_resource
  *      https://en.cppreference.com/w/cpp/memory/polymorphic_allocator
  */
-class LIBIPC_EXPORT allocator {
+class LIBIPC_EXPORT bytes_allocator {
 
   class holder_mr_base {
   public:
@@ -83,7 +83,7 @@ class LIBIPC_EXPORT allocator {
     holder_mr(MR *p_mr) noexcept
       : res_(p_mr) {}
 
-    // [MSVC] error C2259: 'allocator::holder_mr<void *,bool>': cannot instantiate abstract class.
+    // [MSVC] error C2259: 'bytes_allocator::holder_mr<void *,bool>': cannot instantiate abstract class.
     void *alloc(std::size_t s, std::size_t a) const override { return nullptr; }
     void dealloc(void *p, std::size_t s, std::size_t a) const override {}
   };
@@ -118,21 +118,21 @@ class LIBIPC_EXPORT allocator {
   void init_default_resource() noexcept;
 
 public:
-  /// \brief Constructs an `allocator` using the return value of 
+  /// \brief Constructs an `bytes_allocator` using the return value of 
   ///       `new_delete_resource::get()` as the underlying memory resource.
-  allocator() noexcept;
-  ~allocator() noexcept;
+  bytes_allocator() noexcept;
+  ~bytes_allocator() noexcept;
 
-  allocator(allocator const &other) noexcept = default;
-  allocator &operator=(allocator const &other) & noexcept = default;
+  bytes_allocator(bytes_allocator const &other) noexcept = default;
+  bytes_allocator &operator=(bytes_allocator const &other) & noexcept = default;
 
-  allocator(allocator &&other) noexcept = default;
-  allocator &operator=(allocator &&other) & noexcept = default;
+  bytes_allocator(bytes_allocator &&other) noexcept = default;
+  bytes_allocator &operator=(bytes_allocator &&other) & noexcept = default;
 
-  /// \brief Constructs a allocator from a memory resource pointer.
-  /// \note The lifetime of the pointer must be longer than that of allocator.
+  /// \brief Constructs a `bytes_allocator` from a memory resource pointer.
+  /// \note The lifetime of the pointer must be longer than that of bytes_allocator.
   template <typename T, is_memory_resource<T> = true>
-  allocator(T *p_mr) noexcept {
+  bytes_allocator(T *p_mr) noexcept {
     if (p_mr == nullptr) {
       init_default_resource();
       return;
@@ -140,7 +140,7 @@ public:
     std::ignore = ipc::construct<holder_mr<T>>(holder_.data(), p_mr);
   }
 
-  void swap(allocator &other) noexcept;
+  void swap(bytes_allocator &other) noexcept;
 
   /// \brief Allocate/deallocate memory.
   void *allocate(std::size_t s, std::size_t = alignof(std::max_align_t)) const;
@@ -161,7 +161,7 @@ public:
 
 /**
  * \brief An allocator that can be used by all standard library containers, 
- *        based on ipc::allocator.
+ *        based on ipc::bytes_allocator.
  * 
  * \see https://en.cppreference.com/w/cpp/memory/allocator
  *      https://en.cppreference.com/w/cpp/memory/polymorphic_allocator
@@ -183,7 +183,7 @@ public:
   typedef std::ptrdiff_t    difference_type;
 
 private:
-  allocator alloc_;
+  bytes_allocator alloc_;
 
 public:
   // the other type of std_allocator
@@ -193,6 +193,9 @@ public:
   };
 
   polymorphic_allocator() noexcept {}
+
+  template <typename P, is_memory_resource<P> = true>
+  polymorphic_allocator(P *p_mr) noexcept : alloc_(p_mr) {}
 
   // construct by copying (do nothing)
   polymorphic_allocator           (polymorphic_allocator<T> const &) noexcept {}

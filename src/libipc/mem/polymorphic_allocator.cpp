@@ -2,36 +2,36 @@
 #include <algorithm>  // std::swap
 
 #include "libipc/imp/log.h"
-#include "libipc/mem/allocator.h"
+#include "libipc/mem/polymorphic_allocator.h"
 #include "libipc/mem/memory_resource.h"
 
 namespace ipc {
 namespace mem {
 
-allocator::holder_mr_base &allocator::get_holder() noexcept {
+bytes_allocator::holder_mr_base &bytes_allocator::get_holder() noexcept {
   return *reinterpret_cast<holder_mr_base *>(holder_.data());
 }
 
-allocator::holder_mr_base const &allocator::get_holder() const noexcept {
+bytes_allocator::holder_mr_base const &bytes_allocator::get_holder() const noexcept {
   return *reinterpret_cast<holder_mr_base const *>(holder_.data());
 }
 
-void allocator::init_default_resource() noexcept {
+void bytes_allocator::init_default_resource() noexcept {
   std::ignore = ipc::construct<holder_mr<new_delete_resource>>(holder_.data(), new_delete_resource::get());
 }
 
-allocator::allocator() noexcept
-  : allocator(new_delete_resource::get()) {}
+bytes_allocator::bytes_allocator() noexcept
+  : bytes_allocator(new_delete_resource::get()) {}
 
-allocator::~allocator() noexcept {
+bytes_allocator::~bytes_allocator() noexcept {
   ipc::destroy(&get_holder());
 }
 
-void allocator::swap(allocator &other) noexcept {
+void bytes_allocator::swap(bytes_allocator &other) noexcept {
   std::swap(this->holder_, other.holder_);
 }
 
-void *allocator::allocate(std::size_t s, std::size_t a) const {
+void *bytes_allocator::allocate(std::size_t s, std::size_t a) const {
   LIBIPC_LOG();
   if ((a & (a - 1)) != 0) {
     log.error("failed: allocate alignment is not a power of 2.");
@@ -40,7 +40,7 @@ void *allocator::allocate(std::size_t s, std::size_t a) const {
   return get_holder().alloc(s, a);
 }
 
-void allocator::deallocate(void *p, std::size_t s, std::size_t a) const {
+void bytes_allocator::deallocate(void *p, std::size_t s, std::size_t a) const {
   LIBIPC_LOG();
   if ((a & (a - 1)) != 0) {
     log.error("failed: allocate alignment is not a power of 2.");
