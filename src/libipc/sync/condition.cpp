@@ -3,7 +3,7 @@
 
 #include "libipc/utility/pimpl.h"
 #include "libipc/utility/log.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 #include "libipc/platform/detail.h"
 #if defined(LIBIPC_OS_WIN)
 #include "libipc/platform/win/condition.h"
