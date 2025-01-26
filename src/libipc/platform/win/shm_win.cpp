@@ -14,7 +14,7 @@
 #include "libipc/pool_alloc.h"
 
 #include "libipc/utility/log.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 
 #include "to_tchar.h"
 #include "get_sa.h"

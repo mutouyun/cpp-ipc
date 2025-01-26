@@ -25,7 +25,7 @@
 #include "libipc/utility/scope_guard.h"
 #include "libipc/utility/utility.h"
 
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 #include "libipc/platform/detail.h"
 #include "libipc/circ/elem_array.h"
 

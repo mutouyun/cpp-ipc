@@ -6,7 +6,7 @@
 
 #include "libipc/utility/pimpl.h"
 #include "libipc/utility/log.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 
 namespace ipc {
 namespace shm {

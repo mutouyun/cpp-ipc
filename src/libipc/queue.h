@@ -18,7 +18,7 @@
 #include "libipc/utility/log.h"
 #include "libipc/platform/detail.h"
 #include "libipc/circ/elem_def.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 
 namespace ipc {
 namespace detail {
