@@ -139,6 +139,22 @@ TEST(new, delete_null) {
   SUCCEED();
 }
 
+TEST(new, malloc) {
+  void *p = ipc::mem::$new<void>(0);
+  ASSERT_EQ(p, nullptr);
+  ipc::mem::$delete(p);
+  p = ipc::mem::$new<void>(1024);
+  ASSERT_NE(p, nullptr);
+  ipc::mem::$delete(p);
+
+  p = ipc::mem::$new<Derived>(-1);
+  ASSERT_NE(p, nullptr);
+  ASSERT_EQ(((Derived *)p)->get(), -1);
+  ASSERT_EQ(construct_count__, -1);
+  ipc::mem::$delete(p);
+  ASSERT_EQ(construct_count__, 0);
+}
+
 TEST(new, multi_thread) {
   std::array<std::thread, 16> threads;
   for (auto &t : threads) {
