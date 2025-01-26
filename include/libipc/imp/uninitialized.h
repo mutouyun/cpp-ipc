@@ -53,6 +53,11 @@ void *destroy(T *p) noexcept {
   return p;
 }
 
+template <>
+inline void *destroy<void>(void *p) noexcept {
+  return p;
+}
+
 template <typename T, std::size_t N>
 void *destroy(T (*p)[N]) noexcept {
   if (p == nullptr) return nullptr;
