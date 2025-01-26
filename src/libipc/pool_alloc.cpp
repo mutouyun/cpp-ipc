@@ -1,6 +1,6 @@
 #include "libipc/pool_alloc.h"
 
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 
 namespace ipc {
 namespace mem {
