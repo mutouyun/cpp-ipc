@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <type_traits>
 #include <limits>
+#include <tuple>
 
 #include "libipc/imp/aligned.h"
 #include "libipc/imp/uninitialized.h"
@@ -29,13 +30,13 @@ public:
 };
 
 #if defined(LIBIPC_CPP_17)
-using get_block_collector_t = block_collector *(*)() noexcept;
+using recycle_t = void (*)(void *p, void *o, std::size_t bytes, std::size_t alignment) noexcept;
 #else
-using get_block_collector_t = block_collector *(*)();
+using recycle_t = void (*)(void *p, void *o, std::size_t bytes, std::size_t alignment);
 #endif
 
 static constexpr std::size_t regular_head_size
-    = round_up(sizeof(get_block_collector_t), alignof(std::max_align_t));
+    = round_up(sizeof(recycle_t), alignof(std::max_align_t));
 
 /// \brief Select the incremental level based on the size.
 constexpr inline std::size_t regular_level(std::size_t s) noexcept {
@@ -62,6 +63,11 @@ constexpr inline std::size_t regular_sizeof_impl(std::size_t s) noexcept {
 template <typename T>
 constexpr inline std::size_t regular_sizeof() noexcept {
   return regular_sizeof_impl(regular_head_size + sizeof(T));
+}
+
+template <>
+constexpr inline std::size_t regular_sizeof<void>() noexcept {
+  return (std::numeric_limits<std::size_t>::max)();
 }
 
 /// \brief Use block pools to handle memory less than 64K.
@@ -107,20 +113,21 @@ public:
     return &instance;
   }
 
+  template <typename T>
   void *allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept {
     void *p = base_t::allocate(bytes, alignment);
-    *static_cast<get_block_collector_t *>(p) = get;
+    *static_cast<recycle_t *>(p)
+      = [](void *p, void *o, std::size_t bytes, std::size_t alignment) noexcept {
+          std::ignore = destroy(static_cast<T *>(o));
+          get()->recycle(p, bytes, alignment);
+        };
     return static_cast<byte *>(p) + regular_head_size;
   }
 
   void deallocate(void *p, std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept {
-    p = static_cast<byte *>(p) - regular_head_size;
-    auto g = *static_cast<get_block_collector_t *>(p);
-    if (g == get) {
-      base_t::deallocate(p, bytes, alignment);
-      return;
-    }
-    g()->recycle(p, bytes, alignment);
+    void *b = static_cast<byte *>(p) - regular_head_size;
+    auto *r = static_cast<recycle_t *>(b);
+    (*r)(b, p, bytes, alignment);
   }
 };
 
@@ -141,13 +148,59 @@ auto *get_regular_resource() noexcept {
   return dynamic_cast<block_poll_resource_t *>(block_poll_resource_t::get());
 }
 
+namespace detail_new {
+
+template <typename T>
+struct do_allocate {
+  template <typename R, typename... A>
+  static T *apply(R *res, A &&... args) noexcept {
+    LIBIPC_TRY {
+      return construct<T>(res->template allocate<T>(sizeof(T), alignof(T)), std::forward<A>(args)...);
+    } LIBIPC_CATCH(...) {
+      return nullptr;
+    }
+  }
+};
+
+template <>
+struct do_allocate<void> {
+  template <typename R>
+  static void *apply(R *res, std::size_t bytes) noexcept {
+    if (bytes == 0) return nullptr;
+    return res->template allocate<void>(bytes);
+  }
+};
+
+template <typename T>
+struct do_deallocate {
+  template <typename R>
+  static void apply(R *res, T *p) noexcept {
+#if (LIBIPC_CC_MSVC > LIBIPC_CC_MSVC_2015)
+    res->deallocate(p, sizeof(T), alignof(T));
+#else
+    // `alignof` of vs2015 requires that type must be able to be instantiated.
+    res->deallocate(p, sizeof(T));
+#endif
+  }
+};
+
+template <>
+struct do_deallocate<void> {
+  template <typename R>
+  static void apply(R *res, void *p) noexcept {
+    res->deallocate(p, 0);
+  }
+};
+
+} // namespace detail_new
+
 /// \brief Creates an object based on the specified type and parameters with block pool resource.
 /// \note This function is thread-safe.
 template <typename T, typename... A>
 T *$new(A &&... args) noexcept {
   auto *res = get_regular_resource<T>();
   if (res == nullptr) return nullptr;
-  return construct<T>(res->allocate(sizeof(T), alignof(T)), std::forward<A>(args)...);
+  return detail_new::do_allocate<T>::apply(res, std::forward<A>(args)...);
 }
 
 /// \brief Destroys object previously allocated by the `$new` and releases obtained memory area.
@@ -156,15 +209,9 @@ T *$new(A &&... args) noexcept {
 template <typename T>
 void $delete(T *p) noexcept {
   if (p == nullptr) return;
-  destroy(p);
   auto *res = get_regular_resource<T>();
   if (res == nullptr) return;
-#if (LIBIPC_CC_MSVC > LIBIPC_CC_MSVC_2015)
-  res->deallocate(p, sizeof(T), alignof(T));
-#else
-  // `alignof` of vs2015 requires that type must be able to be instantiated.
-  res->deallocate(p, sizeof(T));
-#endif
+  detail_new::do_deallocate<T>::apply(res, p);
 }
 
 /// \brief The destruction policy used by std::unique_ptr.
