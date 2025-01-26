@@ -7,7 +7,7 @@
 
 #include "libipc/platform/detail.h"
 #include "libipc/utility/log.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 #include "libipc/shm.h"
 
 #include "get_wait_time.h"

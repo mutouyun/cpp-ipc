@@ -15,7 +15,7 @@
 #include <cstddef>
 
 #include "libipc/utility/concept.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 #include "libipc/platform/detail.h"
 
 namespace ipc {
