@@ -26,13 +26,13 @@ namespace mem {
 class LIBIPC_EXPORT block_collector {
 public:
   virtual ~block_collector() noexcept = default;
-  virtual void recycle(void *p, std::size_t bytes, std::size_t alignment) noexcept = 0;
+  virtual void recycle(void *p) noexcept = 0;
 };
 
 #if defined(LIBIPC_CPP_17)
-using recycle_t = void (*)(void *p, void *o, std::size_t bytes, std::size_t alignment) noexcept;
+using recycle_t = void (*)(void *p, void *o) noexcept;
 #else
-using recycle_t = void (*)(void *p, void *o, std::size_t bytes, std::size_t alignment);
+using recycle_t = void (*)(void *p, void *o);
 #endif
 
 static constexpr std::size_t regular_head_size
@@ -60,14 +60,12 @@ constexpr inline std::size_t regular_sizeof_impl(std::size_t s) noexcept {
 }
 
 /// \brief Calculates the appropriate memory block size based on the specific type.
-template <typename T>
-constexpr inline std::size_t regular_sizeof() noexcept {
-  return regular_sizeof_impl(regular_head_size + sizeof(T));
+constexpr inline std::size_t regular_sizeof(std::size_t s) noexcept {
+  return regular_sizeof_impl(regular_head_size + s);
 }
-
-template <>
-constexpr inline std::size_t regular_sizeof<void>() noexcept {
-  return (std::numeric_limits<std::size_t>::max)();
+template <typename T, std::size_t S = sizeof(T)>
+constexpr inline std::size_t regular_sizeof() noexcept {
+  return regular_sizeof(S);
 }
 
 /// \brief Use block pools to handle memory less than 64K.
@@ -78,7 +76,7 @@ public:
     return block_pool<BlockSize, BlockPoolExpansion>::allocate();
   }
 
-  void deallocate(void *p, std::size_t /*bytes*/, std::size_t /*alignment*/) noexcept {
+  void deallocate(void *p) noexcept {
     block_pool<BlockSize, BlockPoolExpansion>::deallocate(p);
   }
 };
@@ -91,8 +89,8 @@ public:
     return new_delete_resource::allocate(regular_head_size + bytes, alignment);
   }
 
-  void deallocate(void *p, std::size_t bytes, std::size_t alignment) noexcept {
-    new_delete_resource::deallocate(p, regular_head_size + bytes, alignment);
+  void deallocate(void *p) noexcept {
+    new_delete_resource::deallocate(p, regular_head_size);
   }
 };
 
@@ -103,8 +101,8 @@ class block_pool_resource : public block_resource_base<BlockSize, BlockPoolExpan
 
   using base_t = block_resource_base<BlockSize, BlockPoolExpansion>;
 
-  void recycle(void *p, std::size_t bytes, std::size_t alignment) noexcept override {
-    base_t::deallocate(p, bytes, alignment);
+  void recycle(void *p) noexcept override {
+    base_t::deallocate(p);
   }
 
 public:
@@ -115,19 +113,13 @@ public:
 
   template <typename T>
   void *allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept {
-    void *p = base_t::allocate(bytes, alignment);
-    *static_cast<recycle_t *>(p)
-      = [](void *p, void *o, std::size_t bytes, std::size_t alignment) noexcept {
-          std::ignore = destroy(static_cast<T *>(o));
-          get()->recycle(p, bytes, alignment);
+    void *b = base_t::allocate(bytes, alignment);
+    *static_cast<recycle_t *>(b)
+      = [](void *b, void *p) noexcept {
+          std::ignore = destroy(static_cast<T *>(p));
+          get()->recycle(b);
         };
-    return static_cast<byte *>(p) + regular_head_size;
-  }
-
-  void deallocate(void *p, std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) noexcept {
-    void *b = static_cast<byte *>(p) - regular_head_size;
-    auto *r = static_cast<recycle_t *>(b);
-    (*r)(b, p, bytes, alignment);
+    return static_cast<byte *>(b) + regular_head_size;
   }
 };
 
@@ -145,6 +137,11 @@ template <> constexpr std::size_t block_pool_expansion<3> = 64;
 template <typename T, std::size_t N = regular_sizeof<T>(), std::size_t L = regular_level(N)>
 auto *get_regular_resource() noexcept {
   using block_poll_resource_t = block_pool_resource<N, block_pool_expansion<L>>;
+  return dynamic_cast<block_poll_resource_t *>(block_poll_resource_t::get());
+}
+template <typename T, std::enable_if_t<std::is_void<T>::value, bool> = true>
+auto *get_regular_resource() noexcept {
+  using block_poll_resource_t = block_pool_resource<0, 0>;
   return dynamic_cast<block_poll_resource_t *>(block_poll_resource_t::get());
 }
 
@@ -171,27 +168,6 @@ struct do_allocate<void> {
   }
 };
 
-template <typename T>
-struct do_deallocate {
-  template <typename R>
-  static void apply(R *res, T *p) noexcept {
-#if (LIBIPC_CC_MSVC > LIBIPC_CC_MSVC_2015)
-    res->deallocate(p, sizeof(T), alignof(T));
-#else
-    // `alignof` of vs2015 requires that type must be able to be instantiated.
-    res->deallocate(p, sizeof(T));
-#endif
-  }
-};
-
-template <>
-struct do_deallocate<void> {
-  template <typename R>
-  static void apply(R *res, void *p) noexcept {
-    res->deallocate(p, 0);
-  }
-};
-
 } // namespace detail_new
 
 /// \brief Creates an object based on the specified type and parameters with block pool resource.
@@ -209,9 +185,9 @@ T *$new(A &&... args) noexcept {
 template <typename T>
 void $delete(T *p) noexcept {
   if (p == nullptr) return;
-  auto *res = get_regular_resource<T>();
-  if (res == nullptr) return;
-  detail_new::do_deallocate<T>::apply(res, p);
+  auto *b = reinterpret_cast<byte *>(p) - regular_head_size;
+  auto *r = reinterpret_cast<recycle_t *>(b);
+  (*r)(b, p);
 }
 
 /// \brief The destruction policy used by std::unique_ptr.
