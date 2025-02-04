@@ -5,22 +5,10 @@
 #include <string>
 
 #include "libipc/def.h"
-#include "libipc/memory/alloc.h"
 #include "libipc/imp/fmt.h"
 #include "libipc/mem/polymorphic_allocator.h"
 
 namespace ipc {
-namespace mem {
-
-//using async_pool_alloc = static_wrapper<variable_wrapper<async_wrapper<
-//    detail::fixed_alloc<
-//        variable_alloc                           <sizeof(void*) * 1024 * 256>, 
-//        fixed_expand_policy<sizeof(void*) * 1024, sizeof(void*) * 1024 * 256>
-//    >, 
-//    default_recycler >>>;
-using async_pool_alloc = ipc::mem::static_alloc;
-
-} // namespace mem
 
 template <typename T>
 struct hash : public std::hash<T> {};

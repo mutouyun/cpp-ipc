@@ -14,7 +14,6 @@
 #include "libipc/ipc.h"
 #include "libipc/def.h"
 #include "libipc/shm.h"
-#include "libipc/pool_alloc.h"
 #include "libipc/queue.h"
 #include "libipc/policy.h"
 #include "libipc/rw_lock.h"
@@ -26,6 +25,7 @@
 #include "libipc/utility/utility.h"
 
 #include "libipc/mem/resource.h"
+#include "libipc/mem/new.h"
 #include "libipc/platform/detail.h"
 #include "libipc/circ/elem_array.h"
 
@@ -64,10 +64,15 @@ struct msg_t : msg_t<0, AlignSize> {
 };
 
 template <typename T>
-ipc::buff_t make_cache(T& data, std::size_t size) {
-    auto ptr = ipc::mem::alloc(size);
+ipc::buff_t make_cache(T &data, std::size_t size) {
+    auto *ptr = ipc::mem::$new<void>(size);
     std::memcpy(ptr, &data, (ipc::detail::min)(sizeof(data), size));
-    return { ptr, size, ipc::mem::free };
+    return {
+        ptr, size, 
+        [](void *p, std::size_t) noexcept {
+            ipc::mem::$delete(p);
+        }
+    };
 }
 
 acc_t *cc_acc(std::string const &pref) {
@@ -259,8 +264,8 @@ chunk_info_t *chunk_storage_info(conn_info_head *inf, std::size_t chunk_size) {
             guard.unlock();
             LIBIPC_UNUSED std::lock_guard<ipc::rw_lock> guard {lock};
             it = storages.emplace(chunk_size, chunk_handle_ptr_t{
-                ipc::mem::alloc<chunk_handle_t>(), [](chunk_handle_t *p) {
-                    ipc::mem::destruct(p);
+                ipc::mem::$new<chunk_handle_t>(), [](chunk_handle_t *p) {
+                    ipc::mem::$delete(p);
                 }}).first;
         }
     }
@@ -447,7 +452,7 @@ constexpr static queue_t* queue_of(ipc::handle_t h) noexcept {
 static bool connect(ipc::handle_t * ph, ipc::prefix pref, char const * name, bool start_to_recv) {
     assert(ph != nullptr);
     if (*ph == nullptr) {
-        *ph = ipc::mem::alloc<conn_info_t>(pref.str, name);
+        *ph = ipc::mem::$new<conn_info_t>(pref.str, name);
     }
     return reconnect(ph, start_to_recv);
 }
@@ -490,7 +495,7 @@ static bool reconnect(ipc::handle_t * ph, bool start_to_recv) {
 }
 
 static void destroy(ipc::handle_t h) noexcept {
-    ipc::mem::free(info_of(h));
+    ipc::mem::$delete(info_of(h));
 }
 
 static std::size_t recv_count(ipc::handle_t h) noexcept {
@@ -657,20 +662,20 @@ static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
                     conn_info_t *     inf;
                     ipc::circ::cc_t   curr_conns;
                     ipc::circ::cc_t   conn_id;
-                } *r_info = ipc::mem::alloc<recycle_t>(recycle_t{
+                } *r_info = ipc::mem::$new<recycle_t>(recycle_t{
                     buf_id, 
                     inf, 
                     que->elems()->connections(std::memory_order_relaxed), 
                     que->connected_id()
                 });
                 if (r_info == nullptr) {
-                    ipc::log("fail: ipc::mem::alloc<recycle_t>.\n");
+                    ipc::log("fail: ipc::mem::$new<recycle_t>.\n");
                     return ipc::buff_t{buf, msg_size}; // no recycle
                 } else {
                     return ipc::buff_t{buf, msg_size, [](void* p_info, std::size_t size) {
                         auto r_info = static_cast<recycle_t *>(p_info);
                         LIBIPC_UNUSED auto finally = ipc::guard([r_info] {
-                            ipc::mem::free(r_info);
+                            ipc::mem::$delete(r_info);
                         });
                         recycle_storage<flag_t>(r_info->storage_id, 
                                                 r_info->inf, 
