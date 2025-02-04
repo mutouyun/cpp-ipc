@@ -26,7 +26,7 @@ namespace mem {
 class LIBIPC_EXPORT block_collector {
 public:
   virtual ~block_collector() noexcept = default;
-  virtual void recycle(void *p) noexcept = 0;
+  virtual void recycle(void */*p*/) noexcept {}
 };
 
 #if defined(LIBIPC_CPP_17)
@@ -182,8 +182,7 @@ T *$new(A &&... args) noexcept {
 /// \brief Destroys object previously allocated by the `$new` and releases obtained memory area.
 /// \note This function is thread-safe. If the pointer type passed in is different from `$new`, 
 ///       additional performance penalties may be incurred.
-template <typename T>
-void $delete(T *p) noexcept {
+inline void $delete(void *p) noexcept {
   if (p == nullptr) return;
   auto *b = reinterpret_cast<byte *>(p) - regular_head_size;
   auto *r = reinterpret_cast<recycle_t *>(b);
