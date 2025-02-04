@@ -11,12 +11,12 @@
 #include "libipc/mem/polymorphic_allocator.h"
 #include "libipc/mem/memory_resource.h"
 
-TEST(polymorphic_allocator, construct) {
+TEST(polymorphic_allocator, ctor) {
   ipc::mem::bytes_allocator alc;
   SUCCEED();
 }
 
-TEST(polymorphic_allocator, construct_value_initialization) {
+TEST(polymorphic_allocator, ctor_value_initialization) {
   ipc::mem::bytes_allocator alc{};
   auto p = alc.allocate(128);
   EXPECT_NE(p, nullptr);
@@ -57,7 +57,7 @@ TEST(polymorphic_allocator, memory_resource_traits) {
 #endif
 }
 
-TEST(polymorphic_allocator, construct_copy_move) {
+TEST(polymorphic_allocator, ctor_copy_move) {
   ipc::mem::new_delete_resource mem_res;
   dummy_resource dummy_res;
   ipc::mem::bytes_allocator alc1{&mem_res}, alc2{&dummy_res};

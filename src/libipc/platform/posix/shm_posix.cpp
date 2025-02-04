@@ -13,10 +13,10 @@
 
 #include "libipc/shm.h"
 #include "libipc/def.h"
-#include "libipc/pool_alloc.h"
 
 #include "libipc/utility/log.h"
 #include "libipc/mem/resource.h"
+#include "libipc/mem/new.h"
 
 namespace {
 
@@ -86,7 +86,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     ::fchmod(fd, S_IRUSR | S_IWUSR | 
                  S_IRGRP | S_IWGRP | 
                  S_IROTH | S_IWOTH);
-    auto ii = mem::alloc<id_info_t>();
+    auto ii = mem::$new<id_info_t>();
     ii->fd_   = fd;
     ii->size_ = size;
     ii->name_ = std::move(op_name);
@@ -185,7 +185,7 @@ std::int32_t release(id_t id) noexcept {
         }
     }
     else ::munmap(ii->mem_, ii->size_);
-    mem::free(ii);
+    mem::$delete(ii);
     return ret;
 }
 

@@ -5,7 +5,7 @@
 
 #include "libipc/platform/detail.h"
 #include "libipc/utility/concept.h"
-#include "libipc/pool_alloc.h"
+#include "libipc/mem/new.h"
 
 namespace ipc {
 
@@ -36,12 +36,12 @@ IPC_CONSTEXPR_ auto clear_impl(T* p) -> IsImplComfortable<T, void> {
 
 template <typename T, typename... P>
 IPC_CONSTEXPR_ auto make_impl(P&&... params) -> IsImplUncomfortable<T> {
-    return mem::alloc<T>(std::forward<P>(params)...);
+    return mem::$new<T>(std::forward<P>(params)...);
 }
 
 template <typename T>
 IPC_CONSTEXPR_ auto clear_impl(T* p) -> IsImplUncomfortable<T, void> {
-    mem::free(p);
+    mem::$delete(p);
 }
 
 template <typename T>
