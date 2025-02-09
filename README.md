@@ -11,7 +11,7 @@
  * No other dependencies except STL.
  * Only lock-free or lightweight spin-lock is used.
  * Circular array is used as the underline data structure.
- * `ipc::route` supports single read and multiple write. `ipc::channel` supports multiple read and write. (**Note: currently, a channel supports up to 32 receivers, but there is no such a limit for the sender.**) 
+ * `ipc::route` supports single write and multiple read. `ipc::channel` supports multiple read and write. (**Note: currently, a channel supports up to 32 receivers, but there is no such a limit for the sender.**) 
  * Broadcasting is used by default, but user can choose any read/ write combinations.
  * No long time blind wait. (Semaphore will be used after a certain number of retries.) 
  * [Vcpkg](https://github.com/microsoft/vcpkg/blob/master/README.md) way of installation is supported. E.g. `vcpkg install cpp-ipc`
