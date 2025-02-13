@@ -6,7 +6,7 @@
 #include "libipc/def.h"
 #include "libipc/imp/detect_plat.h"
 #include "libipc/imp/byte.h"
-#include "libipc/mem/polymorphic_allocator.h"
+#include "libipc/mem/bytes_allocator.h"
 #include "libipc/mem/memory_resource.h"
 
 namespace ipc {

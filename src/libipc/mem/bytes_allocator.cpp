@@ -2,7 +2,7 @@
 #include <algorithm>  // std::swap
 
 #include "libipc/imp/log.h"
-#include "libipc/mem/polymorphic_allocator.h"
+#include "libipc/mem/bytes_allocator.h"
 #include "libipc/mem/memory_resource.h"
 
 namespace ipc {

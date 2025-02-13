@@ -1,5 +1,5 @@
 /**
- * \file libipc/polymorphic_allocator
+ * \file libipc/bytes_allocator.h
  * \author mutouyun (orz@orzz.org)
  * \brief A generic polymorphic memory allocator.
  */
@@ -50,13 +50,13 @@ using is_memory_resource =
  * \brief An allocator which exhibits different allocation behavior 
  *        depending upon the memory resource from which it is constructed.
  * 
- * \note Unlike `std::pmr::polymorphic_allocator`, it does not 
+ * \note Unlike `std::pmr::container_allocator`, it does not 
  *       rely on a specific inheritance relationship and only restricts 
  *       the interface behavior of the incoming memory resource object to 
  *       conform to `std::pmr::memory_resource`.
  * 
  * \see https://en.cppreference.com/w/cpp/memory/memory_resource
- *      https://en.cppreference.com/w/cpp/memory/polymorphic_allocator
+ *      https://en.cppreference.com/w/cpp/memory/container_allocator
  */
 class LIBIPC_EXPORT bytes_allocator {
 
@@ -158,89 +158,6 @@ public:
     deallocate(ipc::destroy(p), sizeof(T), alignof(T));
   }
 };
-
-/**
- * \brief An allocator that can be used by all standard library containers, 
- *        based on ipc::bytes_allocator.
- * 
- * \see https://en.cppreference.com/w/cpp/memory/allocator
- *      https://en.cppreference.com/w/cpp/memory/polymorphic_allocator
- */
-template <typename T>
-class polymorphic_allocator {
-
-  template <typename U>
-  friend class polymorphic_allocator;
-
-public:
-  // type definitions
-  typedef T                 value_type;
-  typedef value_type *      pointer;
-  typedef const value_type *const_pointer;
-  typedef value_type &      reference;
-  typedef const value_type &const_reference;
-  typedef std::size_t       size_type;
-  typedef std::ptrdiff_t    difference_type;
-
-private:
-  bytes_allocator alloc_;
-
-public:
-  // the other type of std_allocator
-  template <typename U>
-  struct rebind { 
-    using other = polymorphic_allocator<U>;
-  };
-
-  polymorphic_allocator() noexcept {}
-
-  template <typename P, is_memory_resource<P> = true>
-  polymorphic_allocator(P *p_mr) noexcept : alloc_(p_mr) {}
-
-  // construct by copying (do nothing)
-  polymorphic_allocator           (polymorphic_allocator<T> const &) noexcept {}
-  polymorphic_allocator& operator=(polymorphic_allocator<T> const &) noexcept { return *this; }
-
-  // construct from a related allocator (do nothing)
-  template <typename U> polymorphic_allocator           (polymorphic_allocator<U> const &) noexcept {}
-  template <typename U> polymorphic_allocator &operator=(polymorphic_allocator<U> const &) noexcept { return *this; }
-
-  polymorphic_allocator           (polymorphic_allocator &&) noexcept = default;
-  polymorphic_allocator& operator=(polymorphic_allocator &&) noexcept = default;
-
-  constexpr size_type max_size(void) const noexcept {
-    return (std::numeric_limits<size_type>::max)() / sizeof(value_type);
-  }
-
-  pointer allocate(size_type count) noexcept {
-    if (count == 0) return nullptr;
-    if (count > this->max_size()) return nullptr;
-    return static_cast<pointer>(alloc_.allocate(count * sizeof(value_type), alignof(T)));
-  }
-
-  void deallocate(pointer p, size_type count) noexcept {
-    alloc_.deallocate(p, count * sizeof(value_type), alignof(T));
-  }
-
-  template <typename... P>
-  static void construct(pointer p, P && ... params) {
-    std::ignore = ipc::construct<T>(p, std::forward<P>(params)...);
-  }
-
-  static void destroy(pointer p) {
-    std::ignore = ipc::destroy(p);
-  }
-};
-
-template <typename T, typename U>
-constexpr bool operator==(polymorphic_allocator<T> const &, polymorphic_allocator<U> const &) noexcept {
-  return true;
-}
-
-template <typename T, typename U>
-constexpr bool operator!=(polymorphic_allocator<T> const &, polymorphic_allocator<U> const &) noexcept {
-  return false;
-}
 
 } // namespace mem
 } // namespace ipc

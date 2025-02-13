@@ -6,7 +6,7 @@
 #pragma once
 
 #include "libipc/imp/export.h"
-#include "libipc/mem/polymorphic_allocator.h"
+#include "libipc/mem/bytes_allocator.h"
 
 namespace ipc {
 namespace mem {
