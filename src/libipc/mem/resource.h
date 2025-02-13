@@ -6,7 +6,7 @@
 
 #include "libipc/def.h"
 #include "libipc/imp/fmt.h"
-#include "libipc/mem/polymorphic_allocator.h"
+#include "libipc/mem/container_allocator.h"
 
 namespace ipc {
 
@@ -15,12 +15,12 @@ struct hash : public std::hash<T> {};
 
 template <typename Key, typename T>
 using unordered_map = std::unordered_map<
-  Key, T, ipc::hash<Key>, std::equal_to<Key>, ipc::mem::polymorphic_allocator<std::pair<Key const, T>>
+  Key, T, ipc::hash<Key>, std::equal_to<Key>, ipc::mem::container_allocator<std::pair<Key const, T>>
 >;
 
 template <typename Key, typename T>
 using map = std::map<
-  Key, T, std::less<Key>, ipc::mem::polymorphic_allocator<std::pair<Key const, T>>
+  Key, T, std::less<Key>, ipc::mem::container_allocator<std::pair<Key const, T>>
 >;
 
 /// \brief Check string validity.
