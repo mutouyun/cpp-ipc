@@ -72,7 +72,10 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
                                                S_IRGRP | S_IWGRP | 
                                                S_IROTH | S_IWOTH);
     if (fd == -1) {
-        ipc::error("fail shm_open[%d]: %s\n", errno, op_name.c_str());
+        // only open shm not log error when file not exist
+        if (open != mode || ENOENT != errno) {
+            ipc::error("fail shm_open[%d]: %s\n", errno, op_name.c_str());
+        }
         return nullptr;
     }
     ::fchmod(fd, S_IRUSR | S_IWUSR | 

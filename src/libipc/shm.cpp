@@ -78,8 +78,12 @@ bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
         return false;
     }
     release();
+    const auto id = shm::acquire(name, size, mode);
+    if (!id) {
+        return false;
+    }
+    impl(p_)->id_ = id;
     impl(p_)->n_  = name;
-    impl(p_)->id_ = shm::acquire(name, size, mode);
     impl(p_)->m_  = shm::get_mem(impl(p_)->id_, &(impl(p_)->s_));
     return valid();
 }
