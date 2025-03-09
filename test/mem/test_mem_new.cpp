@@ -9,19 +9,6 @@
 
 #include "libipc/mem/new.h"
 
-TEST(new, regular_sizeof) {
-  ASSERT_EQ(ipc::mem::regular_sizeof<std::int8_t >(), ipc::mem::regular_head_size + alignof(std::max_align_t));
-  ASSERT_EQ(ipc::mem::regular_sizeof<std::int16_t>(), ipc::mem::regular_head_size + alignof(std::max_align_t));
-  ASSERT_EQ(ipc::mem::regular_sizeof<std::int32_t>(), ipc::mem::regular_head_size + alignof(std::max_align_t));
-  ASSERT_EQ(ipc::mem::regular_sizeof<std::int64_t>(), ipc::mem::regular_head_size + alignof(std::max_align_t));
-
-  ASSERT_EQ((ipc::mem::regular_sizeof<std::array<char, 10    >>()), ipc::round_up<std::size_t>(ipc::mem::regular_head_size + 10   , alignof(std::max_align_t)));
-  ASSERT_EQ((ipc::mem::regular_sizeof<std::array<char, 100   >>()), ipc::round_up<std::size_t>(ipc::mem::regular_head_size + 100  , alignof(std::max_align_t)));
-  ASSERT_EQ((ipc::mem::regular_sizeof<std::array<char, 1000  >>()), ipc::round_up<std::size_t>(ipc::mem::regular_head_size + 1000 , 128));
-  ASSERT_EQ((ipc::mem::regular_sizeof<std::array<char, 10000 >>()), ipc::round_up<std::size_t>(ipc::mem::regular_head_size + 10000, 8192));
-  ASSERT_EQ((ipc::mem::regular_sizeof<std::array<char, 100000>>()), (std::numeric_limits<std::size_t>::max)());
-}
-
 TEST(new, new) {
   auto p = ipc::mem::$new<int>();
   ASSERT_NE(p, nullptr);

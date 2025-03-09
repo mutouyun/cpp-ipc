@@ -285,15 +285,17 @@ namespace detail_horrible_cast {
 
 template <typename T, typename U>
 union temp {
-  std::decay_t<U> in;
+  U in;
   T out;
 };
 
 } // namespace detail_horrible_cast
 
 template <typename T, typename U>
-constexpr T horrible_cast(U &&in) noexcept {
-  return detail_horrible_cast::temp<T, U>{std::forward<U>(in)}.out;
+constexpr auto horrible_cast(U &&in) noexcept
+  -> typename std::enable_if<std::is_trivially_copyable<T>::value
+                          && std::is_trivially_copyable<std::decay_t<U>>::value, T>::type {
+  return detail_horrible_cast::temp<T, std::decay_t<U>>{std::forward<U>(in)}.out;
 }
 
 } // namespace ipc
