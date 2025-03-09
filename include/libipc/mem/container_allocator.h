@@ -7,6 +7,7 @@
 
 #include <cstddef>
 #include <utility>
+#include <limits>
 
 #include "libipc/imp/uninitialized.h"
 #include "libipc/mem/new.h"
@@ -56,19 +57,32 @@ public:
   container_allocator& operator=(container_allocator &&) noexcept = default;
 
   constexpr size_type max_size() const noexcept {
-    return 1;
+    return (std::numeric_limits<size_type>::max)() / sizeof(value_type);
   }
 
   pointer allocate(size_type count) noexcept {
     if (count == 0) return nullptr;
     if (count > this->max_size()) return nullptr;
-    return mem::$new<value_type>();
+    if (count == 1) {
+      return mem::$new<value_type>();
+    } else {
+      void *p = mem::alloc(sizeof(value_type) * count);
+      if (p == nullptr) return nullptr;
+      for (std::size_t i = 0; i < count; ++i) {
+        std::ignore = ipc::construct<value_type>(static_cast<byte *>(p) + sizeof(value_type) * i);
+      }
+      return static_cast<pointer>(p);
+    }
   }
 
   void deallocate(pointer p, size_type count) noexcept {
     if (count == 0) return;
     if (count > this->max_size()) return;
-    mem::$delete(p);
+    if (count == 1) {
+      mem::$delete(p);
+    } else {
+      mem::free(ipc::destroy_n(p, count), sizeof(value_type) * count);
+    }
   }
 
   template <typename... P>

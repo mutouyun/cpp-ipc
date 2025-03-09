@@ -44,18 +44,6 @@ enum {
 // #endif/*__cplusplus < 201703L*/
 };
 
-template <typename T, typename U>
-auto horrible_cast(U rhs) noexcept
-    -> typename std::enable_if<std::is_trivially_copyable<T>::value
-                            && std::is_trivially_copyable<U>::value, T>::type {
-    union {
-        T t;
-        U u;
-    } r = {};
-    r.u = rhs;
-    return r.t;
-}
-
 IPC_CONSTEXPR_ std::size_t make_align(std::size_t align, std::size_t size) {
     // align must be 2^n
     return (size + align - 1) & ~(align - 1);
