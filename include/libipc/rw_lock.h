@@ -6,6 +6,7 @@
 #include <limits>
 #include <type_traits>
 #include <utility>
+#include <cstdint>
 
 ////////////////////////////////////////////////////////////////
 /// Gives hint to processor that improves performance of spin-wait loops.
@@ -98,7 +99,7 @@ inline void sleep(K& k) {
 namespace ipc {
 
 class spin_lock {
-    std::atomic<unsigned> lc_ { 0 };
+    std::atomic<std::uint32_t> lc_ { 0 };
 
 public:
     void lock(void) noexcept {
@@ -113,13 +114,13 @@ public:
 };
 
 class rw_lock {
-    using lc_ui_t = unsigned;
+    using lc_ui_t = std::uint32_t;
 
     std::atomic<lc_ui_t> lc_ { 0 };
 
     enum : lc_ui_t {
-        w_mask = (std::numeric_limits<std::make_signed_t<lc_ui_t>>::max)(), // b 0111 1111
-        w_flag = w_mask + 1                                                 // b 1000 0000
+        w_mask = (std::numeric_limits<std::make_signed_t<lc_ui_t>>::max)(), // b 0111 1111 ...
+        w_flag = w_mask + 1                                                 // b 1000 0000 ...
     };
 
 public:
