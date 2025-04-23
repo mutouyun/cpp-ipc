@@ -60,7 +60,7 @@ public:
         for (unsigned k = 0;; ipc::yield(k)) {
             cc_t curr = this->cc_.load(std::memory_order_acquire);
             cc_t next = curr | (curr + 1); // find the first 0, and set it to 1.
-            if (next == 0) {
+            if (next == curr) {
                 // connection-slot is full.
                 return 0;
             }
