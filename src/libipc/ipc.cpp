@@ -76,18 +76,18 @@ ipc::buff_t make_cache(T &data, std::size_t size) {
 }
 
 acc_t *cc_acc(std::string const &pref) {
-    static ipc::unordered_map<std::string, ipc::shm::handle> handles;
+    static auto *phs = new ipc::unordered_map<std::string, ipc::shm::handle>; // no delete
     static std::mutex lock;
     std::lock_guard<std::mutex> guard {lock};
-    auto it = handles.find(pref);
-    if (it == handles.end()) {
+    auto it = phs->find(pref);
+    if (it == phs->end()) {
         std::string shm_name {ipc::make_prefix(pref, "CA_CONN__")};
         ipc::shm::handle h;
         if (!h.acquire(shm_name.c_str(), sizeof(acc_t))) {
             ipc::error("[cc_acc] acquire failed: %s\n", shm_name.c_str());
             return nullptr;
         }
-        it = handles.emplace(pref, std::move(h)).first;
+        it = phs->emplace(pref, std::move(h)).first;
     }
     return static_cast<acc_t *>(it->second.get());
 }
@@ -248,8 +248,8 @@ auto& chunk_storages() {
     };
     using deleter_t = void (*)(chunk_handle_t*);
     using chunk_handle_ptr_t = std::unique_ptr<chunk_handle_t, deleter_t>;
-    static ipc::map<std::size_t, chunk_handle_ptr_t> chunk_hs;
-    return chunk_hs;
+    static auto *chunk_hs = new ipc::map<std::size_t, chunk_handle_ptr_t>; // no delete
+    return *chunk_hs;
 }
 
 chunk_info_t *chunk_storage_info(conn_info_head *inf, std::size_t chunk_size) {
