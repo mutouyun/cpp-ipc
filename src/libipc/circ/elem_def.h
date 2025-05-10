@@ -74,6 +74,10 @@ public:
         return this->cc_.fetch_and(~cc_id, std::memory_order_acq_rel) & ~cc_id;
     }
 
+    bool connected(cc_t cc_id) const noexcept {
+        return (this->connections() & cc_id) != 0;
+    }
+
     std::size_t conn_count(std::memory_order order = std::memory_order_acquire) const noexcept {
         cc_t cur = this->cc_.load(order);
         cc_t cnt; // accumulates the total bits set in cc
@@ -98,6 +102,11 @@ public:
         else {
             return this->cc_.fetch_sub(1, std::memory_order_relaxed) - 1;
         }
+    }
+
+    bool connected(cc_t cc_id) const noexcept {
+        // In non-broadcast mode, connection tags are only used for counting.
+        return (this->connections() != 0) && (cc_id != 0);
     }
 
     std::size_t conn_count(std::memory_order order = std::memory_order_acquire) const noexcept {
