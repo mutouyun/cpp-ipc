@@ -628,7 +628,7 @@ static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
         // pop a new message
         typename queue_t::value_t msg {};
         if (!wait_for(inf->rd_waiter_, [que, &msg, &h] {
-                if (!que->connected(que->elems())) {
+                if (!que->connected()) {
                     reconnect(&h, true);
                 }
                 return !que->pop(msg);

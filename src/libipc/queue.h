@@ -63,13 +63,9 @@ public:
         shm::handle::clear_storage(name);
     }
 
-    bool connected() const noexcept {
-        return connected_ != 0;
-    }
-
     template <typename Elems>
-    bool connected(Elems* elems) noexcept {
-        return connected_ & elems->connections();
+    bool connected(Elems* elems) const noexcept {
+        return elems->connected(connected_);
     }
 
     circ::cc_t connected_id() const noexcept {
@@ -153,6 +149,10 @@ public:
         if (elems_ == nullptr) return;
         if (!sender_flag_) return;
         elems_->disconnect_sender();
+    }
+
+    bool connected() const noexcept {
+        return base_t::connected(elems_);
     }
 
     bool connect() noexcept {
