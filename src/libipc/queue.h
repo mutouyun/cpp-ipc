@@ -63,8 +63,9 @@ public:
         shm::handle::clear_storage(name);
     }
 
-    bool connected() const noexcept {
-        return connected_ != 0;
+    template <typename Elems>
+    bool connected(Elems* elems) const noexcept {
+        return elems->connected(connected_);
     }
 
     circ::cc_t connected_id() const noexcept {
@@ -77,16 +78,16 @@ public:
      -> std::tuple<bool, bool, decltype(std::declval<Elems>().cursor())> {
         if (elems == nullptr) return {};
         // if it's already connected, just return
-        if (connected()) return {connected(), false, 0};
+        if (connected(elems)) return {connected(elems), false, 0};
         connected_ = elems->connect_receiver();
-        return {connected(), true, elems->cursor()};
+        return {connected(elems), true, elems->cursor()};
     }
 
     template <typename Elems>
     bool disconnect(Elems* elems) noexcept {
         if (elems == nullptr) return false;
         // if it's already disconnected, just return false
-        if (!connected()) return false;
+        if (!connected(elems)) return false;
         elems->disconnect_receiver(std::exchange(connected_, 0));
         return true;
     }
@@ -148,6 +149,10 @@ public:
         if (elems_ == nullptr) return;
         if (!sender_flag_) return;
         elems_->disconnect_sender();
+    }
+
+    bool connected() const noexcept {
+        return base_t::connected(elems_);
     }
 
     bool connect() noexcept {
