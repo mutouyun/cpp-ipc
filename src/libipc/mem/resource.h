@@ -10,12 +10,9 @@
 
 namespace ipc {
 
-template <typename T>
-struct hash : public std::hash<T> {};
-
 template <typename Key, typename T>
 using unordered_map = std::unordered_map<
-  Key, T, ipc::hash<Key>, std::equal_to<Key>, ipc::mem::container_allocator<std::pair<Key const, T>>
+  Key, T, std::hash<Key>, std::equal_to<Key>, ipc::mem::container_allocator<std::pair<Key const, T>>
 >;
 
 template <typename Key, typename T>
