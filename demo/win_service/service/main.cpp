@@ -1,7 +1,11 @@
 /// \brief To create a basic Windows Service in C++.
 /// \see https://www.codeproject.com/Articles/499465/Simple-Windows-Service-in-Cplusplus
 
+#if defined(__MINGW32__)
+#include <windows.h>
+#else
 #include <Windows.h>
+#endif
 #include <tchar.h>
 #include <string>
 

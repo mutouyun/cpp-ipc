@@ -1,5 +1,9 @@
 
+#if defined(__MINGW32__)
+#include <windows.h>
+#else
 #include <Windows.h>
+#endif
 
 #include <string>
 #include <utility>

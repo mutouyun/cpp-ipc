@@ -4,7 +4,11 @@
 #include <string>
 #include <mutex>
 
+#if defined(__MINGW32__)
+#include <windows.h>
+#else
 #include <Windows.h>
+#endif
 
 #include "libipc/utility/log.h"
 #include "libipc/utility/scope_guard.h"
