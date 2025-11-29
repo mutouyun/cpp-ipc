@@ -1,6 +1,10 @@
 /// \brief To create a basic Windows command line program.
 
+#if defined(__MINGW32__)
+#include <windows.h>
+#else
 #include <Windows.h>
+#endif
 #include <tchar.h>
 #include <stdio.h>
 

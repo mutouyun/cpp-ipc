@@ -1,6 +1,10 @@
 #pragma once
 
+#if defined(__MINGW32__)
+#include <windows.h>
+#else
 #include <Windows.h>
+#endif
 
 #include <type_traits>
 #include <string>
