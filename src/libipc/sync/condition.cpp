@@ -9,7 +9,7 @@
 #include "libipc/platform/win/condition.h"
 #elif defined(IPC_OS_LINUX_)
 #include "libipc/platform/linux/condition.h"
-#elif defined(IPC_OS_QNX_)
+#elif defined(IPC_OS_QNX_) || defined(IPC_OS_FREEBSD_)
 #include "libipc/platform/posix/condition.h"
 #else/*IPC_OS*/
 #   error "Unsupported platform."
