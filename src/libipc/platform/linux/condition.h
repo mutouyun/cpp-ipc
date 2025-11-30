@@ -27,7 +27,7 @@ public:
                 return false;
             }
         } else {
-            auto ts = detail::make_timespec(tm);
+            auto ts = linux::detail::make_timespec(tm);
             int eno = A0_SYSERR(a0_cnd_timedwait(native(), static_cast<a0_mtx_t *>(mtx.native()), {ts}));
             if (eno != 0) {
                 if (eno != ETIMEDOUT) {
