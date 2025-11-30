@@ -126,8 +126,13 @@ TEST_F(ShmTest, ReleaseMemory) {
   shm::id_t id = shm::acquire(name.c_str(), 128, shm::create);
   ASSERT_NE(id, nullptr);
   
+  // Must call get_mem to map memory and set reference count
+  void* mem = shm::get_mem(id, nullptr);
+  ASSERT_NE(mem, nullptr);
+  
+  // release returns the reference count before decrement, or -1 on error
   std::int32_t ref_count = shm::release(id);
-  EXPECT_GE(ref_count, 0);
+  EXPECT_EQ(ref_count, 1);  // Should be 1 (set by get_mem, before decrement)
   
   shm::remove(name.c_str());
 }
@@ -161,14 +166,25 @@ TEST_F(ShmTest, ReferenceCount) {
   shm::id_t id1 = shm::acquire(name.c_str(), 512, shm::create);
   ASSERT_NE(id1, nullptr);
   
-  std::int32_t ref1 = shm::get_ref(id1);
-  EXPECT_GT(ref1, 0);
+  // Reference count is 0 after acquire (memory not mapped yet)
+  std::int32_t ref_before_get_mem = shm::get_ref(id1);
+  EXPECT_EQ(ref_before_get_mem, 0);
   
-  // Acquire again (should increase reference count)
+  // get_mem maps memory and sets reference count to 1
+  void* mem1 = shm::get_mem(id1, nullptr);
+  ASSERT_NE(mem1, nullptr);
+  
+  std::int32_t ref1 = shm::get_ref(id1);
+  EXPECT_EQ(ref1, 1);
+  
+  // Acquire again and get_mem (should increase reference count)
   shm::id_t id2 = shm::acquire(name.c_str(), 512, shm::open);
   if (id2 != nullptr) {
+      void* mem2 = shm::get_mem(id2, nullptr);
+      ASSERT_NE(mem2, nullptr);
+      
       std::int32_t ref2 = shm::get_ref(id2);
-      EXPECT_GE(ref2, ref1);
+      EXPECT_EQ(ref2, 2);  // Should be 2 now
       
       shm::release(id2);
   }
@@ -184,11 +200,17 @@ TEST_F(ShmTest, SubtractReference) {
   shm::id_t id = shm::acquire(name.c_str(), 256, shm::create);
   ASSERT_NE(id, nullptr);
   
-  std::int32_t ref_before = shm::get_ref(id);
-  shm::sub_ref(id);
-  std::int32_t ref_after = shm::get_ref(id);
+  // Must call get_mem first to map memory and initialize reference count
+  void* mem = shm::get_mem(id, nullptr);
+  ASSERT_NE(mem, nullptr);
   
-  EXPECT_EQ(ref_after, ref_before - 1);
+  std::int32_t ref_before = shm::get_ref(id);
+  EXPECT_EQ(ref_before, 1);  // Should be 1 after get_mem
+  
+  shm::sub_ref(id);
+  
+  std::int32_t ref_after = shm::get_ref(id);
+  EXPECT_EQ(ref_after, 0);  // Should be 0 after sub_ref
   
   // Use remove(id) to clean up - it internally calls release()
   shm::remove(id);

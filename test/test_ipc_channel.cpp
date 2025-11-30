@@ -22,12 +22,37 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <mutex>
+#include <condition_variable>
 #include "libipc/ipc.h"
 #include "libipc/buffer.h"
 
 using namespace ipc;
 
 namespace {
+
+// Simple latch implementation for C++14 (similar to C++20 std::latch)
+class latch {
+public:
+  explicit latch(std::ptrdiff_t count) : count_(count) {}
+  
+  void count_down() {
+      std::unique_lock<std::mutex> lock(mutex_);
+      if (--count_ <= 0) {
+          cv_.notify_all();
+      }
+  }
+  
+  void wait() {
+      std::unique_lock<std::mutex> lock(mutex_);
+      cv_.wait(lock, [this] { return count_ <= 0; });
+  }
+
+private:
+  std::ptrdiff_t count_;
+  std::mutex mutex_;
+  std::condition_variable cv_;
+};
 
 std::string generate_unique_ipc_name(const char* prefix) {
   static int counter = 0;
@@ -516,6 +541,27 @@ TEST_F(ChannelTest, MultipleSendersReceivers) {
   std::atomic<int> sent_count{0};
   std::atomic<int> received_count{0};
   
+  // Use latch to ensure receivers are ready before senders start
+  latch receivers_ready(num_receivers);
+  
+  std::vector<std::thread> receivers;
+  for (int i = 0; i < num_receivers; ++i) {
+      receivers.emplace_back([&, i]() {
+          channel ch(name.c_str(), receiver);
+          receivers_ready.count_down();  // Signal this receiver is ready
+          
+          for (int j = 0; j < messages_per_sender; ++j) {
+              buffer buf = ch.recv(2000);
+              if (!buf.empty()) {
+                  ++received_count;
+              }
+          }
+      });
+  }
+  
+  // Wait for all receivers to be ready
+  receivers_ready.wait();
+  
   std::vector<std::thread> senders;
   for (int i = 0; i < num_senders; ++i) {
       senders.emplace_back([&, i]() {
@@ -526,19 +572,6 @@ TEST_F(ChannelTest, MultipleSendersReceivers) {
                   ++sent_count;
               }
               std::this_thread::sleep_for(std::chrono::milliseconds(10));
-          }
-      });
-  }
-  
-  std::vector<std::thread> receivers;
-  for (int i = 0; i < num_receivers; ++i) {
-      receivers.emplace_back([&, i]() {
-          channel ch(name.c_str(), receiver);
-          for (int j = 0; j < messages_per_sender; ++j) {
-              buffer buf = ch.recv(2000);
-              if (!buf.empty()) {
-                  ++received_count;
-              }
           }
       });
   }

@@ -383,20 +383,23 @@ TEST_F(RWLockTest, ReadersWritersNoOverlap) {
 TEST_F(RWLockTest, ReadWriteReadPattern) {
   rw_lock lock;
   int data = 0;
+  std::atomic<int> iterations{0};
   
   auto pattern_task = [&](int id) {
       for (int i = 0; i < 20; ++i) {
-          // Read
-          lock.lock_shared();
-          int read_val = data;
-          lock.unlock_shared();
+          // Write: increment based on thread id
+          lock.lock();
+          data += id;
+          lock.unlock();
           
+          iterations.fetch_add(1);
           std::this_thread::yield();
           
-          // Write
-          lock.lock();
-          data = read_val + 1;
-          lock.unlock();
+          // Read: verify data is consistent
+          lock.lock_shared();
+          int read_val = data;
+          EXPECT_GE(read_val, 0);  // Data should be non-negative
+          lock.unlock_shared();
           
           std::this_thread::yield();
       }
@@ -408,7 +411,10 @@ TEST_F(RWLockTest, ReadWriteReadPattern) {
   t1.join();
   t2.join();
   
-  EXPECT_EQ(data, 40);
+  // Each thread increments by its id (1 or 2), 20 times each
+  // Total = 1*20 + 2*20 = 20 + 40 = 60
+  EXPECT_EQ(data, 60);
+  EXPECT_EQ(iterations.load(), 40);
 }
 
 // Test many readers, one writer
