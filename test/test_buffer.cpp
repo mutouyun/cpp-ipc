@@ -236,7 +236,10 @@ TEST_F(BufferTest, ToTupleNonConst) {
   
   buffer buf(data, 25, DestructorTracker::destructor);
   
-  auto [ptr, size] = buf.to_tuple();
+  // C++14 compatible: use std::get instead of structured binding
+  auto tuple = buf.to_tuple();
+  auto ptr = std::get<0>(tuple);
+  auto size = std::get<1>(tuple);
   EXPECT_EQ(ptr, buf.data());
   EXPECT_EQ(size, buf.size());
   EXPECT_EQ(size, 25u);
@@ -249,7 +252,10 @@ TEST_F(BufferTest, ToTupleConst) {
   
   const buffer buf(data, 30, DestructorTracker::destructor);
   
-  auto [ptr, size] = buf.to_tuple();
+  // C++14 compatible: use std::get instead of structured binding
+  auto tuple = buf.to_tuple();
+  auto ptr = std::get<0>(tuple);
+  auto size = std::get<1>(tuple);
   EXPECT_EQ(ptr, buf.data());
   EXPECT_EQ(size, buf.size());
   EXPECT_EQ(size, 30u);
