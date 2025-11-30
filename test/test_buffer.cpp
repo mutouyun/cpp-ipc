@@ -73,16 +73,26 @@ TEST_F(BufferTest, DestructorCalled) {
   EXPECT_EQ(DestructorTracker::count, 1);
 }
 
-// Test constructor with additional parameter
-TEST_F(BufferTest, ConstructorWithAdditional) {
-  char* data = new char[50];
-  int additional_value = 42;
+// Test constructor with mem_to_free parameter
+// Scenario: allocate a large block, but only use a portion as data
+TEST_F(BufferTest, ConstructorWithMemToFree) {
+  // Allocate a block of 100 bytes
+  char* allocated_block = new char[100];
   
-  buffer buf(data, 50, DestructorTracker::destructor, &additional_value);
+  // But only use the middle 50 bytes as data (offset 25)
+  char* data_start = allocated_block + 25;
+  std::strcpy(data_start, "Offset data");
+  
+  // When destroyed, should free the entire allocated_block, not just data_start
+  buffer buf(data_start, 50, DestructorTracker::destructor, allocated_block);
   
   EXPECT_FALSE(buf.empty());
   EXPECT_EQ(buf.size(), 50u);
-  EXPECT_NE(buf.data(), nullptr);
+  EXPECT_EQ(buf.data(), data_start);
+  EXPECT_STREQ(static_cast<const char*>(buf.data()), "Offset data");
+  
+  // Destructor will be called with allocated_block (not data_start)
+  // This correctly frees the entire allocation
 }
 
 // Test constructor without destructor

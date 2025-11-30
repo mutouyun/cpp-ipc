@@ -38,8 +38,8 @@ buffer::buffer(void* p, std::size_t s, destructor_t d)
     : p_(p_->make(p, s, d, nullptr)) {
 }
 
-buffer::buffer(void* p, std::size_t s, destructor_t d, void* additional)
-    : p_(p_->make(p, s, d, additional)) {
+buffer::buffer(void* p, std::size_t s, destructor_t d, void* mem_to_free)
+    : p_(p_->make(p, s, d, mem_to_free)) {
 }
 
 buffer::buffer(void* p, std::size_t s)
