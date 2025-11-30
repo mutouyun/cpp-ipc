@@ -537,6 +537,7 @@ TEST_F(ChannelTest, MultipleSendersReceivers) {
   const int num_senders = 2;
   const int num_receivers = 2;
   const int messages_per_sender = 5;
+  const int total_messages = num_senders * messages_per_sender;  // Each receiver should get all messages
   
   std::atomic<int> sent_count{0};
   std::atomic<int> received_count{0};
@@ -550,7 +551,8 @@ TEST_F(ChannelTest, MultipleSendersReceivers) {
           channel ch(name.c_str(), receiver);
           receivers_ready.count_down();  // Signal this receiver is ready
           
-          for (int j = 0; j < messages_per_sender; ++j) {
+          // Each receiver should receive ALL messages from ALL senders (broadcast mode)
+          for (int j = 0; j < total_messages; ++j) {
               buffer buf = ch.recv(2000);
               if (!buf.empty()) {
                   ++received_count;
