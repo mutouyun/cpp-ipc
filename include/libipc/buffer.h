@@ -24,7 +24,7 @@ public:
     explicit buffer(byte_t (& data)[N])
         : buffer(data, sizeof(data)) {
     }
-    explicit buffer(char const & c);
+    explicit buffer(char & c);
 
     buffer(buffer&& rhs);
     ~buffer();

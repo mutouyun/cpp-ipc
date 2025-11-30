@@ -46,8 +46,8 @@ buffer::buffer(void* p, std::size_t s)
     : buffer(p, s, nullptr) {
 }
 
-buffer::buffer(char const & c)
-    : buffer(const_cast<char*>(&c), 1) {
+buffer::buffer(char & c)
+    : buffer(&c, 1) {
 }
 
 buffer::buffer(buffer&& rhs)
