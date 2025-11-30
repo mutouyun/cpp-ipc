@@ -135,10 +135,7 @@ void * get_mem(id_t id, std::size_t * size) {
         // Opening existing shared memory
         ii->size_ = actual_size - sizeof(info_t);
     }
-    else {
-        // Should match the size we allocated in acquire
-        ii->size_ = ii->size_;  // Keep user-requested size
-    }
+    // else: Keep user-requested size (already set in acquire)
     ii->mem_ = mem;
     if (size != nullptr) *size = ii->size_;
     // Initialize or increment reference counter
