@@ -406,9 +406,10 @@ TEST_F(ShmTest, HandleDetachAttach) {
   h2.attach(id);
   EXPECT_TRUE(h2.valid());
   
-  // Clean up
-  h2.release();
-  shm::remove(id);
+  // Clean up - use h2.clear() or shm::remove(id) alone, not both
+  // Option 1: Use handle's clear() which calls shm::remove(id) internally
+  id = h2.detach(); // Detach first to get the id without releasing
+  shm::remove(id);  // Then remove to clean up both memory and disk file
 }
 
 // Test writing and reading data through shared memory
