@@ -50,7 +50,7 @@ TEST_F(ShmTest, AcquireCreate) {
   EXPECT_NE(mem, nullptr);
   EXPECT_GE(actual_size, size);
   
-  shm::release(id);
+  // Use remove(id) to clean up - it internally calls release()
   shm::remove(id);
 }
 
@@ -78,7 +78,7 @@ TEST_F(ShmTest, AcquireCreateOrOpen) {
   EXPECT_NE(mem, nullptr);
   EXPECT_GE(actual_size, size);
   
-  shm::release(id);
+  // Use remove(id) to clean up - it internally calls release()
   shm::remove(id);
 }
 
@@ -101,7 +101,7 @@ TEST_F(ShmTest, GetMemory) {
   std::strcpy(static_cast<char*>(mem), test_data);
   EXPECT_STREQ(static_cast<char*>(mem), test_data);
   
-  shm::release(id);
+  // Use remove(id) to clean up - it internally calls release()
   shm::remove(id);
 }
 
@@ -115,7 +115,7 @@ TEST_F(ShmTest, GetMemoryNoSize) {
   void* mem = shm::get_mem(id, nullptr);
   EXPECT_NE(mem, nullptr);
   
-  shm::release(id);
+  // Use remove(id) to clean up - it internally calls release()
   shm::remove(id);
 }
 
@@ -139,7 +139,7 @@ TEST_F(ShmTest, RemoveById) {
   shm::id_t id = shm::acquire(name.c_str(), 256, shm::create);
   ASSERT_NE(id, nullptr);
   
-  shm::release(id);
+  // remove(id) internally calls release(id), so we don't need to call release first
   shm::remove(id); // Should succeed
 }
 
@@ -190,7 +190,7 @@ TEST_F(ShmTest, SubtractReference) {
   
   EXPECT_EQ(ref_after, ref_before - 1);
   
-  shm::release(id);
+  // Use remove(id) to clean up - it internally calls release()
   shm::remove(id);
 }
 
