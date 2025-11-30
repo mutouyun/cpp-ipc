@@ -15,15 +15,11 @@ include_directories(
     ${LIBIPC_PROJECT_DIR}/3rdparty
     ${LIBIPC_PROJECT_DIR}/3rdparty/gtest/include)
 
-# Collect only new test files (exclude archive directory)
 file(GLOB SRC_FILES
-    ${LIBIPC_PROJECT_DIR}/test/test_*.cpp
+    ${LIBIPC_PROJECT_DIR}/test/*.cpp
+    # ${LIBIPC_PROJECT_DIR}/test/profiler/*.cpp
     )
-file(GLOB HEAD_FILES ${LIBIPC_PROJECT_DIR}/test/test_*.h)
-
-# Ensure we don't include archived tests
-list(FILTER SRC_FILES EXCLUDE REGEX "archive")
-list(FILTER HEAD_FILES EXCLUDE REGEX "archive")
+file(GLOB HEAD_FILES ${LIBIPC_PROJECT_DIR}/test/*.h)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEAD_FILES})
 

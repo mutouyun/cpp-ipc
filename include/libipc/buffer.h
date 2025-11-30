@@ -17,14 +17,16 @@ public:
     buffer();
 
     buffer(void* p, std::size_t s, destructor_t d);
-    buffer(void* p, std::size_t s, destructor_t d, void* additional);
+    // mem_to_free: pointer to be passed to destructor (if different from p)
+    // Use case: when p points into a larger allocated block that needs to be freed
+    buffer(void* p, std::size_t s, destructor_t d, void* mem_to_free);
     buffer(void* p, std::size_t s);
 
     template <std::size_t N>
-    explicit buffer(byte_t const (& data)[N])
+    explicit buffer(byte_t (& data)[N])
         : buffer(data, sizeof(data)) {
     }
-    explicit buffer(char const & c);
+    explicit buffer(char & c);
 
     buffer(buffer&& rhs);
     ~buffer();
