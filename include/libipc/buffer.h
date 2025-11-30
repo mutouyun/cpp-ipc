@@ -21,7 +21,7 @@ public:
     buffer(void* p, std::size_t s);
 
     template <std::size_t N>
-    explicit buffer(byte_t const (& data)[N])
+    explicit buffer(byte_t (& data)[N])
         : buffer(data, sizeof(data)) {
     }
     explicit buffer(char const & c);
