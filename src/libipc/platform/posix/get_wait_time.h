@@ -10,7 +10,7 @@
 #include "libipc/utility/log.h"
 
 namespace ipc {
-namespace posix {
+namespace posix_ {
 namespace detail {
 
 inline bool calc_wait_time(timespec &ts, std::uint64_t tm /*ms*/) noexcept {
@@ -37,5 +37,5 @@ inline timespec make_timespec(std::uint64_t tm /*ms*/) noexcept(false) {
 }
 
 } // namespace detail
-} // namespace posix
+} // namespace posix_
 } // namespace ipc

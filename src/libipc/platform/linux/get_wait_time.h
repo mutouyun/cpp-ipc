@@ -10,7 +10,7 @@
 #include "a0/err_macro.h"
 
 namespace ipc {
-namespace linux {
+namespace linux_ {
 namespace detail {
 
 inline bool calc_wait_time(timespec &ts, std::uint64_t tm /*ms*/) noexcept {
@@ -44,5 +44,5 @@ inline timespec make_timespec(std::uint64_t tm /*ms*/) noexcept(false) {
 }
 
 } // namespace detail
-} // namespace linux
+} // namespace linux_
 } // namespace ipc

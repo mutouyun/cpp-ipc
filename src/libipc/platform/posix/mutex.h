@@ -196,7 +196,7 @@ public:
     bool lock(std::uint64_t tm) noexcept {
         if (!valid()) return false;
         for (;;) {
-            auto ts = posix::detail::make_timespec(tm);
+            auto ts = posix_::detail::make_timespec(tm);
             int eno = (tm == invalid_value) 
                 ? ::pthread_mutex_lock(mutex_) 
                 : ::pthread_mutex_timedlock(mutex_, &ts);
@@ -230,7 +230,7 @@ public:
 
     bool try_lock() noexcept(false) {
         if (!valid()) return false;
-        auto ts = posix::detail::make_timespec(0);
+        auto ts = posix_::detail::make_timespec(0);
         int eno = ::pthread_mutex_timedlock(mutex_, &ts);
         switch (eno) {
         case 0:

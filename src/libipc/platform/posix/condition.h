@@ -115,7 +115,7 @@ public:
             }
             break;
         default: {
-                auto ts = posix::detail::make_timespec(tm);
+                auto ts = posix_::detail::make_timespec(tm);
                 int eno;
                 if ((eno = ::pthread_cond_timedwait(cond_, static_cast<pthread_mutex_t *>(mtx.native()), &ts)) != 0) {
                     if (eno != ETIMEDOUT) {

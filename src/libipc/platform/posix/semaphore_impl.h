@@ -88,7 +88,7 @@ public:
                 return false;
             }
         } else {
-            auto ts = posix::detail::make_timespec(tm);
+            auto ts = posix_::detail::make_timespec(tm);
             if (::sem_timedwait(h_, &ts) != 0) {
                 if (errno != ETIMEDOUT) {
                     ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",

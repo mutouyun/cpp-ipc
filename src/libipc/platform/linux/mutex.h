@@ -25,7 +25,7 @@ public:
     bool lock(std::uint64_t tm) noexcept {
         if (!valid()) return false;
         for (;;) {
-            auto ts = linux::detail::make_timespec(tm);
+            auto ts = linux_::detail::make_timespec(tm);
             int eno = A0_SYSERR(
                 (tm == invalid_value) ? a0_mtx_lock(native()) 
                                       : a0_mtx_timedlock(native(), {ts}));
@@ -56,7 +56,7 @@ public:
 
     bool try_lock() noexcept(false) {
         if (!valid()) return false;
-        int eno = A0_SYSERR(a0_mtx_timedlock(native(), {linux::detail::make_timespec(0)}));
+        int eno = A0_SYSERR(a0_mtx_timedlock(native(), {linux_::detail::make_timespec(0)}));
         switch (eno) {
         case 0:
             return true;
