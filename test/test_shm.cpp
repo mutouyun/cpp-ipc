@@ -37,7 +37,7 @@ protected:
 
 // ========== Low-level API Tests ==========
 
-// Test acquire with shm::create mode
+// Test acquire with create mode
 TEST_F(ShmTest, AcquireCreate) {
   std::string name = generate_unique_name("acquire_create");
   const std::size_t size = 1024;
@@ -54,7 +54,7 @@ TEST_F(ShmTest, AcquireCreate) {
   shm::remove(id);
 }
 
-// Test acquire with shm::open mode (should fail if not exists)
+// Test acquire with open mode (should fail if not exists)
 TEST_F(ShmTest, AcquireOpenNonExistent) {
   std::string name = generate_unique_name("acquire_open_fail");
   
@@ -65,7 +65,7 @@ TEST_F(ShmTest, AcquireOpenNonExistent) {
   }
 }
 
-// Test acquire with both shm::create and shm::open modes
+// Test acquire with both create and open modes
 TEST_F(ShmTest, AcquireCreateOrOpen) {
   std::string name = generate_unique_name("acquire_both");
   const std::size_t size = 2048;
@@ -312,40 +312,40 @@ TEST_F(ShmTest, HandleRef) {
   EXPECT_GT(ref, 0);
 }
 
-// Test handle shm::sub_ref() method
+// Test handle sub_ref() method
 TEST_F(ShmTest, HandleSubRef) {
   std::string name = generate_unique_name("handle_sub_ref");
   
   shm::handle h(name.c_str(), 256);
   
   std::int32_t ref_before = h.ref();
-  h.shm::sub_ref();
+  h.sub_ref();
   std::int32_t ref_after = h.ref();
   
   EXPECT_EQ(ref_after, ref_before - 1);
 }
 
-// Test handle shm::acquire() method
+// Test handle acquire() method
 TEST_F(ShmTest, HandleAcquire) {
   shm::handle h;
   EXPECT_FALSE(h.valid());
   
   std::string name = generate_unique_name("handle_acquire");
-  bool result = h.shm::acquire(name.c_str(), 512);
+  bool result = h.acquire(name.c_str(), 512);
   
   EXPECT_TRUE(result);
   EXPECT_TRUE(h.valid());
   EXPECT_GE(h.size(), 512u);
 }
 
-// Test handle shm::release() method
+// Test handle release() method
 TEST_F(ShmTest, HandleRelease) {
   std::string name = generate_unique_name("handle_release");
   
   shm::handle h(name.c_str(), 256);
   ASSERT_TRUE(h.valid());
   
-  std::int32_t ref_count = h.shm::release();
+  std::int32_t ref_count = h.release();
   EXPECT_GE(ref_count, 0);
 }
 
@@ -407,7 +407,7 @@ TEST_F(ShmTest, HandleDetachAttach) {
   EXPECT_TRUE(h2.valid());
   
   // Clean up
-  h2.shm::release();
+  h2.release();
   shm::remove(id);
 }
 
