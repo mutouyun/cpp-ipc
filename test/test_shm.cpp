@@ -17,7 +17,6 @@
 #include "libipc/shm.h"
 
 using namespace ipc;
-using namespace ipc::shm;
 
 namespace {
 
@@ -38,49 +37,49 @@ protected:
 
 // ========== Low-level API Tests ==========
 
-// Test acquire with create mode
+// Test acquire with shm::create mode
 TEST_F(ShmTest, AcquireCreate) {
   std::string name = generate_unique_name("acquire_create");
   const std::size_t size = 1024;
   
-  id_t id = acquire(name.c_str(), size, create);
+  shm::id_t id = shm::acquire(name.c_str(), size, shm::create);
   ASSERT_NE(id, nullptr);
   
   std::size_t actual_size = 0;
-  void* mem = get_mem(id, &actual_size);
+  void* mem = shm::get_mem(id, &actual_size);
   EXPECT_NE(mem, nullptr);
   EXPECT_GE(actual_size, size);
   
-  release(id);
-  remove(id);
+  shm::release(id);
+  shm::remove(id);
 }
 
-// Test acquire with open mode (should fail if not exists)
+// Test acquire with shm::open mode (should fail if not exists)
 TEST_F(ShmTest, AcquireOpenNonExistent) {
   std::string name = generate_unique_name("acquire_open_fail");
   
-  id_t id = acquire(name.c_str(), 1024, open);
+  shm::id_t id = shm::acquire(name.c_str(), 1024, shm::open);
   // Opening non-existent shared memory should return nullptr or handle failure gracefully
   if (id != nullptr) {
-      release(id);
+      shm::release(id);
   }
 }
 
-// Test acquire with both create and open modes
+// Test acquire with both shm::create and shm::open modes
 TEST_F(ShmTest, AcquireCreateOrOpen) {
   std::string name = generate_unique_name("acquire_both");
   const std::size_t size = 2048;
   
-  id_t id = acquire(name.c_str(), size, create | open);
+  shm::id_t id = shm::acquire(name.c_str(), size, shm::create | shm::open);
   ASSERT_NE(id, nullptr);
   
   std::size_t actual_size = 0;
-  void* mem = get_mem(id, &actual_size);
+  void* mem = shm::get_mem(id, &actual_size);
   EXPECT_NE(mem, nullptr);
   EXPECT_GE(actual_size, size);
   
-  release(id);
-  remove(id);
+  shm::release(id);
+  shm::remove(id);
 }
 
 // Test get_mem function
@@ -88,11 +87,11 @@ TEST_F(ShmTest, GetMemory) {
   std::string name = generate_unique_name("get_mem");
   const std::size_t size = 512;
   
-  id_t id = acquire(name.c_str(), size, create);
+  shm::id_t id = shm::acquire(name.c_str(), size, shm::create);
   ASSERT_NE(id, nullptr);
   
   std::size_t returned_size = 0;
-  void* mem = get_mem(id, &returned_size);
+  void* mem = shm::get_mem(id, &returned_size);
   
   EXPECT_NE(mem, nullptr);
   EXPECT_GE(returned_size, size);
@@ -102,104 +101,104 @@ TEST_F(ShmTest, GetMemory) {
   std::strcpy(static_cast<char*>(mem), test_data);
   EXPECT_STREQ(static_cast<char*>(mem), test_data);
   
-  release(id);
-  remove(id);
+  shm::release(id);
+  shm::remove(id);
 }
 
 // Test get_mem without size parameter
 TEST_F(ShmTest, GetMemoryNoSize) {
   std::string name = generate_unique_name("get_mem_no_size");
   
-  id_t id = acquire(name.c_str(), 256, create);
+  shm::id_t id = shm::acquire(name.c_str(), 256, shm::create);
   ASSERT_NE(id, nullptr);
   
-  void* mem = get_mem(id, nullptr);
+  void* mem = shm::get_mem(id, nullptr);
   EXPECT_NE(mem, nullptr);
   
-  release(id);
-  remove(id);
+  shm::release(id);
+  shm::remove(id);
 }
 
 // Test release function
 TEST_F(ShmTest, ReleaseMemory) {
   std::string name = generate_unique_name("release");
   
-  id_t id = acquire(name.c_str(), 128, create);
+  shm::id_t id = shm::acquire(name.c_str(), 128, shm::create);
   ASSERT_NE(id, nullptr);
   
-  std::int32_t ref_count = release(id);
+  std::int32_t ref_count = shm::release(id);
   EXPECT_GE(ref_count, 0);
   
-  remove(name.c_str());
+  shm::remove(name.c_str());
 }
 
 // Test remove by id
 TEST_F(ShmTest, RemoveById) {
   std::string name = generate_unique_name("remove_by_id");
   
-  id_t id = acquire(name.c_str(), 256, create);
+  shm::id_t id = shm::acquire(name.c_str(), 256, shm::create);
   ASSERT_NE(id, nullptr);
   
-  release(id);
-  remove(id); // Should succeed
+  shm::release(id);
+  shm::remove(id); // Should succeed
 }
 
 // Test remove by name
 TEST_F(ShmTest, RemoveByName) {
   std::string name = generate_unique_name("remove_by_name");
   
-  id_t id = acquire(name.c_str(), 256, create);
+  shm::id_t id = shm::acquire(name.c_str(), 256, shm::create);
   ASSERT_NE(id, nullptr);
   
-  release(id);
-  remove(name.c_str()); // Should succeed
+  shm::release(id);
+  shm::remove(name.c_str()); // Should succeed
 }
 
 // Test reference counting
 TEST_F(ShmTest, ReferenceCount) {
   std::string name = generate_unique_name("ref_count");
   
-  id_t id1 = acquire(name.c_str(), 512, create);
+  shm::id_t id1 = shm::acquire(name.c_str(), 512, shm::create);
   ASSERT_NE(id1, nullptr);
   
-  std::int32_t ref1 = get_ref(id1);
+  std::int32_t ref1 = shm::get_ref(id1);
   EXPECT_GT(ref1, 0);
   
   // Acquire again (should increase reference count)
-  id_t id2 = acquire(name.c_str(), 512, open);
+  shm::id_t id2 = shm::acquire(name.c_str(), 512, shm::open);
   if (id2 != nullptr) {
-      std::int32_t ref2 = get_ref(id2);
+      std::int32_t ref2 = shm::get_ref(id2);
       EXPECT_GE(ref2, ref1);
       
-      release(id2);
+      shm::release(id2);
   }
   
-  release(id1);
-  remove(name.c_str());
+  shm::release(id1);
+  shm::remove(name.c_str());
 }
 
 // Test sub_ref function
 TEST_F(ShmTest, SubtractReference) {
   std::string name = generate_unique_name("sub_ref");
   
-  id_t id = acquire(name.c_str(), 256, create);
+  shm::id_t id = shm::acquire(name.c_str(), 256, shm::create);
   ASSERT_NE(id, nullptr);
   
-  std::int32_t ref_before = get_ref(id);
-  sub_ref(id);
-  std::int32_t ref_after = get_ref(id);
+  std::int32_t ref_before = shm::get_ref(id);
+  shm::sub_ref(id);
+  std::int32_t ref_after = shm::get_ref(id);
   
   EXPECT_EQ(ref_after, ref_before - 1);
   
-  release(id);
-  remove(id);
+  shm::release(id);
+  shm::remove(id);
 }
 
 // ========== High-level handle class Tests ==========
 
 // Test default handle constructor
 TEST_F(ShmTest, HandleDefaultConstructor) {
-  handle h;
+  shm::handle h;
   EXPECT_FALSE(h.valid());
   EXPECT_EQ(h.size(), 0u);
   EXPECT_EQ(h.get(), nullptr);
@@ -210,7 +209,7 @@ TEST_F(ShmTest, HandleConstructorWithParams) {
   std::string name = generate_unique_name("handle_ctor");
   const std::size_t size = 1024;
   
-  handle h(name.c_str(), size);
+  shm::handle h(name.c_str(), size);
   
   EXPECT_TRUE(h.valid());
   EXPECT_GE(h.size(), size);
@@ -222,13 +221,13 @@ TEST_F(ShmTest, HandleConstructorWithParams) {
 TEST_F(ShmTest, HandleMoveConstructor) {
   std::string name = generate_unique_name("handle_move");
   
-  handle h1(name.c_str(), 512);
+  shm::handle h1(name.c_str(), 512);
   ASSERT_TRUE(h1.valid());
   
   void* ptr1 = h1.get();
   std::size_t size1 = h1.size();
   
-  handle h2(std::move(h1));
+  shm::handle h2(std::move(h1));
   
   EXPECT_TRUE(h2.valid());
   EXPECT_EQ(h2.get(), ptr1);
@@ -243,8 +242,8 @@ TEST_F(ShmTest, HandleSwap) {
   std::string name1 = generate_unique_name("handle_swap1");
   std::string name2 = generate_unique_name("handle_swap2");
   
-  handle h1(name1.c_str(), 256);
-  handle h2(name2.c_str(), 512);
+  shm::handle h1(name1.c_str(), 256);
+  shm::handle h2(name2.c_str(), 512);
   
   void* ptr1 = h1.get();
   void* ptr2 = h2.get();
@@ -263,10 +262,10 @@ TEST_F(ShmTest, HandleSwap) {
 TEST_F(ShmTest, HandleAssignment) {
   std::string name = generate_unique_name("handle_assign");
   
-  handle h1(name.c_str(), 768);
+  shm::handle h1(name.c_str(), 768);
   void* ptr1 = h1.get();
   
-  handle h2;
+  shm::handle h2;
   h2 = std::move(h1);
   
   EXPECT_TRUE(h2.valid());
@@ -276,11 +275,11 @@ TEST_F(ShmTest, HandleAssignment) {
 
 // Test handle valid() method
 TEST_F(ShmTest, HandleValid) {
-  handle h1;
+  shm::handle h1;
   EXPECT_FALSE(h1.valid());
   
   std::string name = generate_unique_name("handle_valid");
-  handle h2(name.c_str(), 128);
+  shm::handle h2(name.c_str(), 128);
   EXPECT_TRUE(h2.valid());
 }
 
@@ -289,7 +288,7 @@ TEST_F(ShmTest, HandleSize) {
   std::string name = generate_unique_name("handle_size");
   const std::size_t requested_size = 2048;
   
-  handle h(name.c_str(), requested_size);
+  shm::handle h(name.c_str(), requested_size);
   
   EXPECT_GE(h.size(), requested_size);
 }
@@ -298,7 +297,7 @@ TEST_F(ShmTest, HandleSize) {
 TEST_F(ShmTest, HandleName) {
   std::string name = generate_unique_name("handle_name");
   
-  handle h(name.c_str(), 256);
+  shm::handle h(name.c_str(), 256);
   
   EXPECT_STREQ(h.name(), name.c_str());
 }
@@ -307,46 +306,46 @@ TEST_F(ShmTest, HandleName) {
 TEST_F(ShmTest, HandleRef) {
   std::string name = generate_unique_name("handle_ref");
   
-  handle h(name.c_str(), 256);
+  shm::handle h(name.c_str(), 256);
   
   std::int32_t ref = h.ref();
   EXPECT_GT(ref, 0);
 }
 
-// Test handle sub_ref() method
+// Test handle shm::sub_ref() method
 TEST_F(ShmTest, HandleSubRef) {
   std::string name = generate_unique_name("handle_sub_ref");
   
-  handle h(name.c_str(), 256);
+  shm::handle h(name.c_str(), 256);
   
   std::int32_t ref_before = h.ref();
-  h.sub_ref();
+  h.shm::sub_ref();
   std::int32_t ref_after = h.ref();
   
   EXPECT_EQ(ref_after, ref_before - 1);
 }
 
-// Test handle acquire() method
+// Test handle shm::acquire() method
 TEST_F(ShmTest, HandleAcquire) {
-  handle h;
+  shm::handle h;
   EXPECT_FALSE(h.valid());
   
   std::string name = generate_unique_name("handle_acquire");
-  bool result = h.acquire(name.c_str(), 512);
+  bool result = h.shm::acquire(name.c_str(), 512);
   
   EXPECT_TRUE(result);
   EXPECT_TRUE(h.valid());
   EXPECT_GE(h.size(), 512u);
 }
 
-// Test handle release() method
+// Test handle shm::release() method
 TEST_F(ShmTest, HandleRelease) {
   std::string name = generate_unique_name("handle_release");
   
-  handle h(name.c_str(), 256);
+  shm::handle h(name.c_str(), 256);
   ASSERT_TRUE(h.valid());
   
-  std::int32_t ref_count = h.release();
+  std::int32_t ref_count = h.shm::release();
   EXPECT_GE(ref_count, 0);
 }
 
@@ -354,7 +353,7 @@ TEST_F(ShmTest, HandleRelease) {
 TEST_F(ShmTest, HandleClear) {
   std::string name = generate_unique_name("handle_clear");
   
-  handle h(name.c_str(), 256);
+  shm::handle h(name.c_str(), 256);
   ASSERT_TRUE(h.valid());
   
   h.clear();
@@ -366,14 +365,14 @@ TEST_F(ShmTest, HandleClearStorage) {
   std::string name = generate_unique_name("handle_clear_storage");
   
   {
-      handle h(name.c_str(), 256);
+      shm::handle h(name.c_str(), 256);
       EXPECT_TRUE(h.valid());
   }
   
-  handle::clear_storage(name.c_str());
+  shm::handle::clear_storage(name.c_str());
   
   // Try to open - should fail or create new
-  handle h2(name.c_str(), 256, open);
+  shm::handle h2(name.c_str(), 256, shm::open);
   // Behavior depends on implementation
 }
 
@@ -381,7 +380,7 @@ TEST_F(ShmTest, HandleClearStorage) {
 TEST_F(ShmTest, HandleGet) {
   std::string name = generate_unique_name("handle_get");
   
-  handle h(name.c_str(), 512);
+  shm::handle h(name.c_str(), 512);
   
   void* mem = h.get();
   EXPECT_NE(mem, nullptr);
@@ -396,20 +395,20 @@ TEST_F(ShmTest, HandleGet) {
 TEST_F(ShmTest, HandleDetachAttach) {
   std::string name = generate_unique_name("handle_detach_attach");
   
-  handle h1(name.c_str(), 256);
+  shm::handle h1(name.c_str(), 256);
   ASSERT_TRUE(h1.valid());
   
-  id_t id = h1.detach();
+  shm::id_t id = h1.detach();
   EXPECT_NE(id, nullptr);
   EXPECT_FALSE(h1.valid()); // Should be invalid after detach
   
-  handle h2;
+  shm::handle h2;
   h2.attach(id);
   EXPECT_TRUE(h2.valid());
   
   // Clean up
-  h2.release();
-  remove(id);
+  h2.shm::release();
+  shm::remove(id);
 }
 
 // Test writing and reading data through shared memory
@@ -417,7 +416,7 @@ TEST_F(ShmTest, WriteReadData) {
   std::string name = generate_unique_name("write_read");
   const std::size_t size = 1024;
   
-  handle h1(name.c_str(), size);
+  shm::handle h1(name.c_str(), size);
   ASSERT_TRUE(h1.valid());
   
   // Write test data
@@ -430,8 +429,8 @@ TEST_F(ShmTest, WriteReadData) {
   data1->value = 42;
   std::strcpy(data1->text, "Shared memory data");
   
-  // Open in another "handle" (simulating different process)
-  handle h2(name.c_str(), size, open);
+  // Open in another "shm::handle" (simulating different process)
+  shm::handle h2(name.c_str(), size, shm::open);
   if (h2.valid()) {
       TestData* data2 = static_cast<TestData*>(h2.get());
       EXPECT_EQ(data2->value, 42);
@@ -444,15 +443,15 @@ TEST_F(ShmTest, HandleModes) {
   std::string name = generate_unique_name("handle_modes");
   
   // Create only
-  handle h1(name.c_str(), 256, create);
+  shm::handle h1(name.c_str(), 256, shm::create);
   EXPECT_TRUE(h1.valid());
   
   // Open existing
-  handle h2(name.c_str(), 256, open);
+  shm::handle h2(name.c_str(), 256, shm::open);
   EXPECT_TRUE(h2.valid());
   
   // Both modes
-  handle h3(name.c_str(), 256, create | open);
+  shm::handle h3(name.c_str(), 256, shm::create | shm::open);
   EXPECT_TRUE(h3.valid());
 }
 
@@ -461,8 +460,8 @@ TEST_F(ShmTest, MultipleHandles) {
   std::string name = generate_unique_name("multiple_handles");
   const std::size_t size = 512;
   
-  handle h1(name.c_str(), size);
-  handle h2(name.c_str(), size, open);
+  shm::handle h1(name.c_str(), size);
+  shm::handle h2(name.c_str(), size, shm::open);
   
   ASSERT_TRUE(h1.valid());
   ASSERT_TRUE(h2.valid());
@@ -480,7 +479,7 @@ TEST_F(ShmTest, LargeSegment) {
   std::string name = generate_unique_name("large_segment");
   const std::size_t size = 10 * 1024 * 1024; // 10 MB
   
-  handle h(name.c_str(), size);
+  shm::handle h(name.c_str(), size);
   
   if (h.valid()) {
       EXPECT_GE(h.size(), size);
