@@ -21,20 +21,32 @@ namespace ipc {
  * \see https://en.cppreference.com/w/cpp/memory/construct_at
 */
 
-template <typename T, typename... A>
-auto construct(void *p, A &&...args)
-  -> std::enable_if_t<::std::is_constructible<T, A...>::value, T *> {
+// Overload for zero arguments - use value initialization
+template <typename T>
+T* construct(void *p) {
 #if defined(LIBIPC_CPP_20)
-  return std::construct_at(static_cast<T *>(p), std::forward<A>(args)...);
+  return std::construct_at(static_cast<T *>(p));
 #else
-  return ::new (p) T(std::forward<A>(args)...);
+  return ::new (p) T();
 #endif
 }
 
-template <typename T, typename... A>
-auto construct(void *p, A &&...args)
-  -> std::enable_if_t<!::std::is_constructible<T, A...>::value, T *> {
-  return ::new (p) T{std::forward<A>(args)...};
+// Overload for one or more arguments - prefer direct initialization
+template <typename T, typename A1, typename... A>
+auto construct(void *p, A1 &&arg1, A &&...args)
+  -> std::enable_if_t<::std::is_constructible<T, A1, A...>::value, T *> {
+#if defined(LIBIPC_CPP_20)
+  return std::construct_at(static_cast<T *>(p), std::forward<A1>(arg1), std::forward<A>(args)...);
+#else
+  return ::new (p) T(std::forward<A1>(arg1), std::forward<A>(args)...);
+#endif
+}
+
+// Overload for non-constructible types - use aggregate initialization
+template <typename T, typename A1, typename... A>
+auto construct(void *p, A1 &&arg1, A &&...args)
+  -> std::enable_if_t<!::std::is_constructible<T, A1, A...>::value, T *> {
+  return ::new (p) T{std::forward<A1>(arg1), std::forward<A>(args)...};
 }
 
 /**
