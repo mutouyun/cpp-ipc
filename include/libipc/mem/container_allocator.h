@@ -63,26 +63,18 @@ public:
   pointer allocate(size_type count) noexcept {
     if (count == 0) return nullptr;
     if (count > this->max_size()) return nullptr;
-    if (count == 1) {
-      return mem::$new<value_type>();
-    } else {
-      void *p = mem::alloc(sizeof(value_type) * count);
-      if (p == nullptr) return nullptr;
-      for (std::size_t i = 0; i < count; ++i) {
-        std::ignore = ipc::construct<value_type>(static_cast<byte *>(p) + sizeof(value_type) * i);
-      }
-      return static_cast<pointer>(p);
-    }
+    // Allocate raw memory without constructing objects
+    // Construction should be done by construct() member function
+    void *p = mem::alloc(sizeof(value_type) * count);
+    return static_cast<pointer>(p);
   }
 
   void deallocate(pointer p, size_type count) noexcept {
     if (count == 0) return;
     if (count > this->max_size()) return;
-    if (count == 1) {
-      mem::$delete(p);
-    } else {
-      mem::free(ipc::destroy_n(p, count), sizeof(value_type) * count);
-    }
+    // Deallocate raw memory without destroying objects
+    // Destruction should be done by destroy() member function before deallocate
+    mem::free(p, sizeof(value_type) * count);
   }
 
   template <typename... P>
