@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <thread>
 
-#include "test.h"
+#include "../archive/test.h"
 
 #include "libipc/mem/new.h"
 
