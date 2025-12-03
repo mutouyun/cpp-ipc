@@ -27,7 +27,7 @@ class LIBIPC_EXPORT block_collector {
 public:
   virtual ~block_collector() noexcept = default;
   virtual void *allocate(std::size_t /*bytes*/) noexcept = 0;
-  virtual void deallocate(void */*p*/, std::size_t /*bytes*/) noexcept = 0;
+  virtual void deallocate(void * /*p*/, std::size_t /*bytes*/) noexcept = 0;
 };
 
 /// \brief Matches the appropriate memory block resource based on a specified size.
