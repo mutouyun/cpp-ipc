@@ -55,7 +55,7 @@ public:
         close();
     }
 
-    static void clear_storage(char const */*name*/) noexcept {
+    static void clear_storage(char const * /*name*/) noexcept {
     }
 
     bool lock(std::uint64_t tm) noexcept {
