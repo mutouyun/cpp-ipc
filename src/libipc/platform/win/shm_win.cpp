@@ -161,7 +161,7 @@ std::int32_t release(id_t id) noexcept {
         ipc::error("fail release: invalid id (h = null)\n");
     }
     else ::CloseHandle(ii->h_);
-    mem::free(ii);
+    mem::$delete(ii);
     return ret;
 }
 
