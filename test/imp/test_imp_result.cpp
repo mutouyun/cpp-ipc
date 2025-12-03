@@ -2,7 +2,7 @@
 #include <sstream>
 #include <cstdint>
 
-#include "test.h"
+#include "../archive/test.h"
 
 #include "libipc/imp/result.h"
 

@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "test.h"
+#include "../archive/test.h"
 
 #include "libipc/imp/error.h"
 #include "libipc/imp/fmt.h"

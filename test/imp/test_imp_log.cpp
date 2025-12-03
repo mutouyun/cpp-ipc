@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include "test.h"
+#include "../archive/test.h"
 
 #include "libipc/imp/log.h"
 
