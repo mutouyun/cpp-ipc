@@ -7,7 +7,7 @@
 #include "libipc/platform/linux/a0/strconv.c"
 #include "libipc/platform/linux/a0/tid.c"
 #include "libipc/platform/linux/a0/time.c"
-#elif defined(IPC_OS_QNX_)
+#elif defined(IPC_OS_QNX_) || defined(IPC_OS_FREEBSD_)
 #else/*IPC_OS*/
 #   error "Unsupported platform."
 #endif

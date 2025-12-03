@@ -9,6 +9,8 @@
 #   define IPC_OS_WINDOWS_
 #elif defined(__linux__) || defined(__linux)
 #   define IPC_OS_LINUX_
+#elif defined(__FreeBSD__)
+#   define IPC_OS_FREEBSD_
 #elif defined(__QNX__)
 #   define IPC_OS_QNX_
 #elif defined(__APPLE__)

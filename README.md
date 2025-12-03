@@ -5,7 +5,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/github/mutouyun/cpp-ipc?branch=master&svg=true)](https://ci.appveyor.com/project/mutouyun/cpp-ipc)
 [![Vcpkg package](https://img.shields.io/badge/Vcpkg-package-blueviolet)](https://github.com/microsoft/vcpkg/tree/master/ports/cpp-ipc)
 
-## A high-performance inter-process communication library using shared memory on Linux/Windows.
+## A high-performance inter-process communication library using shared memory on Linux/Windows/FreeBSD.
 
  * Compilers with C++17 support are recommended (msvc-2017/gcc-7/clang-4)
  * No other dependencies except STL.
@@ -44,7 +44,7 @@ Performance data: [performance.xlsx](performance.xlsx)
 ------
 
 
-## 使用共享内存的跨平台（Linux/Windows，x86/x64/ARM）高性能IPC通讯库
+## 使用共享内存的跨平台（Linux/Windows/FreeBSD，x86/x64/ARM）高性能IPC通讯库
 
  * 推荐支持C++17的编译器（msvc-2017/gcc-7/clang-4）
  * 除STL外，无其他依赖
