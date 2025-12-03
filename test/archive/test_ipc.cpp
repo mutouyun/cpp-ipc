@@ -90,9 +90,21 @@ class data_set {
 
 public:
     data_set() {
-        d_ = ::new(datas_) rand_buf[LoopCount];
+        // Use individual placement new instead of array placement new
+        // Array placement new adds a cookie (array size) before the array,
+        // which would overflow the buffer. MSVC's implementation stores this
+        // cookie, causing buffer overflow and subsequent memory corruption.
+        d_ = reinterpret_cast<rand_buf *>(datas_);
         for (int i = 0; i < LoopCount; ++i) {
+            ::new(d_ + i) rand_buf;
             d_[i].set_id(i);
+        }
+    }
+
+    ~data_set() {
+        // Manually destroy each element since we used individual placement new
+        for (int i = 0; i < LoopCount; ++i) {
+            d_[i].~rand_buf();
         }
     }
 
