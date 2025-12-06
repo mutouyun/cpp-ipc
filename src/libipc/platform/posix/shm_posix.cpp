@@ -51,7 +51,12 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     }
     // For portable use, a shared memory object should be identified by name of the form /somename.
     // see: https://man7.org/linux/man-pages/man3/shm_open.3.html
-    ipc::string op_name = ipc::string{"/"} + name;
+    ipc::string op_name;
+    if (name[0] == '/') {
+        op_name = name;
+    } else {
+        op_name = ipc::string{"/"} + name;
+    }
     // Open the object for read-write access.
     int flag = O_RDWR;
     switch (mode) {
@@ -206,7 +211,12 @@ void remove(char const * name) noexcept {
         return;
     }
     // For portable use, a shared memory object should be identified by name of the form /somename.
-    ipc::string op_name = ipc::string{"/"} + name;
+    ipc::string op_name;
+    if (name[0] == '/') {
+        op_name = name;
+    } else {
+        op_name = ipc::string{"/"} + name;
+    }
     int unlink_ret = ::shm_unlink(op_name.c_str());
     if (unlink_ret == -1) {
         ipc::error("fail shm_unlink[%d]: %s\n", errno, op_name.c_str());
