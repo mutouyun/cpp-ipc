@@ -206,19 +206,15 @@ public:
             case ETIMEDOUT:
                 return false;
             case EOWNERDEAD: {
-                    if (shm_->ref() > 1) {
-                        shm_->sub_ref();
-                    }
+                    // EOWNERDEAD means we have successfully acquired the lock,
+                    // but the previous owner died. We need to make it consistent.
                     int eno2 = ::pthread_mutex_consistent(mutex_);
                     if (eno2 != 0) {
                         ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
                         return false;
                     }
-                    // EOWNERDEAD means we have successfully acquired the lock,
-                    // but the previous owner died. After calling pthread_mutex_consistent(),
-                    // the mutex is now in a consistent state and we hold the lock.
-                    // We should return success here, not unlock and retry.
-                    // This avoids issues with FreeBSD's robust mutex list management.
+                    // After calling pthread_mutex_consistent(), the mutex is now in a
+                    // consistent state and we hold the lock. Return success.
                     return true;
                 }
             default:
@@ -238,15 +234,15 @@ public:
         case ETIMEDOUT:
             return false;
         case EOWNERDEAD: {
-                if (shm_->ref() > 1) {
-                    shm_->sub_ref();
-                }
+                // EOWNERDEAD means we have successfully acquired the lock,
+                // but the previous owner died. We need to make it consistent.
                 int eno2 = ::pthread_mutex_consistent(mutex_);
                 if (eno2 != 0) {
                     ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
                     throw std::system_error{eno2, std::system_category()};
                 }
-                // Successfully acquired the lock after making it consistent
+                // After calling pthread_mutex_consistent(), the mutex is now in a
+                // consistent state and we hold the lock. Return success.
                 return true;
             }
         default:
