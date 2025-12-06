@@ -214,13 +214,13 @@ public:
                         ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
                         return false;
                     }
-                    int eno3 = ::pthread_mutex_unlock(mutex_);
-                    if (eno3 != 0) {
-                        ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
-                        return false;
-                    }
+                    // EOWNERDEAD means we have successfully acquired the lock,
+                    // but the previous owner died. After calling pthread_mutex_consistent(),
+                    // the mutex is now in a consistent state and we hold the lock.
+                    // We should return success here, not unlock and retry.
+                    // This avoids issues with FreeBSD's robust mutex list management.
+                    return true;
                 }
-                break; // loop again
             default:
                 ipc::error("fail pthread_mutex_lock[%d]\n", eno);
                 return false;
@@ -244,15 +244,11 @@ public:
                 int eno2 = ::pthread_mutex_consistent(mutex_);
                 if (eno2 != 0) {
                     ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
-                    break;
+                    throw std::system_error{eno2, std::system_category()};
                 }
-                int eno3 = ::pthread_mutex_unlock(mutex_);
-                if (eno3 != 0) {
-                    ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
-                    break;
-                }
+                // Successfully acquired the lock after making it consistent
+                return true;
             }
-            break;
         default:
             ipc::error("fail pthread_mutex_timedlock[%d]\n", eno);
             break;
