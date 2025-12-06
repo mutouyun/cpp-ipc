@@ -19,6 +19,7 @@ namespace sync {
 class semaphore {
     ipc::shm::handle shm_;
     sem_t *h_ = SEM_FAILED;
+    std::string sem_name_;  // Store the actual semaphore name used
 
 public:
     semaphore() = default;
@@ -38,9 +39,16 @@ public:
             ipc::error("[open_semaphore] fail shm.acquire: %s\n", name);
             return false;
         }
-        h_ = ::sem_open(name, O_CREAT, 0666, static_cast<unsigned>(count));
+        // POSIX semaphore names must start with "/" on some platforms (e.g., FreeBSD)
+        // Use a separate namespace for semaphores to avoid conflicts with shm
+        if (name[0] == '/') {
+            sem_name_ = std::string(name) + "_sem";
+        } else {
+            sem_name_ = std::string("/") + name + "_sem";
+        }
+        h_ = ::sem_open(sem_name_.c_str(), O_CREAT, 0666, static_cast<unsigned>(count));
         if (h_ == SEM_FAILED) {
-            ipc::error("fail sem_open[%d]: %s\n", errno, name);
+            ipc::error("fail sem_open[%d]: %s\n", errno, sem_name_.c_str());
             return false;
         }
         return true;
@@ -52,14 +60,14 @@ public:
             ipc::error("fail sem_close[%d]: %s\n", errno);
         }
         h_ = SEM_FAILED;
-        if (shm_.name() != nullptr) {
-            std::string name = shm_.name();
+        if (!sem_name_.empty() && shm_.name() != nullptr) {
             if (shm_.release() <= 1) {
-                if (::sem_unlink(name.c_str()) != 0) {
-                    ipc::error("fail sem_unlink[%d]: %s, name: %s\n", errno, name.c_str());
+                if (::sem_unlink(sem_name_.c_str()) != 0) {
+                    ipc::error("fail sem_unlink[%d]: %s, name: %s\n", errno, sem_name_.c_str());
                 }
             }
         }
+        sem_name_.clear();
     }
 
     void clear() noexcept {
@@ -69,14 +77,22 @@ public:
             }
             h_ = SEM_FAILED;
         }
-        char const *name = shm_.name();
-        if (name == nullptr) return;
-        ::sem_unlink(name);
+        if (!sem_name_.empty()) {
+            ::sem_unlink(sem_name_.c_str());
+            sem_name_.clear();
+        }
         shm_.clear(); // Make sure the storage is cleaned up.
     }
 
     static void clear_storage(char const *name) noexcept {
-        ::sem_unlink(name);
+        // Construct the semaphore name same way as open() does
+        std::string sem_name;
+        if (name[0] == '/') {
+            sem_name = std::string(name) + "_sem";
+        } else {
+            sem_name = std::string("/") + name + "_sem";
+        }
+        ::sem_unlink(sem_name.c_str());
         ipc::shm::handle::clear_storage(name);
     }
 

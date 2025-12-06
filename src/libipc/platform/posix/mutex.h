@@ -150,6 +150,17 @@ public:
 
     void close() noexcept {
         if ((ref_ != nullptr) && (shm_ != nullptr) && (mutex_ != nullptr)) {
+            // Try to unlock the mutex before destroying it.
+            // This is important for robust mutexes on FreeBSD, which maintain
+            // a per-thread robust list. If we destroy a mutex while it's in
+            // the robust list (even if not locked), FreeBSD may encounter
+            // dangling pointers later, leading to segfaults.
+            // We ignore any errors from unlock() since:
+            // 1. If we don't hold the lock, EPERM is expected and harmless
+            // 2. If the mutex is already unlocked, this is a no-op
+            // 3. If there's an error, we still want to proceed with cleanup
+            ::pthread_mutex_unlock(mutex_);
+            
             if (shm_->name() != nullptr) {
                 release_mutex(shm_->name(), [this] {
                     auto self_ref = ref_->fetch_sub(1, std::memory_order_relaxed);
@@ -171,6 +182,9 @@ public:
 
     void clear() noexcept {
         if ((shm_ != nullptr) && (mutex_ != nullptr)) {
+            // Try to unlock before destroying, same reasoning as in close()
+            ::pthread_mutex_unlock(mutex_);
+            
             if (shm_->name() != nullptr) {
                 release_mutex(shm_->name(), [this] {
                     int eno;
@@ -206,21 +220,17 @@ public:
             case ETIMEDOUT:
                 return false;
             case EOWNERDEAD: {
-                    if (shm_->ref() > 1) {
-                        shm_->sub_ref();
-                    }
+                    // EOWNERDEAD means we have successfully acquired the lock,
+                    // but the previous owner died. We need to make it consistent.
                     int eno2 = ::pthread_mutex_consistent(mutex_);
                     if (eno2 != 0) {
                         ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
                         return false;
                     }
-                    int eno3 = ::pthread_mutex_unlock(mutex_);
-                    if (eno3 != 0) {
-                        ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
-                        return false;
-                    }
+                    // After calling pthread_mutex_consistent(), the mutex is now in a
+                    // consistent state and we hold the lock. Return success.
+                    return true;
                 }
-                break; // loop again
             default:
                 ipc::error("fail pthread_mutex_lock[%d]\n", eno);
                 return false;
@@ -238,21 +248,17 @@ public:
         case ETIMEDOUT:
             return false;
         case EOWNERDEAD: {
-                if (shm_->ref() > 1) {
-                    shm_->sub_ref();
-                }
+                // EOWNERDEAD means we have successfully acquired the lock,
+                // but the previous owner died. We need to make it consistent.
                 int eno2 = ::pthread_mutex_consistent(mutex_);
                 if (eno2 != 0) {
                     ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
-                    break;
+                    throw std::system_error{eno2, std::system_category()};
                 }
-                int eno3 = ::pthread_mutex_unlock(mutex_);
-                if (eno3 != 0) {
-                    ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_unlock[%d]\n", eno, eno3);
-                    break;
-                }
+                // After calling pthread_mutex_consistent(), the mutex is now in a
+                // consistent state and we hold the lock. Return success.
+                return true;
             }
-            break;
         default:
             ipc::error("fail pthread_mutex_timedlock[%d]\n", eno);
             break;

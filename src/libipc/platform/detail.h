@@ -72,15 +72,9 @@
 
 #if __cplusplus >= 201703L
 
-namespace std {
 
-// deduction guides for std::unique_ptr
-template <typename T>
-unique_ptr(T* p) -> unique_ptr<T>;
-template <typename T, typename D>
-unique_ptr(T* p, D&& d) -> unique_ptr<T, std::decay_t<D>>;
-
-} // namespace std
+// C++17 and later: std library already provides deduction guides
+// No need to add custom ones, just use the standard ones directly
 
 namespace ipc {
 namespace detail {
