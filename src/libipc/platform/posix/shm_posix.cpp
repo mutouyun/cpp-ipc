@@ -173,7 +173,10 @@ std::int32_t release(id_t id) noexcept {
     else if ((ret = acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel)) <= 1) {
         ::munmap(ii->mem_, ii->size_);
         if (!ii->name_.empty()) {
-            ::shm_unlink(ii->name_.c_str());
+            int unlink_ret = ::shm_unlink(ii->name_.c_str());
+            if (unlink_ret == -1) {
+                ipc::error("fail shm_unlink[%d]: %s\n", errno, ii->name_.c_str());
+            }
         }
     }
     else ::munmap(ii->mem_, ii->size_);
@@ -190,7 +193,10 @@ void remove(id_t id) noexcept {
     auto name = std::move(ii->name_);
     release(id);
     if (!name.empty()) {
-        ::shm_unlink(name.c_str());
+        int unlink_ret = ::shm_unlink(name.c_str());
+        if (unlink_ret == -1) {
+            ipc::error("fail shm_unlink[%d]: %s\n", errno, name.c_str());
+        }
     }
 }
 
@@ -199,7 +205,12 @@ void remove(char const * name) noexcept {
         ipc::error("fail remove: name is empty\n");
         return;
     }
-    ::shm_unlink(name);
+    // For portable use, a shared memory object should be identified by name of the form /somename.
+    ipc::string op_name = ipc::string{"/"} + name;
+    int unlink_ret = ::shm_unlink(op_name.c_str());
+    if (unlink_ret == -1) {
+        ipc::error("fail shm_unlink[%d]: %s\n", errno, op_name.c_str());
+    }
 }
 
 } // namespace shm

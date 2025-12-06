@@ -150,21 +150,19 @@ public:
 
     void close() noexcept {
         if ((ref_ != nullptr) && (shm_ != nullptr) && (mutex_ != nullptr)) {
-            // Try to unlock the mutex before destroying it.
-            // This is important for robust mutexes on FreeBSD, which maintain
-            // a per-thread robust list. If we destroy a mutex while it's in
-            // the robust list (even if not locked), FreeBSD may encounter
-            // dangling pointers later, leading to segfaults.
-            // We ignore any errors from unlock() since:
-            // 1. If we don't hold the lock, EPERM is expected and harmless
-            // 2. If the mutex is already unlocked, this is a no-op
-            // 3. If there's an error, we still want to proceed with cleanup
-            ::pthread_mutex_unlock(mutex_);
-            
             if (shm_->name() != nullptr) {
                 release_mutex(shm_->name(), [this] {
                     auto self_ref = ref_->fetch_sub(1, std::memory_order_relaxed);
                     if ((shm_->ref() <= 1) && (self_ref <= 1)) {
+                        // Before destroying the mutex, try to unlock it.
+                        // This is important for robust mutexes on FreeBSD, which maintain
+                        // a per-thread robust list. If we destroy a mutex while it's locked
+                        // or still in the robust list, FreeBSD may encounter dangling pointers
+                        // later, leading to segfaults.
+                        // Only unlock here (when we're the last reference) to avoid
+                        // interfering with other threads that might be using the mutex.
+                        ::pthread_mutex_unlock(mutex_);
+                        
                         int eno;
                         if ((eno = ::pthread_mutex_destroy(mutex_)) != 0) {
                             ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
@@ -182,11 +180,11 @@ public:
 
     void clear() noexcept {
         if ((shm_ != nullptr) && (mutex_ != nullptr)) {
-            // Try to unlock before destroying, same reasoning as in close()
-            ::pthread_mutex_unlock(mutex_);
-            
             if (shm_->name() != nullptr) {
                 release_mutex(shm_->name(), [this] {
+                    // Unlock before destroying, same reasoning as in close()
+                    ::pthread_mutex_unlock(mutex_);
+                    
                     int eno;
                     if ((eno = ::pthread_mutex_destroy(mutex_)) != 0) {
                         ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
