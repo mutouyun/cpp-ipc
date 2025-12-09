@@ -14,7 +14,6 @@
 #include "libipc/ipc.h"
 #include "libipc/def.h"
 #include "libipc/shm.h"
-#include "libipc/pool_alloc.h"
 #include "libipc/queue.h"
 #include "libipc/policy.h"
 #include "libipc/rw_lock.h"
@@ -25,7 +24,8 @@
 #include "libipc/utility/scope_guard.h"
 #include "libipc/utility/utility.h"
 
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
+#include "libipc/mem/new.h"
 #include "libipc/platform/detail.h"
 #include "libipc/circ/elem_array.h"
 
@@ -64,25 +64,30 @@ struct msg_t : msg_t<0, AlignSize> {
 };
 
 template <typename T>
-ipc::buff_t make_cache(T& data, std::size_t size) {
-    auto ptr = ipc::mem::alloc(size);
+ipc::buff_t make_cache(T &data, std::size_t size) {
+    auto *ptr = ipc::mem::$new<void>(size);
     std::memcpy(ptr, &data, (ipc::detail::min)(sizeof(data), size));
-    return { ptr, size, ipc::mem::free };
+    return {
+        ptr, size, 
+        [](void *p, std::size_t) noexcept {
+            ipc::mem::$delete(p);
+        }
+    };
 }
 
-acc_t *cc_acc(ipc::string const &pref) {
-    static ipc::unordered_map<ipc::string, ipc::shm::handle> handles;
+acc_t *cc_acc(std::string const &pref) {
+    static auto *phs = new ipc::unordered_map<std::string, ipc::shm::handle>; // no delete
     static std::mutex lock;
     std::lock_guard<std::mutex> guard {lock};
-    auto it = handles.find(pref);
-    if (it == handles.end()) {
-        ipc::string shm_name {ipc::make_prefix(pref, {"CA_CONN__"})};
+    auto it = phs->find(pref);
+    if (it == phs->end()) {
+        std::string shm_name {ipc::make_prefix(pref, "CA_CONN__")};
         ipc::shm::handle h;
         if (!h.acquire(shm_name.c_str(), sizeof(acc_t))) {
             ipc::error("[cc_acc] acquire failed: %s\n", shm_name.c_str());
             return nullptr;
         }
-        it = handles.emplace(pref, std::move(h)).first;
+        it = phs->emplace(pref, std::move(h)).first;
     }
     return static_cast<acc_t *>(it->second.get());
 }
@@ -105,8 +110,8 @@ struct cache_t {
 
 struct conn_info_head {
 
-    ipc::string prefix_;
-    ipc::string name_;
+    std::string prefix_;
+    std::string name_;
     msg_id_t    cc_id_; // connection-info id
     ipc::detail::waiter cc_waiter_, wt_waiter_, rd_waiter_;
     ipc::shm::handle acc_h_;
@@ -117,10 +122,10 @@ struct conn_info_head {
         , cc_id_ {} {}
 
     void init() {
-        if (!cc_waiter_.valid()) cc_waiter_.open(ipc::make_prefix(prefix_, {"CC_CONN__", name_}).c_str());
-        if (!wt_waiter_.valid()) wt_waiter_.open(ipc::make_prefix(prefix_, {"WT_CONN__", name_}).c_str());
-        if (!rd_waiter_.valid()) rd_waiter_.open(ipc::make_prefix(prefix_, {"RD_CONN__", name_}).c_str());
-        if (!acc_h_.valid()) acc_h_.acquire(ipc::make_prefix(prefix_, {"AC_CONN__", name_}).c_str(), sizeof(acc_t));
+        if (!cc_waiter_.valid()) cc_waiter_.open(ipc::make_prefix(prefix_, "CC_CONN__", name_).c_str());
+        if (!wt_waiter_.valid()) wt_waiter_.open(ipc::make_prefix(prefix_, "WT_CONN__", name_).c_str());
+        if (!rd_waiter_.valid()) rd_waiter_.open(ipc::make_prefix(prefix_, "RD_CONN__", name_).c_str());
+        if (!acc_h_.valid()) acc_h_.acquire(ipc::make_prefix(prefix_, "AC_CONN__", name_).c_str(), sizeof(acc_t));
         if (cc_id_ != 0) {
             return;
         }
@@ -146,10 +151,10 @@ struct conn_info_head {
     static void clear_storage(char const * prefix, char const * name) noexcept {
         auto p = ipc::make_string(prefix);
         auto n = ipc::make_string(name);
-        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"CC_CONN__", n}).c_str());
-        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"WT_CONN__", n}).c_str());
-        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, {"RD_CONN__", n}).c_str());
-        ipc::shm::handle::clear_storage(ipc::make_prefix(p, {"AC_CONN__", n}).c_str());
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, "CC_CONN__", n).c_str());
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, "WT_CONN__", n).c_str());
+        ipc::detail::waiter::clear_storage(ipc::make_prefix(p, "RD_CONN__", n).c_str());
+        ipc::shm::handle::clear_storage(ipc::make_prefix(p, "AC_CONN__", n).c_str());
     }
 
     void quit_waiting() {
@@ -208,10 +213,10 @@ struct chunk_info_t {
 
 auto& chunk_storages() {
     class chunk_handle_t {
-        ipc::unordered_map<ipc::string, ipc::shm::handle> handles_;
+        ipc::unordered_map<std::string, ipc::shm::handle> handles_;
         std::mutex lock_;
 
-        static bool make_handle(ipc::shm::handle &h, ipc::string const &shm_name, std::size_t chunk_size) {
+        static bool make_handle(ipc::shm::handle &h, std::string const &shm_name, std::size_t chunk_size) {
             if (!h.valid() &&
                 !h.acquire( shm_name.c_str(), 
                             sizeof(chunk_info_t) + chunk_info_t::chunks_mem_size(chunk_size) )) {
@@ -223,8 +228,8 @@ auto& chunk_storages() {
 
     public:
         chunk_info_t *get_info(conn_info_head *inf, std::size_t chunk_size) {
-            ipc::string pref {(inf == nullptr) ? ipc::string{} : inf->prefix_};
-            ipc::string shm_name {ipc::make_prefix(pref, {"CHUNK_INFO__", ipc::to_string(chunk_size)})};
+            std::string pref {(inf == nullptr) ? std::string{} : inf->prefix_};
+            std::string shm_name {ipc::make_prefix(pref, "CHUNK_INFO__", chunk_size)};
             ipc::shm::handle *h;
             {
                 std::lock_guard<std::mutex> guard {lock_};
@@ -243,8 +248,8 @@ auto& chunk_storages() {
     };
     using deleter_t = void (*)(chunk_handle_t*);
     using chunk_handle_ptr_t = std::unique_ptr<chunk_handle_t, deleter_t>;
-    static ipc::map<std::size_t, chunk_handle_ptr_t> chunk_hs;
-    return chunk_hs;
+    static auto *chunk_hs = new ipc::map<std::size_t, chunk_handle_ptr_t>; // no delete
+    return *chunk_hs;
 }
 
 chunk_info_t *chunk_storage_info(conn_info_head *inf, std::size_t chunk_size) {
@@ -252,15 +257,15 @@ chunk_info_t *chunk_storage_info(conn_info_head *inf, std::size_t chunk_size) {
     std::decay_t<decltype(storages)>::iterator it;
     {
         static ipc::rw_lock lock;
-        IPC_UNUSED_ std::shared_lock<ipc::rw_lock> guard {lock};
+        LIBIPC_UNUSED std::shared_lock<ipc::rw_lock> guard {lock};
         if ((it = storages.find(chunk_size)) == storages.end()) {
             using chunk_handle_ptr_t = std::decay_t<decltype(storages)>::value_type::second_type;
             using chunk_handle_t     = chunk_handle_ptr_t::element_type;
             guard.unlock();
-            IPC_UNUSED_ std::lock_guard<ipc::rw_lock> guard {lock};
+            LIBIPC_UNUSED std::lock_guard<ipc::rw_lock> guard {lock};
             it = storages.emplace(chunk_size, chunk_handle_ptr_t{
-                ipc::mem::alloc<chunk_handle_t>(), [](chunk_handle_t *p) {
-                    ipc::mem::destruct(p);
+                ipc::mem::$new<chunk_handle_t>(), [](chunk_handle_t *p) {
+                    ipc::mem::$delete(p);
                 }}).first;
         }
     }
@@ -394,11 +399,11 @@ struct queue_generator {
         void init() {
             conn_info_head::init();
             if (!que_.valid()) {
-                que_.open(ipc::make_prefix(prefix_, {
+                que_.open(ipc::make_prefix(prefix_, 
                           "QU_CONN__", 
                           this->name_, 
-                          "__", ipc::to_string(DataSize), 
-                          "__", ipc::to_string(AlignSize)}).c_str());
+                          "__", DataSize, 
+                          "__", AlignSize).c_str());
             }
         }
 
@@ -408,11 +413,11 @@ struct queue_generator {
         }
 
         static void clear_storage(char const * prefix, char const * name) noexcept {
-            queue_t::clear_storage(ipc::make_prefix(ipc::make_string(prefix), {
+            queue_t::clear_storage(ipc::make_prefix(prefix, 
                                    "QU_CONN__", 
-                                   ipc::make_string(name), 
-                                   "__", ipc::to_string(DataSize), 
-                                   "__", ipc::to_string(AlignSize)}).c_str());
+                                   name, 
+                                   "__", DataSize, 
+                                   "__", AlignSize).c_str());
             conn_info_head::clear_storage(prefix, name);
         }
 
@@ -447,7 +452,7 @@ constexpr static queue_t* queue_of(ipc::handle_t h) noexcept {
 static bool connect(ipc::handle_t * ph, ipc::prefix pref, char const * name, bool start_to_recv) {
     assert(ph != nullptr);
     if (*ph == nullptr) {
-        *ph = ipc::mem::alloc<conn_info_t>(pref.str, name);
+        *ph = ipc::mem::$new<conn_info_t>(pref.str, name);
     }
     return reconnect(ph, start_to_recv);
 }
@@ -490,7 +495,7 @@ static bool reconnect(ipc::handle_t * ph, bool start_to_recv) {
 }
 
 static void destroy(ipc::handle_t h) noexcept {
-    ipc::mem::free(info_of(h));
+    ipc::mem::$delete(info_of(h));
 }
 
 static std::size_t recv_count(ipc::handle_t h) noexcept {
@@ -657,20 +662,20 @@ static ipc::buff_t recv(ipc::handle_t h, std::uint64_t tm) {
                     conn_info_t *     inf;
                     ipc::circ::cc_t   curr_conns;
                     ipc::circ::cc_t   conn_id;
-                } *r_info = ipc::mem::alloc<recycle_t>(recycle_t{
+                } *r_info = ipc::mem::$new<recycle_t>(recycle_t{
                     buf_id, 
                     inf, 
                     que->elems()->connections(std::memory_order_relaxed), 
                     que->connected_id()
                 });
                 if (r_info == nullptr) {
-                    ipc::log("fail: ipc::mem::alloc<recycle_t>.\n");
+                    ipc::log("fail: ipc::mem::$new<recycle_t>.\n");
                     return ipc::buff_t{buf, msg_size}; // no recycle
                 } else {
                     return ipc::buff_t{buf, msg_size, [](void* p_info, std::size_t size) {
                         auto r_info = static_cast<recycle_t *>(p_info);
-                        IPC_UNUSED_ auto finally = ipc::guard([r_info] {
-                            ipc::mem::free(r_info);
+                        LIBIPC_UNUSED auto finally = ipc::guard([r_info] {
+                            ipc::mem::$delete(r_info);
                         });
                         recycle_storage<flag_t>(r_info->storage_id, 
                                                 r_info->inf, 

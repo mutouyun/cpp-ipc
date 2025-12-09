@@ -17,11 +17,11 @@ TEST(Platform, to_tchar) {
                        "\x81\xab\xe3\x81\xa1\xe3\x81\xaf";
     wchar_t const *utf16 = L"hello world, \u4f60\u597d\uff0c\u3053\u3093\u306b\u3061\u306f";
     {
-        ipc::string str = ipc::detail::to_tchar<char>(utf8);
+        std::string str = ipc::detail::to_tchar<char>(utf8);
         EXPECT_STREQ(str.c_str(), utf8);
     }
     {
-        ipc::wstring wtr = ipc::detail::to_tchar<wchar_t>(utf8);
+        std::wstring wtr = ipc::detail::to_tchar<wchar_t>(utf8);
         EXPECT_STREQ(wtr.c_str(), utf16);
         //std::ofstream out("out.txt", std::ios::binary|std::ios::out);
         //out.write((char const *)wtr.c_str(), wtr.size() * sizeof(wchar_t));

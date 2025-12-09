@@ -27,7 +27,7 @@ constexpr decltype(auto) static_switch(std::size_t i, F&& f, D&& def) {
 
 template <typename F, std::size_t...I>
 IPC_CONSTEXPR_ void static_for(std::index_sequence<I...>, F&& f) {
-    IPC_UNUSED_ auto expand = { (std::forward<F>(f)(std::integral_constant<std::size_t, I>{}), 0)... };
+    LIBIPC_UNUSED auto expand = { (std::forward<F>(f)(std::integral_constant<std::size_t, I>{}), 0)... };
 }
 
 template <std::size_t N, typename F>
@@ -43,18 +43,6 @@ enum {
     cache_line_size = 64
 // #endif/*__cplusplus < 201703L*/
 };
-
-template <typename T, typename U>
-auto horrible_cast(U rhs) noexcept
-    -> typename std::enable_if<std::is_trivially_copyable<T>::value
-                            && std::is_trivially_copyable<U>::value, T>::type {
-    union {
-        T t;
-        U u;
-    } r = {};
-    r.u = rhs;
-    return r.t;
-}
 
 IPC_CONSTEXPR_ std::size_t make_align(std::size_t align, std::size_t size) {
     // align must be 2^n

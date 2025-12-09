@@ -4,10 +4,11 @@
 #include <mutex>
 #include <atomic>
 #include <cstring>
+#include <new>
 
 #include "libipc/ipc.h"
 #include "libipc/buffer.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 
 #include "test.h"
 #include "thread_pool.h"
@@ -84,18 +85,31 @@ void test_basic(char const * name) {
 }
 
 class data_set {
-    std::vector<rand_buf> datas_;
+    alignas(rand_buf) char datas_[sizeof(rand_buf[LoopCount])];
+    rand_buf *d_;
 
 public:
     data_set() {
-        datas_.resize(LoopCount);
+        // Use individual placement new instead of array placement new
+        // Array placement new adds a cookie (array size) before the array,
+        // which would overflow the buffer. MSVC's implementation stores this
+        // cookie, causing buffer overflow and subsequent memory corruption.
+        d_ = reinterpret_cast<rand_buf *>(datas_);
         for (int i = 0; i < LoopCount; ++i) {
-            datas_[i].set_id(i);
+            ::new(d_ + i) rand_buf;
+            d_[i].set_id(i);
         }
     }
 
-    std::vector<rand_buf> const &get() const noexcept {
-        return datas_;
+    ~data_set() {
+        // Manually destroy each element since we used individual placement new
+        for (int i = 0; i < LoopCount; ++i) {
+            d_[i].~rand_buf();
+        }
+    }
+
+    rand_buf const *get() const noexcept {
+        return d_;
     }
 } const data_set__;
 
@@ -112,7 +126,7 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
             Que que { name, ipc::sender };
             ASSERT_TRUE(que.wait_for_recv(r_cnt));
             sw.start();
-            for (int i = 0; i < (int)data_set__.get().size(); ++i) {
+            for (int i = 0; i < LoopCount; ++i) {
                 ASSERT_TRUE(que.send(data_set__.get()[i]));
             }
         };
@@ -128,7 +142,7 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
                 if (i == -1) {
                     return;
                 }
-                ASSERT_TRUE((i >= 0) && (i < (int)data_set__.get().size()));
+                ASSERT_TRUE((i >= 0) && (i < LoopCount));
                 auto const &data_set = data_set__.get()[i];
                 if (data_set != got) {
                     printf("data_set__.get()[%d] != got, size = %zd/%zd\n", 
@@ -146,7 +160,7 @@ void test_sr(char const * name, int s_cnt, int r_cnt) {
         que.send(rand_buf{msg_head{-1}});
     }
     ipc_ut::reader().wait_for_done();
-    sw.print_elapsed<std::chrono::microseconds>(s_cnt, r_cnt, (int)data_set__.get().size(), name);
+    sw.print_elapsed<std::chrono::microseconds>(s_cnt, r_cnt, LoopCount, name);
 }
 
 } // internal-linkage

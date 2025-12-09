@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 #include "libipc/def.h"
 #include "libipc/buffer.h"
 #include "libipc/shm.h"
@@ -18,7 +18,7 @@ enum : unsigned {
 };
 
 template <typename Flag>
-struct IPC_EXPORT chan_impl {
+struct LIBIPC_EXPORT chan_impl {
     static ipc::handle_t init_first();
 
     static bool connect   (ipc::handle_t * ph, char const * name, unsigned mode);

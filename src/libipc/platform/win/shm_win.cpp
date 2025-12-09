@@ -11,10 +11,10 @@
 
 #include "libipc/shm.h"
 #include "libipc/def.h"
-#include "libipc/pool_alloc.h"
 
 #include "libipc/utility/log.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
+#include "libipc/mem/new.h"
 
 #include "to_tchar.h"
 #include "get_sa.h"
@@ -76,7 +76,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
           return nullptr;
         }
     }
-    auto ii = mem::alloc<id_info_t>();
+    auto ii = mem::$new<id_info_t>();
     ii->h_    = h;
     ii->size_ = size;
     return ii;
@@ -161,7 +161,7 @@ std::int32_t release(id_t id) noexcept {
         ipc::error("fail release: invalid id (h = null)\n");
     }
     else ::CloseHandle(ii->h_);
-    mem::free(ii);
+    mem::$delete(ii);
     return ret;
 }
 
@@ -183,3 +183,4 @@ void remove(char const * name) noexcept {
 
 } // namespace shm
 } // namespace ipc
+

@@ -15,7 +15,7 @@
 #include "thread_pool.h"
 
 #include "libipc/platform/detail.h"
-#ifdef IPC_OS_LINUX_
+#ifdef LIBIPC_OS_LINUX
 #include <fcntl.h> // ::open
 #endif
 
@@ -88,7 +88,7 @@ inline static thread_pool & reader() {
     return pool;
 }
 
-#ifdef IPC_OS_LINUX_
+#ifdef LIBIPC_OS_LINUX
 inline bool check_exist(char const *name) noexcept {
     int fd = ::open((std::string{"/dev/shm/"} + name).c_str(), O_RDONLY);
     if (fd == -1) {
@@ -100,7 +100,7 @@ inline bool check_exist(char const *name) noexcept {
 #endif
 
 inline bool expect_exist(char const *name, bool expected) noexcept {
-#ifdef IPC_OS_LINUX_
+#ifdef LIBIPC_OS_LINUX
     return ipc_ut::check_exist(name) == expected;
 #else
     return true;

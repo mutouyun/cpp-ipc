@@ -13,10 +13,10 @@
 
 #include "libipc/shm.h"
 #include "libipc/def.h"
-#include "libipc/pool_alloc.h"
 
 #include "libipc/utility/log.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
+#include "libipc/mem/new.h"
 
 namespace {
 
@@ -28,7 +28,7 @@ struct id_info_t {
     int         fd_   = -1;
     void*       mem_  = nullptr;
     std::size_t size_ = 0;
-    ipc::string name_;
+    std::string name_;
 };
 
 constexpr std::size_t calc_size(std::size_t size) {
@@ -51,11 +51,11 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     }
     // For portable use, a shared memory object should be identified by name of the form /somename.
     // see: https://man7.org/linux/man-pages/man3/shm_open.3.html
-    ipc::string op_name;
+    std::string op_name;
     if (name[0] == '/') {
         op_name = name;
     } else {
-        op_name = ipc::string{"/"} + name;
+        op_name = std::string{"/"} + name;
     }
     // Open the object for read-write access.
     int flag = O_RDWR;
@@ -86,7 +86,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     ::fchmod(fd, S_IRUSR | S_IWUSR | 
                  S_IRGRP | S_IWGRP | 
                  S_IROTH | S_IWOTH);
-    auto ii = mem::alloc<id_info_t>();
+    auto ii = mem::$new<id_info_t>();
     ii->fd_   = fd;
     ii->size_ = size;
     ii->name_ = std::move(op_name);
@@ -185,7 +185,7 @@ std::int32_t release(id_t id) noexcept {
         }
     }
     else ::munmap(ii->mem_, ii->size_);
-    mem::free(ii);
+    mem::$delete(ii);
     return ret;
 }
 
@@ -211,11 +211,11 @@ void remove(char const * name) noexcept {
         return;
     }
     // For portable use, a shared memory object should be identified by name of the form /somename.
-    ipc::string op_name;
+    std::string op_name;
     if (name[0] == '/') {
         op_name = name;
     } else {
-        op_name = ipc::string{"/"} + name;
+        op_name = std::string{"/"} + name;
     }
     int unlink_ret = ::shm_unlink(op_name.c_str());
     if (unlink_ret == -1) {

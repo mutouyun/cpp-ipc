@@ -3,13 +3,13 @@
 #include <cstdint>  // std::uint64_t
 #include <system_error>
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 #include "libipc/def.h"
 
 namespace ipc {
 namespace sync {
 
-class IPC_EXPORT mutex {
+class LIBIPC_EXPORT mutex {
     mutex(mutex const &) = delete;
     mutex &operator=(mutex const &) = delete;
 

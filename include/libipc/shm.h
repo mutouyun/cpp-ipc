@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 
 namespace ipc {
 namespace shm {
@@ -15,8 +15,8 @@ enum : unsigned {
     open   = 0x02
 };
 
-IPC_EXPORT id_t         acquire(char const * name, std::size_t size, unsigned mode = create | open);
-IPC_EXPORT void *       get_mem(id_t id, std::size_t * size);
+LIBIPC_EXPORT id_t         acquire(char const * name, std::size_t size, unsigned mode = create | open);
+LIBIPC_EXPORT void *       get_mem(id_t id, std::size_t * size);
 
 // Release shared memory resource and clean up disk file if reference count reaches zero.
 // This function decrements the reference counter. When the counter reaches zero, it:
@@ -25,7 +25,7 @@ IPC_EXPORT void *       get_mem(id_t id, std::size_t * size);
 // 3. Frees the id structure
 // After calling this function, the id becomes invalid and must not be used again.
 // Returns: The reference count before decrement, or -1 on error.
-IPC_EXPORT std::int32_t release(id_t id) noexcept;
+LIBIPC_EXPORT std::int32_t release(id_t id) noexcept;
 
 // Release shared memory resource and force cleanup of disk file.
 // This function calls release(id) internally, then unconditionally attempts to
@@ -34,19 +34,19 @@ IPC_EXPORT std::int32_t release(id_t id) noexcept;
 // not in combination with release().
 // Typical use case: Force cleanup when you want to ensure the disk file is removed
 // regardless of reference count state.
-IPC_EXPORT void         remove (id_t id) noexcept;
+LIBIPC_EXPORT void         remove (id_t id) noexcept;
 
 // Remove shared memory backing file by name.
 // This function only removes the disk file and does not affect any active memory
 // mappings or id structures. Use this for cleanup of orphaned files or for explicit
 // file removal without affecting runtime resources.
 // Safe to call at any time, even if shared memory is still in use elsewhere.
-IPC_EXPORT void         remove (char const * name) noexcept;
+LIBIPC_EXPORT void         remove (char const * name) noexcept;
 
-IPC_EXPORT std::int32_t get_ref(id_t id);
-IPC_EXPORT void sub_ref(id_t id);
+LIBIPC_EXPORT std::int32_t get_ref(id_t id);
+LIBIPC_EXPORT void sub_ref(id_t id);
 
-class IPC_EXPORT handle {
+class LIBIPC_EXPORT handle {
 public:
     handle();
     handle(char const * name, std::size_t size, unsigned mode = create | open);
@@ -83,3 +83,4 @@ private:
 
 } // namespace shm
 } // namespace ipc
+

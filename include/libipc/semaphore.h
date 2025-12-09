@@ -2,13 +2,13 @@
 
 #include <cstdint>  // std::uint64_t
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 #include "libipc/def.h"
 
 namespace ipc {
 namespace sync {
 
-class IPC_EXPORT semaphore {
+class LIBIPC_EXPORT semaphore {
     semaphore(semaphore const &) = delete;
     semaphore &operator=(semaphore const &) = delete;
 

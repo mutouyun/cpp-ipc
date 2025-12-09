@@ -6,7 +6,7 @@
 
 #include "libipc/utility/pimpl.h"
 #include "libipc/utility/log.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 
 namespace ipc {
 namespace shm {
@@ -16,7 +16,7 @@ public:
     shm::id_t id_ = nullptr;
     void*     m_  = nullptr;
 
-    ipc::string n_;
+    std::string n_;
     std::size_t s_ = 0;
 };
 

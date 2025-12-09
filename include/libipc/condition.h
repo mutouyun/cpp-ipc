@@ -2,14 +2,14 @@
 
 #include <cstdint>  // std::uint64_t
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 #include "libipc/def.h"
 #include "libipc/mutex.h"
 
 namespace ipc {
 namespace sync {
 
-class IPC_EXPORT condition {
+class LIBIPC_EXPORT condition {
     condition(condition const &) = delete;
     condition &operator=(condition const &) = delete;
 

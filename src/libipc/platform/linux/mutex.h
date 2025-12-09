@@ -7,7 +7,7 @@
 
 #include "libipc/platform/detail.h"
 #include "libipc/utility/log.h"
-#include "libipc/memory/resource.h"
+#include "libipc/mem/resource.h"
 #include "libipc/shm.h"
 
 #include "get_wait_time.h"
@@ -108,7 +108,7 @@ class mutex {
             shm_data(init arg)
                 : mtx{}, ref{0} { mtx.open(arg.name); }
         };
-        ipc::map<ipc::string, shm_data> mutex_handles;
+        ipc::map<std::string, shm_data> mutex_handles;
         std::mutex lock;
 
         static curr_prog &get() {
@@ -122,7 +122,7 @@ class mutex {
             return;
         }
         auto &info = curr_prog::get();
-        IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
+        LIBIPC_UNUSED std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
             it = info.mutex_handles
@@ -136,10 +136,10 @@ class mutex {
     }
 
     template <typename F>
-    static void release_mutex(ipc::string const &name, F &&clear) {
+    static void release_mutex(std::string const &name, F &&clear) {
         if (name.empty()) return;
         auto &info = curr_prog::get();
-        IPC_UNUSED_ std::lock_guard<std::mutex> guard {info.lock};
+        LIBIPC_UNUSED std::lock_guard<std::mutex> guard {info.lock};
         auto it = info.mutex_handles.find(name);
         if (it == info.mutex_handles.end()) {
             return;

@@ -5,12 +5,12 @@
 #include <vector>
 #include <type_traits>
 
-#include "libipc/export.h"
+#include "libipc/imp/export.h"
 #include "libipc/def.h"
 
 namespace ipc {
 
-class IPC_EXPORT buffer {
+class LIBIPC_EXPORT buffer {
 public:
     using destructor_t = void (*)(void*, std::size_t);
 
@@ -59,8 +59,8 @@ public:
         };
     }
 
-    friend IPC_EXPORT bool operator==(buffer const & b1, buffer const & b2);
-    friend IPC_EXPORT bool operator!=(buffer const & b1, buffer const & b2);
+    friend LIBIPC_EXPORT bool operator==(buffer const & b1, buffer const & b2);
+    friend LIBIPC_EXPORT bool operator!=(buffer const & b1, buffer const & b2);
 
 private:
     class buffer_;
