@@ -15,6 +15,8 @@
 #elif defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || \
       defined(__NT__) || defined(__MSYS__)
 # define LIBIPC_OS_WIN32
+#elif defined(__FreeBSD__)
+# define LIBIPC_OS_FREEBSD
 #elif defined(__QNX__) || defined(__QNXNTO__)
 # define LIBIPC_OS_QNX
 #elif defined(__APPLE__)
