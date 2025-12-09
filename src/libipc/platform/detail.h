@@ -1,6 +1,8 @@
 #ifndef LIBIPC_SRC_PLATFORM_DETAIL_H_
 #define LIBIPC_SRC_PLATFORM_DETAIL_H_
 
+#include "libipc/imp/detect_plat.h"
+
 
 #if defined(__cplusplus)
 
@@ -96,4 +98,5 @@ constexpr const T& (min)(const T& a, const T& b) {
 
 #endif // defined(__cplusplus)
 #endif // LIBIPC_SRC_PLATFORM_DETAIL_H_
+
 
