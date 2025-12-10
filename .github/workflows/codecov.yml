@@ -1,0 +1,34 @@
+name: Upload CodeCov Report
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+  
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    - name: Configure
+      run: cmake -DCMAKE_BUILD_TYPE=Debug -DLIBIPC_BUILD_TESTS=ON -DLIBIPC_CODECOV=ON .
+
+    - name: Build
+      run: make -j
+
+    - name: Test
+      env:
+        LD_LIBRARY_PATH: ./bin
+      run: ./bin/test-ipc
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        verbose: true
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
