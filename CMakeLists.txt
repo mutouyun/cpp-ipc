@@ -5,12 +5,19 @@ option(LIBIPC_BUILD_TESTS       "Build all of libipc's own tests."              
 option(LIBIPC_BUILD_DEMOS       "Build all of libipc's own demos."                      OFF)
 option(LIBIPC_BUILD_SHARED_LIBS "Build shared libraries (DLLs)."                        OFF)
 option(LIBIPC_USE_STATIC_CRT    "Set to ON to build with static CRT on Windows (/MT)."  OFF)
+option(LIBIPC_CODECOV           "Build with unit test coverage."                        OFF)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
+endif()
+
+# Code coverage support
+if (LIBIPC_CODECOV AND NOT MSVC)
+    add_compile_options(--coverage)
+    add_link_options(-lgcov --coverage)
 endif()
 
 if (MSVC)
