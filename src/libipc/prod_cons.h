@@ -10,7 +10,7 @@
 
 #include "libipc/platform/detail.h"
 #include "libipc/circ/elem_def.h"
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/utility/utility.h"
 
 namespace ipc {
@@ -242,6 +242,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
 
     template <typename W, typename F, typename E>
     bool force_push(W* wrapper, F&& f, E* elems) {
+        LIBIPC_LOG();
         E* el;
         epoch_ += ep_incr;
         for (unsigned k = 0;;) {
@@ -252,7 +253,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             circ::cc_t rem_cc = cur_rc & ep_mask;
             if (cc & rem_cc) {
-                ipc::log("force_push: k = %u, cc = %u, rem_cc = %u\n", k, cc, rem_cc);
+                log.warning("force_push: k = ", k, ", cc = ", cc, ", rem_cc = ", rem_cc);
                 cc = wrapper->elems()->disconnect_receiver(rem_cc); // disconnect all invalid readers
                 if (cc == 0) return false; // no reader
             }
@@ -375,7 +376,7 @@ struct prod_cons_impl<wr<relat::multi, relat::multi, trans::broadcast>> {
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             circ::cc_t rem_cc = cur_rc & rc_mask;
             if (cc & rem_cc) {
-                ipc::log("force_push: k = %u, cc = %u, rem_cc = %u\n", k, cc, rem_cc);
+                log.warning("force_push: k = ", k, ", cc = ", cc, ", rem_cc = ", rem_cc);
                 cc = wrapper->elems()->disconnect_receiver(rem_cc); // disconnect all invalid readers
                 if (cc == 0) return false; // no reader
             }

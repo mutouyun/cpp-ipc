@@ -15,7 +15,7 @@
 #include "libipc/shm.h"
 #include "libipc/rw_lock.h"
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/platform/detail.h"
 #include "libipc/circ/elem_def.h"
 #include "libipc/mem/resource.h"
@@ -30,8 +30,9 @@ protected:
 
     template <typename Elems>
     Elems* open(char const * name) {
+        LIBIPC_LOG();
         if (!is_valid_string(name)) {
-            ipc::error("fail open waiter: name is empty!\n");
+            log.error("fail open waiter: name is empty!");
             return nullptr;
         }
         if (!elems_h_.acquire(name, sizeof(Elems))) {
@@ -39,7 +40,7 @@ protected:
         }
         auto elems = static_cast<Elems*>(elems_h_.get());
         if (elems == nullptr) {
-            ipc::error("fail acquire elems: %s\n", name);
+            log.error("fail acquire elems: ", name);
             return nullptr;
         }
         elems->init();
