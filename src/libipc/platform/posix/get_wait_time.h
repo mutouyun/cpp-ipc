@@ -14,6 +14,7 @@ namespace posix_ {
 namespace detail {
 
 inline bool calc_wait_time(timespec &ts, std::uint64_t tm /*ms*/) noexcept {
+    LIBIPC_LOG();
     timeval now;
     int eno = ::gettimeofday(&now, NULL);
     if (eno != 0) {
@@ -27,6 +28,7 @@ inline bool calc_wait_time(timespec &ts, std::uint64_t tm /*ms*/) noexcept {
 }
 
 inline timespec make_timespec(std::uint64_t tm /*ms*/) noexcept(false) {
+    LIBIPC_LOG();
     timespec ts {};
     if (!calc_wait_time(ts, tm)) {
         log.error("fail calc_wait_time: tm = ", tm, ", tv_sec = ", ts.tv_sec, ", tv_nsec = ", ts.tv_nsec);
