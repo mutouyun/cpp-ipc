@@ -365,6 +365,7 @@ struct prod_cons_impl<wr<relat::multi, relat::multi, trans::broadcast>> {
 
     template <typename W, typename F, typename E>
     bool force_push(W* wrapper, F&& f, E* elems) {
+        LIBIPC_LOG();
         E* el;
         circ::u2_t cur_ct;
         rc_t epoch = epoch_.fetch_add(ep_incr, std::memory_order_release) + ep_incr;

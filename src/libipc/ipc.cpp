@@ -588,8 +588,9 @@ static bool send(F&& gen_push, ipc::handle_t h, void const * data, std::size_t s
 }
 
 static bool send(ipc::handle_t h, void const * data, std::size_t size, std::uint64_t tm) {
-    return send([tm](auto *info, auto *que, auto msg_id) {
-        return [tm, info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
+    LIBIPC_LOG();
+    return send([tm, &log](auto *info, auto *que, auto msg_id) {
+        return [tm, &log, info, que, msg_id](std::int32_t remain, void const * data, std::size_t size) {
             if (!wait_for(info->wt_waiter_, [&] {
                     return !que->push(
                         [](void*) { return true; },
