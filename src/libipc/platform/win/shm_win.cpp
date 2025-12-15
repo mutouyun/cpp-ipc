@@ -45,6 +45,7 @@ namespace ipc {
 namespace shm {
 
 id_t acquire(char const * name, std::size_t size, unsigned mode) {
+    LIBIPC_LOG();
     if (!is_valid_string(name)) {
         log.error("fail acquire: name is empty");
         return nullptr;
@@ -55,7 +56,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     if (mode == open) {
         h = ::OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, fmt_name.c_str());
         if (h == NULL) {
-          log.error("fail OpenFileMapping[%d]: ", static_cast<int>(::GetLastError(, "")), name);
+          log.error("fail OpenFileMapping[", static_cast<int>(::GetLastError()), "]: ", name);
           return nullptr;
         }
     }
@@ -72,7 +73,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
             h = NULL;
         }
         if (h == NULL) {
-          log.error("fail CreateFileMapping[%d]: ", static_cast<int>(err, ""), name);
+          log.error("fail CreateFileMapping[", static_cast<int>(err), "]: ", name);
           return nullptr;
         }
     }
@@ -108,6 +109,7 @@ void sub_ref(id_t id) {
 }
 
 void * get_mem(id_t id, std::size_t * size) {
+    LIBIPC_LOG();
     if (id == nullptr) {
         log.error("fail get_mem: invalid id (null)");
         return nullptr;
@@ -123,12 +125,12 @@ void * get_mem(id_t id, std::size_t * size) {
     }
     LPVOID mem = ::MapViewOfFile(ii->h_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     if (mem == NULL) {
-        log.error("fail MapViewOfFile[", static_cast<int>(::GetLastError(, "]")));
+        log.error("fail MapViewOfFile[", static_cast<int>(::GetLastError()), "]");
         return nullptr;
     }
     MEMORY_BASIC_INFORMATION mem_info;
     if (::VirtualQuery(mem, &mem_info, sizeof(mem_info)) == 0) {
-        log.error("fail VirtualQuery[", static_cast<int>(::GetLastError(, "]")));
+        log.error("fail VirtualQuery[", static_cast<int>(::GetLastError()), "]");
         return nullptr;
     }
     std::size_t actual_size = static_cast<std::size_t>(mem_info.RegionSize);

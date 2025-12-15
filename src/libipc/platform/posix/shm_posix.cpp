@@ -45,6 +45,7 @@ namespace ipc {
 namespace shm {
 
 id_t acquire(char const * name, std::size_t size, unsigned mode) {
+    LIBIPC_LOG();
     if (!is_valid_string(name)) {
         log.error("fail acquire: name is empty");
         return nullptr;
@@ -79,7 +80,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     if (fd == -1) {
         // only open shm not log error when file not exist
         if (open != mode || ENOENT != errno) {
-            log.error("fail shm_open[%d]: ", errno, op_name.c_str(, ""));
+            log.error("fail shm_open[", errno, "]: ", op_name);
         }
         return nullptr;
     }
@@ -119,6 +120,7 @@ void sub_ref(id_t id) {
 }
 
 void * get_mem(id_t id, std::size_t * size) {
+    LIBIPC_LOG();
     if (id == nullptr) {
         log.error("fail get_mem: invalid id (null)");
         return nullptr;
@@ -136,25 +138,25 @@ void * get_mem(id_t id, std::size_t * size) {
     if (ii->size_ == 0) {
         struct stat st;
         if (::fstat(fd, &st) != 0) {
-            log.error("fail fstat[%d]: ", errno, ii->name_.c_str(, ", size = %zd"), ii->size_);
+            log.error("fail fstat[", errno, "]: ", ii->name_, ", size = ", ii->size_);
             return nullptr;
         }
         ii->size_ = static_cast<std::size_t>(st.st_size);
         if ((ii->size_ <= sizeof(info_t)) || (ii->size_ % sizeof(info_t))) {
-            log.error("fail get_mem: ", ii->name_.c_str(, ", invalid size = %zd"), ii->size_);
+            log.error("fail get_mem: ", ii->name_, ", invalid size = ", ii->size_);
             return nullptr;
         }
     }
     else {
         ii->size_ = calc_size(ii->size_);
         if (::ftruncate(fd, static_cast<off_t>(ii->size_)) != 0) {
-            log.error("fail ftruncate[%d]: ", errno, ii->name_.c_str(, ", size = %zd"), ii->size_);
+            log.error("fail ftruncate[", errno, "]: ", ii->name_, ", size = ", ii->size_);
             return nullptr;
         }
     }
     void* mem = ::mmap(nullptr, ii->size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (mem == MAP_FAILED) {
-        log.error("fail mmap[%d]: ", errno, ii->name_.c_str(, ", size = %zd"), ii->size_);
+        log.error("fail mmap[", errno, "]: ", ii->name_, ", size = ", ii->size_);
         return nullptr;
     }
     ::close(fd);
@@ -174,14 +176,14 @@ std::int32_t release(id_t id) noexcept {
     std::int32_t ret = -1;
     auto ii = static_cast<id_info_t*>(id);
     if (ii->mem_ == nullptr || ii->size_ == 0) {
-        log.error("fail release: invalid id (mem = %p, size = %zd), name = ", ii->mem_, ii->size_, ii->name_.c_str(, ""));
+        log.error("fail release: invalid id (mem = ", ii->mem_, ", size = ", ii->size_, "), name = ", ii->name_);
     }
     else if ((ret = acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel)) <= 1) {
         ::munmap(ii->mem_, ii->size_);
         if (!ii->name_.empty()) {
             int unlink_ret = ::shm_unlink(ii->name_.c_str());
             if (unlink_ret == -1) {
-                log.error("fail shm_unlink[%d]: ", errno, ii->name_.c_str(, ""));
+                log.error("fail shm_unlink[", errno, "]: ", ii->name_);
             }
         }
     }
@@ -202,7 +204,7 @@ void remove(id_t id) noexcept {
     if (!name.empty()) {
         int unlink_ret = ::shm_unlink(name.c_str());
         if (unlink_ret == -1) {
-            log.error("fail shm_unlink[%d]: ", errno, name.c_str(, ""));
+            log.error("fail shm_unlink[", errno, "]: ", name);
         }
     }
 }
@@ -222,7 +224,7 @@ void remove(char const * name) noexcept {
     }
     int unlink_ret = ::shm_unlink(op_name.c_str());
     if (unlink_ret == -1) {
-        log.error("fail shm_unlink[%d]: ", errno, op_name.c_str(, ""));
+        log.error("fail shm_unlink[", errno, "]: ", op_name);
     }
 }
 
