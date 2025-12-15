@@ -7,14 +7,14 @@ namespace detail {
 
 inline LPSECURITY_ATTRIBUTES get_sa() {
     LIBIPC_LOG();
-    static struct initiator {
-
+    
+    template <typename Logger>
+    struct initiator {
         SECURITY_DESCRIPTOR sd_;
         SECURITY_ATTRIBUTES sa_;
-
         bool succ_ = false;
 
-        initiator() {
+        initiator(Logger const &log) {
             if (!::InitializeSecurityDescriptor(&sd_, SECURITY_DESCRIPTOR_REVISION)) {
                 log.error("fail InitializeSecurityDescriptor[", static_cast<int>(::GetLastError()), "]");
                 return;
@@ -28,7 +28,9 @@ inline LPSECURITY_ATTRIBUTES get_sa() {
             sa_.lpSecurityDescriptor = &sd_;
             succ_ = true;
         }
-    } handle;
+    };
+    
+    static initiator<decltype(log)> handle(log);
     return handle.succ_ ? &handle.sa_ : nullptr;
 }
 

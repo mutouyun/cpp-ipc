@@ -76,7 +76,7 @@ public:
     bool post(std::uint32_t count) noexcept {
         LIBIPC_LOG();
         if (!::ReleaseSemaphore(h_, static_cast<LONG>(count), NULL)) {
-            log.error("fail ReleaseSemaphore[", ::GetLastError(), "]");"}]
+            log.error("fail ReleaseSemaphore[", ::GetLastError(), "]");
             return false;
         }
         return true;
