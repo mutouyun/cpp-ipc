@@ -230,6 +230,7 @@ auto& chunk_storages() {
 
     public:
         chunk_info_t *get_info(conn_info_head *inf, std::size_t chunk_size) {
+            LIBIPC_LOG();
             std::string pref {(inf == nullptr) ? std::string{} : inf->prefix_};
             std::string shm_name {ipc::make_prefix(pref, "CHUNK_INFO__", chunk_size)};
             ipc::shm::handle *h;
