@@ -2,7 +2,7 @@
 #include "libipc/semaphore.h"
 
 #include "libipc/utility/pimpl.h"
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/mem/resource.h"
 #include "libipc/platform/detail.h"
 #if defined(LIBIPC_OS_WIN)
@@ -50,7 +50,7 @@ bool semaphore::valid() const noexcept {
 
 bool semaphore::open(char const *name, std::uint32_t count) noexcept {
     if (!is_valid_string(name)) {
-        ipc::error("fail semaphore open: name is empty\n");
+        log.error("fail semaphore open: name is empty");
         return false;
     }
     return impl(p_)->sem_.open(name, count);

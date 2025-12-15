@@ -9,7 +9,7 @@
 #include <Windows.h>
 #endif
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 
 #include "to_tchar.h"
 #include "get_sa.h"
@@ -39,7 +39,7 @@ public:
         close();
         h_ = ::CreateMutex(detail::get_sa(), FALSE, detail::to_tchar(name).c_str());
         if (h_ == NULL) {
-            ipc::error("fail CreateMutex[%lu]: %s\n", ::GetLastError(), name);
+            log.error("fail CreateMutex[%lu]: ", ::GetLastError(, ""), name);
             return false;
         }
         return true;

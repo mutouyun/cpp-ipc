@@ -7,7 +7,7 @@
 #include <semaphore.h>
 #include <errno.h>
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/shm.h"
 
 #include "get_wait_time.h"
@@ -36,7 +36,7 @@ public:
     bool open(char const *name, std::uint32_t count) noexcept {
         close();
         if (!shm_.acquire(name, 1)) {
-            ipc::error("[open_semaphore] fail shm.acquire: %s\n", name);
+            log.error("[open_semaphore] fail shm.acquire: ", name, "");
             return false;
         }
         // POSIX semaphore names must start with "/" on some platforms (e.g., FreeBSD)
@@ -48,7 +48,7 @@ public:
         }
         h_ = ::sem_open(sem_name_.c_str(), O_CREAT, 0666, static_cast<unsigned>(count));
         if (h_ == SEM_FAILED) {
-            ipc::error("fail sem_open[%d]: %s\n", errno, sem_name_.c_str());
+            log.error("fail sem_open[%d]: ", errno, sem_name_.c_str(, ""));
             return false;
         }
         return true;
@@ -57,13 +57,13 @@ public:
     void close() noexcept {
         if (!valid()) return;
         if (::sem_close(h_) != 0) {
-            ipc::error("fail sem_close[%d]: %s\n", errno);
+            log.error("fail sem_close[%d]: ", errno, "");
         }
         h_ = SEM_FAILED;
         if (!sem_name_.empty() && shm_.name() != nullptr) {
             if (shm_.release() <= 1) {
                 if (::sem_unlink(sem_name_.c_str()) != 0) {
-                    ipc::error("fail sem_unlink[%d]: %s, name: %s\n", errno, sem_name_.c_str());
+                    log.error("fail sem_unlink[%d]: ", errno, sem_name_.c_str(, ", name: %s"));
                 }
             }
         }
@@ -73,7 +73,7 @@ public:
     void clear() noexcept {
         if (valid()) {
             if (::sem_close(h_) != 0) {
-                ipc::error("fail sem_close[%d]: %s\n", errno);
+                log.error("fail sem_close[%d]: ", errno, "");
             }
             h_ = SEM_FAILED;
         }
@@ -100,7 +100,7 @@ public:
         if (!valid()) return false;
         if (tm == invalid_value) {
             if (::sem_wait(h_) != 0) {
-                ipc::error("fail sem_wait[%d]: %s\n", errno);
+                log.error("fail sem_wait[%d]: ", errno, "");
                 return false;
             }
         } else {
@@ -120,7 +120,7 @@ public:
         if (!valid()) return false;
         for (std::uint32_t i = 0; i < count; ++i) {
             if (::sem_post(h_) != 0) {
-                ipc::error("fail sem_post[%d]: %s\n", errno);
+                log.error("fail sem_post[%d]: ", errno, "");
                 return false;
             }
         }

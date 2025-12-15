@@ -10,7 +10,7 @@
 #include <pthread.h>
 
 #include "libipc/platform/detail.h"
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/utility/scope_guard.h"
 #include "libipc/mem/resource.h"
 #include "libipc/shm.h"
@@ -127,21 +127,21 @@ public:
         int eno;
         pthread_mutexattr_t mutex_attr;
         if ((eno = ::pthread_mutexattr_init(&mutex_attr)) != 0) {
-            ipc::error("fail pthread_mutexattr_init[%d]\n", eno);
+            log.error("fail pthread_mutexattr_init[", eno, "]");
             return false;
         }
         LIBIPC_UNUSED auto guard_mutex_attr = guard([&mutex_attr] { ::pthread_mutexattr_destroy(&mutex_attr); });
         if ((eno = ::pthread_mutexattr_setpshared(&mutex_attr, PTHREAD_PROCESS_SHARED)) != 0) {
-            ipc::error("fail pthread_mutexattr_setpshared[%d]\n", eno);
+            log.error("fail pthread_mutexattr_setpshared[", eno, "]");
             return false;
         }
         if ((eno = ::pthread_mutexattr_setrobust(&mutex_attr, PTHREAD_MUTEX_ROBUST)) != 0) {
-            ipc::error("fail pthread_mutexattr_setrobust[%d]\n", eno);
+            log.error("fail pthread_mutexattr_setrobust[", eno, "]");
             return false;
         }
         *mutex_ = PTHREAD_MUTEX_INITIALIZER;
         if ((eno = ::pthread_mutex_init(mutex_, &mutex_attr)) != 0) {
-            ipc::error("fail pthread_mutex_init[%d]\n", eno);
+            log.error("fail pthread_mutex_init[", eno, "]");
             return false;
         }
         finally.dismiss();
@@ -165,7 +165,7 @@ public:
                         
                         int eno;
                         if ((eno = ::pthread_mutex_destroy(mutex_)) != 0) {
-                            ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
+                            log.error("fail pthread_mutex_destroy[", eno, "]");
                         }
                         return true;
                     }
@@ -187,7 +187,7 @@ public:
                     
                     int eno;
                     if ((eno = ::pthread_mutex_destroy(mutex_)) != 0) {
-                        ipc::error("fail pthread_mutex_destroy[%d]\n", eno);
+                        log.error("fail pthread_mutex_destroy[", eno, "]");
                     }
                     shm_->clear();
                     return true;
@@ -222,7 +222,7 @@ public:
                     // but the previous owner died. We need to make it consistent.
                     int eno2 = ::pthread_mutex_consistent(mutex_);
                     if (eno2 != 0) {
-                        ipc::error("fail pthread_mutex_lock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
+                        log.error("fail pthread_mutex_lock[", eno, "], pthread_mutex_consistent[", eno2, "]");
                         return false;
                     }
                     // After calling pthread_mutex_consistent(), the mutex is now in a
@@ -230,7 +230,7 @@ public:
                     return true;
                 }
             default:
-                ipc::error("fail pthread_mutex_lock[%d]\n", eno);
+                log.error("fail pthread_mutex_lock[", eno, "]");
                 return false;
             }
         }
@@ -250,7 +250,7 @@ public:
                 // but the previous owner died. We need to make it consistent.
                 int eno2 = ::pthread_mutex_consistent(mutex_);
                 if (eno2 != 0) {
-                    ipc::error("fail pthread_mutex_timedlock[%d], pthread_mutex_consistent[%d]\n", eno, eno2);
+                    log.error("fail pthread_mutex_timedlock[", eno, "], pthread_mutex_consistent[", eno2, "]");
                     throw std::system_error{eno2, std::system_category()};
                 }
                 // After calling pthread_mutex_consistent(), the mutex is now in a
@@ -258,7 +258,7 @@ public:
                 return true;
             }
         default:
-            ipc::error("fail pthread_mutex_timedlock[%d]\n", eno);
+            log.error("fail pthread_mutex_timedlock[", eno, "]");
             break;
         }
         throw std::system_error{eno, std::system_category()};
@@ -268,7 +268,7 @@ public:
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_mutex_unlock(mutex_)) != 0) {
-            ipc::error("fail pthread_mutex_unlock[%d]\n", eno);
+            log.error("fail pthread_mutex_unlock[", eno, "]");
             return false;
         }
         return true;

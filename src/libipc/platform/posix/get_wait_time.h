@@ -7,7 +7,7 @@
 #include <time.h>
 #include <errno.h>
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 
 namespace ipc {
 namespace posix_ {
@@ -17,7 +17,7 @@ inline bool calc_wait_time(timespec &ts, std::uint64_t tm /*ms*/) noexcept {
     timeval now;
     int eno = ::gettimeofday(&now, NULL);
     if (eno != 0) {
-        ipc::error("fail gettimeofday [%d]\n", eno);
+        log.error("fail gettimeofday [", eno, "]");
         return false;
     }
     ts.tv_nsec = (now.tv_usec + (tm % 1000) * 1000) * 1000;

@@ -8,7 +8,7 @@
 #include <Windows.h>
 #endif
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 
 #include "to_tchar.h"
 #include "get_sa.h"
@@ -38,7 +38,7 @@ public:
                                static_cast<LONG>(count), LONG_MAX, 
                                detail::to_tchar(name).c_str());
         if (h_ == NULL) {
-            ipc::error("fail CreateSemaphore[%lu]: %s\n", ::GetLastError(), name);
+            log.error("fail CreateSemaphore[%lu]: ", ::GetLastError(, ""), name);
             return false;
         }
         return true;

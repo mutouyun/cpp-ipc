@@ -2,7 +2,7 @@
 #include "libipc/mutex.h"
 
 #include "libipc/utility/pimpl.h"
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/mem/resource.h"
 #include "libipc/platform/detail.h"
 #if defined(LIBIPC_OS_WIN)
@@ -51,7 +51,7 @@ bool mutex::valid() const noexcept {
 
 bool mutex::open(char const *name) noexcept {
     if (!is_valid_string(name)) {
-        ipc::error("fail mutex open: name is empty\n");
+        log.error("fail mutex open: name is empty");
         return false;
     }
     return impl(p_)->lock_.open(name);
