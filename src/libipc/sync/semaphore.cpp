@@ -49,6 +49,7 @@ bool semaphore::valid() const noexcept {
 }
 
 bool semaphore::open(char const *name, std::uint32_t count) noexcept {
+    LIBIPC_LOG();
     if (!is_valid_string(name)) {
         log.error("fail semaphore open: name is empty");
         return false;

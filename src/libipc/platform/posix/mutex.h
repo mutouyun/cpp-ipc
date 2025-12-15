@@ -149,6 +149,7 @@ public:
     }
 
     void close() noexcept {
+        LIBIPC_LOG();
         if ((ref_ != nullptr) && (shm_ != nullptr) && (mutex_ != nullptr)) {
             if (shm_->name() != nullptr) {
                 release_mutex(shm_->name(), [this] {
@@ -179,6 +180,7 @@ public:
     }
 
     void clear() noexcept {
+        LIBIPC_LOG();
         if ((shm_ != nullptr) && (mutex_ != nullptr)) {
             if (shm_->name() != nullptr) {
                 release_mutex(shm_->name(), [this] {
@@ -206,6 +208,7 @@ public:
     }
 
     bool lock(std::uint64_t tm) noexcept {
+        LIBIPC_LOG();
         if (!valid()) return false;
         for (;;) {
             auto ts = posix_::detail::make_timespec(tm);
@@ -265,6 +268,7 @@ public:
     }
 
     bool unlock() noexcept {
+        LIBIPC_LOG();
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_mutex_unlock(mutex_)) != 0) {

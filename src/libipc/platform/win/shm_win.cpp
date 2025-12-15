@@ -94,6 +94,7 @@ std::int32_t get_ref(id_t id) {
 }
 
 void sub_ref(id_t id) {
+    LIBIPC_LOG();
     if (id == nullptr) {
         log.error("fail sub_ref: invalid id (null)");
         return;
@@ -144,6 +145,7 @@ void * get_mem(id_t id, std::size_t * size) {
 }
 
 std::int32_t release(id_t id) noexcept {
+    LIBIPC_LOG();
     if (id == nullptr) {
         log.error("fail release: invalid id (null)");
         return -1;
@@ -166,6 +168,7 @@ std::int32_t release(id_t id) noexcept {
 }
 
 void remove(id_t id) noexcept {
+    LIBIPC_LOG();
     if (id == nullptr) {
         log.error("fail release: invalid id (null)");
         return;
@@ -174,6 +177,7 @@ void remove(id_t id) noexcept {
 }
 
 void remove(char const * name) noexcept {
+    LIBIPC_LOG();
     if (!is_valid_string(name)) {
         log.error("fail remove: name is empty");
         return;

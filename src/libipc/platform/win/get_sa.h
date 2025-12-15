@@ -6,6 +6,7 @@ namespace ipc {
 namespace detail {
 
 inline LPSECURITY_ATTRIBUTES get_sa() {
+    LIBIPC_LOG();
     static struct initiator {
 
         SECURITY_DESCRIPTOR sd_;

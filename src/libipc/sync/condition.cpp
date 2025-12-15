@@ -50,6 +50,7 @@ bool condition::valid() const noexcept {
 }
 
 bool condition::open(char const *name) noexcept {
+    LIBIPC_LOG();
     if (!is_valid_string(name)) {
         log.error("fail condition open: name is empty");
         return false;

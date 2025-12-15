@@ -36,6 +36,7 @@ public:
     }
 
     bool open(char const *name) noexcept {
+        LIBIPC_LOG();
         close();
         h_ = ::CreateMutex(detail::get_sa(), FALSE, detail::to_tchar(name).c_str());
         if (h_ == NULL) {
@@ -59,6 +60,7 @@ public:
     }
 
     bool lock(std::uint64_t tm) noexcept {
+        LIBIPC_LOG();
         DWORD ret, ms = (tm == invalid_value) ? INFINITE : static_cast<DWORD>(tm);
         for(;;) {
             switch ((ret = ::WaitForSingleObject(h_, ms))) {
@@ -96,6 +98,7 @@ public:
     }
 
     bool unlock() noexcept {
+        LIBIPC_LOG();
         if (!::ReleaseMutex(h_)) {
             log.error("fail ReleaseMutex[", ::GetLastError(), "]");
             return false;
