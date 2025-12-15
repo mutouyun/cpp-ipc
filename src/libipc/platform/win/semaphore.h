@@ -39,7 +39,7 @@ public:
                                static_cast<LONG>(count), LONG_MAX, 
                                detail::to_tchar(name).c_str());
         if (h_ == NULL) {
-            log.error("fail CreateSemaphore[%lu]: ", ::GetLastError(, ""), name);
+            log.error("fail CreateSemaphore[", static_cast<unsigned long>(::GetLastError()), "]: ", name);
             return false;
         }
         return true;

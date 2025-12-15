@@ -23,7 +23,7 @@ class condition {
     pthread_cond_t *acquire_cond(char const *name) {
         LIBIPC_LOG();
         if (!shm_.acquire(name, sizeof(pthread_cond_t))) {
-            log.error("[acquire_cond] fail shm.acquire: %s", name);
+            log.error("[acquire_cond] fail shm.acquire: ", name);
             return nullptr;
         }
         return static_cast<pthread_cond_t *>(shm_.get());
@@ -62,17 +62,17 @@ public:
         int eno;
         pthread_condattr_t cond_attr;
         if ((eno = ::pthread_condattr_init(&cond_attr)) != 0) {
-            log.error("fail pthread_condattr_init[%d]", eno);
+            log.error("fail pthread_condattr_init[", eno, "]");
             return false;
         }
         LIBIPC_UNUSED auto guard_cond_attr = guard([&cond_attr] { ::pthread_condattr_destroy(&cond_attr); });
         if ((eno = ::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED)) != 0) {
-            log.error("fail pthread_condattr_setpshared[%d]", eno);
+            log.error("fail pthread_condattr_setpshared[", eno, "]");
             return false;
         }
         *cond_ = PTHREAD_COND_INITIALIZER;
         if ((eno = ::pthread_cond_init(cond_, &cond_attr)) != 0) {
-            log.error("fail pthread_cond_init[%d]", eno);
+            log.error("fail pthread_cond_init[", eno, "]");
             return false;
         }
         finally.dismiss();
@@ -84,7 +84,7 @@ public:
         if ((shm_.ref() <= 1) && cond_ != nullptr) {
             int eno;
             if ((eno = ::pthread_cond_destroy(cond_)) != 0) {
-                log.error("fail pthread_cond_destroy[%d]", eno);
+                log.error("fail pthread_cond_destroy[", eno, "]");
             }
         }
         shm_.release();
@@ -95,7 +95,7 @@ public:
         if ((shm_.ref() <= 1) && cond_ != nullptr) {
             int eno;
             if ((eno = ::pthread_cond_destroy(cond_)) != 0) {
-                log.error("fail pthread_cond_destroy[%d]", eno);
+                log.error("fail pthread_cond_destroy[", eno, "]");
             }
         }
         shm_.clear(); // Make sure the storage is cleaned up.
@@ -113,7 +113,7 @@ public:
         case invalid_value: {
                 int eno;
                 if ((eno = ::pthread_cond_wait(cond_, static_cast<pthread_mutex_t *>(mtx.native()))) != 0) {
-                    log.error("fail pthread_cond_wait[%d]", eno);
+                    log.error("fail pthread_cond_wait[", eno, "]");
                     return false;
                 }
             }
@@ -137,7 +137,7 @@ public:
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_signal(cond_)) != 0) {
-            log.error("fail pthread_cond_signal[%d]", eno);
+            log.error("fail pthread_cond_signal[", eno, "]");
             return false;
         }
         return true;
@@ -147,7 +147,7 @@ public:
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_broadcast(cond_)) != 0) {
-            log.error("fail pthread_cond_broadcast[%d]", eno);
+            log.error("fail pthread_cond_broadcast[", eno, "]");
             return false;
         }
         return true;

@@ -40,7 +40,7 @@ public:
         close();
         h_ = ::CreateMutex(detail::get_sa(), FALSE, detail::to_tchar(name).c_str());
         if (h_ == NULL) {
-            log.error("fail CreateMutex[%lu]: ", ::GetLastError(, ""), name);
+            log.error("fail CreateMutex[", static_cast<unsigned long>(::GetLastError()), "]: ", name);
             return false;
         }
         return true;

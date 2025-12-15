@@ -37,7 +37,7 @@ public:
         LIBIPC_LOG();
         close();
         if (!shm_.acquire(name, 1)) {
-            log.error("[open_semaphore] fail shm.acquire: ", name, "");
+            log.error("[open_semaphore] fail shm.acquire: ", name);
             return false;
         }
         // POSIX semaphore names must start with "/" on some platforms (e.g., FreeBSD)
@@ -49,7 +49,7 @@ public:
         }
         h_ = ::sem_open(sem_name_.c_str(), O_CREAT, 0666, static_cast<unsigned>(count));
         if (h_ == SEM_FAILED) {
-            log.error("fail sem_open[%d]: ", errno, sem_name_.c_str(, ""));
+            log.error("fail sem_open[", errno, "]: ", sem_name_);
             return false;
         }
         return true;
@@ -59,13 +59,13 @@ public:
         LIBIPC_LOG();
         if (!valid()) return;
         if (::sem_close(h_) != 0) {
-            log.error("fail sem_close[%d]: ", errno, "");
+            log.error("fail sem_close[", errno, "]");
         }
         h_ = SEM_FAILED;
         if (!sem_name_.empty() && shm_.name() != nullptr) {
             if (shm_.release() <= 1) {
                 if (::sem_unlink(sem_name_.c_str()) != 0) {
-                    log.error("fail sem_unlink[%d]: ", errno, sem_name_.c_str(, ", name: %s"));
+                    log.error("fail sem_unlink[", errno, "]: ", sem_name_);
                 }
             }
         }
@@ -76,7 +76,7 @@ public:
         LIBIPC_LOG();
         if (valid()) {
             if (::sem_close(h_) != 0) {
-                log.error("fail sem_close[%d]: ", errno, "");
+                log.error("fail sem_close[", errno, "]");
             }
             h_ = SEM_FAILED;
         }
@@ -104,7 +104,7 @@ public:
         if (!valid()) return false;
         if (tm == invalid_value) {
             if (::sem_wait(h_) != 0) {
-                log.error("fail sem_wait[%d]: ", errno, "");
+                log.error("fail sem_wait[", errno, "]");
                 return false;
             }
         } else {
@@ -124,7 +124,7 @@ public:
         if (!valid()) return false;
         for (std::uint32_t i = 0; i < count; ++i) {
             if (::sem_post(h_) != 0) {
-                log.error("fail sem_post[%d]: ", errno, "");
+                log.error("fail sem_post[", errno, "]");
                 return false;
             }
         }
