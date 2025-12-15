@@ -5,7 +5,7 @@
 
 #include <pthread.h>
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/utility/scope_guard.h"
 #include "libipc/mutex.h"
 #include "libipc/shm.h"
@@ -21,8 +21,9 @@ class condition {
     pthread_cond_t *cond_ = nullptr;
 
     pthread_cond_t *acquire_cond(char const *name) {
+        LIBIPC_LOG();
         if (!shm_.acquire(name, sizeof(pthread_cond_t))) {
-            ipc::error("[acquire_cond] fail shm.acquire: %s\n", name);
+            log.error("[acquire_cond] fail shm.acquire: ", name);
             return nullptr;
         }
         return static_cast<pthread_cond_t *>(shm_.get());
@@ -47,6 +48,7 @@ public:
     }
 
     bool open(char const *name) noexcept {
+        LIBIPC_LOG();
         close();
         if ((cond_ = acquire_cond(name)) == nullptr) {
             return false;
@@ -60,17 +62,17 @@ public:
         int eno;
         pthread_condattr_t cond_attr;
         if ((eno = ::pthread_condattr_init(&cond_attr)) != 0) {
-            ipc::error("fail pthread_condattr_init[%d]\n", eno);
+            log.error("fail pthread_condattr_init[", eno, "]");
             return false;
         }
         LIBIPC_UNUSED auto guard_cond_attr = guard([&cond_attr] { ::pthread_condattr_destroy(&cond_attr); });
         if ((eno = ::pthread_condattr_setpshared(&cond_attr, PTHREAD_PROCESS_SHARED)) != 0) {
-            ipc::error("fail pthread_condattr_setpshared[%d]\n", eno);
+            log.error("fail pthread_condattr_setpshared[", eno, "]");
             return false;
         }
         *cond_ = PTHREAD_COND_INITIALIZER;
         if ((eno = ::pthread_cond_init(cond_, &cond_attr)) != 0) {
-            ipc::error("fail pthread_cond_init[%d]\n", eno);
+            log.error("fail pthread_cond_init[", eno, "]");
             return false;
         }
         finally.dismiss();
@@ -78,10 +80,11 @@ public:
     }
 
     void close() noexcept {
+        LIBIPC_LOG();
         if ((shm_.ref() <= 1) && cond_ != nullptr) {
             int eno;
             if ((eno = ::pthread_cond_destroy(cond_)) != 0) {
-                ipc::error("fail pthread_cond_destroy[%d]\n", eno);
+                log.error("fail pthread_cond_destroy[", eno, "]");
             }
         }
         shm_.release();
@@ -92,7 +95,7 @@ public:
         if ((shm_.ref() <= 1) && cond_ != nullptr) {
             int eno;
             if ((eno = ::pthread_cond_destroy(cond_)) != 0) {
-                ipc::error("fail pthread_cond_destroy[%d]\n", eno);
+                log.error("fail pthread_cond_destroy[", eno, "]");
             }
         }
         shm_.clear(); // Make sure the storage is cleaned up.
@@ -104,12 +107,13 @@ public:
     }
 
     bool wait(ipc::sync::mutex &mtx, std::uint64_t tm) noexcept {
+        LIBIPC_LOG();
         if (!valid()) return false;
         switch (tm) {
         case invalid_value: {
                 int eno;
                 if ((eno = ::pthread_cond_wait(cond_, static_cast<pthread_mutex_t *>(mtx.native()))) != 0) {
-                    ipc::error("fail pthread_cond_wait[%d]\n", eno);
+                    log.error("fail pthread_cond_wait[", eno, "]");
                     return false;
                 }
             }
@@ -119,8 +123,7 @@ public:
                 int eno;
                 if ((eno = ::pthread_cond_timedwait(cond_, static_cast<pthread_mutex_t *>(mtx.native()), &ts)) != 0) {
                     if (eno != ETIMEDOUT) {
-                        ipc::error("fail pthread_cond_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                                   eno, tm, ts.tv_sec, ts.tv_nsec);
+                        log.error("fail pthread_cond_timedwait[", eno, "]: tm = ", tm, ", tv_sec = ", ts.tv_sec, ", tv_nsec = ", ts.tv_nsec);
                     }
                     return false;
                 }
@@ -134,7 +137,7 @@ public:
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_signal(cond_)) != 0) {
-            ipc::error("fail pthread_cond_signal[%d]\n", eno);
+            log.error("fail pthread_cond_signal[", eno, "]");
             return false;
         }
         return true;
@@ -144,7 +147,7 @@ public:
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_broadcast(cond_)) != 0) {
-            ipc::error("fail pthread_cond_broadcast[%d]\n", eno);
+            log.error("fail pthread_cond_broadcast[", eno, "]");
             return false;
         }
         return true;

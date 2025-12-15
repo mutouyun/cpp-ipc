@@ -1,6 +1,6 @@
 #pragma once
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/shm.h"
 
 #include "a0/empty.h"
@@ -19,8 +19,9 @@ protected:
     sync_t *h_ = nullptr;
 
     sync_t *acquire_handle(char const *name) {
+        LIBIPC_LOG();
         if (!shm_.acquire(name, sizeof(sync_t))) {
-            ipc::error("[acquire_handle] fail shm.acquire: %s\n", name);
+            log.error("[acquire_handle] fail shm.acquire: ", name);
             return nullptr;
         }
         return static_cast<sync_t *>(shm_.get());

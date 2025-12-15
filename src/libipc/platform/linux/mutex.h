@@ -6,7 +6,7 @@
 #include <atomic>
 
 #include "libipc/platform/detail.h"
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/mem/resource.h"
 #include "libipc/shm.h"
 
@@ -23,6 +23,7 @@ namespace sync {
 class robust_mutex : public sync::obj_impl<a0_mtx_t> {
 public:
     bool lock(std::uint64_t tm) noexcept {
+        LIBIPC_LOG();
         if (!valid()) return false;
         for (;;) {
             auto ts = linux_::detail::make_timespec(tm);
@@ -37,24 +38,25 @@ public:
             case EOWNERDEAD: {
                     int eno2 = A0_SYSERR(a0_mtx_consistent(native()));
                     if (eno2 != 0) {
-                        ipc::error("fail mutex lock[%d] -> consistent[%d]\n", eno, eno2);
+                        log.error("fail mutex lock[", eno, "] -> consistent[", eno2, "]");
                         return false;
                     }
                     int eno3 = A0_SYSERR(a0_mtx_unlock(native()));
                     if (eno3 != 0) {
-                        ipc::error("fail mutex lock[%d] -> unlock[%d]\n", eno, eno3);
+                        log.error("fail mutex lock[", eno, "] -> unlock[", eno3, "]");
                         return false;
                     }
                 }
                 break; // loop again
             default:
-                ipc::error("fail mutex lock[%d]\n", eno);
+                log.error("fail mutex lock[", eno, "]");
                 return false;
             }
         }
     }
 
     bool try_lock() noexcept(false) {
+        LIBIPC_LOG();
         if (!valid()) return false;
         int eno = A0_SYSERR(a0_mtx_timedlock(native(), {linux_::detail::make_timespec(0)}));
         switch (eno) {
@@ -65,28 +67,29 @@ public:
         case EOWNERDEAD: {
                 int eno2 = A0_SYSERR(a0_mtx_consistent(native()));
                 if (eno2 != 0) {
-                    ipc::error("fail mutex try_lock[%d] -> consistent[%d]\n", eno, eno2);
+                    log.error("fail mutex try_lock[", eno, "] -> consistent[", eno2, "]");
                     break;
                 }
                 int eno3 = A0_SYSERR(a0_mtx_unlock(native()));
                 if (eno3 != 0) {
-                    ipc::error("fail mutex try_lock[%d] -> unlock[%d]\n", eno, eno3);
+                    log.error("fail mutex try_lock[", eno, "] -> unlock[", eno3, "]");
                     break;
                 }
             }
             break;
         default:
-            ipc::error("fail mutex try_lock[%d]\n", eno);
+            log.error("fail mutex try_lock[", eno, "]");
             break;
         }
         throw std::system_error{eno, std::system_category()};
     }
 
     bool unlock() noexcept {
+        LIBIPC_LOG();
         if (!valid()) return false;
         int eno = A0_SYSERR(a0_mtx_unlock(native()));
         if (eno != 0) {
-            ipc::error("fail mutex unlock[%d]\n", eno);
+            log.error("fail mutex unlock[", eno, "]");
             return false;
         }
         return true;

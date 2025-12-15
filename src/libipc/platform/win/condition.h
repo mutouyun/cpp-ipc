@@ -10,7 +10,7 @@
 #include <Windows.h>
 #endif
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/utility/scope_guard.h"
 #include "libipc/platform/detail.h"
 #include "libipc/mutex.h"

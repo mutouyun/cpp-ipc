@@ -14,7 +14,7 @@
 #include "libipc/shm.h"
 #include "libipc/def.h"
 
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/mem/resource.h"
 #include "libipc/mem/new.h"
 
@@ -45,8 +45,9 @@ namespace ipc {
 namespace shm {
 
 id_t acquire(char const * name, std::size_t size, unsigned mode) {
+    LIBIPC_LOG();
     if (!is_valid_string(name)) {
-        ipc::error("fail acquire: name is empty\n");
+        log.error("fail acquire: name is empty");
         return nullptr;
     }
     // For portable use, a shared memory object should be identified by name of the form /somename.
@@ -79,7 +80,7 @@ id_t acquire(char const * name, std::size_t size, unsigned mode) {
     if (fd == -1) {
         // only open shm not log error when file not exist
         if (open != mode || ENOENT != errno) {
-            ipc::error("fail shm_open[%d]: %s\n", errno, op_name.c_str());
+            log.error("fail shm_open[", errno, "]: ", op_name);
         }
         return nullptr;
     }
@@ -105,21 +106,23 @@ std::int32_t get_ref(id_t id) {
 }
 
 void sub_ref(id_t id) {
+    LIBIPC_LOG();
     if (id == nullptr) {
-        ipc::error("fail sub_ref: invalid id (null)\n");
+        log.error("fail sub_ref: invalid id (null)");
         return;
     }
     auto ii = static_cast<id_info_t*>(id);
     if (ii->mem_ == nullptr || ii->size_ == 0) {
-        ipc::error("fail sub_ref: invalid id (mem = %p, size = %zd)\n", ii->mem_, ii->size_);
+        log.error("fail sub_ref: invalid id (mem = ", ii->mem_, ", size = ", ii->size_, ")");
         return;
     }
     acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel);
 }
 
 void * get_mem(id_t id, std::size_t * size) {
+    LIBIPC_LOG();
     if (id == nullptr) {
-        ipc::error("fail get_mem: invalid id (null)\n");
+        log.error("fail get_mem: invalid id (null)");
         return nullptr;
     }
     auto ii = static_cast<id_info_t*>(id);
@@ -129,31 +132,31 @@ void * get_mem(id_t id, std::size_t * size) {
     }
     int fd = ii->fd_;
     if (fd == -1) {
-        ipc::error("fail get_mem: invalid id (fd = -1)\n");
+        log.error("fail get_mem: invalid id (fd = -1)");
         return nullptr;
     }
     if (ii->size_ == 0) {
         struct stat st;
         if (::fstat(fd, &st) != 0) {
-            ipc::error("fail fstat[%d]: %s, size = %zd\n", errno, ii->name_.c_str(), ii->size_);
+            log.error("fail fstat[", errno, "]: ", ii->name_, ", size = ", ii->size_);
             return nullptr;
         }
         ii->size_ = static_cast<std::size_t>(st.st_size);
         if ((ii->size_ <= sizeof(info_t)) || (ii->size_ % sizeof(info_t))) {
-            ipc::error("fail get_mem: %s, invalid size = %zd\n", ii->name_.c_str(), ii->size_);
+            log.error("fail get_mem: ", ii->name_, ", invalid size = ", ii->size_);
             return nullptr;
         }
     }
     else {
         ii->size_ = calc_size(ii->size_);
         if (::ftruncate(fd, static_cast<off_t>(ii->size_)) != 0) {
-            ipc::error("fail ftruncate[%d]: %s, size = %zd\n", errno, ii->name_.c_str(), ii->size_);
+            log.error("fail ftruncate[", errno, "]: ", ii->name_, ", size = ", ii->size_);
             return nullptr;
         }
     }
     void* mem = ::mmap(nullptr, ii->size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (mem == MAP_FAILED) {
-        ipc::error("fail mmap[%d]: %s, size = %zd\n", errno, ii->name_.c_str(), ii->size_);
+        log.error("fail mmap[", errno, "]: ", ii->name_, ", size = ", ii->size_);
         return nullptr;
     }
     ::close(fd);
@@ -165,22 +168,22 @@ void * get_mem(id_t id, std::size_t * size) {
 }
 
 std::int32_t release(id_t id) noexcept {
+    LIBIPC_LOG();
     if (id == nullptr) {
-        ipc::error("fail release: invalid id (null)\n");
+        log.error("fail release: invalid id (null)");
         return -1;
     }
     std::int32_t ret = -1;
     auto ii = static_cast<id_info_t*>(id);
     if (ii->mem_ == nullptr || ii->size_ == 0) {
-        ipc::error("fail release: invalid id (mem = %p, size = %zd), name = %s\n", 
-                    ii->mem_, ii->size_, ii->name_.c_str());
+        log.error("fail release: invalid id (mem = ", ii->mem_, ", size = ", ii->size_, "), name = ", ii->name_);
     }
     else if ((ret = acc_of(ii->mem_, ii->size_).fetch_sub(1, std::memory_order_acq_rel)) <= 1) {
         ::munmap(ii->mem_, ii->size_);
         if (!ii->name_.empty()) {
             int unlink_ret = ::shm_unlink(ii->name_.c_str());
             if (unlink_ret == -1) {
-                ipc::error("fail shm_unlink[%d]: %s\n", errno, ii->name_.c_str());
+                log.error("fail shm_unlink[", errno, "]: ", ii->name_);
             }
         }
     }
@@ -190,8 +193,9 @@ std::int32_t release(id_t id) noexcept {
 }
 
 void remove(id_t id) noexcept {
+    LIBIPC_LOG();
     if (id == nullptr) {
-        ipc::error("fail remove: invalid id (null)\n");
+        log.error("fail remove: invalid id (null)");
         return;
     }
     auto ii = static_cast<id_info_t*>(id);
@@ -200,14 +204,15 @@ void remove(id_t id) noexcept {
     if (!name.empty()) {
         int unlink_ret = ::shm_unlink(name.c_str());
         if (unlink_ret == -1) {
-            ipc::error("fail shm_unlink[%d]: %s\n", errno, name.c_str());
+            log.error("fail shm_unlink[", errno, "]: ", name);
         }
     }
 }
 
 void remove(char const * name) noexcept {
+    LIBIPC_LOG();
     if (!is_valid_string(name)) {
-        ipc::error("fail remove: name is empty\n");
+        log.error("fail remove: name is empty");
         return;
     }
     // For portable use, a shared memory object should be identified by name of the form /somename.
@@ -219,7 +224,7 @@ void remove(char const * name) noexcept {
     }
     int unlink_ret = ::shm_unlink(op_name.c_str());
     if (unlink_ret == -1) {
-        ipc::error("fail shm_unlink[%d]: %s\n", errno, op_name.c_str());
+        log.error("fail shm_unlink[", errno, "]: ", op_name);
     }
 }
 

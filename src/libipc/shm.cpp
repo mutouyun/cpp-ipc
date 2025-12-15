@@ -5,7 +5,7 @@
 #include "libipc/shm.h"
 
 #include "libipc/utility/pimpl.h"
-#include "libipc/utility/log.h"
+#include "libipc/imp/log.h"
 #include "libipc/mem/resource.h"
 
 namespace ipc {
@@ -69,12 +69,13 @@ void handle::sub_ref() noexcept {
 }
 
 bool handle::acquire(char const * name, std::size_t size, unsigned mode) {
+    LIBIPC_LOG();
     if (!is_valid_string(name)) {
-        ipc::error("fail acquire: name is empty\n");
+        log.error("fail acquire: name is empty");
         return false;
     }
     if (size == 0) {
-        ipc::error("fail acquire: size is 0\n");
+        log.error("fail acquire: size is 0");
         return false;
     }
     release();
