@@ -253,7 +253,7 @@ struct prod_cons_impl<wr<relat::single, relat::multi, trans::broadcast>> {
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             circ::cc_t rem_cc = cur_rc & ep_mask;
             if (cc & rem_cc) {
-                log.warning("force_push: k = ", k, ", cc = ", cc, ", rem_cc = ", rem_cc);
+                log.debug("force_push: k = ", k, ", cc = ", cc, ", rem_cc = ", rem_cc);
                 cc = wrapper->elems()->disconnect_receiver(rem_cc); // disconnect all invalid readers
                 if (cc == 0) return false; // no reader
             }
@@ -376,7 +376,7 @@ struct prod_cons_impl<wr<relat::multi, relat::multi, trans::broadcast>> {
             auto cur_rc = el->rc_.load(std::memory_order_acquire);
             circ::cc_t rem_cc = cur_rc & rc_mask;
             if (cc & rem_cc) {
-                log.warning("force_push: k = ", k, ", cc = ", cc, ", rem_cc = ", rem_cc);
+                log.debug("force_push: k = ", k, ", cc = ", cc, ", rem_cc = ", rem_cc);
                 cc = wrapper->elems()->disconnect_receiver(rem_cc); // disconnect all invalid readers
                 if (cc == 0) return false; // no reader
             }
