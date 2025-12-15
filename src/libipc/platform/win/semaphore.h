@@ -66,14 +66,14 @@ public:
             return false;
         case WAIT_ABANDONED:
         default:
-            ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
+            log.error("fail WaitForSingleObject[", ::GetLastError(), "]: 0x", std::hex, ret, std::dec);
             return false;
         }
     }
 
     bool post(std::uint32_t count) noexcept {
         if (!::ReleaseSemaphore(h_, static_cast<LONG>(count), NULL)) {
-            ipc::error("fail ReleaseSemaphore[%lu]\n", ::GetLastError());
+            log.error("fail ReleaseSemaphore[", ::GetLastError(), "]");"}]
             return false;
         }
         return true;

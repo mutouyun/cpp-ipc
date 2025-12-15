@@ -29,8 +29,7 @@ inline bool calc_wait_time(timespec &ts, std::uint64_t tm /*ms*/) noexcept {
 inline timespec make_timespec(std::uint64_t tm /*ms*/) noexcept(false) {
     timespec ts {};
     if (!calc_wait_time(ts, tm)) {
-        ipc::error("fail calc_wait_time: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                    tm, ts.tv_sec, ts.tv_nsec);
+        log.error("fail calc_wait_time: tm = ", tm, ", tv_sec = ", ts.tv_sec, ", tv_nsec = ", ts.tv_nsec);
         throw std::system_error{static_cast<int>(errno), std::system_category()};
     }
     return ts;

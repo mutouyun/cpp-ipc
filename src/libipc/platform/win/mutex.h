@@ -67,13 +67,13 @@ public:
             case WAIT_TIMEOUT:
                 return false;
             case WAIT_ABANDONED:
-                ipc::log("fail WaitForSingleObject[%lu]: WAIT_ABANDONED, try again.\n", ::GetLastError());
+                log.warning("fail WaitForSingleObject[", ::GetLastError(), "]: WAIT_ABANDONED, try again.");
                 if (!unlock()) {
                     return false;
                 }
                 break; // loop again
             default:
-                ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
+                log.error("fail WaitForSingleObject[", ::GetLastError(), "]: 0x", std::hex, ret, std::dec);
                 return false;
             }
         }
@@ -90,14 +90,14 @@ public:
             unlock();
             LIBIPC_FALLTHROUGH;
         default:
-            ipc::error("fail WaitForSingleObject[%lu]: 0x%08X\n", ::GetLastError(), ret);
+            log.error("fail WaitForSingleObject[", ::GetLastError(), "]: 0x", std::hex, ret, std::dec);
             throw std::system_error{static_cast<int>(ret), std::system_category()};
         }
     }
 
     bool unlock() noexcept {
         if (!::ReleaseMutex(h_)) {
-            ipc::error("fail ReleaseMutex[%lu]\n", ::GetLastError());
+            log.error("fail ReleaseMutex[", ::GetLastError(), "]");
             return false;
         }
         return true;

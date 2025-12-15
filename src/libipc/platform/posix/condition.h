@@ -123,8 +123,7 @@ public:
                 int eno;
                 if ((eno = ::pthread_cond_timedwait(cond_, static_cast<pthread_mutex_t *>(mtx.native()), &ts)) != 0) {
                     if (eno != ETIMEDOUT) {
-                        ipc::error("fail pthread_cond_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                                   eno, tm, ts.tv_sec, ts.tv_nsec);
+                        log.error("fail pthread_cond_timedwait[", eno, "]: tm = ", tm, ", tv_sec = ", ts.tv_sec, ", tv_nsec = ", ts.tv_nsec);
                     }
                     return false;
                 }

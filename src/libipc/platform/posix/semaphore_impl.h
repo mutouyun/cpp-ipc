@@ -107,8 +107,7 @@ public:
             auto ts = posix_::detail::make_timespec(tm);
             if (::sem_timedwait(h_, &ts) != 0) {
                 if (errno != ETIMEDOUT) {
-                    ipc::error("fail sem_timedwait[%d]: tm = %zd, tv_sec = %ld, tv_nsec = %ld\n",
-                                errno, tm, ts.tv_sec, ts.tv_nsec);
+                    log.error("fail sem_timedwait[", errno, "]: tm = ", tm, ", tv_sec = ", ts.tv_sec, ", tv_nsec = ", ts.tv_nsec);
                 }
                 return false;
             }
