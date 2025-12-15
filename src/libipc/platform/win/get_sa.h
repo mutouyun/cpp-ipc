@@ -16,11 +16,11 @@ inline LPSECURITY_ATTRIBUTES get_sa() {
 
         initiator() {
             if (!::InitializeSecurityDescriptor(&sd_, SECURITY_DESCRIPTOR_REVISION)) {
-                log.error("fail InitializeSecurityDescriptor[", static_cast<int>(::GetLastError(, "]")));
+                log.error("fail InitializeSecurityDescriptor[", static_cast<int>(::GetLastError()), "]");
                 return;
             }
             if (!::SetSecurityDescriptorDacl(&sd_, TRUE, NULL, FALSE)) {
-                log.error("fail SetSecurityDescriptorDacl[", static_cast<int>(::GetLastError(, "]")));
+                log.error("fail SetSecurityDescriptorDacl[", static_cast<int>(::GetLastError()), "]");
                 return;
             }
             sa_.nLength = sizeof(SECURITY_ATTRIBUTES);

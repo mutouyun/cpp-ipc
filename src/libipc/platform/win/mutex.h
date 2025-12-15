@@ -82,6 +82,7 @@ public:
     }
 
     bool try_lock() noexcept(false) {
+        LIBIPC_LOG();
         DWORD ret = ::WaitForSingleObject(h_, 0);
         switch (ret) {
         case WAIT_OBJECT_0:
