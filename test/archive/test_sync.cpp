@@ -37,8 +37,11 @@ TEST(PThread, Robust) {
     pthread_mutex_destroy(&mutex);
 }
 #elif defined(LIBIPC_OS_WIN)
+#if defined(__MINGW32__)
+#include <windows.h>
+#else
 #include <Windows.h>
-#include <Windows.h>
+#endif
 #endif
 #include <tchar.h>
 
