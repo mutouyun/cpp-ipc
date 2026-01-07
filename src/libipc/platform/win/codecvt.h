@@ -4,7 +4,11 @@
  */
 #pragma once
 
+#if defined(__MINGW32__)
+#include <windows.h>
+#else
 #include <Windows.h>
+#endif
 
 #include "libipc/imp/codecvt.h"
 #include "libipc/imp/detect_plat.h"

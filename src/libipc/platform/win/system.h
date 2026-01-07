@@ -7,7 +7,11 @@
 #include <exception>
 #include <type_traits>
 
+#if defined(__MINGW32__)
+#include <windows.h>
+#else
 #include <Windows.h>
+#endif
 #include <tchar.h>
 
 #include "libipc/imp/system.h"
