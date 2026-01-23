@@ -75,7 +75,7 @@ public:
                 }
                 break; // loop again
             default:
-                log.error("fail WaitForSingleObject[", ::GetLastError(), "]: 0x", std::hex, ret, std::dec);
+                log.error("fail WaitForSingleObject[", ::GetLastError(), "]: ", ipc::spec("#x")(ret));
                 return false;
             }
         }
@@ -93,7 +93,7 @@ public:
             unlock();
             LIBIPC_FALLTHROUGH;
         default:
-            log.error("fail WaitForSingleObject[", ::GetLastError(), "]: 0x", std::hex, ret, std::dec);
+            log.error("fail WaitForSingleObject[", ::GetLastError(), "]: ", ipc::spec("#x")(ret));
             throw std::system_error{static_cast<int>(ret), std::system_category()};
         }
     }

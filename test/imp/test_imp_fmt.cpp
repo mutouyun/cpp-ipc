@@ -191,3 +191,74 @@ TEST(fmt, result) {
     EXPECT_EQ(ipc::fmt(r1), ipc::fmt("succ, error = ", std::error_code()));
   }
 }
+
+/// \brief Test case for issue #171: Compiler failures under MinGW
+/// \see https://github.com/mutouyun/cpp-ipc/issues/171
+/// 
+/// The issue is that std::hex and std::dec (I/O manipulators) were incorrectly
+/// used with ipc::fmt. These are function pointers of type:
+///   std::ios_base& (*)(std::ios_base&)
+/// which ipc::fmt does not support.
+/// 
+/// The correct way to output hexadecimal values with ipc::fmt is to use ipc::spec.
+TEST(fmt, hex_output_with_spec) {
+  /// \brief Basic hexadecimal formatting using ipc::spec
+  /// This is the correct way to format hex values (instead of std::hex)
+  {
+    unsigned int val = 255;
+    EXPECT_EQ(ipc::fmt(ipc::spec("x")(val)), "ff");
+    EXPECT_EQ(ipc::fmt(ipc::spec("X")(val)), "FF");
+    EXPECT_EQ(ipc::fmt(ipc::spec("08x")(val)), "000000ff");
+    EXPECT_EQ(ipc::fmt(ipc::spec("08X")(val)), "000000FF");
+  }
+
+  /// \brief Hex formatting with prefix (simulating "0x" prefix like std::hex would produce)
+  {
+    unsigned int val = 0xDEADBEEF;
+    // Correct way: use string concatenation with ipc::spec for hex format
+    EXPECT_EQ(ipc::fmt("0x", ipc::spec("x")(val)), "0xdeadbeef");
+    EXPECT_EQ(ipc::fmt("0x", ipc::spec("X")(val)), "0xDEADBEEF");
+    EXPECT_EQ(ipc::fmt("0x", ipc::spec("08x")(val)), "0xdeadbeef");
+  }
+
+  /// \brief Mixed decimal and hex output (simulating the problematic log pattern from issue #171)
+  /// Original problematic code pattern was:
+  ///   log.error("fail WaitForSingleObject[", ::GetLastError(), "]: 0x", std::hex, ret, std::dec);
+  /// Correct pattern should be:
+  ///   log.error("fail WaitForSingleObject[", ::GetLastError(), "]: ", ipc::spec("08x")(ret));
+  {
+    unsigned long error_code = 5;  // ERROR_ACCESS_DENIED
+    unsigned int ret = 0x00000102; // WAIT_TIMEOUT value
+    
+    // Correct way to format the log message
+    auto msg = ipc::fmt("fail WaitForSingleObject[", error_code, "]: ", ipc::spec("08x")(ret));
+    EXPECT_EQ(msg, "fail WaitForSingleObject[5]: 00000102");
+    
+    // Alternative with "0x" prefix
+    auto msg2 = ipc::fmt("fail WaitForSingleObject[", error_code, "]: 0x", ipc::spec("x")(ret));
+    EXPECT_EQ(msg2, "fail WaitForSingleObject[5]: 0x102");
+  }
+
+  /// \brief Various integer types with hex formatting
+  /// Note: ipc::spec format string should NOT include length modifiers (like "ll").
+  /// The to_string function automatically adds the correct length modifier based on
+  /// the argument type. Just use "x" or "X" for hex conversion.
+  {
+    EXPECT_EQ(ipc::fmt(ipc::spec("x")((unsigned char)0xAB)), "ab");
+    EXPECT_EQ(ipc::fmt(ipc::spec("x")((unsigned short)0xABCD)), "abcd");
+    EXPECT_EQ(ipc::fmt(ipc::spec("x")((unsigned int)0xABCDEF01)), "abcdef01");
+    EXPECT_EQ(ipc::fmt(ipc::spec("x")((unsigned long)0xABCDEF01)), "abcdef01");
+    // For unsigned long long, just use "x" - the length modifier is added automatically
+    EXPECT_EQ(ipc::fmt(ipc::spec("x")((unsigned long long)0xABCDEF0123456789ULL)), "abcdef0123456789");
+  }
+
+  /// \brief Width and padding with hex
+  {
+    unsigned int val = 0x1F;
+    EXPECT_EQ(ipc::fmt(ipc::spec("2x")(val)), "1f");
+    EXPECT_EQ(ipc::fmt(ipc::spec("4x")(val)), "  1f");
+    EXPECT_EQ(ipc::fmt(ipc::spec("04x")(val)), "001f");
+    EXPECT_EQ(ipc::fmt(ipc::spec("8x")(val)), "      1f");
+    EXPECT_EQ(ipc::fmt(ipc::spec("08x")(val)), "0000001f");
+  }
+}

@@ -68,7 +68,7 @@ public:
             return false;
         case WAIT_ABANDONED:
         default:
-            log.error("fail WaitForSingleObject[", ::GetLastError(), "]: 0x", std::hex, ret, std::dec);
+            log.error("fail WaitForSingleObject[", ::GetLastError(), "]: ", ipc::spec("#x")(ret));
             return false;
         }
     }
