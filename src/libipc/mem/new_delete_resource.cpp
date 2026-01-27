@@ -36,7 +36,7 @@ void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) no
     log.error("invalid bytes = ", bytes, ", alignment = ", alignment);
     return nullptr;
   }
-#if defined(LIBIPC_CPP_17) && !defined(LIBIPC_CC_MSVC) && !defined(__MINGW32__)
+#if defined(LIBIPC_CPP_17) && !defined(LIBIPC_CC_MSVC) && !defined(__MINGW32__) && !defined(__WEBOS__)
   /// \see https://en.cppreference.com/w/cpp/memory/c/aligned_alloc
   /// \remark The size parameter must be an integral multiple of alignment.
   return std::aligned_alloc(alignment, ipc::round_up(bytes, alignment));
@@ -55,7 +55,7 @@ void *new_delete_resource::allocate(std::size_t bytes, std::size_t alignment) no
   if (ret != 0) {
     log.error("failed: posix_memalign(alignment = ", alignment, 
                                        ", bytes = ", bytes, 
-                                      "). error = ", sys::error(ret));
+                                      "). error = ", sys::error());
     return nullptr;
   }
   return p;
