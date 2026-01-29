@@ -92,6 +92,7 @@ public:
     }
 
     void clear() noexcept {
+        LIBIPC_LOG();
         if ((shm_.ref() <= 1) && cond_ != nullptr) {
             int eno;
             if ((eno = ::pthread_cond_destroy(cond_)) != 0) {
@@ -134,6 +135,7 @@ public:
     }
 
     bool notify(ipc::sync::mutex &) noexcept {
+        LIBIPC_LOG();
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_signal(cond_)) != 0) {
@@ -144,6 +146,7 @@ public:
     }
 
     bool broadcast(ipc::sync::mutex &) noexcept {
+        LIBIPC_LOG();
         if (!valid()) return false;
         int eno;
         if ((eno = ::pthread_cond_broadcast(cond_)) != 0) {

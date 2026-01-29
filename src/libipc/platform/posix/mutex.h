@@ -113,6 +113,7 @@ public:
     }
 
     bool open(char const *name) noexcept {
+        LIBIPC_LOG();
         close();
         if ((mutex_ = acquire_mutex(name)) == nullptr) {
             return false;
@@ -152,7 +153,7 @@ public:
         LIBIPC_LOG();
         if ((ref_ != nullptr) && (shm_ != nullptr) && (mutex_ != nullptr)) {
             if (shm_->name() != nullptr) {
-                release_mutex(shm_->name(), [this] {
+                release_mutex(shm_->name(), [this, &log] {
                     auto self_ref = ref_->fetch_sub(1, std::memory_order_relaxed);
                     if ((shm_->ref() <= 1) && (self_ref <= 1)) {
                         // Before destroying the mutex, try to unlock it.
@@ -183,7 +184,7 @@ public:
         LIBIPC_LOG();
         if ((shm_ != nullptr) && (mutex_ != nullptr)) {
             if (shm_->name() != nullptr) {
-                release_mutex(shm_->name(), [this] {
+                release_mutex(shm_->name(), [this, &log] {
                     // Unlock before destroying, same reasoning as in close()
                     ::pthread_mutex_unlock(mutex_);
                     
@@ -240,6 +241,7 @@ public:
     }
 
     bool try_lock() noexcept(false) {
+        LIBIPC_LOG();
         if (!valid()) return false;
         auto ts = posix_::detail::make_timespec(0);
         int eno = ::pthread_mutex_timedlock(mutex_, &ts);
