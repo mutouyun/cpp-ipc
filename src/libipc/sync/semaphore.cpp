@@ -7,8 +7,7 @@
 #include "libipc/platform/detail.h"
 #if defined(LIBIPC_OS_WIN)
 #include "libipc/platform/win/semaphore.h"
-#elif defined(LIBIPC_OS_QNX) || defined(LIBIPC_OS_FREEBSD)
-#elif defined(LIBIPC_OS_LINUX) || defined(LIBIPC_OS_QNX)
+#elif defined(LIBIPC_OS_LINUX) || defined(LIBIPC_OS_QNX) || defined(LIBIPC_OS_FREEBSD)
 #include "libipc/platform/posix/semaphore_impl.h"
 #else/*IPC_OS*/
 #   error "Unsupported platform."
