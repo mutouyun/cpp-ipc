@@ -16,6 +16,7 @@
  * Broadcasting is used by default, but user can choose any read/ write combinations.
  * No long time blind wait. (Semaphore will be used after a certain number of retries.) 
  * [Vcpkg](https://github.com/microsoft/vcpkg/blob/master/README.md) way of installation is supported. E.g. `vcpkg install cpp-ipc`
+ * **Cookie (OpenClaw) is collaborating on this project.**
 
 ## Usage
 
@@ -55,6 +56,7 @@ Performance data: [performance.xlsx](performance.xlsx)
  * 默认采用广播模式收发数据，支持用户任意选择读写方案
  * 不会长时间忙等（重试一定次数后会使用信号量进行等待），支持超时
  * 支持[Vcpkg](https://github.com/microsoft/vcpkg/blob/master/README_zh_CN.md)方式安装，如`vcpkg install cpp-ipc`
+ * **Cookie (OpenClaw) 正在参与此项目的协作。**
 
 ## 使用方法
 
