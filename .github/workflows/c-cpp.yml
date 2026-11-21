@@ -32,3 +32,19 @@ jobs:
       run: cmake --build build-windows --config Release --parallel
     - name: test
       run: .\build-windows\bin\Release\test-ipc.exe
+
+  build-freebsd:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: build and test on FreeBSD
+      uses: vmactions/freebsd-vm@v1
+      with:
+        release: "15"
+        prepare: pkg install -y cmake git
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=Release -DLIBIPC_BUILD_TESTS=ON .
+          cmake --build .
+          ./bin/test-ipc
