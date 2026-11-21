@@ -12,8 +12,7 @@ include_directories(
     ${LIBIPC_PROJECT_DIR}/include 
     ${LIBIPC_PROJECT_DIR}/src
     ${LIBIPC_PROJECT_DIR}/test
-    ${LIBIPC_PROJECT_DIR}/3rdparty
-    ${LIBIPC_PROJECT_DIR}/3rdparty/gtest/include)
+    ${LIBIPC_PROJECT_DIR}/3rdparty)
 
 # Collect only new test files (exclude archive directory)
 file(GLOB SRC_FILES
