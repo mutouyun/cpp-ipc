@@ -19,3 +19,16 @@ jobs:
       run: make -j
     - name: test
       run: export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH && ./bin/test-ipc
+
+  build-windows:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: cmake
+      run: cmake -S . -B build-windows -DLIBIPC_BUILD_TESTS=ON
+    - name: build
+      run: cmake --build build-windows --config Release --parallel
+    - name: test
+      run: .\build-windows\bin\Release\test-ipc.exe
