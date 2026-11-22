@@ -12,6 +12,8 @@ TEST(detect_plat, os) {
   std::cout << "LIBIPC_OS_LINUX\n";
 #elif defined(LIBIPC_OS_QNX)
   std::cout << "LIBIPC_OS_QNX\n";
+#elif defined(LIBIPC_OS_FREEBSD)
+  std::cout << "LIBIPC_OS_FREEBSD\n";
 #elif defined(LIBIPC_OS_ANDROID)
   std::cout << "LIBIPC_OS_ANDROID\n";
 #else
